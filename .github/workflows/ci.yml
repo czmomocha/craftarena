@@ -1,0 +1,100 @@
+name: CI
+
+# CD-53 §4.1「每次变更」门禁的当前可实现子集：语法与类型检查、单元测试。
+# Schema 验证、禁止 API 扫描和 PR Web 预览要等对应系统落地后再加进来，
+# 在那之前不要在任何地方把本流水线描述成"已覆盖 §4.1 全部门禁"（宪法第二十四条）。
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# 同一分支上只保留最新一次运行，旧的直接取消，避免连续推送时排队。
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # 版本的所有者是 CD-51 §1，升级引擎必须同时改那里和本行。
+  GODOT_VERSION: 4.7.2
+  NODE_VERSION: 24
+
+jobs:
+  backend:
+    name: Backend typecheck and tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - run: npm ci
+
+      # 宪法第二十三条：backend 与 tools 静态类型、警告视为错误，由 tsconfig 的 strict 系列保证。
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Unit tests
+        run: npm test
+
+  godot:
+    name: Godot check-only and GUT
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # GUT 与后续内容资源走 LFS，跳过会让 check-only 读到指针文件而不是真文件。
+          lfs: true
+
+      - name: Cache Godot binary
+        id: godot-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/godot
+          key: godot-${{ env.GODOT_VERSION }}-linux
+
+      - name: Download Godot
+        if: steps.godot-cache.outputs.cache-hit != 'true'
+        run: |
+          set -euo pipefail
+          mkdir -p ~/godot
+          name="Godot_v${GODOT_VERSION}-stable_linux.x86_64"
+          curl -fsSL -o /tmp/godot.zip \
+            "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/${name}.zip"
+          unzip -q /tmp/godot.zip -d ~/godot
+          chmod +x ~/godot/"${name}"
+
+      - name: Expose GODOT4
+        run: echo "GODOT4=$HOME/godot/Godot_v${GODOT_VERSION}-stable_linux.x86_64" >> "$GITHUB_ENV"
+
+      - name: Report engine version
+        run: "\"$GODOT4\" --version"
+
+      # 干净检出没有 .godot 导入缓存，后面的 check-only 和 GUT 都依赖它先生成。
+      - name: Import resources
+        run: "\"$GODOT4\" --headless --path game --import"
+
+      - name: Syntax and type check
+        run: |
+          set -uo pipefail
+          failed=0
+          while IFS= read -r file; do
+            res="res://${file#game/}"
+            if ! "$GODOT4" --headless --path game --check-only -s "$res" > /tmp/check.log 2>&1; then
+              echo "::error file=${file}::check-only failed"
+              cat /tmp/check.log
+              failed=1
+            fi
+          done < <(find game/src game/tests -name '*.gd' | sort)
+          exit "$failed"
+
+      - name: Headless boot smoke test
+        run: "\"$GODOT4\" --headless --path game --quit"
+
+      - name: GUT unit tests
+        run: "\"$GODOT4\" --headless --path game -s res://addons/gut/gut_cmdln.gd -gdir=res://tests/unit -gexit"
