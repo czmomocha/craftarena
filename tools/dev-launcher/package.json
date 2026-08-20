@@ -1,0 +1,11 @@
+{
+  "name": "@craftarena/dev-launcher",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Starts the three backend processes together and waits until all of them report ready.",
+  "license": "UNLICENSED",
+  "scripts": {
+    "start": "node src/main.ts"
+  }
+}
