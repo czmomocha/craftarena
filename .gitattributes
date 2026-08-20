@@ -1,0 +1,86 @@
+# 行尾规范化
+#
+# 仓库内一律存 LF，检出时也保持 LF。Windows 与 macOS 两台开发机加上 Linux CI
+# 必须拿到逐字节一致的文本文件，否则 CD-53 的状态哈希与回放一致性测试会因行尾差异误报。
+* text=auto eol=lf
+
+# 这几类在 Windows 上必须是 CRLF 才能正确执行
+*.bat  text eol=crlf
+*.cmd  text eol=crlf
+*.ps1  text eol=crlf
+
+# 这几类含 \r 会直接执行失败
+*.sh          text eol=lf
+Dockerfile    text eol=lf
+*.dockerfile  text eol=lf
+
+# Godot 文本资源。.import 与 .uid 由引擎生成但必须入库，
+# 真正的缓存在 .godot/ 中并已被 .gitignore 排除。
+*.gd           text
+*.gdshader     text
+*.gdshaderinc  text
+*.tscn         text
+*.tres         text
+*.godot        text
+*.import       text
+*.uid          text
+*.cfg          text
+
+# Git LFS
+#
+# 依据 CD-51 §2：可复现所需的源文件（.blend、原始音频、高分辨率图）
+# 与运行时资产（GLB、压缩音频）统一进 LFS。
+
+# 3D 源文件与运行时模型
+*.blend filter=lfs diff=lfs merge=lfs -text
+*.fbx   filter=lfs diff=lfs merge=lfs -text
+*.glb   filter=lfs diff=lfs merge=lfs -text
+*.abc   filter=lfs diff=lfs merge=lfs -text
+
+# 图像。SVG 是文本，刻意不纳入 LFS。
+*.png  filter=lfs diff=lfs merge=lfs -text
+*.jpg  filter=lfs diff=lfs merge=lfs -text
+*.jpeg filter=lfs diff=lfs merge=lfs -text
+*.gif  filter=lfs diff=lfs merge=lfs -text
+*.bmp  filter=lfs diff=lfs merge=lfs -text
+*.webp filter=lfs diff=lfs merge=lfs -text
+*.tga  filter=lfs diff=lfs merge=lfs -text
+*.tif  filter=lfs diff=lfs merge=lfs -text
+*.tiff filter=lfs diff=lfs merge=lfs -text
+*.psd  filter=lfs diff=lfs merge=lfs -text
+*.exr  filter=lfs diff=lfs merge=lfs -text
+*.hdr  filter=lfs diff=lfs merge=lfs -text
+*.dds  filter=lfs diff=lfs merge=lfs -text
+*.ktx  filter=lfs diff=lfs merge=lfs -text
+*.ktx2 filter=lfs diff=lfs merge=lfs -text
+
+# 音频
+*.wav  filter=lfs diff=lfs merge=lfs -text
+*.aif  filter=lfs diff=lfs merge=lfs -text
+*.aiff filter=lfs diff=lfs merge=lfs -text
+*.flac filter=lfs diff=lfs merge=lfs -text
+*.ogg  filter=lfs diff=lfs merge=lfs -text
+*.mp3  filter=lfs diff=lfs merge=lfs -text
+*.m4a  filter=lfs diff=lfs merge=lfs -text
+
+# 视频
+*.mp4  filter=lfs diff=lfs merge=lfs -text
+*.mov  filter=lfs diff=lfs merge=lfs -text
+*.webm filter=lfs diff=lfs merge=lfs -text
+
+# 字体
+*.ttf   filter=lfs diff=lfs merge=lfs -text
+*.otf   filter=lfs diff=lfs merge=lfs -text
+*.woff  filter=lfs diff=lfs merge=lfs -text
+*.woff2 filter=lfs diff=lfs merge=lfs -text
+
+# 二进制数据与归档
+*.bin filter=lfs diff=lfs merge=lfs -text
+*.zip filter=lfs diff=lfs merge=lfs -text
+*.7z  filter=lfs diff=lfs merge=lfs -text
+
+# 第三方插件自带的小体积资源不进 LFS：省配额，也避免"装个插件还得先有 LFS"。
+# 必须放在文件末尾——gitattributes 后写的规则覆盖先写的，放在上面会被通配的 LFS 规则盖掉。
+game/addons/**/*.png  -filter -diff -merge -text
+game/addons/**/*.ttf  -filter -diff -merge -text
+game/addons/**/*.otf  -filter -diff -merge -text

@@ -1,0 +1,70 @@
+# Godot 4.1+
+#
+# 依据 Godot 官方 Version Control Systems 文档：.godot/ 是可再生的项目缓存，
+# *.translation 是由 CSV 生成的二进制翻译产物，两者都不入库。
+# 这覆盖了 CD-51 §2 要求的 .godot/imported 排除。
+.godot/
+*.translation
+
+# 早期概念图
+#
+# 44 MB 的 AI 生成大厅概念图。AGENTS.md 已明确 early-concepts/ 是历史归档、
+# 不构成任何决策依据，没有必要为它常年占用仓库和 LFS 配额。文件只留在本地。
+/early-concepts/
+
+# 导出与构建产物
+/build/
+/export/
+*.pck
+game/android/
+
+# Blender 自动备份
+*.blend1
+*.blend2
+
+# Node.js
+node_modules/
+dist/
+coverage/
+*.tsbuildinfo
+.npm/
+.pnpm-store/
+.yarn/
+
+# 密钥与本地配置
+#
+# CD-51 §3：仓库只允许提交本地或 PR 沙盒可随时销毁的假凭据，
+# 长期测试环境的真实密钥必须留在 GitHub Secrets 或服务器外部配置。
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.keystore
+secrets.json
+
+# SQLite 本地数据库（CD-51 §1 测试期数据库，由控制面在本地生成）
+*.sqlite
+*.sqlite3
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+
+# 日志与临时文件
+*.log
+logs/
+tmp/
+.cache/
+
+# 操作系统与编辑器
+.DS_Store
+._*
+.Spotlight-V100
+.Trashes
+Thumbs.db
+desktop.ini
+.idea/
+*.swp
+*~

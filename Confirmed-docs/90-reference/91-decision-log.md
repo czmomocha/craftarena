@@ -1,0 +1,207 @@
+# CD-91 决策记录
+
+> 文档 ID：CD-91
+> 单一事实源：每项决策的选择来源、覆盖关系与延期标记
+> 加载建议：只在需要追溯"某个设计为什么是这样"或确认某项是否真的拍板过时读取。日常实现不需要
+> 上位约束：[CD-00 宪法](../00-constitution/CONSTITUTION.md) 第二十六条
+> 相关：[CD-63 开发期决策清单](../60-plan/63-open-decisions.md)、[CD-62 风险登记册](../60-plan/62-risk-register.md)
+> 派生自：初稿 v0.2 附录 D
+
+## 使用与追加规则
+
+本文件记录选择来源，防止 AI 把推荐项误当决定。
+
+- 若正文与本文件冲突，以**时间较新的明确决策**为准；
+- `延期` 表示**不得推断默认值**；
+- 出现新拍板或推翻旧决策时，必须在对应小节追加一行，并注明被覆盖的旧值；
+- 只记录"选了什么"和"覆盖了什么"，具体规则写进所有者文档。
+
+---
+
+## D.1 产品、平台与账号
+
+- `project_name = craft_arena`（2026-08-20）：正式定名 **Craft Arena／工坊竞技场**，GitHub 仓库名 `craftarena`。此前无正式名称，文档中仅以工作目录名 `AIGame` 临时指代，该临时称呼作废。命名规范见 [CD-11 §1](../10-product/11-scope-and-platforms.md)。
+- `primary_validation_path = hybrid_web_gate`：桌面原生开发，测试者优先 Web，共享功能持续过 Web 门禁。
+- `web_editor_scope = light_editor`：Web 游玩 + 轻量编辑；完整规则图留在桌面。
+- `authoring_identity`：允许匿名编辑，云端自动保存并保留本地缓存。
+- `guest_draft_lifecycle = guest_30_claim`：Guest ID + 恢复密钥，云端 30 天，登录后认领。
+- `product_packaging = one_platform_modular`：同品牌、账号、大厅，双玩法按需资源模块。
+- `module_delivery_boundary = assets_content_only`：可信代码随基础包，模块只下发资源与内容。
+- `minimum_device_tier = midrange_2020`；`fps_targets = pc60_mobile30`。
+- `browser_support = chromium_desktop`：桌面 Chrome/Edge 最新两个大版本。
+- `web_offline = native_only`：安装版离线；Web 在线但保留本地草稿。
+- `mobile_editor_scope = play_only`；`pc_input_support = keyboard_only`。
+- `localization_scope = zh_en`；`accessibility_baseline = defer_accessibility`。
+- `art_direction = stylized_lowpoly`；`target_age = teen_plus`。
+- `monetization_phase1 = none_no_hooks`。
+- `client_signing = platform_minimum`；`steam_integration_timing = after_core_adapter`。
+
+## D.2 UGC、发现与发布
+
+- `ugc_visibility = automatic_public`；仅指长期测试环境。
+- `ugc_asset_scope = platform_assets_only`。
+- `publication_safety = technical_only`：只做技术、结构和预算验证。
+- `public_text_scope = no_free_text`：系统名/词库 + 结构化标签。
+- `ugc_playability_label = publish_with_status`：机器人未完成仍公开并标记。
+- `ugc_feedback = ratings`；`ugc_rating_dimensions = overall_plus_tags`。
+- `ugc_sorting = simple_tabs`：最新、评分、游玩次数、已验证。
+- `ugc_publish_rate = no_limits`；`ugc_feed_dedup = manual_cleanup`。
+- `ugc_validation_concurrency = one_concurrent_queue`。
+- `ugc_validation_time = tiered_validation`：60 秒快检 + 10 分钟后台抽样。
+- `draft_autosave = command_log_checkpoints`。
+- `collaborative_editing = single_editor_fork`：单写者；他人可只读或复制私有草稿；设备租约互斥。
+- `ugc_forking = never_allowed`。
+- `ugc_withdrawal = hard_delete`；`hard_delete_audit_exception = minimal_tombstone`。
+- `asset_versioning = latest_alias`，后由 `asset_latest_gameplay_boundary = visual_latest_gameplay_immutable` 限定：仅视觉/音效自动 latest。
+- `ugc_data_format = json_source_binary_bundle`。
+- `schema_compatibility = current_plus_two`。
+- `rule_vm_compatibility = versioned_semantics`。
+- `creator_rule_access = templates_web_graph_desktop`。
+- `dual_editor_architecture = shared_framework_mode_tools`。
+
+## D.3 TRAPRUSH
+
+- `traprush_camera = isometric_soft_follow`。
+- `traprush_movement = single_jump_autostep`。
+- `traprush_player_collision`：实体碰撞、阻挡推挤，道具/工具可眩晕。
+- `traprush_combat_intensity = nonlethal_control`。
+- `traprush_anti_block = no_protection`。
+- `traprush_chokepoint_rule = hard_choke_allowed`。
+- `traprush_stalemate = baseline_shove`。
+- `traprush_item_distribution = fixed_seeded_spawns`。
+- `traprush_destructible_scope = shared_world`。
+- `traprush_failure_penalty = unlimited_respawn`。
+- `traprush_match_duration = creator_defined`；`traprush_time_bounds`：内容级不设上限。
+- `match_server_lease = renewable_lease`。
+- `traprush_finish_requirement`：默认终点，创作者可组合自定义结束条件。
+- `custom_end_validation = typed_bounded_terminal`。
+- `traprush_player_count`：在线 1～8 人，单人也走服务器。
+- `traprush_web_player_count = same_eight`。
+- `player_collision_prediction = predict_remote_capsules`。
+- `authoritative_character_physics = custom_kinematic`。
+- `traprush_offline_opponents = local_ghost`。
+- `authoritative_motion_dof = upright_3d_kinematic`。
+- `traprush_inventory = 延期`。
+
+## D.4 BASTION
+
+- `bastion_player_count = one_and_two`：官方先 1v1，再开放 2v2。
+- `bastion_team_building = personal_sector_gold`。
+- `bastion_obstacle_draft = simultaneous_hidden`。
+- `bastion_obstacle_ownership = captain_places`。
+- `bastion_captain_selection = volunteer_vote_fallback`。
+- `bastion_path_blocking = path_always_required`。
+- `bastion_tower_placement = slot_based`。
+- `bastion_tower_control = fully_automatic`。
+- `bastion_offense_model = shared_waves_score`。
+- `bastion_win_condition = core_first_or_score`。
+- `bastion_wave_symmetry = identical_seeded`。
+- `bastion_economy = base_plus_kill_capped`。
+- `bastion_obstacle_destruction = mixed_by_archetype`。
+- `bastion_build_timing = creator_defined`。
+- `bastion_build_policy_authoring = whitelisted_policies`。
+- `bastion_wave_count = creator_unbounded`。
+- `bastion_balance_authoring = bounded_multipliers`。
+- `bastion_asymmetric_teams = creator_defined_teams`。
+- `bastion_max_players = max_eight`。
+- `asymmetric_compensation = platform_presets`。
+- `bastion_pathfinding = waypoint_graph`。
+- `tower_target_priority = player_selects_whitelist`。
+- `bastion_offline_opponent = template_bot`。
+- `hidden_state_sync = 延期`。
+
+## D.5 热修改、Preview 与内容版本
+
+- `ugc_version_activation = all_next_safe_tick`，后由补丁等级决策限定。
+- `live_match_patch_level = p0_p1_only`：P2/P3 只用于新对局。
+- `live_p1_safe_point = phase_boundary_notify`。
+- `live_patch_rollout = all_immediately`。
+- `live_patch_rollback = technical_auto_rollback`。
+- `edit_play_workflow = separate_preview_window`。
+- `preview_patch_mode = persistent_incremental`。
+- `multiplayer_preview_editing = author_live_patch`。
+
+## D.6 AI、协作与项目治理
+
+- `ai_autonomy = edit_test_no_commit_release`。
+- `human_review_granularity = task_and_gate`。
+- `ai_parallelism = lead_isolated_domains`。
+- `test_first_scope = core_tdd_presentation_after`。
+- `ai_asset_policy = auto_publish_if_technical`。
+- `ai_asset_sources = no_traceability`。
+- `ai_asset_takedown = manual_case_review`。
+- `repository_hosting = github_private`。
+- `git_workflow = trunk_short_pr`。
+- `ci_environment = github_plus_selfhosted`。
+- `pr_merge_gate = required_ci_one_human`。
+- `web_preview_frequency = per_pr_preview`。
+- `preview_access = public_preview`。
+- `preview_backend_isolation = ephemeral_sandbox`。
+- `project_tracking = github_projects_adrs`。
+- `engineering_language = chinese_docs_english_code`。
+- `commit_convention = conventional_commits`。
+- `dependency_updates = locked_scheduled`。
+- `roadmap_style = milestone_no_dates`。
+- `human_team_size = solo_owner`。
+- `project_scaffold = minimal_custom`。
+- `repo_structure = monorepo`。
+- `asset_source_control = lfs_sources_and_runtime`。
+- `godot_mcp_choice = 延期专项调研`。
+- `godot_version_lock = 4_7_2_stable`（2026-08-20）：精确锁定 Godot 4.7.2-stable Standard，覆盖原先只写到次版本的 "Godot 4.7 stable"。4.7-stable 首发于 2026-06-18，4.7.2 为官方推荐的兼容维护版；两台开发机与 CI 必须使用同一精确版本与配套导出模板。
+- `human_playtest_cadence = internal_only`。
+- `internal_acceptance = owner_signoff_checklist`。
+
+## D.7 后端、数据与部署
+
+- `match_server_runtime = godot_headless_shared`。
+- `control_plane_stack = typescript_fastify`。
+- `primary_database = postgresql` 已被后续 `postgres_deployment = sqlite_control_plane` 覆盖：一期 SQLite，PostgreSQL 为迁移目标。
+- `sqlite_ownership = control_plane_only`。
+- `primary_region = hong_kong`；`cloud_provider = tencent_cloud_hk`，其中托管 PostgreSQL 部分被 SQLite 决策覆盖。
+- `phase1_ccu = ccu_50`；`capacity_overflow = fifo_queue`。
+- `match_process_model = one_process_per_match`。
+- `match_orchestration = match_host_supervisor`。
+- `realtime_gateway = single_gateway_proxy`。
+- `gateway_service_boundary = separate_ts_service`。
+- `deployment_environments = local_staging_only`：本地 + 长期测试环境，无正式 Production。
+- `monthly_infra_budget`：具体月度上限未锁定；已知已有腾讯云香港服务器和域名，一期无邮件服务。
+- `phase1_auth = email_magic_link` 已被 `auth_without_email = username_password_now` 覆盖。
+- `password_recovery = no_recovery`。
+- `test_registration = open_registration`。
+- `registration_abuse_control = no_protection`。
+- `public_player_names = free_username_public`。
+- `in_game_communication = none`。
+- `secrets_management = plain_env_repo` 后由 `plain_secret_scope = disposable_dev_only` 限定：只允许可销毁沙盒假凭据入库。
+- `data_retention = balanced_retention`。
+- `telemetry_policy = pseudonymous_optout`。
+- `match_history_ui = backend_only`。
+- `backup_policy = no_backup`。
+- `production_monitoring = logs_only`。
+
+## D.8 网络、仿真与测试
+
+- `network_serialization = json_control_binary_match`。
+- `realtime_transport = websocket_all_first`。
+- `simulation_numeric_model = fixed_point_core`。
+- `authoritative_collision_shapes = primitive_compound`。
+- `gdscript_typing = strict_core_typed_ui_flexible`。
+- `rule_vm_execution = versioned_bytecode_interpreter`。
+- `api_contract = json_schema_openapi`。
+- `network_targets = region_real_data`。
+- `provisional_network_gate = no_gate`。
+- `network_correctness_tests = manual_network_tests`。
+- `manual_network_cadence = ad_hoc`。
+- `performance_regression = optimize_when_bad`。
+- `client_anticheat = server_validation_only`。
+- `cheat_enforcement = log_only`。
+- `bot_fill = no_bot_fill`。
+
+## D.9 明确延期或跳过
+
+- `bug_reporting` 及 Bug 提交、客服、通知、告警展示等同类问题：跳过，后续开发再决定。
+- 道具栏、具体数值、时长、动画、精确频率等实现级玩法细节：统一延期。
+- `hidden_state_sync`：延期，不默认采用任何推荐协议。
+
+## D.10 文档体系
+
+- `docs_structure = index_first_single_source`（2026-08-20）：将 2129 行一体化初稿拆分为 `Confirmed-docs/` 文档群；宪法常驻，其余按主题分章按需读取。原初稿退役为归档，不再作为依据。
