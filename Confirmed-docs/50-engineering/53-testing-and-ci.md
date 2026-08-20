@@ -178,6 +178,22 @@ AI 生成代码必须比普通手写代码有**更强的自动化证据**，因�
 - 编辑文件的 linter 诊断；
 - 功能 PR 自动生成独立公开 Web 预览。
 
+#### 当前实现状态
+
+上面是本项目的目标门禁清单，不是已经生效的清单。`.github/workflows/ci.yml` 在 M0 只启用了其中一个子集：
+
+| 门禁项 | 状态 | 实现方式 |
+|---|---|---|
+| 语法与类型检查 | 已启用 | 逐个 `.gd` 文件跑 `--check-only`；`backend/`、`tools/` 跑 `tsc --noEmit` |
+| 核心目录警告视为错误 | 已启用 | GDScript 由 `project.godot` 全局配置（[ADR-0001](../../docs/adr/0001-strict-gdscript-typing-gate.md)）并由 GUT 断言守护；TypeScript 由 `tsconfig.json` 的 strict 系列保证 |
+| 单元测试 | 已启用（全量，非"受影响"） | GUT 跑 `res://tests/unit`；后端跑 `node --test` |
+| Schema 验证 | 未实现 | 尚无 Schema |
+| 禁止 API 和依赖检查 | 部分 | 仅有"工程内不得出现 `.cs` / `.csproj`"一条，由 GUT 断言 |
+| 编辑文件的 linter 诊断 | 未实现 | 依赖开发机 IDE，未进 CI |
+| PR Web 预览 | 未实现 | 等 Web 导出与沙盒环境落地 |
+
+按宪法第二十四条，**未在本表标为"已启用"的项目不得在任何材料中描述为已覆盖**。新增门禁时同时改本表和 workflow。
+
 ### 4.2 每日
 
 - 全量 GUT；

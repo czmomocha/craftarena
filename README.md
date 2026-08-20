@@ -59,9 +59,11 @@ export GODOT4="/Applications/Godot.app/Contents/MacOS/Godot"
 
 ## 常用命令
 
-以下命令都在 Windows + Godot 4.7.2 + GUT 9.7.1 上实际执行验证过。CD-51 §4 要求把固定命令写在本文件，**禁止各 Agent 自行猜测参数**。
+以下命令都在 Windows + Godot 4.7.2 + GUT 9.7.1 + Node 24 上实际执行验证过。CD-51 §4 要求把固定命令写在本文件，**禁止各 Agent 自行猜测参数**。
 
 macOS 一列尚未在真机验证，首次在 mac 上执行后请回来修正本表。
+
+### Godot
 
 | 用途 | Windows (PowerShell) | macOS (bash/zsh) |
 |---|---|---|
@@ -71,10 +73,34 @@ macOS 一列尚未在真机验证，首次在 mac 上执行后请回来修正本
 | Headless 启动主场景 | `& $env:GODOT4_CONSOLE --headless --path game --quit` | `"$GODOT4" --headless --path game --quit` |
 | 单文件语法与类型检查 | `& $env:GODOT4_CONSOLE --headless --path game --check-only -s res://src/client/main.gd` | `"$GODOT4" --headless --path game --check-only -s res://src/client/main.gd` |
 | 运行 GUT 单元测试 | `& $env:GODOT4_CONSOLE --headless --path game -s res://addons/gut/gut_cmdln.gd -gdir=res://tests/unit -gexit` | `"$GODOT4" --headless --path game -s res://addons/gut/gut_cmdln.gd -gdir=res://tests/unit -gexit` |
-| 启动控制面 | 未实现 | 未实现 |
-| 启动实时网关 | 未实现 | 未实现 |
 
 关于退出码：`--check-only` 和 GUT 的 `-gexit` 在失败时都返回 1，可以直接作为 CI 门禁条件，两者均已实测确认。
+
+### 后端与工具
+
+后端是 npm workspaces，命令在仓库根目录执行，两个平台写法相同。`.ts` 由 Node 24 原生剥离类型直接运行，没有构建步骤。
+
+| 用途 | 命令 |
+|---|---|
+| 安装依赖 | `npm install` |
+| 类型检查 | `npm run typecheck` |
+| 后端与工具单元测试 | `npm test` |
+| **一键拉起三个后端进程** | `npm run dev` |
+| 单独启动控制面 | `npm run control-plane` |
+| 单独启动实时网关 | `npm run gateway` |
+| 单独启动 MatchHost | `npm run match-host` |
+
+`npm run dev` 是 DevLauncher：顺序拉起控制面、网关、MatchHost，从各自日志里读出实际监听地址后轮询 `/readyz`，三个都就绪才放行；Ctrl+C 一起停。它不复制端口默认值，所以用 `CONTROL_PLANE_PORT` 等环境变量改端口时不需要同步改它。任一进程在就绪后意外退出，DevLauncher 会停掉其余进程并以非 0 退出，避免留下半死的环境。
+
+DevLauncher 只管本地开发编排，不做守护、重启和资源限制；测试环境的编排见 [CD-44](Confirmed-docs/40-technical/44-deployment.md)。
+
+默认端口、数据库位置等配置项由各服务自己的 `src/config.ts` 通过环境变量读取，默认值写在那里，本文件不复述。
+
+## 持续集成
+
+`.github/workflows/ci.yml` 在推送 `main` 和所有 PR 上运行两个 job：`backend`（`npm run typecheck` + `npm test`）与 `godot`（导入、逐文件 `--check-only`、Headless 启动烟测、GUT）。用的都是上面表里那些命令，本地跑一遍就能复现 CI 的结论。
+
+CI 当前实际启用了哪些门禁、哪些还没实现，以 [CD-53 §4.1](Confirmed-docs/50-engineering/53-testing-and-ci.md) 的「当前实现状态」表为准。
 
 ## 协作规则
 

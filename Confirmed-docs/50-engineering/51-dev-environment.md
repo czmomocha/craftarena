@@ -17,7 +17,7 @@
 | 测试期数据库 | SQLite；仅控制面直接访问 |
 | 实时入口 | 独立 TypeScript TLS WebSocket 网关 |
 | AI IDE | Cursor |
-| Godot AI 接入 | 尚未拍板；调研后只启用一个主 MCP |
+| Godot AI 接入 | 已拍板延期至 M2 启动前重估，见 [ADR-0003](../../docs/adr/0003-godot-mcp-selection.md)；在那之前不装 MCP，选定后也只启用一个主 MCP |
 | 单元测试 | GUT **9.7.1**（MIT）；随仓库入库于 `game/addons/gut/`，升级须同步本行 |
 | 版本管理 | GitHub 私有 Monorepo；受保护 `main`；Git LFS |
 | 3D 工具 | Blender，统一导出 GLB/glTF |
@@ -49,7 +49,7 @@
 7. 安装 GUT；
 8. 创建 `AGENTS.md` 和项目规则；
 9. 建立 `game/`、`backend/`、`infra/`、`docs/` 的 Monorepo 骨架；
-10. 在专项调研拍板后安装唯一 Godot MCP；
+10. 不安装 Godot MCP——[ADR-0003](../../docs/adr/0003-godot-mcp-selection.md) 已拍板延期至 M2 启动前重估；
 11. 运行最小编辑、启动、Headless、Fastify、网关和测试闭环。
 
 第 5 步的环境变量约定：所有命令通过 `GODOT4` 定位引擎，禁止把安装路径写死在脚本里。Windows 上还需要 `GODOT4_CONSOLE` 指向同版本的 `_console.exe`，否则 PowerShell 读不到引擎 stdout。

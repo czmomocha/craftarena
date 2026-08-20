@@ -41,4 +41,4 @@
 | 传送迷路或跳关 | 高，已治理 | 检查点序列、路径验证、镜头过渡、出口安全点 |
 | BASTION 互设障碍不公平 | 高，已治理 | 同预算、盲设、路径硬验证、槽位与补偿预设 |
 | 网页/微信包体超限 | 中，已治理 | Compatibility、资源变体、子包、按需资源模块 |
-| Godot 主 MCP 未选定 | 中，延期 | 专项验证 UndoRedo、运行、错误读取、Headless 与维护性 |
+| Godot 主 MCP 未选定 | 中，延期至 M2 前重估 | 已确认无 MCP 也能完成开发闭环；重估时按 UndoRedo、运行、错误读取、Headless、维护性五维实测，清单见 [ADR-0003](../../docs/adr/0003-godot-mcp-selection.md) |

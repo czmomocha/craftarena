@@ -146,7 +146,7 @@
 - `project_scaffold = minimal_custom`。
 - `repo_structure = monorepo`。
 - `asset_source_control = lfs_sources_and_runtime`。
-- `godot_mcp_choice = 延期专项调研`。
+- `godot_mcp_choice = 延期专项调研` 已被 `godot_mcp_choice = defer_to_m2`（2026-08-20）覆盖：专项调研完成后采纳 [ADR-0003](../../docs/adr/0003-godot-mcp-selection.md) 选项 A——**暂不选定主 MCP，M2 启动前按七条清单重估**。原值表示"调研尚未进行"，现调研已完成，结论是延期。M1 期间继续使用受审查的 Editor API / 文件方式（[CD-51 §6](../50-engineering/51-dev-environment.md)），不得安装任何 MCP。
 - `godot_version_lock = 4_7_2_stable`（2026-08-20）：精确锁定 Godot 4.7.2-stable Standard，覆盖原先只写到次版本的 "Godot 4.7 stable"。4.7-stable 首发于 2026-06-18，4.7.2 为官方推荐的兼容维护版；两台开发机与 CI 必须使用同一精确版本与配套导出模板。
 - `human_playtest_cadence = internal_only`。
 - `internal_acceptance = owner_signoff_checklist`。
