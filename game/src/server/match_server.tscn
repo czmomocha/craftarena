@@ -1,0 +1,6 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://src/server/match_server.gd" id="1_xq5y3"]
+
+[node name="MatchServer" type="Node" unique_id=903306970]
+script = ExtResource("1_xq5y3")

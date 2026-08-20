@@ -1,0 +1,31 @@
+{
+  "name": "craftarena",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Craft Arena monorepo root. Owns backend and tools workspaces; the Godot project under game/ is not an npm workspace.",
+  "license": "UNLICENSED",
+  "engines": {
+    "node": ">=24.0.0"
+  },
+  "workspaces": [
+    "backend/contracts",
+    "backend/control-plane",
+    "backend/realtime-gateway",
+    "backend/match-host",
+    "tools/dev-launcher"
+  ],
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "node --test \"backend/**/tests/**/*.test.ts\" \"tools/**/tests/**/*.test.ts\"",
+    "dev": "node tools/dev-launcher/src/main.ts",
+    "control-plane": "node backend/control-plane/src/main.ts",
+    "gateway": "node backend/realtime-gateway/src/main.ts",
+    "match-host": "node backend/match-host/src/main.ts"
+  },
+  "devDependencies": {
+    "@types/node": "24.13.3",
+    "@types/ws": "8.18.1",
+    "typescript": "7.0.2"
+  }
+}

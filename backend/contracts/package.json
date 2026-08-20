@@ -1,0 +1,8 @@
+{
+  "name": "@craftarena/contracts",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Shared wire contracts: error codes, health payloads, JSON Schema. No runtime dependencies on purpose.",
+  "license": "UNLICENSED"
+}

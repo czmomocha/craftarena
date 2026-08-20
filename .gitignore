@@ -48,6 +48,10 @@ secrets.json
 *.sqlite
 *.sqlite3
 *.db
+# WAL 模式会额外产生 -wal / -shm 边车文件，漏掉它们会在每次跑服务后污染 git status
+*.sqlite-journal
+*.sqlite-wal
+*.sqlite-shm
 *.db-journal
 *.db-wal
 *.db-shm

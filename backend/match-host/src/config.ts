@@ -1,0 +1,72 @@
+import { resolve } from "node:path";
+
+export interface MatchHostConfig {
+	readonly host: string;
+	readonly port: number;
+	readonly godotExecutable: string;
+	readonly godotProjectPath: string;
+	readonly matchScene: string;
+	readonly portRangeMin: number;
+	readonly portRangeMax: number;
+	readonly leaseDurationMs: number;
+	readonly idleTimeoutMs: number;
+	readonly reclaimIntervalMs: number;
+	readonly maxConcurrentMatches: number;
+	readonly version: string;
+	readonly logLevel: string;
+}
+
+const DEFAULT_PORT = 8100;
+
+/** CD-44 §3：默认会话租约 30 分钟。数值的所有者是那份文档，这里只是它的实现默认值。 */
+const DEFAULT_LEASE_DURATION_MS = 30 * 60 * 1000;
+
+/** CD-44 §3：连续 10 分钟没有有效输入就关闭进程。 */
+const DEFAULT_IDLE_TIMEOUT_MS = 10 * 60 * 1000;
+
+/**
+ * 内网临时端口范围。CD-44 只要求"MatchHost 分配内网端口"，没有规定具体号段，
+ * 因此这是实现层的默认值而不是产品参数，可以按部署环境覆盖。
+ */
+const DEFAULT_PORT_RANGE_MIN = 42000;
+const DEFAULT_PORT_RANGE_MAX = 42099;
+
+const DEFAULT_RECLAIM_INTERVAL_MS = 15 * 1000;
+
+export function loadConfig(env: NodeJS.ProcessEnv = process.env): MatchHostConfig {
+	const portRangeMin = parseInteger(env["MATCH_HOST_PORT_RANGE_MIN"], DEFAULT_PORT_RANGE_MIN, "MATCH_HOST_PORT_RANGE_MIN");
+	const portRangeMax = parseInteger(env["MATCH_HOST_PORT_RANGE_MAX"], DEFAULT_PORT_RANGE_MAX, "MATCH_HOST_PORT_RANGE_MAX");
+
+	// 并发上限默认等于端口容量：再多也分不到端口，不如在入口就明确拒绝。
+	const portCapacity = portRangeMax - portRangeMin + 1;
+
+	return {
+		host: env["MATCH_HOST_HOST"] ?? "127.0.0.1",
+		port: parseInteger(env["MATCH_HOST_PORT"], DEFAULT_PORT, "MATCH_HOST_PORT"),
+		// 与 README 命令表一致，引擎路径只从 GODOT4 取，不在代码里写死安装位置。
+		godotExecutable: env["GODOT4"] ?? "godot",
+		godotProjectPath: resolve(env["MATCH_HOST_GODOT_PROJECT"] ?? "./game"),
+		matchScene: env["MATCH_HOST_SCENE"] ?? "res://src/server/match_server.tscn",
+		portRangeMin,
+		portRangeMax,
+		leaseDurationMs: parseInteger(env["MATCH_HOST_LEASE_MS"], DEFAULT_LEASE_DURATION_MS, "MATCH_HOST_LEASE_MS"),
+		idleTimeoutMs: parseInteger(env["MATCH_HOST_IDLE_MS"], DEFAULT_IDLE_TIMEOUT_MS, "MATCH_HOST_IDLE_MS"),
+		reclaimIntervalMs: parseInteger(env["MATCH_HOST_RECLAIM_MS"], DEFAULT_RECLAIM_INTERVAL_MS, "MATCH_HOST_RECLAIM_MS"),
+		maxConcurrentMatches: parseInteger(env["MATCH_HOST_MAX_MATCHES"], portCapacity, "MATCH_HOST_MAX_MATCHES"),
+		version: env["CRAFTARENA_VERSION"] ?? "0.0.0-dev",
+		logLevel: env["MATCH_HOST_LOG_LEVEL"] ?? "info",
+	};
+}
+
+function parseInteger(raw: string | undefined, fallback: number, name: string): number {
+	if (raw === undefined || raw.trim() === "") {
+		return fallback;
+	}
+
+	const parsed = Number.parseInt(raw, 10);
+	if (!Number.isInteger(parsed) || parsed < 0) {
+		throw new Error(`${name} must be a non-negative integer, received: ${raw}`);
+	}
+
+	return parsed;
+}

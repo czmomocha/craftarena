@@ -1,0 +1,14 @@
+{
+  "name": "@craftarena/match-host",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Spawns one Godot headless process per match, owns port allocation, leases and reclamation.",
+  "license": "UNLICENSED",
+  "scripts": {
+    "start": "node src/main.ts"
+  },
+  "dependencies": {
+    "fastify": "5.12.1"
+  }
+}
