@@ -151,6 +151,7 @@
 - `human_playtest_cadence = internal_only`。
 - `internal_acceptance = owner_signoff_checklist`。
 - `milestone_m0 = exited`（2026-08-20）：[CD-61](../60-plan/61-milestones.md) M0 验收通过并退出。依据是 Linux CI 跑绿、人类按 [环境烟测清单](../../docs/runbooks/environment-smoke-test.md) 复跑全绿，以及编辑器 GUI 独立确认 Compatibility 与 17 个输入动作。下一阶段为 M1，**尚未启动**。
+- `macos_second_machine_smoke = verified`（2026-08-20）：覆盖原先「macOS 命令列尚未在真机验证」。人类按 CD-51 §4.1 在 macOS 26.5.2 arm64 跑通十步与编辑器 GUI；固定命令见 [README.md](../../README.md)，签字记录见烟测清单第 10 步。顺带确认 `--check-only` 在 macOS 上类型错误仍打印但退出码为 0，与 Windows 的退出码 1 不同。
 
 ## D.7 后端、数据与部署
 

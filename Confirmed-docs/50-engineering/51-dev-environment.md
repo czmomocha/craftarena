@@ -22,7 +22,7 @@
 | 版本管理 | GitHub 私有 Monorepo；受保护 `main`；Git LFS |
 | 3D 工具 | Blender，统一导出 GLB/glTF |
 | 服务端本地环境 | Godot Headless + Node.js 服务；Docker Compose 可选 |
-| CI | 目标为 GitHub Actions Linux + 自托管 Windows Runner。**当前只有 Linux 一档在跑**，自托管 Windows Runner 尚未搭建，Windows 侧验证仍靠开发机人工执行 [环境烟测清单](../../docs/runbooks/environment-smoke-test.md) |
+| CI | 目标为 GitHub Actions Linux + 自托管 Windows Runner。**当前只有 Linux 一档在跑**，自托管 Windows Runner 尚未搭建；Windows 与 macOS 开发机上的引擎行为都靠人工执行 [环境烟测清单](../../docs/runbooks/environment-smoke-test.md) |
 | 云环境 | 腾讯云香港计算与 COS；本地 + 一个长期测试环境 |
 
 不要在同一个工程里同时启用多个功能重叠的 Godot MCP，以免 AI 选择错误工具或重复修改场景。
@@ -67,7 +67,9 @@
 
 本节给「Windows 开发机已经跑通、另一台 Mac 要拉同一份代码」用。第 6–9 步（新建工程、装 GUT、写 AGENTS.md、建骨架）不要再做，那些已经在仓库里。
 
-尚未在真机验证。首次在 Mac 上跑通后，必须回来修正本节、[README.md](../../README.md) 的 macOS 命令列，并在 [环境烟测清单](../../docs/runbooks/environment-smoke-test.md) 第 10 步追加一行。在那之前，下面只是安装顺序，不是已验证的运行证据。
+2026-08-20 已在 macOS 26.5.2（arm64）真机跑通。逐步命令与签字记录见 [环境烟测清单](../../docs/runbooks/environment-smoke-test.md)；固定命令以 [README.md](../../README.md) 的 macOS 列为准。本节只写安装顺序。
+
+与 Windows 不同、跑烟测时不要照搬的两点：`--check-only` 在类型错误时会打印 `Warning treated as error`，但进程退出码仍为 0（以日志为准）；MatchHost 拉起的对局只有一个 Godot 进程，没有 `_console.exe` 外层。
 
 1. 安装 Git，并启用 Git LFS（`git lfs install`）。仓库有 LFS 指针，跳过会让后续 `--check-only` 和 GUT 读到指针文件而不是真文件；
 2. 安装 Node.js **24.x**（与 `package.json` 的 `engines.node` 一致）；
@@ -77,7 +79,7 @@
 6. 克隆仓库（私有仓库，用有权限的 GitHub 账号）。**不要**再跑一遍 Windows 上已经做过的项目初始化；
 7. 不安装 Godot MCP（[ADR-0003](../../docs/adr/0003-godot-mcp-selection.md)）；
 8. 在仓库根目录 `npm ci`，再按 README 的 macOS 列做一次 `--headless --import`（干净检出没有 `.godot/` 导入缓存）；
-9. 按 [环境烟测清单](../../docs/runbooks/environment-smoke-test.md) 把 PowerShell 换成 README 里对应的 bash 命令，从头跑一遍；另开一次编辑器做 GUI 检查。
+9. 按 [环境烟测清单](../../docs/runbooks/environment-smoke-test.md) 的 macOS 列从头跑一遍；另开一次编辑器做 GUI 检查。
 
 环境变量示例（路径按本机实际安装位置改）：
 
@@ -121,4 +123,4 @@ export GODOT4="/Applications/Godot.app/Contents/MacOS/Godot"
 
 **未完成这套闭环，不进入正式功能开发。** 人类须按同一份清单在开发机复跑并签字；仅有 AI 执行记录不够。
 
-可执行版本与历次执行记录见 [环境烟测清单](../../docs/runbooks/environment-smoke-test.md)。上面十步是本节拥有的要求，那份 runbook 只是它的落地形式；步骤增减先改这里。M0 退出时该闭环已由 AI 与人类各跑通一次，记录见清单第 10 步。
+可执行版本与历次执行记录见 [环境烟测清单](../../docs/runbooks/environment-smoke-test.md)。上面十步是本节拥有的要求，那份 runbook 只是它的落地形式；步骤增减先改这里。M0 退出时该闭环已由 AI 与人类在 Windows 上各跑通一次；2026-08-20 人类在第二台开发机（macOS）按同一清单再跑通一次，记录见清单第 10 步。

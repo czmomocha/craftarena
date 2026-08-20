@@ -47,7 +47,8 @@ Godot 4.7 提供了 `debug/gdscript/warnings/directory_rules`，看起来正好�
 
 实际执行过的证据：
 
-- 故意写一个未标注类型的脚本，`--check-only` 返回退出码 1，报 `Parse Error: Variable "untyped_value" has no static type. (Warning treated as error.)`；
+- 故意写一个未标注类型的脚本，`--check-only` 返回退出码 1，报 `Parse Error: Variable "untyped_value" has no static type. (Warning treated as error.)`（Windows 实测）；
+- 2026-08-20 在 macOS 上复测同一类错误脚本：同样打印 `Warning treated as error`，但 `--check-only` 进程退出码为 0。macOS 本地以日志为准，不能只看 `$?`；
 - 合规脚本 `res://src/client/main.gd` 同一命令返回 0；
 - 第一版 `test_project_contract.gd` 里用了 `int(ProjectSettings.get_setting(...))`，被门禁拦下并要求改写，说明规则对测试代码同样生效；
 - GUT 加载 `res://addons/gut` 下 259 个文件未受影响，确认 `directory_rules` 的排除规则起作用。

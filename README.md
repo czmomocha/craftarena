@@ -61,9 +61,7 @@ export GODOT4="/Applications/Godot.app/Contents/MacOS/Godot"
 
 ## 常用命令
 
-以下命令都在 Windows + Godot 4.7.2 + GUT 9.7.1 + Node 24 上实际执行验证过。CD-51 §4 要求把固定命令写在本文件，**禁止各 Agent 自行猜测参数**。
-
-macOS 一列尚未在真机验证，首次在 mac 上执行后请回来修正本表。
+以下命令都在 Windows 与 macOS 上、Godot 4.7.2 + GUT 9.7.1 + Node 24 实际执行验证过。CD-51 §4 要求把固定命令写在本文件，**禁止各 Agent 自行猜测参数**。
 
 ### Godot
 
@@ -76,7 +74,7 @@ macOS 一列尚未在真机验证，首次在 mac 上执行后请回来修正本
 | 单文件语法与类型检查 | `& $env:GODOT4_CONSOLE --headless --path game --check-only -s res://src/client/main.gd` | `"$GODOT4" --headless --path game --check-only -s res://src/client/main.gd` |
 | 运行 GUT 单元测试 | `& $env:GODOT4_CONSOLE --headless --path game -s res://addons/gut/gut_cmdln.gd -gdir=res://tests/unit -gexit` | `"$GODOT4" --headless --path game -s res://addons/gut/gut_cmdln.gd -gdir=res://tests/unit -gexit` |
 
-关于退出码：`--check-only` 和 GUT 的 `-gexit` 在失败时都返回 1，可以直接作为 CI 门禁条件，两者均已实测确认。
+关于退出码：GUT 的 `-gexit` 在失败时返回 1（Windows 已测失败路径；macOS 本次只测了全绿路径）。`--check-only` 在 Windows 上失败返回 1；在 macOS 4.7.2 上类型错误会打印 `SCRIPT ERROR` / `Warning treated as error`，但进程退出码仍为 0，本地不要只看 `$?`。Linux CI 按退出码收集 `--check-only` 失败，该失败路径未在 macOS 上复现为非 0，不能把本机行为说成 CI 已经覆盖。
 
 ### 后端与工具
 

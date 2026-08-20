@@ -194,7 +194,7 @@ AI 生成代码必须比普通手写代码有**更强的自动化证据**，因�
 
 按宪法第二十四条，**未在本表标为"已启用"的项目不得在任何材料中描述为已覆盖**。新增门禁时同时改本表和 workflow。
 
-另有一条平台缺口：CI 目前只跑 Linux runner。CD-51 §1 规划的自托管 Windows Runner 尚未搭建，因此**Windows 上的引擎行为没有任何自动回归**，只能靠开发机按 [环境烟测清单](../../docs/runbooks/environment-smoke-test.md) 人工执行。
+另有一条平台缺口：CI 目前只跑 Linux runner。CD-51 §1 规划的自托管 Windows Runner 尚未搭建，因此 **Windows 与 macOS 上的引擎行为都没有任何自动回归**，只能靠开发机按 [环境烟测清单](../../docs/runbooks/environment-smoke-test.md) 人工执行。macOS 上 `--check-only` 在类型错误时退出码仍为 0，本地门禁看日志；Linux CI 仍按退出码收集失败，这条失败路径未在桌面开发机上按 Linux 复测。
 
 ### 4.2 每日
 
