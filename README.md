@@ -4,7 +4,7 @@ Godot 4 + UGC 双玩法（TRAPRUSH / BASTION）项目 Monorepo。代码与仓库
 
 - 工程规则入口：[AGENTS.md](AGENTS.md)
 - 规范唯一事实源：[Confirmed-docs](Confirmed-docs/README.md)
-- 当前阶段：M0（环境、Monorepo 与宪法），见 [CD-61](Confirmed-docs/60-plan/61-milestones.md)
+- 当前阶段：M0 已退出；下一阶段 M1（共享定点仿真与 TRAPRUSH 灰盒），尚未启动。见 [CD-61](Confirmed-docs/60-plan/61-milestones.md)
 
 ## 目录
 
@@ -22,7 +22,7 @@ docs/       adr / plans / runbooks
 
 工具选型、精确版本锁定与安装步骤全部以 [CD-51](Confirmed-docs/50-engineering/51-dev-environment.md) 为准，本文件不复述选型理由。
 
-首次在一台新机器上准备环境时按 CD-51 §4 执行，完成后必须跑通 CD-51 §6 的环境验证烟测；**未完成那套闭环不进入正式功能开发**。
+首次在一台新机器上准备环境时按 CD-51 §4 执行。Windows 开发机已经跑通、要在第二台 Mac 上拉同一份代码时，按 [CD-51 §4.1](Confirmed-docs/50-engineering/51-dev-environment.md) 执行，不要再初始化一遍工程。完成后必须跑通 CD-51 §6 的环境验证烟测；**未完成那套闭环不进入正式功能开发**。
 
 烟测的逐步命令、预期输出与历次执行记录见 [环境烟测清单](docs/runbooks/environment-smoke-test.md)。想亲手确认这套环境成立，照它从头跑一遍即可，约 10 分钟。
 

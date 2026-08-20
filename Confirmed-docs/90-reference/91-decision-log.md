@@ -150,6 +150,7 @@
 - `godot_version_lock = 4_7_2_stable`（2026-08-20）：精确锁定 Godot 4.7.2-stable Standard，覆盖原先只写到次版本的 "Godot 4.7 stable"。4.7-stable 首发于 2026-06-18，4.7.2 为官方推荐的兼容维护版；两台开发机与 CI 必须使用同一精确版本与配套导出模板。
 - `human_playtest_cadence = internal_only`。
 - `internal_acceptance = owner_signoff_checklist`。
+- `milestone_m0 = exited`（2026-08-20）：[CD-61](../60-plan/61-milestones.md) M0 验收通过并退出。依据是 Linux CI 跑绿、人类按 [环境烟测清单](../../docs/runbooks/environment-smoke-test.md) 复跑全绿，以及编辑器 GUI 独立确认 Compatibility 与 17 个输入动作。下一阶段为 M1，**尚未启动**。
 
 ## D.7 后端、数据与部署
 

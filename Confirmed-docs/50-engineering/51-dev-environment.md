@@ -1,7 +1,7 @@
 # CD-51 开发环境搭建
 
 > 文档 ID：CD-51
-> 单一事实源：工具选型与版本锁定策略、资产入库规则、密钥管理边界、Windows 安装步骤、Godot 项目初始设置、AI 环境烟测清单
+> 单一事实源：工具选型与版本锁定策略、资产入库规则、密钥管理边界、Windows / macOS 安装步骤、Godot 项目初始设置、AI 环境烟测清单
 > 加载建议：搭建或修复环境、升级依赖、调整项目设置时读取
 > 上位约束：[CD-00 宪法](../00-constitution/CONSTITUTION.md) 第七、十八、二十三条
 > 相关：[CD-41 架构](../40-technical/41-architecture.md)、[CD-52 AI 协作规范](52-ai-workflow.md)、[CD-53 测试与 CI](53-testing-and-ci.md)
@@ -63,6 +63,30 @@
 
 **具体可执行的命令行不在本文件维护**，一律以仓库 [README.md](../../README.md) 的命令表为准，禁止让每个 Agent 自己猜参数。
 
+## 4.1 在已有仓库的第二台机器上（macOS）
+
+本节给「Windows 开发机已经跑通、另一台 Mac 要拉同一份代码」用。第 6–9 步（新建工程、装 GUT、写 AGENTS.md、建骨架）不要再做，那些已经在仓库里。
+
+尚未在真机验证。首次在 Mac 上跑通后，必须回来修正本节、[README.md](../../README.md) 的 macOS 命令列，并在 [环境烟测清单](../../docs/runbooks/environment-smoke-test.md) 第 10 步追加一行。在那之前，下面只是安装顺序，不是已验证的运行证据。
+
+1. 安装 Git，并启用 Git LFS（`git lfs install`）。仓库有 LFS 指针，跳过会让后续 `--check-only` 和 GUT 读到指针文件而不是真文件；
+2. 安装 Node.js **24.x**（与 `package.json` 的 `engines.node` 一致）；
+3. 安装 Cursor；
+4. 下载 Godot **4.7.2-stable Standard** 的 macOS 包，不下载 .NET 版；解压后的 `.app` 放进 `/Applications`；
+5. 只设 `GODOT4`，指向 `.app` 包内的可执行文件。macOS 没有 Windows 那种 GUI / console 双 exe，不要设 `GODOT4_CONSOLE`；
+6. 克隆仓库（私有仓库，用有权限的 GitHub 账号）。**不要**再跑一遍 Windows 上已经做过的项目初始化；
+7. 不安装 Godot MCP（[ADR-0003](../../docs/adr/0003-godot-mcp-selection.md)）；
+8. 在仓库根目录 `npm ci`，再按 README 的 macOS 列做一次 `--headless --import`（干净检出没有 `.godot/` 导入缓存）；
+9. 按 [环境烟测清单](../../docs/runbooks/environment-smoke-test.md) 把 PowerShell 换成 README 里对应的 bash 命令，从头跑一遍；另开一次编辑器做 GUI 检查。
+
+环境变量示例（路径按本机实际安装位置改）：
+
+```bash
+export GODOT4="/Applications/Godot.app/Contents/MacOS/Godot"
+```
+
+写入 `~/.zshrc` 或 `~/.bashrc` 后新开终端生效。验证：`"$GODOT4" --version` 必须输出 `4.7.2.stable`，且与 Windows 开发机、CI 使用同一精确版本。
+
 ## 5. Godot 项目初始设置
 
 必须先配置：
@@ -95,6 +119,6 @@
 9. 删除临时测试内容；
 10. 输出实际使用的命令和结果。
 
-**未完成这套闭环，不进入正式功能开发。**
+**未完成这套闭环，不进入正式功能开发。** 人类须按同一份清单在开发机复跑并签字；仅有 AI 执行记录不够。
 
-可执行版本与历次执行记录见 [环境烟测清单](../../docs/runbooks/environment-smoke-test.md)。上面十步是本节拥有的要求，那份 runbook 只是它的落地形式；步骤增减先改这里。
+可执行版本与历次执行记录见 [环境烟测清单](../../docs/runbooks/environment-smoke-test.md)。上面十步是本节拥有的要求，那份 runbook 只是它的落地形式；步骤增减先改这里。M0 退出时该闭环已由 AI 与人类各跑通一次，记录见清单第 10 步。
