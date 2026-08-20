@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, test } from "node:test";
 
+import { loadConfig } from "../src/config.ts";
 import { createLease, evaluateLease, renewLease } from "../src/lease.ts";
 import type { LaunchedProcess, MatchExit, MatchLaunchSpec, ProcessLauncher } from "../src/launcher.ts";
 import { PortAllocator } from "../src/ports.ts";
@@ -9,6 +10,24 @@ import { buildMatchHost } from "../src/server.ts";
 
 const LEASE_MS = 30 * 60 * 1000;
 const IDLE_MS = 10 * 60 * 1000;
+
+describe("match host config", () => {
+	test("prefers the console build on Windows so crash output is not lost", () => {
+		const env = { GODOT4: "C:\\Tools\\Godot.exe", GODOT4_CONSOLE: "C:\\Tools\\Godot_console.exe" };
+
+		assert.equal(loadConfig(env, "win32").godotExecutable, "C:\\Tools\\Godot_console.exe");
+		// 其他平台没有 GUI/console 之分，多一个变量只会让部署配置分叉。
+		assert.equal(loadConfig(env, "linux").godotExecutable, "C:\\Tools\\Godot.exe");
+	});
+
+	test("falls back to GODOT4 on Windows when no console build is configured", () => {
+		assert.equal(loadConfig({ GODOT4: "C:\\Tools\\Godot.exe" }, "win32").godotExecutable, "C:\\Tools\\Godot.exe");
+		assert.equal(
+			loadConfig({ GODOT4: "C:\\Tools\\Godot.exe", GODOT4_CONSOLE: "  " }, "win32").godotExecutable,
+			"C:\\Tools\\Godot.exe",
+		);
+	});
+});
 
 /** 假的进程启动器：让租约、端口与回收逻辑可以在没装 Godot 的机器上测。 */
 class FakeLauncher implements ProcessLauncher {

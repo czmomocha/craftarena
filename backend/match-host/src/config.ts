@@ -33,7 +33,10 @@ const DEFAULT_PORT_RANGE_MAX = 42099;
 
 const DEFAULT_RECLAIM_INTERVAL_MS = 15 * 1000;
 
-export function loadConfig(env: NodeJS.ProcessEnv = process.env): MatchHostConfig {
+export function loadConfig(
+	env: NodeJS.ProcessEnv = process.env,
+	platform: NodeJS.Platform = process.platform,
+): MatchHostConfig {
 	const portRangeMin = parseInteger(env["MATCH_HOST_PORT_RANGE_MIN"], DEFAULT_PORT_RANGE_MIN, "MATCH_HOST_PORT_RANGE_MIN");
 	const portRangeMax = parseInteger(env["MATCH_HOST_PORT_RANGE_MAX"], DEFAULT_PORT_RANGE_MAX, "MATCH_HOST_PORT_RANGE_MAX");
 
@@ -43,8 +46,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): MatchHostConfi
 	return {
 		host: env["MATCH_HOST_HOST"] ?? "127.0.0.1",
 		port: parseInteger(env["MATCH_HOST_PORT"], DEFAULT_PORT, "MATCH_HOST_PORT"),
-		// 与 README 命令表一致，引擎路径只从 GODOT4 取，不在代码里写死安装位置。
-		godotExecutable: env["GODOT4"] ?? "godot",
+		godotExecutable: resolveGodotExecutable(env, platform),
 		godotProjectPath: resolve(env["MATCH_HOST_GODOT_PROJECT"] ?? "./game"),
 		matchScene: env["MATCH_HOST_SCENE"] ?? "res://src/server/match_server.tscn",
 		portRangeMin,
@@ -56,6 +58,29 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): MatchHostConfi
 		version: env["CRAFTARENA_VERSION"] ?? "0.0.0-dev",
 		logLevel: env["MATCH_HOST_LOG_LEVEL"] ?? "info",
 	};
+}
+
+/**
+ * 引擎路径只从环境变量取，不在代码里写死安装位置（与 README 命令表一致）。
+ *
+ * Windows 上多一层选择：普通 `godot.exe` 是 GUI 子系统程序，不会向父进程的管道写
+ * stdout，于是 CD-44 §3 要求的"进程异常时尽力保留日志"会退化成一片空白，崩溃了
+ * 也看不到原因。同版本的 `_console.exe` 没有这个问题，所以优先用它。
+ * Linux 与 macOS 不存在这个区分，仍然直接用 GODOT4。
+ *
+ * 代价是 Windows 上会变成两级进程：`_console.exe` 自己再派生一个 `godot.exe`，
+ * 因此 MatchHost 记录的 pid 是外层 wrapper 而不是引擎本体，按 pid 排查时要注意。
+ * 已实测确认终止 wrapper 会连带回收内层引擎并释放对局端口，不会留下孤儿进程。
+ */
+function resolveGodotExecutable(env: NodeJS.ProcessEnv, platform: NodeJS.Platform): string {
+	if (platform === "win32") {
+		const consoleExecutable = env["GODOT4_CONSOLE"];
+		if (consoleExecutable !== undefined && consoleExecutable.trim() !== "") {
+			return consoleExecutable;
+		}
+	}
+
+	return env["GODOT4"] ?? "godot";
 }
 
 function parseInteger(raw: string | undefined, fallback: number, name: string): number {
