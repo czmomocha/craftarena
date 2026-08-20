@@ -85,6 +85,8 @@
 repo/
 ├─ AGENTS.md
 ├─ README.md
+├─ .github/
+│  └─ workflows/                 # CI；门禁范围见 CD-53 §4.1
 ├─ game/
 │  ├─ project.godot
 │  ├─ addons/
@@ -128,6 +130,8 @@ repo/
    └─ runbooks/
 ```
 
-Godot 主 MCP 尚未拍板，因此目录中不预建具体 MCP 插件。选定前禁止同时启用多个重叠 MCP，见 [CD-63](../60-plan/63-open-decisions.md)。
+Godot 主 MCP 已拍板延期至 M2 启动前重估（[ADR-0003](../../docs/adr/0003-godot-mcp-selection.md)），因此目录中不预建 MCP 插件。选定后也只允许启用一个，见 [CD-63](../60-plan/63-open-decisions.md)。
 
 `Confirmed-docs/` 保留在仓库根，是产品与工程规范的唯一事实源；`docs/adr/` 只记录实现级架构决策。
+
+上面是目标形态，不是当前完成度。截至 M0，`backend/contracts/` 里只有服务健康检查用的 TypeScript 类型，CD-91 定下的 `api_contract = json_schema_openapi` 尚未落地；`tools/` 下也只有 `dev-launcher/` 是实的，其余三个工具目录待对应里程碑创建。
