@@ -26,11 +26,14 @@ AI 不得把其他文档中的示例表格、推荐项或"建议"当成已确认
 
 ## 2. 工具与平台细节
 
-1. 唯一 Godot 主 MCP 的最终选择——专项调研已完成并拍板**延期至 M2 启动前重估**（[ADR-0003](../../docs/adr/0003-godot-mcp-selection.md) 选项 A）。在重估出结论前仍属未决事项，任何 Agent 不得自行选定或安装；
-2. 微信小游戏具体适配插件、包体拆分与轻量编辑边界；
-3. PostgreSQL 迁移触发条件与托管方式；
-4. GodotSteam 的具体能力清单；
-5. 正式 Production、备份、监控、告警、抗滥用与可访问性何时立项。
+1. 微信小游戏具体适配插件、包体拆分与轻量编辑边界；
+2. PostgreSQL 迁移触发条件与托管方式；
+3. GodotSteam 的具体能力清单；
+4. 正式 Production、备份、监控、告警、抗滥用与可访问性何时立项。
+
+已关闭并迁出本清单：唯一 Godot 主 MCP 选定为 Godot AI，插件不入库，遥测强制关（2026-08-21，[ADR-0003](../../docs/adr/0003-godot-mcp-selection.md)、[CD-51 §7](../50-engineering/51-dev-environment.md)）。未完成接入烟测签字前，Agent 仍不得自行安装或写入 CI——那是执行门禁，不是未决选型。
+
+已关闭并迁出本清单：多 Agent 启用时机与运行时（2026-08-21，[ADR-0004](../../docs/adr/0004-multi-agent-adoption-timing-and-architecture.md)）。Cursor 原生 worktree + subagent + hooks；一期不引入 Multica 与 Automations；审查由 Bugbot 承担。启用判据与权限边界见 [CD-52](../50-engineering/52-ai-workflow.md)。四条退出条件未全绿前不得开启多域并行。
 
 ## 3. 明确跳过的运营类议题
 

@@ -1,10 +1,10 @@
 # CD-52 AI 主导开发方式
 
 > 文档 ID：CD-52
-> 单一事实源：人机分工与 AI 权限边界、标准任务循环、任务单模板、AI 使用规则、多 Agent 协作、项目治理与语言约定
+> 单一事实源：人机分工与 AI 权限边界、标准任务循环、任务单模板、AI 使用规则、多 Agent 协作、项目治理与语言约定、Godot AI MCP 使用边界
 > 加载建议：AI Agent 接手任务时必读；调整协作流程或权限边界时读取
 > 上位约束：[CD-00 宪法](../00-constitution/CONSTITUTION.md) 第九、十、十一、十二、十八、二十条
-> 相关：[CD-53 测试与 CI](53-testing-and-ci.md)、[CD-51 开发环境](51-dev-environment.md)、[CD-61 里程碑路线](../60-plan/61-milestones.md)
+> 相关：[CD-53 测试与 CI](53-testing-and-ci.md)、[CD-51 开发环境](51-dev-environment.md)、[CD-61 里程碑路线](../60-plan/61-milestones.md)、[ADR-0003](../../docs/adr/0003-godot-mcp-selection.md)、[ADR-0004](../../docs/adr/0004-multi-agent-adoption-timing-and-architecture.md)
 > 派生自：初稿 v0.2 §43–§47
 
 ## 1. 角色分工
@@ -15,7 +15,7 @@
 - 搜索项目上下文和官方文档；
 - 编写与重构 GDScript；
 - 创建数据 Schema、规则和测试夹具；
-- 通过 MCP 修改场景和编辑器对象；
+- 通过 MCP 修改场景和编辑器对象（仅限该开发机已完成 [CD-51 §7](51-dev-environment.md) 接入烟测签字；边界见 §7）；
 - 生成单元、集成、回放、网络和安全测试；
 - 运行测试、读取错误并修复；
 - 生成占位 UI、低模资产草稿、音效草稿；
@@ -23,7 +23,14 @@
 - 根据日志和指标定位问题；
 - 批量生成合法 UGC 内容做压力测试。
 
-**权限边界**：AI 可以自主读取和修改代码、场景、文档和测试，也可运行本地游戏、Headless 与测试。未经人类明确确认，AI **不得**创建提交、推送、部署或发布内容。
+**权限边界**：AI 可以自主读取和修改代码、场景、文档和测试，也可运行本地游戏、Headless 与测试。
+
+提交与推送按 [ADR-0004](../../docs/adr/0004-multi-agent-adoption-timing-and-architecture.md) 对 `ai_autonomy = edit_test_no_commit_release` 的收窄解释执行（[CD-91 D.6](../90-reference/91-decision-log.md)）：
+
+- **允许**：在隔离的 agent 分支或 git worktree 上创建提交，并推送到对应的非保护远程分支。这是 Cursor Cloud Agent 与 `/worktree` 的运行时形态，也避免未提交产出被 worktree 清理丢失。
+- **禁止，且属宪法第十八条人类门禁**：向 `main` 或任何受保护分支提交或推送；合并 PR；部署；发布；回滚线上内容。人类门禁落在 PR 合并（`pr_merge_gate = required_ci_one_human`）与 GitHub 分支保护。
+- **机械化拦截（待落地）**：项目级 `.cursor/hooks.json` 的 `beforeShellExecution` 拦向 `main` / 受保护分支的推送，以及 `git worktree remove --force`。该 hook **必须** `failClosed: true`（Cursor 默认 fail-open，崩溃即放行）。判定逻辑必须有单测。hook 未入库之前，不得把它描述为已生效门禁。
+- **硬前置**：GitHub 分支保护未配置完成之前，上述「允许」条款不生效，仍按原字面执行——Agent **不得**创建任何提交或推送。分支保护的目标项见 [CD-53 §4.5](53-testing-and-ci.md)，当前是否已配置以那一节为准。
 
 ### 1.2 人类负责
 
@@ -51,7 +58,7 @@
 → 运行场景 / Headless 验证
 → 检查日志与性能
 → 人类审查
-→ 人类决定是否提交 / 推送 / 部署
+→ 人类决定是否合入 main / 部署 / 发布
 → 更新文档和任务状态
 ```
 
@@ -66,6 +73,7 @@ AI 不得用"代码看起来正确"代替运行证据。
 背景：
 允许修改：
 禁止修改：
+隔离方式：worktree | cloud | 无
 输入文件：
 验收标准：
 必须运行的测试：
@@ -73,32 +81,68 @@ AI 不得用"代码看起来正确"代替运行证据。
 输出物：
 ```
 
-功能任务应控制在**半天到两天**可验证的粒度。禁止用"实现完整 UGC 平台"这类无法审查的任务驱动 Agent。
+`隔离方式` 必填。阶段 A（§5.1 的四条退出条件未全绿）只允许 `无`，即单 Agent 串行、共享当前 checkout。阶段 B 起必须填 `worktree` 或 `cloud`：**Cursor 的 subagent 默认共享父 Agent 的 checkout，不显式要求隔离会静默互相覆盖。** 不得留空。
+
+功能任务应控制在**半天到两天**可验证的粒度。禁止用"实现完整 UGC 平台"这类无法审查的任务驱动 Agent。任务结束时由人类审查后立刻开 PR，不要让未提交产出跨夜留在 worktree 里（Cursor 托管 worktree 会自动清理，见 [CD-62](../60-plan/62-risk-register.md)）。
 
 ## 4. AI 使用规则
 
 1. 先读项目现有代码，再生成代码；
 2. 优先查 Godot 4.7 官方文档，不凭记忆猜 API；
 3. 禁止 Godot 3 API；
-4. 不直接大范围手改 `.tscn`；优先通过 MCP/Editor API 和 UndoRedo；
+4. 不直接大范围手改 `.tscn`；优先通过 MCP/Editor API 和 UndoRedo。M2 生产级启用之后，大型场景任务必须走这条路径；接入烟测尚未在该机器签字时，退回受审查的文件 / Editor API 方式，不得把「MCP 没连上」当成任务失败；
 5. 不随意使用 `@tool`，避免编辑器死循环；
 6. 不引入新依赖，除非说明必要性、许可、维护风险和平台支持；
 7. 不引入 C#；
 8. `SimulationCore`、命令、Schema、Rule VM、网络与热发布必须测试先行；纯表现/UI 可先实现后补烟测和视觉检查；
 9. 不把客户端结果当权威结果；
 10. 不在 UGC 中执行任意代码；
-11. 不自动提交、推送、部署或发布；
+11. 提交与推送边界见 §1.1；不得部署或发布；
 12. 无法解释的代码不得合入；
 13. 遇到 Schema、网络协议、数据删除和发布策略变更时必须请求人类确认；
 14. AI 资产通过格式、性能和许可证元数据自动检查后可以进入测试发布包，不要求逐项人工质量审批；
 15. AI 资产不强制保存模型、提示词、种子或来源；收到权利投诉时由人类逐案判断是否下架或替换；
-16. 给 Godot 引擎官方仓库贡献时遵守其 AI 贡献政策；本项目游戏代码不受该贡献禁令影响。
+16. 给 Godot 引擎官方仓库贡献时遵守其 AI 贡献政策；本项目游戏代码不受该贡献禁令影响；
+17. 唯一 Godot 主 MCP 是 Godot AI，使用边界见 §7；禁止再启用功能重叠的第二套 Godot MCP。
 
 ## 5. 多 Agent 协作
 
-始终由**一个主 Agent** 统筹。子 Agent 只在互不重叠的模块或独立工作区并行，禁止同时修改同一场景、Schema 或协议。
+决策来源：[ADR-0004](../../docs/adr/0004-multi-agent-adoption-timing-and-architecture.md)。本节是启用时机、运行时形态与角色表的所有者。
 
-必要时按任务临时分工：
+始终由**一个主 Agent** 统筹。子 Agent 只在互不重叠的模块或独立工作区并行，禁止同时修改同一场景、Schema 或协议。Cursor 没有 Agent Teams 那样的共享任务列表与成员间消息，「统筹」靠任务单与 prompt 纪律，不是运行时保证。
+
+### 5.1 启用时机
+
+并行度的瓶颈是人类审查带宽，不是编排工具。启用判据是门禁覆盖率，不是里程碑编号。**下列四条全部成立之前，任何 Agent 不得以「提高效率」为由开启多域并行。**
+
+| # | 条件 |
+|---|---|
+| A1 | `game/src/shared/` 有 v1 契约，且被 GUT 单测覆盖 |
+| A2 | 契约变更被 `CODEOWNERS` 标为需要人类批准 |
+| A3 | Schema 验证、禁止 API 扫描、worktree 并行环境三条门禁上线（是否已进 CI 以 [CD-53 §4.1](53-testing-and-ci.md) 为准） |
+| A4 | 仓库里走通至少一次「Agent 产出 → PR → CI 全绿 → 人类 review → 人类合并」 |
+
+当前（2026-08-21）四条均未成立。阶段 A 由主 Agent 串行完成 L0 契约冻结与上述门禁，中间不并行。
+
+### 5.2 运行时形态
+
+一期使用 Cursor 原生能力，零自建编排框架。下表是已拍板的运行时形态，**不是当前磁盘事实**——仓库里此刻没有 `.cursor/` 目录；对应文件随阶段 A 待办落地，落地前不得声称并行环境已可用。
+
+| 能力 | 位置 / 用法 | 约束 |
+|---|---|---|
+| 工作区隔离 | IDE `/worktree`、CLI `-w/--worktree`、Cloud Agent 独立 VM | 默认上限与自动清理见 Cursor 文档；不要在 worktree 里放未提交且不可再生的东西 |
+| 角色定义 | 项目级 `.cursor/agents/*.md` | frontmatter 只有 `name`、`description`、`model`、`readonly`、`is_background`。**没有 `tools` 白名单**；不得声称 `readonly: true` 是已证实的硬边界 |
+| 提交拦截 | `.cursor/hooks.json` 的 `beforeShellExecution` | 见 §1.1；必须 `failClosed: true` |
+| 代码审查 | Bugbot：本地 `/review-bugbot`，PR 侧在第一个 PR 走通后开启 | 配置在 `.cursor/BUGBOT.md`。`.cursor/rules/*.mdc` 对 Bugbot 不生效。findings 默认 `neutral`，**不是 CI 门禁**（[CD-53 §4.1](53-testing-and-ci.md)） |
+| worktree 基建 | `.cursor/worktrees.json` 的 `setup-worktree-windows` / `setup-worktree-unix` | `npm install`、按需拷本地文件、Godot `--import`、写端口偏移。**禁止 symlink `node_modules`** |
+
+一期**不引入** Multica 类平台，**不用** Cursor Automations（配置无法入库）。重估触发点见 ADR-0004 §6.4。
+
+并行度上限 **3**，先跑 **2** 个域，确认审查节奏后再加第 3 个。不要一上来开 5 个。阶段 B 的域划分与 M2 启动前工具链评审见 [CD-61](../60-plan/61-milestones.md)。
+
+### 5.3 角色
+
+按任务临时分工。角色定义入库在 `.cursor/agents/`，阶段 B 启动时才建：
 
 | 角色 | 职责 |
 |---|---|
@@ -108,7 +152,7 @@ AI 不得用"代码看起来正确"代替运行证据。
 | 网络 Agent | 命令、快照、重连和回放 |
 | 测试 Agent | 生成测试、恶意输入和性能场景 |
 | 资产 Agent | 生成占位资源并执行导入检查 |
-| 审查 Agent | 只读检查实现与宪法是否冲突 |
+| 审查 | **不建 Agent**。由 Bugbot 承担。Cursor subagent 继承父 Agent 的全部工具，做不成硬只读 |
 
 任何 Agent 产物都必须进入同一代码库、同一测试门禁和同一人类审批流程。
 
@@ -119,3 +163,34 @@ AI 不得用"代码看起来正确"代替运行证据。
 - 技术文档、Issue 和 ADR 以中文为主；
 - 代码标识符、协议字段和 Git 提交信息使用英文；
 - 提交遵循带 scope 的 Conventional Commits。
+
+## 7. Godot AI MCP 使用边界
+
+安装、版本、遥测开关与接入时机的所有者是 [CD-51 §7](51-dev-environment.md)。选型与阶段定义见 [ADR-0003](../../docs/adr/0003-godot-mcp-selection.md)。本节只约束 Agent **已经连上 MCP 之后**怎么用。
+
+### 7.1 按里程碑
+
+- **M1**：默认仍用文件工具写 `.gd` 与测试。仅当该开发机已完成接入烟测签字，才可用 MCP 改表现层占位场景；不得用 MCP 表达权威仿真状态。
+- **M2 生产级启用之后**：大型 `.tscn` 走 MCP / Editor API / UndoRedo；优先 `batch_execute` 做可回滚的一批节点操作，改完在编辑器里确认 Ctrl+Z 仍然有效。
+- **任何阶段**：编辑器未开或 MCP 不可用时，Headless、GUT 与 README 命令仍是正路。不得把 Godot AI 写进 CI job，不得在 MatchServer 进程里依赖 `_mcp_game_helper`。
+
+### 7.2 禁止
+
+- `editor_manage(op="game_eval")`：这是对运行中游戏的任意求值，不能当调试便门，更不能当权威逻辑；
+- 用 `test_run` / `McpTestSuite` 替代 GUT 或 [CD-53](53-testing-and-ci.md) 门禁；编辑器内试跑只是辅助；
+- 开启 Vision Routing（截图会离开本机）；
+- `--allow-host` 或把 MCP HTTP 绑到非回环地址；
+- 提交 `game/addons/godot_ai/`、`project.godot` 里的 `godot_ai` 插件项、或 `_mcp_game_helper` autoload；
+- 为「让 MCP 更好用」向已提交工程添加新的 Autoload 或放宽核心目录类型门禁。
+
+### 7.3 提交前
+
+若本机为了开 MCP 改脏了 `game/project.godot`，提交前必须还原那两处（插件列表与 helper autoload）。工作区里出现 `game/addons/godot_ai/` 是 gitignore 预期内的本机文件，不得 `git add`。
+
+`.cursor/` 入库边界：
+
+| 入库 | 不入库 |
+|---|---|
+| `agents/`、`hooks.json`、`worktrees.json`、`BUGBOT.md` | `mcp.json`（含本机绝对路径）、`permissions.json`（自然语言指令，官方明确不是安全边界） |
+
+不要把用户目录里带绝对路径的 attach 片段拷进仓库。不要把 `permissions.json` 入库后当成门禁。

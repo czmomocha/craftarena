@@ -28,11 +28,11 @@
 → 运行场景 / Headless 验证
 → 检查日志与性能
 → 人类审查
-→ 人类决定是否提交 / 推送 / 部署
+→ 人类决定是否合入 main / 部署 / 发布
 → 更新文档和任务状态
 ```
 
-不得用"代码看起来正确"代替运行证据。完整分工与任务单模板见 [CD-52](Confirmed-docs/50-engineering/52-ai-workflow.md)。
+不得用"代码看起来正确"代替运行证据。完整分工、任务单模板与提交边界见 [CD-52](Confirmed-docs/50-engineering/52-ai-workflow.md)。
 
 ## 3. 二十六条红线
 
@@ -202,4 +202,4 @@ AI 或人类不能以"实现完了"代替测试证据。没有执行结果的测
 
 ## 8. 命令
 
-环境要求与安装步骤的所有者文档是 [CD-51](Confirmed-docs/50-engineering/51-dev-environment.md)。**实际可执行的固定命令写在 [README.md](README.md)**，禁止每个 Agent 自己猜命令行参数。
+环境要求与安装步骤的所有者文档是 [CD-51](Confirmed-docs/50-engineering/51-dev-environment.md)。**实际可执行的固定命令写在 [README.md](README.md)**，禁止每个 Agent 自己猜命令行参数。Godot 主 MCP 的安装、遥测开关与接入签字见 [CD-51 §7](Confirmed-docs/50-engineering/51-dev-environment.md) 与 [Godot AI 接入烟测](docs/runbooks/godot-ai-mcp-setup.md)；使用边界见 [CD-52 §7](Confirmed-docs/50-engineering/52-ai-workflow.md)。

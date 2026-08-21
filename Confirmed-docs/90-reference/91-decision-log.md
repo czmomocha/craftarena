@@ -123,9 +123,11 @@
 
 ## D.6 AI、协作与项目治理
 
-- `ai_autonomy = edit_test_no_commit_release`。
+- `ai_autonomy = edit_test_no_commit_release` 已被 `ai_autonomy_scope = isolated_branch_commit_ok`（2026-08-21）**收窄解释、并未推翻**：禁止的是向 `main` 或受保护分支提交/推送，以及部署、发布与线上回滚；允许在隔离的 agent 分支或 worktree 上 commit/push。人类门禁落在 PR 合并（`pr_merge_gate`）与 GitHub 分支保护。**分支保护落地前仍按原字面执行**——Agent 不得创建任何提交。口径见 [CD-52 §1.1](../50-engineering/52-ai-workflow.md)，来源 [ADR-0004](../../docs/adr/0004-multi-agent-adoption-timing-and-architecture.md)。
 - `human_review_granularity = task_and_gate`。
 - `ai_parallelism = lead_isolated_domains`。
+- `multi_agent_runtime = cursor_native_worktree`（2026-08-21）：一期用 Cursor 原生 `/worktree` + `.cursor/agents/` + `.cursor/hooks.json`。不引入 Multica 类平台，不用 Cursor Automations。启用判据、并行度上限与角色表见 [CD-52 §5](../50-engineering/52-ai-workflow.md)。
+- `code_review_assist = bugbot`（2026-08-21）：审查角色不建 Cursor subagent，由 Bugbot 承担。本地 `/review-bugbot` 先行，第一个 PR 走通后再开 PR 侧。不启用 fail-on-unresolved-issues，故不是 CI 门禁。配置与边界见 [CD-52 §5.2](../50-engineering/52-ai-workflow.md)，状态见 [CD-53 §4.1](../50-engineering/53-testing-and-ci.md)。
 - `test_first_scope = core_tdd_presentation_after`。
 - `ai_asset_policy = auto_publish_if_technical`。
 - `ai_asset_sources = no_traceability`。
@@ -146,7 +148,7 @@
 - `project_scaffold = minimal_custom`。
 - `repo_structure = monorepo`。
 - `asset_source_control = lfs_sources_and_runtime`。
-- `godot_mcp_choice = 延期专项调研` 已被 `godot_mcp_choice = defer_to_m2`（2026-08-20）覆盖：专项调研完成后采纳 [ADR-0003](../../docs/adr/0003-godot-mcp-selection.md) 选项 A——**暂不选定主 MCP，M2 启动前按七条清单重估**。原值表示"调研尚未进行"，现调研已完成，结论是延期。M1 期间继续使用受审查的 Editor API / 文件方式（[CD-51 §6](../50-engineering/51-dev-environment.md)），不得安装任何 MCP。
+- `godot_mcp_choice = 延期专项调研` 已被 `godot_mcp_choice = defer_to_m2`（2026-08-20）覆盖：专项调研完成后曾采纳 [ADR-0003](../../docs/adr/0003-godot-mcp-selection.md) 选项 A。该值再被 `godot_mcp_choice = godot_ai_v3_1_5`（2026-08-21）覆盖：M1 启动前第二轮调研选定 **Godot AI**（MIT，GDScript 插件 + Python/uv，~43 工具 / 120+ 操作）为唯一主 MCP。匿名遥测强制关；插件不入库；接入烟测与 M1 仿真拆开，M2 启动前生产级启用。版本与开关见 [CD-51 §7](../50-engineering/51-dev-environment.md)。
 - `godot_version_lock = 4_7_2_stable`（2026-08-20）：精确锁定 Godot 4.7.2-stable Standard，覆盖原先只写到次版本的 "Godot 4.7 stable"。4.7-stable 首发于 2026-06-18，4.7.2 为官方推荐的兼容维护版；两台开发机与 CI 必须使用同一精确版本与配套导出模板。
 - `human_playtest_cadence = internal_only`。
 - `internal_acceptance = owner_signoff_checklist`。

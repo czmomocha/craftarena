@@ -40,12 +40,14 @@
 | 改账号、登录、离线、单局结算 | CD-00 | [CD-13 账号与会话](10-product/13-account-and-session.md) |
 | 改后端 API、数据库、网关、MatchHost | CD-00 | [CD-44 部署与容量](40-technical/44-deployment.md)、CD-41、[CD-14 数据与遥测](10-product/14-data-and-telemetry.md) |
 | 搭建或修复开发环境 | CD-00 | [CD-51 开发环境](50-engineering/51-dev-environment.md) |
+| 安装、关闭遥测或使用 Godot 主 MCP | CD-00 | [CD-51 §7](50-engineering/51-dev-environment.md)、[CD-52 §7](50-engineering/52-ai-workflow.md)、[ADR-0003](../docs/adr/0003-godot-mcp-selection.md) |
 | 写测试、改 CI 门禁 | CD-00 | [CD-53 测试与 CI](50-engineering/53-testing-and-ci.md) |
 | 判断当前该做什么、验收标准 | CD-00 | [CD-61 里程碑路线](60-plan/61-milestones.md) |
 | 评估范围、平台、设备、商业化 | CD-00 | [CD-11 范围与平台](10-product/11-scope-and-platforms.md) |
 | 想知道"某个设计为什么是这样" | — | [CD-91 决策记录](90-reference/91-decision-log.md) |
 | 发现某件事没定过 | CD-00 | [CD-63 开发期决策清单](60-plan/63-open-decisions.md)、[CD-62 风险登记册](60-plan/62-risk-register.md) |
 | 作为 AI Agent 接手任务 | CD-00 | [CD-52 AI 协作规范](50-engineering/52-ai-workflow.md) |
+| 启用或调整多 Agent 并行 | CD-00 | [CD-52 §5](50-engineering/52-ai-workflow.md)、[ADR-0004](../docs/adr/0004-multi-agent-adoption-timing-and-architecture.md) |
 
 ## 4. 完整文档地图
 
@@ -92,8 +94,8 @@
 
 | ID | 文档 | 内容 |
 |---|---|---|
-| CD-51 | [51-dev-environment.md](50-engineering/51-dev-environment.md) | 工具选型与版本锁定、Windows 安装、Godot 项目设置、AI 环境烟测 |
-| CD-52 | [52-ai-workflow.md](50-engineering/52-ai-workflow.md) | 人机分工、任务循环、任务单模板、AI 使用规则、多 Agent 与协作约定 |
+| CD-51 | [51-dev-environment.md](50-engineering/51-dev-environment.md) | 工具选型与版本锁定、Windows 安装、Godot 项目设置、AI 环境烟测、Godot AI 安装与遥测开关 |
+| CD-52 | [52-ai-workflow.md](50-engineering/52-ai-workflow.md) | 人机分工、任务循环、任务单模板、AI 使用规则、多 Agent 与协作约定、Godot AI MCP 使用边界 |
 | CD-53 | [53-testing-and-ci.md](50-engineering/53-testing-and-ci.md) | 测试原则与层级、性能观察参考、CI 门禁、Definition of Done、首批测试用例 |
 
 ### 60 计划与风险
@@ -132,8 +134,8 @@
 | Component Schema、Rule VM、命令字段 | CD-42 |
 | 协议编码、传输、回放内容 | CD-43 |
 | 容量、租约、部署形态、数据库所有权 | CD-44 |
-| 工具版本、安装步骤、项目设置 | CD-51 |
-| AI 权限边界与工作流 | CD-52 |
+| 工具版本、安装步骤、项目设置、Godot 主 MCP 与其遥测开关 | CD-51 |
+| AI 权限边界、工作流与 Godot AI 使用边界 | CD-52 |
 | 测试层级、CI 门禁、DoD、性能观察值 | CD-53 |
 | 里程碑与验收 | CD-61 |
 | 风险状态 | CD-62 |
