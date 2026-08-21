@@ -57,7 +57,7 @@ npm ci
 
 ## 第 2–3 步：新建一个静态类型 GDScript 与临时场景
 
-MCP 未选定（[ADR-0003](../adr/0003-godot-mcp-selection.md)），所以按 CD-51 §6 第 2 步的规定走文件方式。
+MCP 已选定为 Godot AI（[ADR-0003](../adr/0003-godot-mcp-selection.md)），但 **M0 这十步仍然走文件方式**：它们证明的是 Headless / CI 闭环，不依赖打开的编辑器。若要在本机启用 MCP，另走 [Godot AI 接入烟测](godot-ai-mcp-setup.md)，不要改本清单的第 2–3 步来「顺便装插件」。
 
 新建 `game/src/client/_smoke_probe.gd`，内容如下：
 
@@ -350,4 +350,5 @@ CD-51 §6 第 10 步要求输出实际使用的命令与结果。命令即本文
 - **Windows / macOS 均无自动回归**。CI 只有 Linux runner（[CD-53 §4.1](../../Confirmed-docs/50-engineering/53-testing-and-ci.md)），两台桌面开发机上的引擎行为完全依赖本清单被人手动执行。
 - **不覆盖网络故障与性能**。这两类按 CD-53 §1.1 是明确接受的风险，没有门禁。
 - **不验证对局玩法**。M0 的对局进程只打印一行启动日志就挂着，没有仿真、没有网络协议。真正的对局验收从 M1 开始。
+- **不覆盖 Godot AI MCP**。主 MCP 已选定，但接入烟测是独立清单，CI 不安装、不启动该插件。
 - **macOS 上 `--check-only` 的退出码不能当门禁**。类型错误会打印，但进程仍返回 0。Linux CI 仍按退出码收集失败；该失败路径未在本机复现，不能把 macOS 的退出码行为说成 CI 已经覆盖。

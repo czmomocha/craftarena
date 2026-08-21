@@ -130,7 +130,7 @@ repo/
    └─ runbooks/
 ```
 
-Godot 主 MCP 已拍板延期至 M2 启动前重估（[ADR-0003](../../docs/adr/0003-godot-mcp-selection.md)），因此目录中不预建 MCP 插件。选定后也只允许启用一个，见 [CD-63](../60-plan/63-open-decisions.md)。
+Godot 主 MCP 已选定为 Godot AI（[ADR-0003](../../docs/adr/0003-godot-mcp-selection.md)）。插件只出现在本机 `game/addons/godot_ai/`，**不预建、不入库**；已提交的 `project.godot` 不启用该插件、不写入 `_mcp_game_helper`。同时只允许这一套 Godot MCP。安装与遥测开关见 [CD-51 §7](../50-engineering/51-dev-environment.md)。
 
 `Confirmed-docs/` 保留在仓库根，是产品与工程规范的唯一事实源；`docs/adr/` 只记录实现级架构决策。
 

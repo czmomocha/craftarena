@@ -26,3 +26,5 @@
 | BASTION | 玩法二《双塔要塞》代号 | [CD-22](../20-gameplay/22-bastion.md) |
 | MatchHost | 管理 Godot MatchServer 子进程生命周期的监管进程 | [CD-44](../40-technical/44-deployment.md) |
 | RealtimeGateway | 唯一公网 TLS WebSocket 入口，代理到内网 MatchServer | [CD-41](../40-technical/41-architecture.md) |
+| Godot AI | 本项目唯一 Godot 主 MCP：GDScript 编辑器插件 + 本机 Python（uv）服务，MIT | [CD-51 §7](../50-engineering/51-dev-environment.md)、[ADR-0003](../../docs/adr/0003-godot-mcp-selection.md) |
+| `_mcp_game_helper` | Godot AI 为编辑器试玩进程注入的 autoload；禁止进入已提交的 `project.godot` 与 MatchServer | [CD-51 §7.3](../50-engineering/51-dev-environment.md) |
