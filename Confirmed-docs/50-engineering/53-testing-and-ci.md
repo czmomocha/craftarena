@@ -192,7 +192,7 @@ AI 生成代码必须比普通手写代码有**更强的自动化证据**，因�
 | 编辑文件的 linter 诊断 | 未实现 | 依赖开发机 IDE，未进 CI |
 | PR Web 预览 | 未实现 | 等 Web 导出与沙盒环境落地 |
 | Godot AI MCP | **不进 CI** | 只服务本机打开的编辑器；Headless / GUT / `npm test` 仍是门禁。不得把 `test_run` / `McpTestSuite` 写成自动回归。接入与生产级启用见 [CD-51 §7](51-dev-environment.md)、[ADR-0003](../../docs/adr/0003-godot-mcp-selection.md) |
-| Bugbot | **非门禁** | 已拍板引入（[ADR-0004](../../docs/adr/0004-multi-agent-adoption-timing-and-architecture.md) 决策 6）。本地 `/review-bugbot` 已于 2026-08-21 跑过，该路径会注入 `AGENTS.md`。`.cursor/BUGBOT.md` 已入库（门禁 2 红线 + CD-00 / `AGENTS.md` 链接）。PR 侧仍未开。findings 默认 `neutral`，不启用 fail-on-unresolved-issues 之前**不得**描述为已覆盖的合并门禁。配置见 [CD-52 §5.2](52-ai-workflow.md) |
+| Bugbot | **非门禁** | 已拍板引入（[ADR-0004](../../docs/adr/0004-multi-agent-adoption-timing-and-architecture.md) 决策 6）。本地 `/review-bugbot` 已于 2026-08-21 跑过。`.cursor/BUGBOT.md` 已入库。**GitHub PR 侧已跳过**（Cursor SCM 安装对不上）；合入继续靠本表已启用的 CI + [§4.5](#45-pr-合并规则) 人类批准。不得描述为已覆盖的合并门禁。配置见 [CD-52 §5.2](52-ai-workflow.md) |
 
 按宪法第二十四条，**未在本表标为"已启用"的项目不得在任何材料中描述为已覆盖**。新增门禁时同时改本表和 workflow。
 
@@ -223,7 +223,7 @@ AI 生成代码必须比普通手写代码有**更强的自动化证据**，因�
 
 ### 4.5 PR 合并规则
 
-PR 合并必须 CI 全绿并至少获得一次人类批准；AI 审查不能替代人类。Bugbot 的 PR check 默认结论为 `neutral`，勾选该 check **不会**因为发现问题而阻止合并，因此它不构成本条的「一次人类批准」。
+PR 合并必须 CI 全绿并至少获得一次人类批准；AI 审查不能替代人类。GitHub PR 侧 Bugbot 已跳过，不构成本条的「一次人类批准」。若日后恢复，其 check 默认仍为 `neutral`，勾选该 check **不会**因为发现问题而阻止合并。
 
 [ADR-0004](../../docs/adr/0004-multi-agent-adoption-timing-and-architecture.md) 决策 4 把 GitHub 分支保护定为隔离分支提交的硬前置。目标配置：
 

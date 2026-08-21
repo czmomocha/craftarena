@@ -87,7 +87,7 @@ repo/
 ├─ README.md
 ├─ .cursor/
 │  ├─ agents/                    # 角色定义；无审查 Agent
-│  ├─ BUGBOT.md                  # PR Bugbot 规则；非门禁
+│  ├─ BUGBOT.md                  # 本地/日后 PR Bugbot 规则；非门禁；PR 侧已跳过
 │  ├─ hooks.json
 │  └─ worktrees.json
 ├─ .github/

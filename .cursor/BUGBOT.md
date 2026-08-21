@@ -1,8 +1,10 @@
 # Bugbot
 
-This file is what GitHub PR Bugbot loads. It is **not** a merge gate: findings default to `neutral`. Do not treat this check as blocking.
+This file is what GitHub PR Bugbot would load. It is **not** a merge gate: findings default to `neutral`.
 
-Local `/review-bugbot` already injects root [`AGENTS.md`](../AGENTS.md). PR-side Bugbot does not. Follow the linked sources instead of copying numbers out of them.
+GitHub PR-side Bugbot is **deferred** (Cursor SCM installation does not match this repository). Merge relies on CI plus a human approval. Local `/review-bugbot` remains optional.
+
+Local `/review-bugbot` already injects root [`AGENTS.md`](../AGENTS.md). Follow the linked sources instead of copying numbers out of them.
 
 ## Sources (do not restate parameters)
 
