@@ -152,7 +152,8 @@
 - `godot_version_lock = 4_7_2_stable`（2026-08-20）：精确锁定 Godot 4.7.2-stable Standard，覆盖原先只写到次版本的 "Godot 4.7 stable"。4.7-stable 首发于 2026-06-18，4.7.2 为官方推荐的兼容维护版；两台开发机与 CI 必须使用同一精确版本与配套导出模板。
 - `human_playtest_cadence = internal_only`。
 - `internal_acceptance = owner_signoff_checklist`。
-- `milestone_m0 = exited`（2026-08-20）：[CD-61](../60-plan/61-milestones.md) M0 验收通过并退出。依据是 Linux CI 跑绿、人类按 [环境烟测清单](../../docs/runbooks/environment-smoke-test.md) 复跑全绿，以及编辑器 GUI 独立确认 Compatibility 与 17 个输入动作。下一阶段为 M1，**尚未启动**。该句被 `milestone_m1 = phase_a_started`（2026-08-21）覆盖：M1 阶段 A 启动；L0 信封（ID / 命令 / 事件 / 状态哈希）开工；定点运算仍待 [ADR-0005](../../docs/adr/0005-fixed-point-numeric-model.md) 拍板。Windows Godot AI 接入烟测第 7 步剩余两项（Vision Routing 关、无第二套 Godot MCP）同日由人类确认。
+- `milestone_m0 = exited`（2026-08-20）：[CD-61](../60-plan/61-milestones.md) M0 验收通过并退出。依据是 Linux CI 跑绿、人类按 [环境烟测清单](../../docs/runbooks/environment-smoke-test.md) 复跑全绿，以及编辑器 GUI 独立确认 Compatibility 与 17 个输入动作。下一阶段为 M1，**尚未启动**。该句被 `milestone_m1 = phase_a_started`（2026-08-21）覆盖：M1 阶段 A 启动；L0 信封（ID / 命令 / 事件 / 状态哈希）开工；定点运算仍待 [ADR-0005](../../docs/adr/0005-fixed-point-numeric-model.md) 拍板。Windows Godot AI 接入烟测第 7 步剩余两项（Vision Routing 关、无第二套 Godot MCP）同日由人类确认。该句再被 `milestone_m1 = phase_a_a1_a4`（2026-08-21）覆盖：定点已拍板并合入；[CD-52 §5.1](../50-engineering/52-ai-workflow.md) 的 A1 与 A4 成立（[PR #1](https://github.com/czmomocha/craftarena/pull/1)）；A2 / A3 未成立，并行仍禁止。
+- `pr_loop_a4 = first_pr_merged`（2026-08-21）：走通「Agent 产出 → PR → CI 全绿 → 人类 review → 人类合并」。证据：[PR #1](https://github.com/czmomocha/craftarena/pull/1)。不因此开启多域并行。
 - `macos_second_machine_smoke = verified`（2026-08-20）：覆盖原先「macOS 命令列尚未在真机验证」。人类按 CD-51 §4.1 在 macOS 26.5.2 arm64 跑通十步与编辑器 GUI；固定命令见 [README.md](../../README.md)，签字记录见烟测清单第 10 步。顺带确认 `--check-only` 在 macOS 上类型错误仍打印但退出码为 0，与 Windows 的退出码 1 不同。
 
 ## D.7 后端、数据与部署
