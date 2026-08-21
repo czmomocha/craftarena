@@ -4,7 +4,7 @@ Godot 4 + UGC 双玩法（TRAPRUSH / BASTION）项目 Monorepo。代码与仓库
 
 - 工程规则入口：[AGENTS.md](AGENTS.md)
 - 规范唯一事实源：[Confirmed-docs](Confirmed-docs/README.md)
-- 当前阶段：M0 已退出；下一阶段 M1（共享定点仿真与 TRAPRUSH 灰盒），尚未启动。M1 启动前已选定唯一 Godot 主 MCP 为 Godot AI，接入烟测与仿真任务分开，见 [CD-61](Confirmed-docs/60-plan/61-milestones.md)、[ADR-0003](docs/adr/0003-godot-mcp-selection.md)
+- 当前阶段：M1 阶段 A 进行中（L0 信封与定点运算已落地）。进度与退出条件见 [CD-61](Confirmed-docs/60-plan/61-milestones.md)。
 
 ## 目录
 

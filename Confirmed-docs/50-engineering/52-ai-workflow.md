@@ -122,7 +122,7 @@ AI 不得用"代码看起来正确"代替运行证据。
 | A3 | Schema 验证、禁止 API 扫描、worktree 并行环境三条门禁上线（是否已进 CI 以 [CD-53 §4.1](53-testing-and-ci.md) 为准） |
 | A4 | 仓库里走通至少一次「Agent 产出 → PR → CI 全绿 → 人类 review → 人类合并」 |
 
-当前（2026-08-21）四条均未成立。阶段 A 由主 Agent 串行完成 L0 契约冻结与上述门禁，中间不并行。
+当前（2026-08-21）A2–A4 未成立。`game/src/shared/` 已有 ID / 信封 / 定点与 GUT，但 JSON Schema、CODEOWNERS、红线扫描、worktree 基建与首个 PR 仍缺，不得据此开启多域并行。中间不并行。
 
 ### 5.2 运行时形态
 

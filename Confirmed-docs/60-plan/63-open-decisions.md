@@ -20,9 +20,8 @@ AI 不得把其他文档中的示例表格、推荐项或"建议"当成已确认
 3. 伤害、冷却、复活硬直、推击力度、无控保护、刷新时间等具体数值；
 4. 各阶段默认时长、官方地图目标局时与 UI 动画时长；
 5. Tick、输入发送、快照频率、插值窗口和对账阈值；
-6. 定点数单位尺度、舍入方式、溢出检查和三角函数策略；
-7. BASTION 隐藏布障的协议实现，包括服务器裁剪、提交揭示或其他方式；
-8. 具体性能预算和香港真实网络门禁。
+6. BASTION 隐藏布障的协议实现，包括服务器裁剪、提交揭示或其他方式；
+7. 具体性能预算和香港真实网络门禁。
 
 ## 2. 工具与平台细节
 
@@ -34,6 +33,8 @@ AI 不得把其他文档中的示例表格、推荐项或"建议"当成已确认
 已关闭并迁出本清单：唯一 Godot 主 MCP 选定为 Godot AI，插件不入库，遥测强制关（2026-08-21，[ADR-0003](../../docs/adr/0003-godot-mcp-selection.md)、[CD-51 §7](../50-engineering/51-dev-environment.md)）。未完成接入烟测签字前，Agent 仍不得自行安装或写入 CI——那是执行门禁，不是未决选型。
 
 已关闭并迁出本清单：多 Agent 启用时机与运行时（2026-08-21，[ADR-0004](../../docs/adr/0004-multi-agent-adoption-timing-and-architecture.md)）。Cursor 原生 worktree + subagent + hooks；一期不引入 Multica 与 Automations；审查由 Bugbot 承担。启用判据与权限边界见 [CD-52](../50-engineering/52-ai-workflow.md)。四条退出条件未全绿前不得开启多域并行。
+
+已关闭并迁出本清单：定点数单位尺度、舍入、溢出与三角函数（2026-08-21，[ADR-0005](../../docs/adr/0005-fixed-point-numeric-model.md) 选项 1）。合同见 [CD-42 §1.1](../40-technical/42-contracts-and-rulevm.md)。
 
 ## 3. 明确跳过的运营类议题
 
