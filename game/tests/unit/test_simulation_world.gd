@@ -1,6 +1,6 @@
 extends GutTest
 
-## SimulationWorld 骨架：Tick 计数、姿态读写、Canonical 状态哈希、可取出的 SimRng。
+## SimulationWorld 骨架：Tick 计数、姿态读写、XZ 目的地阻挡、Canonical 状态哈希、可取出的 SimRng。
 
 const FixedClass := preload("res://src/shared/fixed/fixed.gd")
 const FixedResultClass := preload("res://src/shared/fixed/fixed_result.gd")
@@ -59,6 +59,51 @@ func test_hash_state_is_stable_until_a_coordinate_changes() -> void:
 	assert_ne(right.hash_state().hex_encode(), left_hash.hex_encode())
 
 
+func test_hash_state_ignores_capsule_radius_and_height() -> void:
+	var posed: SimulationWorld = SimulationWorld.new(1)
+	posed.spawn_capsule(_whole(3), _whole(4), _whole(5), 16)
+	var sized: SimulationWorld = SimulationWorld.new(1)
+	sized.spawn_capsule(_whole(3), _whole(4), _whole(5), 16, _whole(1), _whole(2))
+	assert_eq(posed.hash_state().hex_encode(), sized.hash_state().hex_encode())
+
+
+func test_try_move_xz_in_open_space_changes_x_z_not_y_or_yaw() -> void:
+	var world: SimulationWorld = SimulationWorld.new(1)
+	var y: int = _whole(4)
+	var entity_id: int = world.spawn_capsule(0, y, 0, 16)
+	var dx: int = _whole(2)
+	var dz: int = _whole(-1)
+	assert_true(world.try_move_xz(entity_id, dx, dz))
+	_assert_pose(world, entity_id, dx, y, dz, 16)
+
+
+func test_try_move_xz_rejects_destination_overlap_and_keeps_pose() -> void:
+	var world: SimulationWorld = SimulationWorld.new(1)
+	var radius: int = _whole(1)
+	var along_x: int = _whole(3)
+	var toward: int = _whole(2)
+	var mover_id: int = world.spawn_capsule(0, 0, 0, 0, radius, 0)
+	world.spawn_capsule(along_x, 0, 0, 0, radius, 0)
+	assert_false(world.try_move_xz(mover_id, toward, 0))
+	_assert_pose(world, mover_id, 0, 0, 0, 0)
+	assert_true(world.try_move_xz(mover_id, 0, 0))
+	_assert_pose(world, mover_id, 0, 0, 0, 0)
+	assert_true(world.try_move_xz(mover_id, 1, 0))
+	_assert_pose(world, mover_id, 1, 0, 0, 0)
+
+
+func test_try_move_xz_rejects_overflow_and_unknown_id() -> void:
+	var world: SimulationWorld = SimulationWorld.new(1)
+	var entity_id: int = world.spawn_capsule(FixedClass.INT64_MAX, 0, FixedClass.INT64_MAX, 8)
+	assert_false(world.try_move_xz(entity_id, 1, 0))
+	_assert_pose(world, entity_id, FixedClass.INT64_MAX, 0, FixedClass.INT64_MAX, 8)
+	assert_false(world.try_move_xz(entity_id, 0, 1))
+	_assert_pose(world, entity_id, FixedClass.INT64_MAX, 0, FixedClass.INT64_MAX, 8)
+	assert_false(world.try_move_xz(0, 1, 0))
+	assert_false(world.try_move_xz(-1, 1, 0))
+	assert_false(world.try_move_xz(99, 1, 0))
+
+
 func test_get_rng_uses_constructor_seed() -> void:
 	var world: SimulationWorld = SimulationWorld.new(1)
 	var rng: SimRng = world.get_rng()
@@ -70,6 +115,18 @@ func _two_capsule_world() -> SimulationWorld:
 	world.spawn_capsule(_whole(3), _whole(4), _whole(5), 16)
 	world.spawn_capsule(_whole(1), _whole(2), _whole(3), 0)
 	return world
+
+
+func _assert_pose(world: SimulationWorld, entity_id: int, x: int, y: int, z: int, yaw: int) -> void:
+	var pose: Dictionary = world.get_pose(entity_id)
+	var pose_x: int = pose.get("x", -1)
+	var pose_y: int = pose.get("y", -1)
+	var pose_z: int = pose.get("z", -1)
+	var pose_yaw: int = pose.get("yaw", -1)
+	assert_eq(pose_x, x)
+	assert_eq(pose_y, y)
+	assert_eq(pose_z, z)
+	assert_eq(pose_yaw, yaw)
 
 
 func _whole(units: int) -> int:
