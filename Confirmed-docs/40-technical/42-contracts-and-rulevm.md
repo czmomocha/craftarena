@@ -38,7 +38,20 @@
 - UGC 权威碰撞只允许盒、球、胶囊和平台预制复合体，视觉网格不能参与裁决；
 - UGC 数据中禁止出现 `NodePath`、`Callable`、`Object` 和 `Script`。
 
-定点数的单位尺度、舍入方式、溢出检查与三角函数策略**未锁定**，见 [CD-63](../60-plan/63-open-decisions.md)。
+定点数合同（[ADR-0005](../../docs/adr/0005-fixed-point-numeric-model.md)，2026-08-21 整包拍板）：
+
+| 项 | 锁定值 |
+|---|---|
+| 空间 / 速度 | `SCALE = 65536`（2^16）内部单位 = 表现层 1 Godot 米；存储 int64（Q48.16） |
+| 经济 / 伤害 / 耐久 | 尺度 1 的 int64（1 金 = 1，1 点伤害 = 1） |
+| 时间间隔 | Tick 计数；Hz 仍见 [CD-63](../60-plan/63-open-decisions.md) 第 1.5 条 |
+| 水平朝向 | BAM：`65536 = 一周` |
+| 舍入 | 向零截断，与 GDScript 整数 `/` 一致 |
+| 溢出 | 拒绝该次运算，不饱和、不回绕成合法值 |
+| 乘法 | 64×64→128 再除；禁止先算 `a * b` 再除 |
+| 三角函数 | 4096 项整数 LUT + BAM 索引 + 整数线性插值；禁止引擎 `sin`/`cos` |
+
+实现：`game/src/shared/fixed/`。`float` 换算只允许出现在 `game/src/client/` 与后续 creator 表现映射，不得进入 `shared/` / `simulation/`。
 
 ## 2. Rule VM v1
 
@@ -101,4 +114,19 @@ trace_id
 → 复制、回放与审计
 ```
 
-各玩法允许的具体 Intent 列表见 [CD-21 §8](../20-gameplay/21-traprush.md) 与 [CD-22 §7.3](../20-gameplay/22-bastion.md)。
+各玩法允许的具体 Intent 列表见 [CD-21 §8](../20-gameplay/21-traprush.md) 与 [CD-22 §7.3](../20-gameplay/22-bastion.md)。名字的代码落点是 `game/src/shared/commands/player_intent_names.gd`。
+
+### 3.4 实现落点（M1 阶段 A）
+
+不复述字段。GDScript 信封在：
+
+| 内容 | 路径 |
+|---|---|
+| 稳定 ID | `game/src/shared/ids/shared_ids.gd` |
+| 命令信封 | `game/src/shared/commands/shared_command.gd` |
+| 领域事件 | `game/src/shared/events/shared_domain_event.gd` |
+| 可哈希 payload 白名单 | `game/src/shared/protocol/canonical_payload.gd` |
+| 关键状态哈希 | `game/src/shared/protocol/state_hasher.gd` |
+| 定点与 BAM | `game/src/shared/fixed/` |
+
+JSON Schema 仍待阶段 A 后续任务写入 `backend/contracts/`。`payload` 只允许 nil / bool / int / String / Array / Dictionary（字符串键）；禁止 float、Object、Callable。PLAYER 命令必须带白名单 `intent` 字符串。SYSTEM 命令允许 `actor_id = 0`。

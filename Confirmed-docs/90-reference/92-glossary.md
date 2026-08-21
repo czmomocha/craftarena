@@ -28,3 +28,6 @@
 | RealtimeGateway | 唯一公网 TLS WebSocket 入口，代理到内网 MatchServer | [CD-41](../40-technical/41-architecture.md) |
 | Godot AI | 本项目唯一 Godot 主 MCP：GDScript 编辑器插件 + 本机 Python（uv）服务，MIT | [CD-51 §7](../50-engineering/51-dev-environment.md)、[ADR-0003](../../docs/adr/0003-godot-mcp-selection.md) |
 | `_mcp_game_helper` | Godot AI 为编辑器试玩进程注入的 autoload；禁止进入已提交的 `project.godot` 与 MatchServer | [CD-51 §7.3](../50-engineering/51-dev-environment.md) |
+| SharedCommand | 所有命令共用的 L0 信封（字段名单见 CD-42，不在此复述） | [CD-42](../40-technical/42-contracts-and-rulevm.md) |
+| StateHasher | 关键状态的确定性 SHA-256 哈希器，供回放对账 | [CD-43](../40-technical/43-networking-and-replay.md) |
+| BAM | 二进制角：一周 = 65536，用于权威朝向与三角函数索引 | [CD-42 §1.1](../40-technical/42-contracts-and-rulevm.md) |

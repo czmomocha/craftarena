@@ -152,7 +152,7 @@
 - `godot_version_lock = 4_7_2_stable`（2026-08-20）：精确锁定 Godot 4.7.2-stable Standard，覆盖原先只写到次版本的 "Godot 4.7 stable"。4.7-stable 首发于 2026-06-18，4.7.2 为官方推荐的兼容维护版；两台开发机与 CI 必须使用同一精确版本与配套导出模板。
 - `human_playtest_cadence = internal_only`。
 - `internal_acceptance = owner_signoff_checklist`。
-- `milestone_m0 = exited`（2026-08-20）：[CD-61](../60-plan/61-milestones.md) M0 验收通过并退出。依据是 Linux CI 跑绿、人类按 [环境烟测清单](../../docs/runbooks/environment-smoke-test.md) 复跑全绿，以及编辑器 GUI 独立确认 Compatibility 与 17 个输入动作。下一阶段为 M1，**尚未启动**。
+- `milestone_m0 = exited`（2026-08-20）：[CD-61](../60-plan/61-milestones.md) M0 验收通过并退出。依据是 Linux CI 跑绿、人类按 [环境烟测清单](../../docs/runbooks/environment-smoke-test.md) 复跑全绿，以及编辑器 GUI 独立确认 Compatibility 与 17 个输入动作。下一阶段为 M1，**尚未启动**。该句被 `milestone_m1 = phase_a_started`（2026-08-21）覆盖：M1 阶段 A 启动；L0 信封（ID / 命令 / 事件 / 状态哈希）开工；定点运算仍待 [ADR-0005](../../docs/adr/0005-fixed-point-numeric-model.md) 拍板。Windows Godot AI 接入烟测第 7 步剩余两项（Vision Routing 关、无第二套 Godot MCP）同日由人类确认。
 - `macos_second_machine_smoke = verified`（2026-08-20）：覆盖原先「macOS 命令列尚未在真机验证」。人类按 CD-51 §4.1 在 macOS 26.5.2 arm64 跑通十步与编辑器 GUI；固定命令见 [README.md](../../README.md)，签字记录见烟测清单第 10 步。顺带确认 `--check-only` 在 macOS 上类型错误仍打印但退出码为 0，与 Windows 的退出码 1 不同。
 
 ## D.7 后端、数据与部署
@@ -186,7 +186,7 @@
 
 - `network_serialization = json_control_binary_match`。
 - `realtime_transport = websocket_all_first`。
-- `simulation_numeric_model = fixed_point_core`。
+- `simulation_numeric_model = fixed_point_core`。该值被 `fixed_point_contract = q48_16_trunc_reject_lut4096`（2026-08-21）具体化：[ADR-0005](../../docs/adr/0005-fixed-point-numeric-model.md) 选项 1。空间 `SCALE = 65536`；经济/伤害尺度 1；向零截断；溢出拒绝 + 64×64→128；BAM + 4096 整数 LUT + 整数插值。数字只在 [CD-42 §1.1](../40-technical/42-contracts-and-rulevm.md) 维护。
 - `authoritative_collision_shapes = primitive_compound`。
 - `gdscript_typing = strict_core_typed_ui_flexible`。
 - `rule_vm_execution = versioned_bytecode_interpreter`。
@@ -203,7 +203,7 @@
 ## D.9 明确延期或跳过
 
 - `bug_reporting` 及 Bug 提交、客服、通知、告警展示等同类问题：跳过，后续开发再决定。
-- 道具栏、具体数值、时长、动画、精确频率等实现级玩法细节：统一延期。
+- 道具栏、具体数值、时长、动画、精确频率等实现级玩法细节：统一延期。定点数尺度已迁出，见 D.8 `fixed_point_contract`。
 - `hidden_state_sync`：延期，不默认采用任何推荐协议。
 
 ## D.10 文档体系

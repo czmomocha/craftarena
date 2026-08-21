@@ -62,6 +62,8 @@
 
 ### M1：共享定点仿真与 TRAPRUSH 灰盒
 
+状态：**进行中（阶段 A）**（2026-08-21 启动）。L0 信封与定点运算已落地（[ADR-0005](../../docs/adr/0005-fixed-point-numeric-model.md)）。A1 的 GDScript 侧已有 GUT；JSON Schema、CODEOWNERS、worktree 基建与首个 PR 仍缺，A1–A4 不得报全绿。并行仍禁止。
+
 产出：
 
 - SharedContracts；

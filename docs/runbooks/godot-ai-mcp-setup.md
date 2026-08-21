@@ -237,8 +237,8 @@ echo "exit code: $?"
 
 - [x] 插件目录无 `.cs` / `.csproj`（2026-08-21 Windows 接入烟测已核对）
 - [x] MCP HTTP/WS 只听 `127.0.0.1:8000` / `9500`，未开 `--allow-host`（同日已核对端口）
-- [ ] **Clients & Tools → Settings**：Vision Routing 保持关（主 Dock 上看不到此项，属正常）
-- [ ] 没有同时启用第二套 Godot MCP
+- [x] **Clients & Tools → Settings**：Vision Routing 保持关（主 Dock 上看不到此项，属正常；2026-08-21 人类确认）
+- [x] 没有同时启用第二套 Godot MCP（同日人类确认）
 - [x] 没有把 `editor_manage(op="game_eval")` 写进任务习惯或脚本
 - [x] 没有用 `test_run` / `McpTestSuite` 替代 GUT
 
@@ -278,6 +278,6 @@ git status --short
 
 | 日期 | 执行人 | 机器 / 系统 | 插件版本 | 遥测 | UndoRedo | 运行与错误 | Headless 退路 | project.godot 已恢复 | 结果 |
 |---|---|---|---|---|---|---|---|---|---|
-| 2026-08-21 | 人类（安装 / Configure / Ctrl+Z）+ AI Agent（第 5–6、8–9 步） | Windows 10.0.26100 | 3.1.5 | 通过：`GODOT_AI_DISABLE_TELEMETRY=true`，无 `%APPDATA%\godot-ai\`，Cursor attach 含 `--disable-telemetry` | 通过：MCP 创建并重命名 `Marker3D`（`undoable: true`），人类 Ctrl+Z 两次后层次只剩根节点 `McpSmoke` | 通过：`project_run` 主场景 `game_status=live`，日志含 `client_boot` / `gl_compatibility`；无类型脚本诊断定位到 `_mcp_smoke_probe.gd:4` | 通过：Headless `--quit` 与 GUT `6/6`，exit 0 | 通过：已 `git checkout -- game/project.godot`；`editor_plugins` 仅 GUT；无 `_mcp_game_helper`；`game/addons/godot_ai/` 未入库 | **Windows 接入烟测通过**。第 7 步 Dock 人工项（Vision Routing 关、无第二套 MCP）见该节勾选，未单独写入本行 |
+| 2026-08-21 | 人类（安装 / Configure / Ctrl+Z）+ AI Agent（第 5–6、8–9 步） | Windows 10.0.26100 | 3.1.5 | 通过：`GODOT_AI_DISABLE_TELEMETRY=true`，无 `%APPDATA%\godot-ai\`，Cursor attach 含 `--disable-telemetry` | 通过：MCP 创建并重命名 `Marker3D`（`undoable: true`），人类 Ctrl+Z 两次后层次只剩根节点 `McpSmoke` | 通过：`project_run` 主场景 `game_status=live`，日志含 `client_boot` / `gl_compatibility`；无类型脚本诊断定位到 `_mcp_smoke_probe.gd:4` | 通过：Headless `--quit` 与 GUT `6/6`，exit 0 | 通过：已 `git checkout -- game/project.godot`；`editor_plugins` 仅 GUT；无 `_mcp_game_helper`；`game/addons/godot_ai/` 未入库 | **Windows 接入烟测通过**。第 7 步全部人工项已勾选：Vision Routing 关、无第二套 Godot MCP（人类 2026-08-21 确认） |
 
 签字前不要在任务单里写「本机 MCP 已可用」。上表有对应机器的通过行之后，该开发机上允许按 [CD-52 §7](../../Confirmed-docs/50-engineering/52-ai-workflow.md) 使用 MCP 改表现层占位场景；M2 生产级启用仍以 CD-61 与 ADR-0003 阶段 C 为准。若编辑器仍开着并把插件状态写回 `project.godot`，提交前再还原一次。
