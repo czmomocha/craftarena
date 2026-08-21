@@ -4,6 +4,8 @@ extends RefCounted
 ## Authoritative simulation skeleton. Tick is a counter, not a wall-clock duration.
 ## Pose fields are Q48.16; yaw is BAM. Hash order: tick_index, then id,x,y,z,yaw by id.
 ## Radius, cylinder_height, and static AABBs are Q48.16 geometry and are not part of hash_state.
+## set_static_box_solid toggles whether a static AABB blocks occupancy; ids stay
+## 1-based and non-solid boxes stay in the array. Solidity is not part of hash_state.
 ## try_set_pose occupancy-checks the landing pose then teleports; it is not a sweep
 ## and not phase-through. Occupied or overflow destinations reject. set_pose still
 ## writes without occupancy checks so respawn can teleport into a blocked pose.
@@ -22,6 +24,7 @@ var _yaw: Array[int] = []
 var _radius: Array[int] = []
 var _cylinder_height: Array[int] = []
 var _boxes: Array[StaticAabb] = []
+var _box_solid: Array[bool] = []
 
 
 func _init(p_seed: int = 1) -> void:
@@ -53,7 +56,15 @@ func spawn_static_box(x: int, y: int, z: int, half_x: int, half_y: int, half_z: 
 	box.half_y = half_y
 	box.half_z = half_z
 	_boxes.append(box)
+	_box_solid.append(true)
 	return _boxes.size()
+
+
+func set_static_box_solid(box_id: int, solid: bool) -> bool:
+	if not _has_box(box_id):
+		return false
+	_box_solid[box_id - 1] = solid
+	return true
 
 
 func set_pose(entity_id: int, x: int, y: int, z: int, yaw: int) -> bool:
@@ -247,6 +258,8 @@ func _destination_blocked(entity_id: int, pose_index: int, dest_x: int, dest_y: 
 		if mover.overlaps(other) or not mover.overlap_math_ok:
 			return true
 	for box_index: int in range(_boxes.size()):
+		if not _box_solid[box_index]:
+			continue
 		var box: StaticAabb = _boxes[box_index]
 		if box.overlaps_capsule(mover) or not box.overlap_math_ok:
 			return true
@@ -265,3 +278,7 @@ func _capsule_at(pose_index: int, x: int, y: int, z: int) -> KinematicCapsule:
 
 func _has_entity(entity_id: int) -> bool:
 	return entity_id >= 1 and entity_id <= _x.size()
+
+
+func _has_box(box_id: int) -> bool:
+	return box_id >= 1 and box_id <= _boxes.size()
