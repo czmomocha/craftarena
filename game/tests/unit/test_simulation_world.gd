@@ -1,6 +1,6 @@
 extends GutTest
 
-## SimulationWorld 骨架：Tick 计数、姿态读写、XZ 目的地阻挡、Canonical 状态哈希、可取出的 SimRng。
+## SimulationWorld 骨架：Tick 计数、姿态读写、XZ/Y 目的地阻挡、Canonical 状态哈希、可取出的 SimRng。
 
 const FixedClass := preload("res://src/shared/fixed/fixed.gd")
 const FixedResultClass := preload("res://src/shared/fixed/fixed_result.gd")
@@ -102,6 +102,49 @@ func test_try_move_xz_rejects_overflow_and_unknown_id() -> void:
 	assert_false(world.try_move_xz(0, 1, 0))
 	assert_false(world.try_move_xz(-1, 1, 0))
 	assert_false(world.try_move_xz(99, 1, 0))
+
+
+func test_try_move_y_in_open_space_changes_y_not_x_z_or_yaw() -> void:
+	var world: SimulationWorld = SimulationWorld.new(1)
+	var x: int = _whole(3)
+	var z: int = _whole(5)
+	var entity_id: int = world.spawn_capsule(x, 0, z, 16)
+	var dy: int = _whole(-1)
+	assert_true(world.try_move_y(entity_id, dy))
+	_assert_pose(world, entity_id, x, dy, z, 16)
+
+
+func test_try_move_y_rejects_destination_overlap_and_keeps_pose() -> void:
+	var world: SimulationWorld = SimulationWorld.new(1)
+	var radius: int = _whole(1)
+	var cylinder_height: int = _whole(2)
+	var half_height: int = cylinder_height / 2
+	var contact_y: int = half_height + half_height + radius + radius
+	var along_y: int = contact_y + _whole(1)
+	var toward: int = _whole(1)
+	var mover_id: int = world.spawn_capsule(0, 0, 0, 0, radius, cylinder_height)
+	world.spawn_capsule(0, along_y, 0, 0, radius, cylinder_height)
+	assert_false(world.try_move_y(mover_id, toward))
+	_assert_pose(world, mover_id, 0, 0, 0, 0)
+	assert_true(world.try_move_y(mover_id, 0))
+	_assert_pose(world, mover_id, 0, 0, 0, 0)
+	assert_true(world.try_move_y(mover_id, 1))
+	_assert_pose(world, mover_id, 0, 1, 0, 0)
+
+
+func test_try_move_y_rejects_overflow_unknown_id_and_overlap_math() -> void:
+	var world: SimulationWorld = SimulationWorld.new(1)
+	var entity_id: int = world.spawn_capsule(0, FixedClass.INT64_MAX, 0, 8)
+	assert_false(world.try_move_y(entity_id, 1))
+	_assert_pose(world, entity_id, 0, FixedClass.INT64_MAX, 0, 8)
+	assert_false(world.try_move_y(0, 1))
+	assert_false(world.try_move_y(-1, 1))
+	assert_false(world.try_move_y(99, 1))
+	var math_world: SimulationWorld = SimulationWorld.new(1)
+	var mover_id: int = math_world.spawn_capsule(FixedClass.INT64_MAX, 0, 0, 0, _whole(1), _whole(2))
+	math_world.spawn_capsule(FixedClass.INT64_MIN, 0, 0, 0, _whole(1), _whole(2))
+	assert_false(math_world.try_move_y(mover_id, 0))
+	_assert_pose(math_world, mover_id, FixedClass.INT64_MAX, 0, 0, 0)
 
 
 func test_get_rng_uses_constructor_seed() -> void:

@@ -4,7 +4,7 @@ extends RefCounted
 ## Authoritative simulation skeleton. Tick is a counter, not a wall-clock duration.
 ## Pose fields are Q48.16; yaw is BAM. Hash order: tick_index, then id,x,y,z,yaw by id.
 ## Radius and cylinder_height are Q48.16 but are not part of hash_state.
-## try_move_xz rejects a destination that overlaps another upright capsule.
+## try_move_xz / try_move_y reject a destination that overlaps another upright capsule.
 ## Continuous sweep / substepping along the segment is not implemented in this slice.
 
 var tick_index: int = 0
@@ -70,18 +70,24 @@ func try_move_xz(entity_id: int, dx: int, dz: int) -> bool:
 	var new_z_res: FixedResult = Fixed.try_add(_z[pose_index], dz)
 	if not new_z_res.ok:
 		return false
-	var mover: KinematicCapsule = _capsule_at(pose_index, new_x_res.value, _y[pose_index], new_z_res.value)
-	for other_id: int in range(1, _x.size() + 1):
-		if other_id == entity_id:
-			continue
-		var other_index: int = other_id - 1
-		var other: KinematicCapsule = _capsule_at(
-			other_index, _x[other_index], _y[other_index], _z[other_index]
-		)
-		if mover.overlaps(other) or not mover.overlap_math_ok:
-			return false
+	if _destination_blocked(entity_id, pose_index, new_x_res.value, _y[pose_index], new_z_res.value):
+		return false
 	_x[pose_index] = new_x_res.value
 	_z[pose_index] = new_z_res.value
+	return true
+
+
+## dy is this-tick displacement in Q48.16 internal units, not metres per second.
+func try_move_y(entity_id: int, dy: int) -> bool:
+	if not _has_entity(entity_id):
+		return false
+	var pose_index: int = entity_id - 1
+	var new_y_res: FixedResult = Fixed.try_add(_y[pose_index], dy)
+	if not new_y_res.ok:
+		return false
+	if _destination_blocked(entity_id, pose_index, _x[pose_index], new_y_res.value, _z[pose_index]):
+		return false
+	_y[pose_index] = new_y_res.value
 	return true
 
 
@@ -107,6 +113,20 @@ func hash_state() -> PackedByteArray:
 
 func get_rng() -> SimRng:
 	return _rng
+
+
+func _destination_blocked(entity_id: int, pose_index: int, dest_x: int, dest_y: int, dest_z: int) -> bool:
+	var mover: KinematicCapsule = _capsule_at(pose_index, dest_x, dest_y, dest_z)
+	for other_id: int in range(1, _x.size() + 1):
+		if other_id == entity_id:
+			continue
+		var other_index: int = other_id - 1
+		var other: KinematicCapsule = _capsule_at(
+			other_index, _x[other_index], _y[other_index], _z[other_index]
+		)
+		if mover.overlaps(other) or not mover.overlap_math_ok:
+			return true
+	return false
 
 
 func _capsule_at(pose_index: int, x: int, y: int, z: int) -> KinematicCapsule:
