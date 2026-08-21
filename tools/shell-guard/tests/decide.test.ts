@@ -9,6 +9,7 @@ describe("shell-guard allows ordinary git on a feature branch", () => {
 		assert.equal(decideShellCommand("git commit -m ok", { currentBranch: "feat/x" }).permission, "allow");
 		assert.equal(decideShellCommand("git push -u origin feat/x", { currentBranch: "feat/x" }).permission, "allow");
 		assert.equal(decideShellCommand("git push origin HEAD:feat/x", { currentBranch: "feat/x" }).permission, "allow");
+		assert.equal(decideShellCommand("git push -u origin HEAD", { currentBranch: "feat/x" }).permission, "allow");
 		assert.equal(decideShellCommand("git worktree add ../wt feat/x").permission, "allow");
 		assert.equal(decideShellCommand("git worktree remove ../wt").permission, "allow");
 		assert.equal(decideShellCommand("npm test").permission, "allow");
@@ -27,6 +28,8 @@ describe("shell-guard blocks protected-branch writes", () => {
 	});
 
 	it("blocks implicit push when the current branch is main or unknown", () => {
+		assert.equal(decideShellCommand("git push -u origin HEAD", { currentBranch: "main" }).code, "push-protected");
+		assert.equal(decideShellCommand("git push origin HEAD").code, "push-implicit-unknown");
 		assert.equal(decideShellCommand("git push", { currentBranch: "main" }).code, "push-protected");
 		assert.equal(decideShellCommand("git push origin", { currentBranch: "main" }).code, "push-protected");
 		assert.equal(decideShellCommand("git push").code, "push-implicit-unknown");

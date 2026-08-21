@@ -10,9 +10,9 @@ type HookInput = {
 
 const input = await readStdinJson();
 const command = typeof input.command === "string" ? input.command : "";
-const cwd = typeof input.cwd === "string" ? input.cwd : "";
+const cwd = typeof input.cwd === "string" && input.cwd !== "" ? input.cwd : process.cwd();
 const decision = decideShellCommand(command, {
-	currentBranch: cwd === "" ? undefined : readCurrentBranch(cwd),
+	currentBranch: readCurrentBranch(cwd),
 });
 stdout.write(`${JSON.stringify(toHookResponse(decision))}\n`);
 

@@ -93,8 +93,14 @@ function decidePush(args: readonly string[], currentBranch: string | undefined):
 	for (const spec of refspecs) {
 		const dest = refspecDestination(spec);
 		if (dest === "HEAD") {
-			if (currentBranch === undefined || isProtectedBranch(currentBranch)) {
-				return deny("push-protected", "git push of HEAD onto a protected branch is blocked");
+			if (currentBranch === undefined) {
+				return deny(
+					"push-implicit-unknown",
+					"git push of HEAD is blocked unless the current branch is known and not protected",
+				);
+			}
+			if (isProtectedBranch(currentBranch)) {
+				return deny("push-protected", `git push of protected branch '${currentBranch}' via HEAD is blocked`);
 			}
 			continue;
 		}
