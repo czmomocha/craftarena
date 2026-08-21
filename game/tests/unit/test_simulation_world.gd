@@ -1,6 +1,6 @@
 extends GutTest
 
-## SimulationWorld 骨架：Tick 计数、姿态读写、占用检查瞬移、XZ/Y 离散扫掠阻挡、Canonical 状态哈希、可取出的 SimRng。
+## SimulationWorld 骨架：Tick 计数、姿态读写、占用检查瞬移、XZ/Y 离散扫掠阻挡、静态盒阻挡开关、Canonical 状态哈希、可取出的 SimRng。
 
 const FixedClass := preload("res://src/shared/fixed/fixed.gd")
 const FixedResultClass := preload("res://src/shared/fixed/fixed_result.gd")
@@ -262,6 +262,103 @@ func test_spawn_static_box_does_not_change_hash_state() -> void:
 	var before_hex: String = world.hash_state().hex_encode()
 	assert_eq(world.spawn_static_box(_whole(8), 0, 0, _whole(1), _whole(1), _whole(1)), 1)
 	assert_eq(world.hash_state().hex_encode(), before_hex)
+
+
+func test_set_static_box_solid_opens_then_reblocks_path() -> void:
+	var world: SimulationWorld = SimulationWorld.new(1)
+	var radius: int = _whole(1)
+	var start_x: int = _whole(4)
+	var into_box: int = -_whole(2)
+	var mover_id: int = world.spawn_capsule(start_x, 0, 0, 8, radius, _whole(2))
+	assert_eq(world.spawn_static_box(0, 0, 0, _whole(1), _whole(1), _whole(1)), 1)
+	assert_true(world.is_pose_blocked(mover_id, 0, 0, 0))
+	assert_false(world.try_set_pose(mover_id, 0, 0, 0, 16))
+	assert_false(world.try_move_xz(mover_id, into_box, 0))
+	_assert_pose(world, mover_id, start_x, 0, 0, 8)
+	assert_true(world.set_static_box_solid(1, false))
+	assert_false(world.is_pose_blocked(mover_id, 0, 0, 0))
+	assert_true(world.try_set_pose(mover_id, 0, 0, 0, 16))
+	_assert_pose(world, mover_id, 0, 0, 0, 16)
+	assert_true(world.set_pose(mover_id, start_x, 0, 0, 8))
+	assert_true(world.try_move_xz(mover_id, into_box, 0))
+	_assert_pose(world, mover_id, start_x + into_box, 0, 0, 8)
+	assert_true(world.set_pose(mover_id, start_x, 0, 0, 8))
+	assert_true(world.set_static_box_solid(1, true))
+	assert_true(world.is_pose_blocked(mover_id, 0, 0, 0))
+	assert_false(world.try_set_pose(mover_id, 0, 0, 0, 16))
+	assert_false(world.try_move_xz(mover_id, into_box, 0))
+	_assert_pose(world, mover_id, start_x, 0, 0, 8)
+
+
+func test_set_static_box_solid_false_lets_sweep_cross_thin_box() -> void:
+	var world: SimulationWorld = SimulationWorld.new(1)
+	var radius: int = _whole(1)
+	var dest_x: int = _whole(10)
+	var dest_y: int = _whole(10)
+	var mover_id: int = world.spawn_capsule(0, 0, 0, 8, radius, _whole(2))
+	assert_eq(world.spawn_static_box(_whole(5), 0, 0, 1, _whole(1), _whole(1)), 1)
+	assert_false(world.try_move_xz(mover_id, dest_x, 0))
+	_assert_pose(world, mover_id, 0, 0, 0, 8)
+	assert_true(world.set_static_box_solid(1, false))
+	assert_true(world.try_move_xz(mover_id, dest_x, 0))
+	_assert_pose(world, mover_id, dest_x, 0, 0, 8)
+	assert_true(world.set_pose(mover_id, 0, 0, 0, 8))
+	assert_true(world.set_static_box_solid(1, true))
+	assert_false(world.try_move_xz(mover_id, dest_x, 0))
+	_assert_pose(world, mover_id, 0, 0, 0, 8)
+	var y_world: SimulationWorld = SimulationWorld.new(1)
+	var y_mover: int = y_world.spawn_capsule(0, 0, 0, 8, radius, _whole(2))
+	assert_eq(y_world.spawn_static_box(0, _whole(5), 0, _whole(1), 1, _whole(1)), 1)
+	assert_false(y_world.try_move_y(y_mover, dest_y))
+	assert_true(y_world.set_static_box_solid(1, false))
+	assert_true(y_world.try_move_y(y_mover, dest_y))
+	_assert_pose(y_world, y_mover, 0, dest_y, 0, 8)
+	assert_true(y_world.set_pose(y_mover, 0, 0, 0, 8))
+	assert_true(y_world.set_static_box_solid(1, true))
+	assert_false(y_world.try_move_y(y_mover, dest_y))
+	_assert_pose(y_world, y_mover, 0, 0, 0, 8)
+
+
+func test_set_static_box_solid_unknown_id_fails() -> void:
+	var world: SimulationWorld = SimulationWorld.new(1)
+	assert_false(world.set_static_box_solid(0, false))
+	assert_false(world.set_static_box_solid(-1, false))
+	assert_false(world.set_static_box_solid(1, false))
+	assert_false(world.set_static_box_solid(99, true))
+	assert_eq(world.spawn_static_box(0, 0, 0, _whole(1), _whole(1), _whole(1)), 1)
+	assert_false(world.set_static_box_solid(0, false))
+	assert_false(world.set_static_box_solid(-1, false))
+	assert_false(world.set_static_box_solid(2, false))
+	assert_false(world.set_static_box_solid(99, true))
+	assert_true(world.set_static_box_solid(1, false))
+	assert_true(world.set_static_box_solid(1, true))
+
+
+func test_set_static_box_solid_does_not_change_hash_state() -> void:
+	var world: SimulationWorld = SimulationWorld.new(1)
+	world.spawn_capsule(_whole(3), _whole(4), _whole(5), 16, _whole(1), _whole(2))
+	assert_eq(world.spawn_static_box(0, 0, 0, _whole(1), _whole(1), _whole(1)), 1)
+	var before_hex: String = world.hash_state().hex_encode()
+	assert_true(world.set_static_box_solid(1, false))
+	assert_eq(world.hash_state().hex_encode(), before_hex)
+	assert_true(world.set_static_box_solid(1, true))
+	assert_eq(world.hash_state().hex_encode(), before_hex)
+
+
+func test_set_static_box_solid_keeps_ids_and_only_toggles_that_box() -> void:
+	var world: SimulationWorld = SimulationWorld.new(1)
+	var radius: int = _whole(1)
+	var mover_id: int = world.spawn_capsule(_whole(10), 0, 0, 8, radius, _whole(2))
+	assert_eq(world.spawn_static_box(0, 0, 0, _whole(1), _whole(1), _whole(1)), 1)
+	assert_eq(world.spawn_static_box(_whole(20), 0, 0, _whole(1), _whole(1), _whole(1)), 2)
+	assert_true(world.set_static_box_solid(1, false))
+	assert_false(world.is_pose_blocked(mover_id, 0, 0, 0))
+	assert_true(world.is_pose_blocked(mover_id, _whole(20), 0, 0))
+	assert_eq(world.spawn_static_box(_whole(30), 0, 0, _whole(1), _whole(1), _whole(1)), 3)
+	assert_true(world.set_static_box_solid(1, true))
+	assert_true(world.is_pose_blocked(mover_id, 0, 0, 0))
+	assert_true(world.is_pose_blocked(mover_id, _whole(20), 0, 0))
+	assert_true(world.is_pose_blocked(mover_id, _whole(30), 0, 0))
 
 
 func test_try_move_xz_rejects_static_box_and_allows_going_around() -> void:
