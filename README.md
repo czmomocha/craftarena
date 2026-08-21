@@ -115,7 +115,7 @@ CI 当前实际启用了哪些门禁、哪些还没实现，以 [CD-53 §4.1](Co
 
 ## 并行工作区
 
-[CD-52 §5.1](Confirmed-docs/50-engineering/52-ai-workflow.md) 的 A1–A4 已成立，但阶段 B 尚未启动，**不要开启多域并行**。下面只服务「一个 Agent 在隔离 worktree 里干活」。禁止 symlink `node_modules`，禁止把 Cursor Automations 配进项目。
+[CD-52 §5.1](Confirmed-docs/50-engineering/52-ai-workflow.md) 的 A1–A4 已成立，`.cursor/agents/` 已入库，**仍不要开启多域并行**（`.cursor/BUGBOT.md` 与 PR 侧 Bugbot 未就绪）。下面只服务「一个 Agent 在隔离 worktree 里干活」。禁止 symlink `node_modules`，禁止把 Cursor Automations 配进项目。
 
 Cursor 创建 worktree 时会跑 `.cursor/worktrees.json`：`npm install`、按需从 `$ROOT_WORKTREE_PATH` 拷 `.env` 与 `data/*.sqlite`、按 worktree 目录名写入端口偏移、用 `GODOT4`（Windows 优先 `GODOT4_CONSOLE`）对 `game/` 做 `--import`。主 checkout（与 `$ROOT_WORKTREE_PATH` 相同）不写 `.env`。
 
