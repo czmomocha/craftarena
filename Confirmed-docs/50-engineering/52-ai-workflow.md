@@ -122,11 +122,11 @@ AI 不得用"代码看起来正确"代替运行证据。
 | A3 | Schema 验证、禁止 API 扫描、worktree 并行环境三条门禁上线（是否已进 CI 以 [CD-53 §4.1](53-testing-and-ci.md) 为准） |
 | A4 | 仓库里走通至少一次「Agent 产出 → PR → CI 全绿 → 人类 review → 人类合并」 |
 
-当前（2026-08-21）**A1–A4 已成立。** A1 / A4 见 [PR #1](https://github.com/czmomocha/craftarena/pull/1)。A2：`.github/CODEOWNERS` + GitHub code owner 审查。A3：L0 JSON Schema、红线扫描、`.cursor/worktrees.json` 与 DevLauncher `loadEnvFile` 已落地。`.cursor/hooks.json` 已入库（`failClosed: true`）。本地 `/review-bugbot` 已按 [ADR-0004](../../docs/adr/0004-multi-agent-adoption-timing-and-architecture.md) §6.1 第 9 项执行。阶段 B 角色定义与任务单「隔离方式」行尚未建，**本阶段不开启多域并行**。
+当前（2026-08-21）**A1–A4 已成立。** A1 / A4 见 [PR #1](https://github.com/czmomocha/craftarena/pull/1)。A2：`.github/CODEOWNERS` + GitHub code owner 审查。A3：L0 JSON Schema、红线扫描、`.cursor/worktrees.json` 与 DevLauncher `loadEnvFile` 已落地。`.cursor/hooks.json` 已入库（`failClosed: true`）。本地 `/review-bugbot` 已按 [ADR-0004](../../docs/adr/0004-multi-agent-adoption-timing-and-architecture.md) §6.1 第 9 项执行。`.cursor/agents/` 已按 §5.3 入库（无审查 Agent）。任务单「隔离方式」行见 §3。**仍不开启多域并行**：`.cursor/BUGBOT.md` 与 PR 侧 Bugbot 未就绪，先开 2 域属于阶段 B 待办 14，须人类确认后再跑。
 
 ### 5.2 运行时形态
 
-一期使用 Cursor 原生能力，零自建编排框架。下表是已拍板的运行时形态。`.cursor/worktrees.json` 与 `.cursor/hooks.json` 已入库；`.cursor/agents/`、`BUGBOT.md` 仍未建，不得声称并行角色已可用。
+一期使用 Cursor 原生能力，零自建编排框架。下表是已拍板的运行时形态。`.cursor/worktrees.json`、`.cursor/hooks.json` 与 `.cursor/agents/` 已入库；`BUGBOT.md` 仍未建，不得声称 PR 侧审查规则已覆盖。
 
 | 能力 | 位置 / 用法 | 约束 |
 |---|---|---|
@@ -142,17 +142,19 @@ AI 不得用"代码看起来正确"代替运行证据。
 
 ### 5.3 角色
 
-按任务临时分工。角色定义入库在 `.cursor/agents/`，阶段 B 启动时才建：
+按任务临时分工。角色定义在 `.cursor/agents/`：
 
-| 角色 | 职责 |
-|---|---|
-| 架构 Agent | 维护边界、ADR 和 Schema |
-| 玩法 Agent | 实现 TRAPRUSH/BASTION System |
-| 编辑器 Agent | EditCommand、UI 和 Preview |
-| 网络 Agent | 命令、快照、重连和回放 |
-| 测试 Agent | 生成测试、恶意输入和性能场景 |
-| 资产 Agent | 生成占位资源并执行导入检查 |
-| 审查 | **不建 Agent**。由 Bugbot 承担。Cursor subagent 继承父 Agent 的全部工具，做不成硬只读 |
+| 角色 | 文件 | 职责 |
+|---|---|---|
+| 架构 Agent | `architecture.md` | 维护边界、ADR 和 Schema |
+| 玩法 Agent | `gameplay.md` | 实现 TRAPRUSH/BASTION System |
+| 编辑器 Agent | `editor.md` | EditCommand、UI 和 Preview |
+| 网络 Agent | `networking.md` | 命令、快照、重连和回放 |
+| 测试 Agent | `testing.md` | 生成测试、恶意输入和性能场景 |
+| 资产 Agent | `assets.md` | 生成占位资源并执行导入检查 |
+| 审查 | **不建文件** | 由 Bugbot 承担。Cursor subagent 继承父 Agent 的全部工具，做不成硬只读 |
+
+frontmatter 只有 `name`、`description`、`model`、`readonly`、`is_background`。没有 `tools` 白名单。这些文件**不**等于已经开启多域并行。
 
 任何 Agent 产物都必须进入同一代码库、同一测试门禁和同一人类审批流程。
 
