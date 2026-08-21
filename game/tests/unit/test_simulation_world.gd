@@ -147,6 +147,59 @@ func test_try_move_y_rejects_overflow_unknown_id_and_overlap_math() -> void:
 	_assert_pose(math_world, mover_id, FixedClass.INT64_MAX, 0, 0, 0)
 
 
+func test_spawn_static_box_rejects_negative_half_extents() -> void:
+	var world: SimulationWorld = SimulationWorld.new(1)
+	assert_eq(world.spawn_static_box(0, 0, 0, -1, 0, 0), 0)
+	assert_eq(world.spawn_static_box(0, 0, 0, 0, -1, 0), 0)
+	assert_eq(world.spawn_static_box(0, 0, 0, 0, 0, -1), 0)
+	assert_eq(world.spawn_static_box(0, 0, 0, 0, 0, 0), 1)
+
+
+func test_spawn_static_box_does_not_change_hash_state() -> void:
+	var world: SimulationWorld = SimulationWorld.new(1)
+	world.spawn_capsule(_whole(3), _whole(4), _whole(5), 16, _whole(1), _whole(2))
+	var before_hex: String = world.hash_state().hex_encode()
+	assert_eq(world.spawn_static_box(_whole(8), 0, 0, _whole(1), _whole(1), _whole(1)), 1)
+	assert_eq(world.hash_state().hex_encode(), before_hex)
+
+
+func test_try_move_xz_rejects_static_box_and_allows_going_around() -> void:
+	var world: SimulationWorld = SimulationWorld.new(1)
+	var radius: int = _whole(1)
+	var start_x: int = _whole(4)
+	var into_box: int = -_whole(2)
+	var around_z: int = _whole(1)
+	var mover_id: int = world.spawn_capsule(start_x, 0, 0, 0, radius, _whole(2))
+	assert_eq(world.spawn_static_box(0, 0, 0, _whole(1), _whole(1), _whole(1)), 1)
+	assert_false(world.try_move_xz(mover_id, into_box, 0))
+	_assert_pose(world, mover_id, start_x, 0, 0, 0)
+	assert_true(world.try_move_xz(mover_id, 0, around_z))
+	_assert_pose(world, mover_id, start_x, 0, around_z, 0)
+
+
+func test_try_move_y_rejects_static_box_overhead() -> void:
+	var world: SimulationWorld = SimulationWorld.new(1)
+	var radius: int = _whole(1)
+	var cylinder_height: int = _whole(2)
+	var toward: int = _whole(1)
+	var mover_id: int = world.spawn_capsule(0, 0, 0, 0, radius, cylinder_height)
+	assert_eq(world.spawn_static_box(0, _whole(4), 0, _whole(1), _whole(1), _whole(1)), 1)
+	assert_false(world.try_move_y(mover_id, toward))
+	_assert_pose(world, mover_id, 0, 0, 0, 0)
+
+
+func test_try_move_rejects_when_static_box_overlap_math_overflows() -> void:
+	var world: SimulationWorld = SimulationWorld.new(1)
+	var mover_id: int = world.spawn_capsule(
+		FixedClass.INT64_MAX, 0, 0, 0, _whole(1), _whole(2)
+	)
+	assert_eq(world.spawn_static_box(FixedClass.INT64_MIN, 0, 0, 0, 0, 0), 1)
+	assert_false(world.try_move_xz(mover_id, 0, 0))
+	_assert_pose(world, mover_id, FixedClass.INT64_MAX, 0, 0, 0)
+	assert_false(world.try_move_y(mover_id, 0))
+	_assert_pose(world, mover_id, FixedClass.INT64_MAX, 0, 0, 0)
+
+
 func test_get_rng_uses_constructor_seed() -> void:
 	var world: SimulationWorld = SimulationWorld.new(1)
 	var rng: SimRng = world.get_rng()

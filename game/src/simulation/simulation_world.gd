@@ -3,8 +3,9 @@ extends RefCounted
 
 ## Authoritative simulation skeleton. Tick is a counter, not a wall-clock duration.
 ## Pose fields are Q48.16; yaw is BAM. Hash order: tick_index, then id,x,y,z,yaw by id.
-## Radius and cylinder_height are Q48.16 but are not part of hash_state.
-## try_move_xz / try_move_y reject a destination that overlaps another upright capsule.
+## Radius, cylinder_height, and static AABBs are Q48.16 geometry and are not part of hash_state.
+## try_move_xz / try_move_y reject a destination that overlaps another upright capsule
+## or a spawned static AABB. Box blocking is destination detection only.
 ## Continuous sweep / substepping along the segment is not implemented in this slice.
 
 var tick_index: int = 0
@@ -16,6 +17,7 @@ var _z: Array[int] = []
 var _yaw: Array[int] = []
 var _radius: Array[int] = []
 var _cylinder_height: Array[int] = []
+var _boxes: Array[StaticAabb] = []
 
 
 func _init(p_seed: int = 1) -> void:
@@ -34,6 +36,20 @@ func spawn_capsule(x: int, y: int, z: int, yaw: int, radius: int = 0, cylinder_h
 	_radius.append(radius)
 	_cylinder_height.append(cylinder_height)
 	return _x.size()
+
+
+func spawn_static_box(x: int, y: int, z: int, half_x: int, half_y: int, half_z: int) -> int:
+	if half_x < 0 or half_y < 0 or half_z < 0:
+		return 0
+	var box: StaticAabb = StaticAabb.new()
+	box.x = x
+	box.y = y
+	box.z = z
+	box.half_x = half_x
+	box.half_y = half_y
+	box.half_z = half_z
+	_boxes.append(box)
+	return _boxes.size()
 
 
 func set_pose(entity_id: int, x: int, y: int, z: int, yaw: int) -> bool:
@@ -125,6 +141,10 @@ func _destination_blocked(entity_id: int, pose_index: int, dest_x: int, dest_y: 
 			other_index, _x[other_index], _y[other_index], _z[other_index]
 		)
 		if mover.overlaps(other) or not mover.overlap_math_ok:
+			return true
+	for box_index: int in range(_boxes.size()):
+		var box: StaticAabb = _boxes[box_index]
+		if box.overlaps_capsule(mover) or not box.overlap_math_ok:
 			return true
 	return false
 
