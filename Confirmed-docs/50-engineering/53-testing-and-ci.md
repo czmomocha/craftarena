@@ -232,7 +232,7 @@ PR 合并必须 CI 全绿并至少获得一次人类批准；AI 审查不能替�
 - 要求一次人类批准；
 - `CODEOWNERS` 覆盖 `game/src/shared/`、`backend/contracts/`、`Confirmed-docs/`、`.github/`。
 
-**当前（2026-08-21）：`main` 分支保护已由 GitHub API 复核。** 已启用：要求 1 次批准、过期 review 作废、禁止 force push、禁止删除 `main`。未启用：`required_status_checks`（CI 全绿仍是流程要求，**不是** GitHub 硬门禁）、`require_code_owner_reviews`、`enforce_admins`。`CODEOWNERS` 文件仍未入库。A4 回路已走通一次： [PR #1](https://github.com/czmomocha/craftarena/pull/1) 经 CI 全绿与人类批准后合并。此后 Agent 可在隔离分支上创建提交，仍不得向 `main` 提交或推送（[CD-52 §1.1](52-ai-workflow.md)）。
+**当前（2026-08-21）：`main` 分支保护已由 GitHub API 复核。** 已启用：要求 1 次批准、过期 review 作废、禁止 force push、禁止删除 `main`。未启用：`required_status_checks`（CI 全绿仍是流程要求，**不是** GitHub 硬门禁）、`require_code_owner_reviews`、`enforce_admins`。`.github/CODEOWNERS` 已入库，覆盖 `game/src/shared/`、`backend/contracts/`、`Confirmed-docs/`、`.github/`。在人类勾选「Require review from Code Owners」之前，该文件只是标记，**不是** GitHub 硬门禁。A4 回路已走通一次： [PR #1](https://github.com/czmomocha/craftarena/pull/1)。此后 Agent 可在隔离分支上创建提交，仍不得向 `main` 提交或推送（[CD-52 §1.1](52-ai-workflow.md)）。
 
 每个 PR 的 Web 预览公开访问，但必须使用独立临时沙盒命名空间、测试数据和可销毁凭据，关闭 PR 后清理。合入 `main` 后更新稳定测试链接。
 

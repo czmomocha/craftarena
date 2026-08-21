@@ -1,0 +1,7 @@
+# Constitution article 18 / ADR-0004 §6.1 item 4 / CD-53 §4.5
+# File marks these paths as needing the human owner. GitHub only blocks merge
+# when "Require review from Code Owners" is enabled on main.
+/game/src/shared/ @czmomocha
+/backend/contracts/ @czmomocha
+/Confirmed-docs/ @czmomocha
+/.github/ @czmomocha
