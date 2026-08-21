@@ -1,0 +1,13 @@
+{
+	"version": 1,
+	"hooks": {
+		"beforeShellExecution": [
+			{
+				"command": "node tools/shell-guard/src/main.ts",
+				"failClosed": true,
+				"timeout": 10,
+				"matcher": "git"
+			}
+		]
+	}
+}

@@ -62,7 +62,7 @@
 
 ### M1：共享定点仿真与 TRAPRUSH 灰盒
 
-状态：**进行中（阶段 A）**（2026-08-21 启动）。L0 信封、定点、JSON Schema、红线扫描、`CODEOWNERS` 与 worktree 基建已落地。[CD-52 §5.1](../50-engineering/52-ai-workflow.md) 的 A1–A4 已成立。阶段 B 尚未启动，不开启多域并行。`.cursor/hooks.json` 仍缺。
+状态：**进行中（阶段 A）**（2026-08-21 启动）。L0 信封、定点、JSON Schema、红线扫描、`CODEOWNERS`、worktree 基建与 shell-guard hook 已落地。[CD-52 §5.1](../50-engineering/52-ai-workflow.md) 的 A1–A4 已成立。阶段 B 尚未启动，不开启多域并行。
 
 产出：
 

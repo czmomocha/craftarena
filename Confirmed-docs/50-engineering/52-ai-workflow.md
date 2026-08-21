@@ -29,7 +29,7 @@
 
 - **允许**：在隔离的 agent 分支或 git worktree 上创建提交，并推送到对应的非保护远程分支。这是 Cursor Cloud Agent 与 `/worktree` 的运行时形态，也避免未提交产出被 worktree 清理丢失。
 - **禁止，且属宪法第十八条人类门禁**：向 `main` 或任何受保护分支提交或推送；合并 PR；部署；发布；回滚线上内容。人类门禁落在 PR 合并（`pr_merge_gate = required_ci_one_human`）与 GitHub 分支保护。
-- **机械化拦截（待落地）**：项目级 `.cursor/hooks.json` 的 `beforeShellExecution` 拦向 `main` / 受保护分支的推送，以及 `git worktree remove --force`。该 hook **必须** `failClosed: true`（Cursor 默认 fail-open，崩溃即放行）。判定逻辑必须有单测。hook 未入库之前，不得把它描述为已生效门禁。
+- **机械化拦截**：项目级 `.cursor/hooks.json` 的 `beforeShellExecution` 拦向 `main` / 受保护分支的提交与推送，以及 `git worktree remove --force`。该 hook **必须** `failClosed: true`（Cursor 默认 fail-open，崩溃即放行）。判定逻辑在 `tools/shell-guard/`，由 `npm test` 覆盖。
 - **硬前置**：GitHub 分支保护未配置完成之前，上述「允许」条款不生效，仍按原字面执行——Agent **不得**创建任何提交或推送。分支保护的目标项见 [CD-53 §4.5](53-testing-and-ci.md)，当前是否已配置以那一节为准。
 
 ### 1.2 人类负责
@@ -122,11 +122,11 @@ AI 不得用"代码看起来正确"代替运行证据。
 | A3 | Schema 验证、禁止 API 扫描、worktree 并行环境三条门禁上线（是否已进 CI 以 [CD-53 §4.1](53-testing-and-ci.md) 为准） |
 | A4 | 仓库里走通至少一次「Agent 产出 → PR → CI 全绿 → 人类 review → 人类合并」 |
 
-当前（2026-08-21）**A1–A4 已成立。** A1 / A4 见 [PR #1](https://github.com/czmomocha/craftarena/pull/1)。A2：`.github/CODEOWNERS` + GitHub code owner 审查。A3：L0 JSON Schema、红线扫描、`.cursor/worktrees.json` 与 DevLauncher `loadEnvFile` 已落地。阶段 B 角色定义与任务单「隔离方式」行尚未建，**本阶段不开启多域并行**。`.cursor/hooks.json` 仍未入库，不得描述为已生效拦截。
+当前（2026-08-21）**A1–A4 已成立。** A1 / A4 见 [PR #1](https://github.com/czmomocha/craftarena/pull/1)。A2：`.github/CODEOWNERS` + GitHub code owner 审查。A3：L0 JSON Schema、红线扫描、`.cursor/worktrees.json` 与 DevLauncher `loadEnvFile` 已落地。`.cursor/hooks.json` 已入库（`failClosed: true`）。阶段 B 角色定义与任务单「隔离方式」行尚未建，**本阶段不开启多域并行**。
 
 ### 5.2 运行时形态
 
-一期使用 Cursor 原生能力，零自建编排框架。下表是已拍板的运行时形态。`.cursor/worktrees.json` 已入库；`.cursor/agents/`、`hooks.json`、`BUGBOT.md` 仍未建，不得声称并行角色或提交拦截已可用。
+一期使用 Cursor 原生能力，零自建编排框架。下表是已拍板的运行时形态。`.cursor/worktrees.json` 与 `.cursor/hooks.json` 已入库；`.cursor/agents/`、`BUGBOT.md` 仍未建，不得声称并行角色已可用。
 
 | 能力 | 位置 / 用法 | 约束 |
 |---|---|---|
