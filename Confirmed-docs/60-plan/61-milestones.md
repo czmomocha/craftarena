@@ -46,7 +46,19 @@
 - 人类按 [环境烟测清单](../../docs/runbooks/environment-smoke-test.md) 在 Windows 开发机复跑十步全绿；
 - 人类独立打开编辑器，确认 Compatibility 基线与 17 个输入动作。
 
-同日第二台开发机（macOS 26.5.2 arm64）按 CD-51 §4.1 与同一份清单再跑通一次，不改变上述退出结论。执行记录见该清单第 10 步与「编辑器 GUI」节。下一阶段是 M1，启动前仍须遵守宪法第十八条：AI 不得自行提交、推送或部署。
+同日第二台开发机（macOS 26.5.2 arm64）按 CD-51 §4.1 与同一份清单再跑通一次，不改变上述退出结论。执行记录见该清单第 10 步与「编辑器 GUI」节。下一阶段是 M1。提交与推送的现行口径见 [CD-52 §1.1](../50-engineering/52-ai-workflow.md)；GitHub 分支保护落地前，Agent 仍不得创建任何提交。
+
+2026-08-21：M1 启动前完成第二轮 MCP 调研，唯一主 MCP 选定为 Godot AI，并覆盖 ADR-0003 原先的「拖到 M2 再选」。**选定之后仍不把安装并进 M1 仿真任务。** 接入烟测与生产级启用的时机见本节「M0 与 M1 之间」及 [ADR-0003](../../docs/adr/0003-godot-mcp-selection.md)；安装与遥测开关见 [CD-51 §7](../50-engineering/51-dev-environment.md)。
+
+### M0 与 M1 之间：Godot AI 接入（不阻塞灰盒编码）
+
+这不是新的里程碑编号，而是 M1 开工后允许并行的独立环境任务：
+
+1. **接入烟测**（配置与测试的合适时机）：人类按 [Godot AI 接入烟测](../../docs/runbooks/godot-ai-mcp-setup.md) 安装锁定版本、在第一次启用插件前关闭匿名遥测、Configure Cursor，并按 UndoRedo / 运行 / 错误读取 / Headless 退路签字。未签字前，Agent 改场景仍走文件方式。
+2. **M1 期间**：SimulationCore、契约、状态哈希、GUT、Headless 仍是主路径。烟测签字后，MCP 只用于表现层占位，不是 M1 退出条件。
+3. **M2 启动门禁 = 生产级启用**：接入清单全绿、遥测关闭已核实、已提交的 `project.godot` 无 MCP autoload / 插件项。此后大型 `.tscn` 必须走 MCP / Editor API / UndoRedo。这是 MCP 在本项目里第一次作为日常主路径，也是「生产级应用」的起点——对象是编辑器里的内容生产，不是玩家包。
+
+该条与多 Agent 并行度提升合并为一次 **M2 启动前工具链评审**（[ADR-0004](../../docs/adr/0004-multi-agent-adoption-timing-and-architecture.md) 决策 8）：同时处理 ADR-0003 阶段 C 与「先跑 2 个域」是否升到 3（[CD-52 §5](../50-engineering/52-ai-workflow.md)）。
 
 ### M1：共享定点仿真与 TRAPRUSH 灰盒
 
@@ -61,6 +73,8 @@
 
 验收：同一输入可重复得到相同关键状态；单人可完成包含上下左右传送和障碍破坏的赛道。
 
+并行不在 M1 开头启动。四条退出条件见 [CD-52 §5.1](../50-engineering/52-ai-workflow.md)：阶段 A 由主 Agent 串行锁死 L0 契约并补门禁；条件全绿后才按域并行。Schema 验证、红线扫描与 worktree 基建作为阶段 A 工作进入 M1 范围，服务于本节「阶段退出条件」里的自动化通过率与人类可接管两项。
+
 ### M2：共享 Edit 框架与 TRAPRUSH 工具
 
 产出：
@@ -73,7 +87,7 @@
 - 独立持续 Preview；
 - 桌面完整编辑与 Web 轻量编辑的共同数据模型。
 
-验收：不改 GDScript，只用编辑器做出两张不同赛道；修改到预览 ≤ 10 秒。
+验收：不改 GDScript，只用编辑器做出两张不同赛道；修改到预览 ≤ 10 秒。大型场景编辑须走已生产级启用的 Godot AI MCP / UndoRedo（[ADR-0003](../../docs/adr/0003-godot-mcp-selection.md) 阶段 C），MCP 不可用时仍须能以 Editor API 退路完成，且不得把 MCP 做成 CI 依赖。
 
 ### M3：权威联机与进程隔离
 

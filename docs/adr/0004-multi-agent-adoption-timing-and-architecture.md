@@ -337,7 +337,7 @@ Cursor Automations 是按计划（cron）或事件（PR opened/pushed/merged、C
 
 ### 6.3 需要同步修改的所有者文档（宪法第十九、二十六条）
 
-本 ADR 已于 2026-08-21 获批，以下同步是**尚未完成的待办**：
+本 ADR 已于 2026-08-21 获批。下列所有者文档已按本节要求同步，清单见 §8：
 
 - **CD-52 §5**：现在只有 15 行的角色表，需补：启用时机的门禁判据（§4.1）、worktree/cloud 隔离形态与「必须显式声明」这条硬要求、并行度上限 3（先跑 2）、`.cursor/agents/` 的位置约定。**「审查 Agent」那一行改为「由 Bugbot 承担，见 ADR-0004 §5.3」**，并说明 Cursor 无 `tools` 白名单、`readonly` 不是已证实的硬边界；
 - **CD-52 §1.1 权限边界**：现在写的是「未经人类明确确认，AI 不得创建提交、推送、部署或发布内容」。按 §8 决策 4（C1）改为「不得向 `main` 或受保护分支提交/推送，不得部署或发布；允许在隔离的 agent 分支 / worktree 上提交」，并补 `beforeShellExecution` hook 作为机械化落地，注明 hook 默认 fail-open、本项目强制 `failClosed: true`；
@@ -416,6 +416,6 @@ Cursor Automations 是按计划（cron）或事件（PR opened/pushed/merged、C
 4. **Bugbot 与 Cloud Agent 都需要仓库读写权限**，属安全边界扩大，随本决策批准，须在 CD-62 登记；
 5. **门禁状态遵守宪法第二十四条**：Schema 验证、红线扫描没进 CI、Bugbot 没启用 fail-on-unresolved-issues 之前，都不得在任何材料中描述为已生效门禁。
 
-### 待同步
+### 已同步
 
-按 §6.3 同步九处所有者文档（CD-52 §1.1/§3/§5/§7.3、CD-53 §4.1/§4.5、CD-91 D.6、CD-62、README、`.gitignore`）。**同步完成后回来补一行「已同步」清单**，参照 [ADR-0003](0003-godot-mcp-selection.md) 末尾的写法。
+[CD-52 §1.1 / §3 / §5 / §7.3](../../Confirmed-docs/50-engineering/52-ai-workflow.md)、[CD-53 §4.1 / §4.5](../../Confirmed-docs/50-engineering/53-testing-and-ci.md)、[CD-61](../../Confirmed-docs/60-plan/61-milestones.md)、[CD-62](../../Confirmed-docs/60-plan/62-risk-register.md)、[CD-63 §2](../../Confirmed-docs/60-plan/63-open-decisions.md)、[CD-91 D.6](../../Confirmed-docs/90-reference/91-decision-log.md)、[Confirmed-docs 索引](../../Confirmed-docs/README.md)、[README.md](../../README.md)、[`.gitignore`](../../.gitignore)、[AGENTS.md](../../AGENTS.md) §2。

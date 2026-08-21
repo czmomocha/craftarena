@@ -4,7 +4,7 @@ Godot 4 + UGC 双玩法（TRAPRUSH / BASTION）项目 Monorepo。代码与仓库
 
 - 工程规则入口：[AGENTS.md](AGENTS.md)
 - 规范唯一事实源：[Confirmed-docs](Confirmed-docs/README.md)
-- 当前阶段：M0 已退出；下一阶段 M1（共享定点仿真与 TRAPRUSH 灰盒），尚未启动。见 [CD-61](Confirmed-docs/60-plan/61-milestones.md)
+- 当前阶段：M0 已退出；下一阶段 M1（共享定点仿真与 TRAPRUSH 灰盒），尚未启动。M1 启动前已选定唯一 Godot 主 MCP 为 Godot AI，接入烟测与仿真任务分开，见 [CD-61](Confirmed-docs/60-plan/61-milestones.md)、[ADR-0003](docs/adr/0003-godot-mcp-selection.md)
 
 ## 目录
 
@@ -24,7 +24,7 @@ docs/       adr / plans / runbooks
 
 首次在一台新机器上准备环境时按 CD-51 §4 执行。Windows 开发机已经跑通、要在第二台 Mac 上拉同一份代码时，按 [CD-51 §4.1](Confirmed-docs/50-engineering/51-dev-environment.md) 执行，不要再初始化一遍工程。完成后必须跑通 CD-51 §6 的环境验证烟测；**未完成那套闭环不进入正式功能开发**。
 
-烟测的逐步命令、预期输出与历次执行记录见 [环境烟测清单](docs/runbooks/environment-smoke-test.md)。想亲手确认这套环境成立，照它从头跑一遍即可，约 10 分钟。
+烟测的逐步命令、预期输出与历次执行记录见 [环境烟测清单](docs/runbooks/environment-smoke-test.md)。想亲手确认这套环境成立，照它从头跑一遍即可，约 10 分钟。Godot AI MCP 的安装、关遥测与接入签字是另一份清单：[Godot AI 接入烟测](docs/runbooks/godot-ai-mcp-setup.md)，不要和 M0 十步混做。
 
 ### 依赖
 
@@ -40,11 +40,14 @@ docs/       adr / plans / runbooks
 # 一次性写入用户环境变量，改成你自己的安装路径
 [Environment]::SetEnvironmentVariable("GODOT4", "C:\Tools\Godot_v4.7.2-stable_win64.exe", "User")
 [Environment]::SetEnvironmentVariable("GODOT4_CONSOLE", "C:\Tools\Godot_v4.7.2-stable_win64_console.exe", "User")
+# Godot AI 匿名遥测必须在第一次启用插件前关闭（CD-51 §7.2）
+[Environment]::SetEnvironmentVariable("GODOT_AI_DISABLE_TELEMETRY", "true", "User")
 ```
 
 ```bash
 # macOS / Linux，写入 shell 配置
 export GODOT4="/Applications/Godot.app/Contents/MacOS/Godot"
+export GODOT_AI_DISABLE_TELEMETRY=true
 ```
 
 ### Godot 工程
@@ -104,6 +107,10 @@ CI 当前实际启用了哪些门禁、哪些还没实现，以 [CD-53 §4.1](Co
 
 ## 协作规则
 
-AI Agent 可自主读写代码、场景、文档与测试，也可运行本地游戏、Headless 与测试，但**未经人类明确确认不得提交、推送、部署或发布**（宪法第十八条）。
+提交、推送与合入 `main` 的边界见 [CD-52 §1.1](Confirmed-docs/50-engineering/52-ai-workflow.md)。宪法第十八条的人类门禁落在合入 `main`、部署与发布。GitHub 分支保护落地前，Agent 仍不得创建任何提交。
 
 任务完成判定见 [CD-53 §5 Definition of Done](Confirmed-docs/50-engineering/53-testing-and-ci.md)。
+
+## 并行工作区
+
+多 Agent 并行**尚未启用**。启用判据见 [CD-52 §5.1](Confirmed-docs/50-engineering/52-ai-workflow.md)。启用后的固定命令与端口偏移会写在本节；在那之前禁止 Agent 自行猜测 worktree 端口、symlink `node_modules`，或把 Cursor Automations 配进项目。

@@ -44,6 +44,20 @@ coverage/
 *.keystore
 secrets.json
 
+# Godot AI MCP（ADR-0003 / CD-51 §7）
+#
+# 只服务本机打开的编辑器，CI 与 Headless 不依赖它。启用插件会在本机
+# 生成该目录；禁止入库。已提交的 project.godot 也不得写入该插件或
+# _mcp_game_helper autoload。
+game/addons/godot_ai/
+
+# Cursor 若把 Godot AI attach 写进项目级 MCP 配置，其中含本机绝对路径，不得入库。
+.cursor/mcp.json
+
+# Cursor Run Modes 的自然语言权限指令。官方明确 Auto-review 不是安全边界，
+# 入库会给人「配置即门禁」的错觉；本机路径也不该进仓库。
+.cursor/permissions.json
+
 # SQLite 本地数据库（CD-51 §1 测试期数据库，由控制面在本地生成）
 *.sqlite
 *.sqlite3

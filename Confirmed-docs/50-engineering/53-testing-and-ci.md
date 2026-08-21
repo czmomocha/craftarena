@@ -191,6 +191,8 @@ AI 生成代码必须比普通手写代码有**更强的自动化证据**，因�
 | 禁止 API 和依赖检查 | 部分 | 仅有"工程内不得出现 `.cs` / `.csproj`"一条，由 GUT 断言 |
 | 编辑文件的 linter 诊断 | 未实现 | 依赖开发机 IDE，未进 CI |
 | PR Web 预览 | 未实现 | 等 Web 导出与沙盒环境落地 |
+| Godot AI MCP | **不进 CI** | 只服务本机打开的编辑器；Headless / GUT / `npm test` 仍是门禁。不得把 `test_run` / `McpTestSuite` 写成自动回归。接入与生产级启用见 [CD-51 §7](51-dev-environment.md)、[ADR-0003](../../docs/adr/0003-godot-mcp-selection.md) |
+| Bugbot | **非门禁** | 已拍板引入（[ADR-0004](../../docs/adr/0004-multi-agent-adoption-timing-and-architecture.md) 决策 6）。本地 `/review-bugbot` 可在推送前跑；PR 侧等第一个 PR 走通后再开。findings 默认 `neutral`，不启用 fail-on-unresolved-issues 之前**不得**描述为已覆盖的合并门禁。配置见 [CD-52 §5.2](52-ai-workflow.md) |
 
 按宪法第二十四条，**未在本表标为"已启用"的项目不得在任何材料中描述为已覆盖**。新增门禁时同时改本表和 workflow。
 
@@ -221,7 +223,16 @@ AI 生成代码必须比普通手写代码有**更强的自动化证据**，因�
 
 ### 4.5 PR 合并规则
 
-PR 合并必须 CI 全绿并至少获得一次人类批准；AI 审查不能替代人类。
+PR 合并必须 CI 全绿并至少获得一次人类批准；AI 审查不能替代人类。Bugbot 的 PR check 默认结论为 `neutral`，勾选该 check **不会**因为发现问题而阻止合并，因此它不构成本条的「一次人类批准」。
+
+[ADR-0004](../../docs/adr/0004-multi-agent-adoption-timing-and-architecture.md) 决策 4 把 GitHub 分支保护定为隔离分支提交的硬前置。目标配置：
+
+- `main` 禁止直推，必须走 PR；
+- 要求 CI 通过；
+- 要求一次人类批准；
+- `CODEOWNERS` 覆盖 `game/src/shared/`、`backend/contracts/`、`Confirmed-docs/`、`.github/`。
+
+**当前（2026-08-21）：未配置。** 现有提交全部直推 `main`，尚无 PR 历史。在本小节改成「已启用」之前，Agent 不得创建任何提交（[CD-52 §1.1](52-ai-workflow.md)）。
 
 每个 PR 的 Web 预览公开访问，但必须使用独立临时沙盒命名空间、测试数据和可销毁凭据，关闭 PR 后清理。合入 `main` 后更新稳定测试链接。
 
@@ -240,7 +251,7 @@ PR 合并必须 CI 全绿并至少获得一次人类批准；AI 审查不能替�
 9. AI 能解释关键实现和失败模式；
 10. 人类完成必要审查；
 11. 未把人工临时网络测试或性能观察伪报成自动门禁；
-12. AI 没有未经许可提交、推送、部署或发布。
+12. AI 没有违反 [CD-52 §1.1](52-ai-workflow.md) 的提交边界，也没有未经许可部署或发布。
 
 ## 6. 首批测试用例
 

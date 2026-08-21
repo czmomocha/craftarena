@@ -22,7 +22,7 @@
 
 | 风险 | 状态 | 当前处理 |
 |---|---|---|
-| AI 高速生成导致架构漂移 | 高，已治理 | 单一主 Agent、隔离子任务、核心 TDD、逐任务人类审查 |
+| AI 高速生成导致架构漂移 | 高，已治理 | 单一主 Agent、隔离子任务、核心 TDD、逐任务人类审查。计划补 Schema 验证、宪法红线扫描与 CODEOWNERS（[ADR-0004](../../docs/adr/0004-multi-agent-adoption-timing-and-architecture.md) §4.2）；**这些门禁尚未进 CI**，见 [CD-53 §4.1](../50-engineering/53-testing-and-ci.md) |
 | 固定点 3D kinematic 实现复杂 | 高，已接受 | 限制直立角色和基础碰撞体；先灰盒验证状态哈希 |
 | TRAPRUSH 实体碰撞、硬卡口和无自动解堵 | 高，已接受 | 基础推击提供最低破局手段；不承诺消除恶意堵路 |
 | 无网络自动门禁且人工测试无固定频率 | 高，已接受 | 如实标记未保证；香港真实数据形成后再立项 |
@@ -41,4 +41,9 @@
 | 传送迷路或跳关 | 高，已治理 | 检查点序列、路径验证、镜头过渡、出口安全点 |
 | BASTION 互设障碍不公平 | 高，已治理 | 同预算、盲设、路径硬验证、槽位与补偿预设 |
 | 网页/微信包体超限 | 中，已治理 | Compatibility、资源变体、子包、按需资源模块 |
-| Godot 主 MCP 未选定 | 中，延期至 M2 前重估 | 已确认无 MCP 也能完成开发闭环；重估时按 UndoRedo、运行、错误读取、Headless、维护性五维实测，清单见 [ADR-0003](../../docs/adr/0003-godot-mcp-selection.md) |
+| Godot 主 MCP 供应链与编辑器权限 | 中，已缓解 | 已选定唯一主 MCP 为 Godot AI（MIT，GDScript 插件 + 本机 Python）。接入烟测未签字前不当作可用能力；插件不入库；仅回环；禁止 `--allow-host` 与 Vision Routing。清单见 [ADR-0003](../../docs/adr/0003-godot-mcp-selection.md) |
+| Godot AI 匿名遥测默认开启 | 中，已治理 | 第一次启用插件前写入 `GODOT_AI_DISABLE_TELEMETRY=true`，Dock 再关 Telemetry，Cursor attach 带 `--disable-telemetry`。口径见 [CD-51 §7.2](../50-engineering/51-dev-environment.md)，不属于 [CD-14](../10-product/14-data-and-telemetry.md) 玩家遥测 |
+| `_mcp_game_helper` 写入 `project.godot` 后进入 Headless | 高，已缓解 | 上游导出会剥 autoload，但 MatchServer 跑源码。已提交工程只保留 GUT 插件；本机启用后提交前必须还原。生产级启用前不得把 helper 当基础 Autoload |
+| 多 Agent 并行放大 review 负担 | 高，已缓解 | 启用判据 A1–A4 与并行度上限见 [CD-52 §5](../50-engineering/52-ai-workflow.md)。门禁覆盖率不足时禁止并行 |
+| Cursor 托管 worktree 自动清理可能丢失未提交产出 | 中，已缓解 | 任务粒度半天到两天；任务结束即开 PR。隔离分支提交须等分支保护落地后才允许，见 [CD-52 §1.1](../50-engineering/52-ai-workflow.md) |
+| Bugbot / Cloud Agent 需要仓库读写权限 | 中，已接受 | 属安全边界扩大，随 [ADR-0004](../../docs/adr/0004-multi-agent-adoption-timing-and-architecture.md) 批准。Bugbot 一期不启用 fail-on-unresolved-issues，不是门禁。Cloud Agent 在分支保护落地前不得使用 |
