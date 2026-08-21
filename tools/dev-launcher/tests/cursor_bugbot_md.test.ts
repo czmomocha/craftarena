@@ -12,6 +12,7 @@ describe(".cursor/BUGBOT.md", () => {
 		assert.match(source, /Confirmed-docs\/00-constitution\/CONSTITUTION\.md/);
 		assert.match(source, /AGENTS\.md/);
 		assert.match(source, /not.*merge gate/i);
+		assert.match(source, /deferred/i);
 		assert.match(source, /game\/src\/simulation/);
 		assert.match(source, /SceneTree/);
 		assert.match(source, /float/);

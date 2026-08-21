@@ -46,4 +46,4 @@
 | `_mcp_game_helper` 写入 `project.godot` 后进入 Headless | 高，已缓解 | 上游导出会剥 autoload，但 MatchServer 跑源码。已提交工程只保留 GUT 插件；本机启用后提交前必须还原。生产级启用前不得把 helper 当基础 Autoload |
 | 多 Agent 并行放大 review 负担 | 高，已缓解 | 启用判据 A1–A4 与并行度上限见 [CD-52 §5](../50-engineering/52-ai-workflow.md)。门禁覆盖率不足时禁止并行 |
 | Cursor 托管 worktree 自动清理可能丢失未提交产出 | 中，已缓解 | 任务粒度半天到两天；任务结束即开 PR。隔离分支提交须等分支保护落地后才允许，见 [CD-52 §1.1](../50-engineering/52-ai-workflow.md) |
-| Bugbot / Cloud Agent 需要仓库读写权限 | 中，已接受 | 属安全边界扩大，随 [ADR-0004](../../docs/adr/0004-multi-agent-adoption-timing-and-architecture.md) 批准。Bugbot 一期不启用 fail-on-unresolved-issues，不是门禁。Cloud Agent 在分支保护落地前不得使用 |
+| Bugbot / Cloud Agent 需要仓库读写权限 | 中，已接受 | 属安全边界扩大，随 [ADR-0004](../../docs/adr/0004-multi-agent-adoption-timing-and-architecture.md) 批准。GitHub PR 侧 Bugbot 已跳过（SCM 安装对不上）；合入靠 CI + 人类批准。不启用 fail-on-unresolved-issues。Cloud Agent 仍须分支保护 |

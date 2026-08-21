@@ -122,18 +122,18 @@ AI 不得用"代码看起来正确"代替运行证据。
 | A3 | Schema 验证、禁止 API 扫描、worktree 并行环境三条门禁上线（是否已进 CI 以 [CD-53 §4.1](53-testing-and-ci.md) 为准） |
 | A4 | 仓库里走通至少一次「Agent 产出 → PR → CI 全绿 → 人类 review → 人类合并」 |
 
-当前（2026-08-21）**A1–A4 已成立。** A1 / A4 见 [PR #1](https://github.com/czmomocha/craftarena/pull/1)。A2：`.github/CODEOWNERS` + GitHub code owner 审查。A3：L0 JSON Schema、红线扫描、`.cursor/worktrees.json` 与 DevLauncher `loadEnvFile` 已落地。`.cursor/hooks.json` 已入库（`failClosed: true`）。本地 `/review-bugbot` 已按 [ADR-0004](../../docs/adr/0004-multi-agent-adoption-timing-and-architecture.md) §6.1 第 9 项执行。`.cursor/agents/` 已按 §5.3 入库（无审查 Agent）。`.cursor/BUGBOT.md` 已入库。任务单「隔离方式」行见 §3。**仍不开启多域并行**：PR 侧 Bugbot 未开，先开 2 域属于阶段 B 待办 14，须人类确认后再跑。
+当前（2026-08-21）**A1–A4 已成立。** A1 / A4 见 [PR #1](https://github.com/czmomocha/craftarena/pull/1)。A2：`.github/CODEOWNERS` + GitHub code owner 审查。A3：L0 JSON Schema、红线扫描、`.cursor/worktrees.json` 与 DevLauncher `loadEnvFile` 已落地。`.cursor/hooks.json` 已入库（`failClosed: true`）。本地 `/review-bugbot` 已按 [ADR-0004](../../docs/adr/0004-multi-agent-adoption-timing-and-architecture.md) §6.1 第 9 项执行。`.cursor/agents/` 已按 §5.3 入库（无审查 Agent）。`.cursor/BUGBOT.md` 已入库。任务单「隔离方式」行见 §3。**GitHub PR 侧 Bugbot 已跳过**（Cursor SCM 安装对不上，审查改回 CI + 人类批准；本地 `/review-bugbot` 仍可用）。先开 2 域属于阶段 B 待办 14，须人类确认后再跑，不再等 PR 侧 Bugbot。
 
 ### 5.2 运行时形态
 
-一期使用 Cursor 原生能力，零自建编排框架。下表是已拍板的运行时形态。`.cursor/worktrees.json`、`.cursor/hooks.json`、`.cursor/agents/` 与 `.cursor/BUGBOT.md` 已入库。PR 侧 Bugbot 仍未开，不得把 Bugbot 描述为合并门禁。
+一期使用 Cursor 原生能力，零自建编排框架。下表是已拍板的运行时形态。`.cursor/worktrees.json`、`.cursor/hooks.json`、`.cursor/agents/` 与 `.cursor/BUGBOT.md` 已入库。GitHub PR 侧 Bugbot 已跳过，合入靠 CI + 人类批准；不得把 Bugbot 描述为合并门禁。
 
 | 能力 | 位置 / 用法 | 约束 |
 |---|---|---|
 | 工作区隔离 | IDE `/worktree`、CLI `-w/--worktree`、Cloud Agent 独立 VM | 默认上限与自动清理见 Cursor 文档；不要在 worktree 里放未提交且不可再生的东西 |
 | 角色定义 | 项目级 `.cursor/agents/*.md` | frontmatter 只有 `name`、`description`、`model`、`readonly`、`is_background`。**没有 `tools` 白名单**；不得声称 `readonly: true` 是已证实的硬边界 |
 | 提交拦截 | `.cursor/hooks.json` 的 `beforeShellExecution` | 见 §1.1；必须 `failClosed: true` |
-| 代码审查 | Bugbot：本地 `/review-bugbot` 已跑通；PR 侧仍未开 | 配置在 `.cursor/BUGBOT.md`。本地 `/review-bugbot` **会**注入根目录 `AGENTS.md`（`always_applied_workspace_rules`）。GitHub PR 侧官方规则源是 Team Rules → `.cursor/BUGBOT.md` → learned/manual rules，**不含** `AGENTS.md`；`.cursor/rules/*.mdc` 对 Bugbot 不生效。不得把本地注入当成 PR 侧已覆盖。findings 默认 `neutral`，**不是 CI 门禁**（[CD-53 §4.1](53-testing-and-ci.md)）。实测见 [CD-91 D.6](../90-reference/91-decision-log.md) `bugbot_agents_md` |
+| 代码审查 | 合入靠 CI + 人类批准。本地 `/review-bugbot` 可选；GitHub PR 侧 Bugbot **已跳过** | 配置在 `.cursor/BUGBOT.md`（若日后 PR 侧恢复则加载它）。本地 `/review-bugbot` **会**注入根目录 `AGENTS.md`。GitHub PR 侧因 Cursor SCM 安装对不上而跳过，不要再把它写成流程前置。findings 默认 `neutral`，**不是 CI 门禁**（[CD-53 §4.1](53-testing-and-ci.md)）。实测见 [CD-91 D.6](../90-reference/91-decision-log.md) `bugbot_pr_side` |
 | worktree 基建 | `.cursor/worktrees.json` 的 `setup-worktree-windows` / `setup-worktree-unix` | `npm install`、按需拷本地文件、Godot `--import`、写端口偏移。**禁止 symlink `node_modules`** |
 
 一期**不引入** Multica 类平台，**不用** Cursor Automations（配置无法入库）。重估触发点见 ADR-0004 §6.4。
