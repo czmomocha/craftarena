@@ -1,0 +1,8 @@
+{
+	"name": "@craftarena/content-validator",
+	"version": "0.0.0",
+	"private": true,
+	"type": "module",
+	"description": "Validates L0 envelope fixtures against backend/contracts JSON Schema. No extra runtime dependencies.",
+	"license": "UNLICENSED"
+}

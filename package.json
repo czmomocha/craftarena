@@ -13,7 +13,8 @@
     "backend/control-plane",
     "backend/realtime-gateway",
     "backend/match-host",
-    "tools/dev-launcher"
+    "tools/dev-launcher",
+    "tools/content-validator"
   ],
   "scripts": {
     "typecheck": "tsc --noEmit",

@@ -1,0 +1,88 @@
+{
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"$id": "https://craftarena.local/contracts/shared_command.schema.json",
+	"title": "SharedCommand",
+	"description": "L0 command envelope. Field list owner: CD-42 §3.2. Kind numbers and PLAYER intent names must stay in sync with game/src/shared/.",
+	"type": "object",
+	"additionalProperties": false,
+	"required": [
+		"command_id",
+		"actor_id",
+		"sequence",
+		"target_tick",
+		"expected_revision",
+		"content_version",
+		"payload",
+		"trace_id",
+		"kind"
+	],
+	"properties": {
+		"command_id": { "type": "integer", "minimum": 1 },
+		"actor_id": { "type": "integer", "minimum": 0 },
+		"sequence": { "type": "integer", "minimum": 1 },
+		"target_tick": { "type": "integer", "minimum": 0 },
+		"expected_revision": { "type": "integer", "minimum": 0 },
+		"content_version": { "type": "string", "minLength": 1 },
+		"payload": {
+			"type": "object",
+			"additionalProperties": {
+				"$ref": "canonical_payload.schema.json#/$defs/value"
+			}
+		},
+		"trace_id": { "type": "string", "minLength": 1 },
+		"kind": {
+			"type": "integer",
+			"enum": [1, 2, 3, 4]
+		}
+	},
+	"allOf": [
+		{
+			"if": {
+				"properties": { "kind": { "const": 4 } },
+				"required": ["kind"]
+			},
+			"then": {
+				"properties": {
+					"actor_id": { "type": "integer", "minimum": 0 }
+				}
+			},
+			"else": {
+				"properties": {
+					"actor_id": { "type": "integer", "minimum": 1 }
+				}
+			}
+		},
+		{
+			"if": {
+				"properties": { "kind": { "const": 1 } },
+				"required": ["kind"]
+			},
+			"then": {
+				"properties": {
+					"payload": {
+						"type": "object",
+						"required": ["intent"],
+						"properties": {
+							"intent": {
+								"type": "string",
+								"enum": [
+									"MoveIntent",
+									"JumpIntent",
+									"ShoveIntent",
+									"UseItemIntent",
+									"InteractIntent",
+									"ResetToCheckpointIntent",
+									"BuildTowerIntent",
+									"UpgradeTowerIntent",
+									"SellTowerIntent",
+									"SetTowerPriorityIntent",
+									"DonateResourceIntent"
+								]
+							}
+						}
+					}
+				}
+			}
+		}
+	]
+}

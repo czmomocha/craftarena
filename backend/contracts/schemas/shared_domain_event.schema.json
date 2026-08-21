@@ -1,0 +1,31 @@
+{
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"$id": "https://craftarena.local/contracts/shared_domain_event.schema.json",
+	"title": "SharedDomainEvent",
+	"description": "L0 domain-event envelope. Field list owner: CD-42 §3.2 / §3.3. System events may use actor_id 0 and source_command_id 0.",
+	"type": "object",
+	"additionalProperties": false,
+	"required": [
+		"event_id",
+		"tick",
+		"actor_id",
+		"source_command_id",
+		"event_type",
+		"payload",
+		"trace_id"
+	],
+	"properties": {
+		"event_id": { "type": "integer", "minimum": 1 },
+		"tick": { "type": "integer", "minimum": 0 },
+		"actor_id": { "type": "integer", "minimum": 0 },
+		"source_command_id": { "type": "integer", "minimum": 0 },
+		"event_type": { "type": "string", "minLength": 1 },
+		"payload": {
+			"type": "object",
+			"additionalProperties": {
+				"$ref": "canonical_payload.schema.json#/$defs/value"
+			}
+		},
+		"trace_id": { "type": "string", "minLength": 1 }
+	}
+}

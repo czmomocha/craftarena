@@ -122,7 +122,7 @@ AI 不得用"代码看起来正确"代替运行证据。
 | A3 | Schema 验证、禁止 API 扫描、worktree 并行环境三条门禁上线（是否已进 CI 以 [CD-53 §4.1](53-testing-and-ci.md) 为准） |
 | A4 | 仓库里走通至少一次「Agent 产出 → PR → CI 全绿 → 人类 review → 人类合并」 |
 
-当前（2026-08-21）**A1、A4 已成立，A2、A3 未成立。** A1：`game/src/shared/` 已有 v1 信封 / 定点与 GUT（[PR #1](https://github.com/czmomocha/craftarena/pull/1)）。A4：该 PR 走通「Agent 产出 → PR → CI 全绿 → 人类 review → 人类合并」。A2（`CODEOWNERS`）与 A3（JSON Schema 验证、红线扫描、worktree 基建）仍缺，**A1–A4 不得报全绿**，不得开启多域并行。中间不并行。
+当前（2026-08-21）**A1、A4 已成立，A2、A3 未成立。** A1：`game/src/shared/` 已有 v1 信封 / 定点与 GUT（[PR #1](https://github.com/czmomocha/craftarena/pull/1)）。A4：该 PR 走通「Agent 产出 → PR → CI 全绿 → 人类 review → 人类合并」。A3 的 L0 JSON Schema 正反例已进 `npm test`；红线扫描与 worktree 基建仍缺。A2（`CODEOWNERS`）仍缺。**A1–A4 不得报全绿**，不得开启多域并行。中间不并行。
 
 ### 5.2 运行时形态
 

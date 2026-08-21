@@ -191,7 +191,7 @@
 - `authoritative_collision_shapes = primitive_compound`。
 - `gdscript_typing = strict_core_typed_ui_flexible`。
 - `rule_vm_execution = versioned_bytecode_interpreter`。
-- `api_contract = json_schema_openapi`。
+- `api_contract = json_schema_openapi`。L0 信封 JSON Schema 已于 2026-08-21 落入 `backend/contracts/schemas/`，由 `tools/content-validator/` 做正反例；未引入 Ajv。Component Schema / OpenAPI 仍未落地，本键不被覆盖。
 - `network_targets = region_real_data`。
 - `provisional_network_gate = no_gate`。
 - `network_correctness_tests = manual_network_tests`。

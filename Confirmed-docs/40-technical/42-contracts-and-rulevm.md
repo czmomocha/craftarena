@@ -129,4 +129,13 @@ trace_id
 | 关键状态哈希 | `game/src/shared/protocol/state_hasher.gd` |
 | 定点与 BAM | `game/src/shared/fixed/` |
 
-JSON Schema 仍待阶段 A 后续任务写入 `backend/contracts/`。`payload` 只允许 nil / bool / int / String / Array / Dictionary（字符串键）；禁止 float、Object、Callable。PLAYER 命令必须带白名单 `intent` 字符串。SYSTEM 命令允许 `actor_id = 0`。
+JSON Schema 落点：
+
+| 内容 | 路径 |
+|---|---|
+| 可哈希 payload | `backend/contracts/schemas/canonical_payload.schema.json` |
+| 命令信封 | `backend/contracts/schemas/shared_command.schema.json` |
+| 领域事件 | `backend/contracts/schemas/shared_domain_event.schema.json` |
+| 正反例与校验 | `tools/content-validator/`（由根目录 `npm test` 收集） |
+
+`payload` 只允许 nil / bool / int / String / Array / Dictionary（字符串键）；禁止 float、Object、Callable。PLAYER 命令必须带白名单 `intent` 字符串。SYSTEM 命令允许 `actor_id = 0`。Component Schema v1 与 Rule VM 图的 JSON Schema 仍未落地。

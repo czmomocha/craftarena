@@ -1,0 +1,13 @@
+{
+	"command_id": 7,
+	"actor_id": 0,
+	"sequence": 1,
+	"target_tick": 0,
+	"expected_revision": 0,
+	"content_version": "content-v1",
+	"payload": {
+		"reason": "tick"
+	},
+	"trace_id": "trace-sys",
+	"kind": 4
+}

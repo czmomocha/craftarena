@@ -1,0 +1,25 @@
+{
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"$id": "https://craftarena.local/contracts/canonical_payload.schema.json",
+	"title": "CanonicalPayload",
+	"description": "Wire form of a hashable payload value. Field rules belong to CD-42 §3.4. Nested depth is enforced by the validator against CanonicalPayload.MAX_DEPTH, not by unrolling this schema.",
+	"$ref": "#/$defs/value",
+	"$defs": {
+		"value": {
+			"oneOf": [
+				{ "type": "null" },
+				{ "type": "boolean" },
+				{ "type": "integer" },
+				{ "type": "string" },
+				{
+					"type": "array",
+					"items": { "$ref": "#/$defs/value" }
+				},
+				{
+					"type": "object",
+					"additionalProperties": { "$ref": "#/$defs/value" }
+				}
+			]
+		}
+	}
+}
