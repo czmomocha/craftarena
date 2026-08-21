@@ -134,4 +134,4 @@ Godot 主 MCP 已选定为 Godot AI（[ADR-0003](../../docs/adr/0003-godot-mcp-s
 
 `Confirmed-docs/` 保留在仓库根，是产品与工程规范的唯一事实源；`docs/adr/` 只记录实现级架构决策。
 
-上面是目标形态，不是当前完成度。截至 M1 阶段 A，`game/src/shared/` 已有稳定 ID、命令信封、领域事件、状态哈希与定点运算；Component Schema 的代码与 JSON Schema 仍待后续任务。`backend/contracts/` 里仍然只有服务健康检查用的 TypeScript 类型，CD-91 定下的 `api_contract = json_schema_openapi` 尚未落地；`tools/` 下也只有 `dev-launcher/` 是实的，其余三个工具目录待对应里程碑创建。
+上面是目标形态，不是当前完成度。截至 M1 阶段 A，`game/src/shared/` 已有稳定 ID、命令信封、领域事件、状态哈希与定点运算；`backend/contracts/schemas/` 已有对应的 L0 JSON Schema，由 `tools/content-validator/` 做正反例。Component Schema v1 的代码与 JSON Schema、OpenAPI、以及 `bot-runner/` / `replay-inspector/` 仍待后续任务。

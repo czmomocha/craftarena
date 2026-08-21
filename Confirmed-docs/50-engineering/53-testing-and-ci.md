@@ -187,7 +187,7 @@ AI 生成代码必须比普通手写代码有**更强的自动化证据**，因�
 | 语法与类型检查 | 已启用 | 逐个 `.gd` 文件跑 `--check-only`；`backend/`、`tools/` 跑 `tsc --noEmit` |
 | 核心目录警告视为错误 | 已启用 | GDScript 由 `project.godot` 全局配置（[ADR-0001](../../docs/adr/0001-strict-gdscript-typing-gate.md)）并由 GUT 断言守护；TypeScript 由 `tsconfig.json` 的 strict 系列保证 |
 | 单元测试 | 已启用（全量，非"受影响"） | GUT 跑 `res://tests/unit`；后端跑 `node --test` |
-| Schema 验证 | 未实现 | 尚无 Schema |
+| Schema 验证 | 已启用（仅 L0 信封） | `tools/content-validator/` 对 `backend/contracts/schemas/` 做正反例，并由根目录 `npm test` 收集。未覆盖 Component Schema / Rule VM。未引入 Ajv（新依赖属宪法第十八条人类门禁） |
 | 禁止 API 和依赖检查 | 部分 | 仅有"工程内不得出现 `.cs` / `.csproj`"一条，由 GUT 断言 |
 | 编辑文件的 linter 诊断 | 未实现 | 依赖开发机 IDE，未进 CI |
 | PR Web 预览 | 未实现 | 等 Web 导出与沙盒环境落地 |

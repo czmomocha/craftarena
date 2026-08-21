@@ -1,0 +1,12 @@
+{
+	"event_id": 11,
+	"tick": 3,
+	"actor_id": 9,
+	"source_command_id": 1,
+	"event_type": "PlayerMoved",
+	"payload": {
+		"dx": 1,
+		"dz": 0
+	},
+	"trace_id": "trace-1"
+}

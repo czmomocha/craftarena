@@ -1,0 +1,9 @@
+{
+	"event_id": 1,
+	"tick": -1,
+	"actor_id": 0,
+	"source_command_id": 0,
+	"event_type": "MatchStarted",
+	"payload": {},
+	"trace_id": "trace-sys"
+}
