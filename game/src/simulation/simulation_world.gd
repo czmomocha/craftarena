@@ -4,9 +4,10 @@ extends RefCounted
 ## Authoritative simulation skeleton. Tick is a counter, not a wall-clock duration.
 ## Pose fields are Q48.16; yaw is BAM. Hash order: tick_index, then id,x,y,z,yaw by id.
 ## Radius, cylinder_height, and static AABBs are Q48.16 geometry and are not part of hash_state.
-## try_move_xz / try_move_y reject a destination that overlaps another upright capsule
-## or a spawned static AABB. Box blocking is destination detection only.
-## Continuous sweep / substepping along the segment is not implemented in this slice.
+## try_move_xz / try_move_y sample the displacement segment with discrete substeps
+## (not continuous analytic TOI) against other upright capsules and static AABBs.
+## A blocked sample or overflow rejects the whole move; there is no slide.
+## radius <= 0 keeps destination-only checks; radius is the only step scale.
 
 var tick_index: int = 0
 
@@ -86,7 +87,7 @@ func try_move_xz(entity_id: int, dx: int, dz: int) -> bool:
 	var new_z_res: FixedResult = Fixed.try_add(_z[pose_index], dz)
 	if not new_z_res.ok:
 		return false
-	if _destination_blocked(entity_id, pose_index, new_x_res.value, _y[pose_index], new_z_res.value):
+	if not _sweep_clear_xz(entity_id, pose_index, dx, dz, new_x_res.value, new_z_res.value):
 		return false
 	_x[pose_index] = new_x_res.value
 	_z[pose_index] = new_z_res.value
@@ -101,7 +102,7 @@ func try_move_y(entity_id: int, dy: int) -> bool:
 	var new_y_res: FixedResult = Fixed.try_add(_y[pose_index], dy)
 	if not new_y_res.ok:
 		return false
-	if _destination_blocked(entity_id, pose_index, _x[pose_index], new_y_res.value, _z[pose_index]):
+	if not _sweep_clear_y(entity_id, pose_index, dy, new_y_res.value):
 		return false
 	_y[pose_index] = new_y_res.value
 	return true
@@ -129,6 +130,93 @@ func hash_state() -> PackedByteArray:
 
 func get_rng() -> SimRng:
 	return _rng
+
+
+func _sweep_clear_xz(
+	entity_id: int, pose_index: int, dx: int, dz: int, dest_x: int, dest_z: int
+) -> bool:
+	var start_x: int = _x[pose_index]
+	var start_y: int = _y[pose_index]
+	var start_z: int = _z[pose_index]
+	var radius: int = _radius[pose_index]
+	if radius <= 0:
+		return not _destination_blocked(entity_id, pose_index, dest_x, start_y, dest_z)
+	var abs_dx_res: FixedResult = _try_abs(dx)
+	if not abs_dx_res.ok:
+		return false
+	var abs_dz_res: FixedResult = _try_abs(dz)
+	if not abs_dz_res.ok:
+		return false
+	var chebyshev: int = abs_dx_res.value
+	if abs_dz_res.value > chebyshev:
+		chebyshev = abs_dz_res.value
+	var step_count: int = _sweep_step_count(chebyshev, radius)
+	var sample_i: int = 1
+	while true:
+		var step_dx_res: FixedResult = Fixed.try_mul_div(dx, sample_i, step_count)
+		if not step_dx_res.ok:
+			return false
+		var step_dz_res: FixedResult = Fixed.try_mul_div(dz, sample_i, step_count)
+		if not step_dz_res.ok:
+			return false
+		var sample_x_res: FixedResult = Fixed.try_add(start_x, step_dx_res.value)
+		if not sample_x_res.ok:
+			return false
+		var sample_z_res: FixedResult = Fixed.try_add(start_z, step_dz_res.value)
+		if not sample_z_res.ok:
+			return false
+		if _destination_blocked(
+			entity_id, pose_index, sample_x_res.value, start_y, sample_z_res.value
+		):
+			return false
+		if sample_i == step_count:
+			break
+		sample_i += 1
+	return true
+
+
+func _sweep_clear_y(entity_id: int, pose_index: int, dy: int, dest_y: int) -> bool:
+	var start_x: int = _x[pose_index]
+	var start_y: int = _y[pose_index]
+	var start_z: int = _z[pose_index]
+	var radius: int = _radius[pose_index]
+	if radius <= 0:
+		return not _destination_blocked(entity_id, pose_index, start_x, dest_y, start_z)
+	var abs_dy_res: FixedResult = _try_abs(dy)
+	if not abs_dy_res.ok:
+		return false
+	var step_count: int = _sweep_step_count(abs_dy_res.value, radius)
+	var sample_i: int = 1
+	while true:
+		var step_dy_res: FixedResult = Fixed.try_mul_div(dy, sample_i, step_count)
+		if not step_dy_res.ok:
+			return false
+		var sample_y_res: FixedResult = Fixed.try_add(start_y, step_dy_res.value)
+		if not sample_y_res.ok:
+			return false
+		if _destination_blocked(
+			entity_id, pose_index, start_x, sample_y_res.value, start_z
+		):
+			return false
+		if sample_i == step_count:
+			break
+		sample_i += 1
+	return true
+
+
+func _sweep_step_count(length: int, radius: int) -> int:
+	var step_count: int = length / radius
+	if length % radius != 0:
+		step_count += 1
+	if step_count < 1:
+		step_count = 1
+	return step_count
+
+
+func _try_abs(value: int) -> FixedResult:
+	if value >= 0:
+		return FixedResult.success(value)
+	return Fixed.try_neg(value)
 
 
 func _destination_blocked(entity_id: int, pose_index: int, dest_x: int, dest_y: int, dest_z: int) -> bool:

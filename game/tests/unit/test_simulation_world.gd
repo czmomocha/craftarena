@@ -1,6 +1,6 @@
 extends GutTest
 
-## SimulationWorld 骨架：Tick 计数、姿态读写、XZ/Y 目的地阻挡、Canonical 状态哈希、可取出的 SimRng。
+## SimulationWorld 骨架：Tick 计数、姿态读写、XZ/Y 离散扫掠阻挡、Canonical 状态哈希、可取出的 SimRng。
 
 const FixedClass := preload("res://src/shared/fixed/fixed.gd")
 const FixedResultClass := preload("res://src/shared/fixed/fixed_result.gd")
@@ -198,6 +198,96 @@ func test_try_move_rejects_when_static_box_overlap_math_overflows() -> void:
 	_assert_pose(world, mover_id, FixedClass.INT64_MAX, 0, 0, 0)
 	assert_false(world.try_move_y(mover_id, 0))
 	_assert_pose(world, mover_id, FixedClass.INT64_MAX, 0, 0, 0)
+
+
+func test_try_move_xz_sweep_allows_long_move_in_open_space() -> void:
+	var world: SimulationWorld = SimulationWorld.new(1)
+	var radius: int = _whole(1)
+	var dx: int = _whole(10)
+	var entity_id: int = world.spawn_capsule(0, 0, 0, 16, radius, _whole(2))
+	assert_true(world.try_move_xz(entity_id, dx, 0))
+	_assert_pose(world, entity_id, dx, 0, 0, 16)
+
+
+func test_try_move_y_sweep_allows_long_move_in_open_space() -> void:
+	var world: SimulationWorld = SimulationWorld.new(1)
+	var radius: int = _whole(1)
+	var dy: int = _whole(10)
+	var entity_id: int = world.spawn_capsule(0, 0, 0, 16, radius, _whole(2))
+	assert_true(world.try_move_y(entity_id, dy))
+	_assert_pose(world, entity_id, 0, dy, 0, 16)
+
+
+func test_try_move_xz_sweep_rejects_thin_box_between_free_poses() -> void:
+	var world: SimulationWorld = SimulationWorld.new(1)
+	var radius: int = _whole(1)
+	var dest_x: int = _whole(10)
+	var mover_id: int = world.spawn_capsule(0, 0, 0, 8, radius, _whole(2))
+	assert_eq(world.spawn_static_box(_whole(5), 0, 0, 1, _whole(1), _whole(1)), 1)
+	assert_true(world.try_move_xz(mover_id, 0, 0))
+	assert_true(world.set_pose(mover_id, dest_x, 0, 0, 8))
+	assert_true(world.try_move_xz(mover_id, 0, 0))
+	assert_true(world.set_pose(mover_id, 0, 0, 0, 8))
+	assert_false(world.try_move_xz(mover_id, dest_x, 0))
+	_assert_pose(world, mover_id, 0, 0, 0, 8)
+
+
+func test_try_move_y_sweep_rejects_thin_box_between_free_poses() -> void:
+	var world: SimulationWorld = SimulationWorld.new(1)
+	var radius: int = _whole(1)
+	var dest_y: int = _whole(10)
+	var mover_id: int = world.spawn_capsule(0, 0, 0, 8, radius, _whole(2))
+	assert_eq(world.spawn_static_box(0, _whole(5), 0, _whole(1), 1, _whole(1)), 1)
+	assert_true(world.try_move_y(mover_id, 0))
+	assert_true(world.set_pose(mover_id, 0, dest_y, 0, 8))
+	assert_true(world.try_move_y(mover_id, 0))
+	assert_true(world.set_pose(mover_id, 0, 0, 0, 8))
+	assert_false(world.try_move_y(mover_id, dest_y))
+	_assert_pose(world, mover_id, 0, 0, 0, 8)
+
+
+func test_try_move_xz_sweep_rejects_capsule_between_free_poses() -> void:
+	var world: SimulationWorld = SimulationWorld.new(1)
+	var radius: int = _whole(1)
+	var dest_x: int = _whole(10)
+	var mover_id: int = world.spawn_capsule(0, 0, 0, 8, radius, _whole(2))
+	world.spawn_capsule(_whole(5), 0, 0, 0, radius, _whole(2))
+	assert_true(world.try_move_xz(mover_id, 0, 0))
+	assert_true(world.set_pose(mover_id, dest_x, 0, 0, 8))
+	assert_true(world.try_move_xz(mover_id, 0, 0))
+	assert_true(world.set_pose(mover_id, 0, 0, 0, 8))
+	assert_false(world.try_move_xz(mover_id, dest_x, 0))
+	_assert_pose(world, mover_id, 0, 0, 0, 8)
+
+
+func test_try_move_xz_zero_radius_only_checks_destination() -> void:
+	var world: SimulationWorld = SimulationWorld.new(1)
+	var dest_x: int = _whole(10)
+	var mover_id: int = world.spawn_capsule(0, 0, 0, 8)
+	assert_eq(world.spawn_static_box(_whole(5), 0, 0, 1, _whole(1), _whole(1)), 1)
+	assert_true(world.try_move_xz(mover_id, dest_x, 0))
+	_assert_pose(world, mover_id, dest_x, 0, 0, 8)
+
+
+func test_try_move_y_zero_radius_only_checks_destination() -> void:
+	var world: SimulationWorld = SimulationWorld.new(1)
+	var dest_y: int = _whole(10)
+	var mover_id: int = world.spawn_capsule(0, 0, 0, 8)
+	assert_eq(world.spawn_static_box(0, _whole(5), 0, _whole(1), 1, _whole(1)), 1)
+	assert_true(world.try_move_y(mover_id, dest_y))
+	_assert_pose(world, mover_id, 0, dest_y, 0, 8)
+
+
+func test_try_move_rejects_when_displacement_abs_overflows() -> void:
+	var world: SimulationWorld = SimulationWorld.new(1)
+	var radius: int = _whole(1)
+	var entity_id: int = world.spawn_capsule(0, 0, 0, 8, radius, 0)
+	assert_false(world.try_move_xz(entity_id, FixedClass.INT64_MIN, 0))
+	_assert_pose(world, entity_id, 0, 0, 0, 8)
+	assert_false(world.try_move_xz(entity_id, 0, FixedClass.INT64_MIN))
+	_assert_pose(world, entity_id, 0, 0, 0, 8)
+	assert_false(world.try_move_y(entity_id, FixedClass.INT64_MIN))
+	_assert_pose(world, entity_id, 0, 0, 0, 8)
 
 
 func test_get_rng_uses_constructor_seed() -> void:
