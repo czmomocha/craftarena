@@ -14,11 +14,13 @@
     "backend/realtime-gateway",
     "backend/match-host",
     "tools/dev-launcher",
-    "tools/content-validator"
+    "tools/content-validator",
+    "tools/redline-scanner"
   ],
   "scripts": {
     "typecheck": "tsc --noEmit",
     "test": "node --test \"backend/**/tests/**/*.test.ts\" \"tools/**/tests/**/*.test.ts\"",
+    "redline-scan": "node tools/redline-scanner/src/main.ts",
     "dev": "node tools/dev-launcher/src/main.ts",
     "control-plane": "node backend/control-plane/src/main.ts",
     "gateway": "node backend/realtime-gateway/src/main.ts",

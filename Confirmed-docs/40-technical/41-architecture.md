@@ -120,6 +120,7 @@ repo/
 │  ├─ dev-launcher/
 │  ├─ bot-runner/
 │  ├─ content-validator/
+│  ├─ redline-scanner/
 │  └─ replay-inspector/
 ├─ infra/
 │  ├─ compose/
@@ -134,4 +135,4 @@ Godot 主 MCP 已选定为 Godot AI（[ADR-0003](../../docs/adr/0003-godot-mcp-s
 
 `Confirmed-docs/` 保留在仓库根，是产品与工程规范的唯一事实源；`docs/adr/` 只记录实现级架构决策。
 
-上面是目标形态，不是当前完成度。截至 M1 阶段 A，`game/src/shared/` 已有稳定 ID、命令信封、领域事件、状态哈希与定点运算；`backend/contracts/schemas/` 已有对应的 L0 JSON Schema，由 `tools/content-validator/` 做正反例。Component Schema v1 的代码与 JSON Schema、OpenAPI、以及 `bot-runner/` / `replay-inspector/` 仍待后续任务。
+上面是目标形态，不是当前完成度。截至 M1 阶段 A，`game/src/shared/` 已有稳定 ID、命令信封、领域事件、状态哈希与定点运算；`backend/contracts/schemas/` 已有对应的 L0 JSON Schema，由 `tools/content-validator/` 做正反例；`tools/redline-scanner/` 扫描宪法第五、七、十一条的可机械化红线。Component Schema v1 的代码与 JSON Schema、OpenAPI、以及 `bot-runner/` / `replay-inspector/` 仍待后续任务。

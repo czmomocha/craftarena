@@ -182,7 +182,7 @@ AI 或人类不能以"实现完了"代替测试证据。没有执行结果的测
 | `.github/workflows/` | CI；实际生效的门禁范围见 CD-53 §4.1 |
 | `game/` | Godot 4 工程；`src/` 下按 L0–L5 分层 |
 | `backend/` | 控制面、实时网关、MatchHost、接口契约 |
-| `tools/` | DevLauncher、BotRunner、内容验证器、回放检查器 |
+| `tools/` | DevLauncher、BotRunner、内容验证器、红线扫描器、回放检查器 |
 | `infra/` | Compose 与腾讯云部署配置 |
 | `docs/` | 实现级 ADR、计划、运维手册 |
 | `early-docs/` | 历史归档，**不构成决策依据** |
