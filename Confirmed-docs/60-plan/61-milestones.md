@@ -62,7 +62,7 @@
 
 ### M1：共享定点仿真与 TRAPRUSH 灰盒
 
-状态：**进行中（阶段 B 两域第一轮已合入；第 3 域未开）**（2026-08-21）。L0 信封、定点、JSON Schema、红线扫描、`CODEOWNERS`、worktree 基建、shell-guard hook、本地 `/review-bugbot`、`.cursor/agents/` 与 `.cursor/BUGBOT.md` 已落地。[CD-52 §5.1](../50-engineering/52-ai-workflow.md) 的 A1–A4 已成立。合入靠 CI + 人类批准。待办 14 第一轮：[PR #13](https://github.com/czmomocha/craftarena/pull/13)（检查点/传送）、[PR #14](https://github.com/czmomocha/craftarena/pull/14)（SimulationWorld 骨架）已由人类合入，并确认审查节奏可继续两域。第 3 域未开。
+状态：**进行中（阶段 B 两域第二轮已合入；第 3 域未开）**（2026-08-21）。L0 信封、定点、JSON Schema、红线扫描、`CODEOWNERS`、worktree 基建、shell-guard hook、本地 `/review-bugbot`、`.cursor/agents/` 与 `.cursor/BUGBOT.md` 已落地。[CD-52 §5.1](../50-engineering/52-ai-workflow.md) 的 A1–A4 已成立。合入靠 CI + 人类批准。待办 14 第一轮：[PR #13](https://github.com/czmomocha/craftarena/pull/13)（检查点/传送）、[PR #14](https://github.com/czmomocha/craftarena/pull/14)（SimulationWorld 骨架）；第二轮：[PR #16](https://github.com/czmomocha/craftarena/pull/16)（XZ 目的地阻挡）、[PR #17](https://github.com/czmomocha/craftarena/pull/17)（MoveIntent / 重置落点 / 推击冷却）已由人类合入。审查节奏可继续两域。第 3 域未开。
 
 产出：
 
