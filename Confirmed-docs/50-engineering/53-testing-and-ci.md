@@ -192,7 +192,7 @@ AI 生成代码必须比普通手写代码有**更强的自动化证据**，因�
 | 编辑文件的 linter 诊断 | 未实现 | 依赖开发机 IDE，未进 CI |
 | PR Web 预览 | 未实现 | 等 Web 导出与沙盒环境落地 |
 | Godot AI MCP | **不进 CI** | 只服务本机打开的编辑器；Headless / GUT / `npm test` 仍是门禁。不得把 `test_run` / `McpTestSuite` 写成自动回归。接入与生产级启用见 [CD-51 §7](51-dev-environment.md)、[ADR-0003](../../docs/adr/0003-godot-mcp-selection.md) |
-| Bugbot | **非门禁** | 已拍板引入（[ADR-0004](../../docs/adr/0004-multi-agent-adoption-timing-and-architecture.md) 决策 6）。本地 `/review-bugbot` 可在推送前跑；PR 侧等第一个 PR 走通后再开。findings 默认 `neutral`，不启用 fail-on-unresolved-issues 之前**不得**描述为已覆盖的合并门禁。配置见 [CD-52 §5.2](52-ai-workflow.md) |
+| Bugbot | **非门禁** | 已拍板引入（[ADR-0004](../../docs/adr/0004-multi-agent-adoption-timing-and-architecture.md) 决策 6）。本地 `/review-bugbot` 已于 2026-08-21 跑过，该路径会注入 `AGENTS.md`。PR 侧仍未开，其官方规则源不含 `AGENTS.md`。findings 默认 `neutral`，不启用 fail-on-unresolved-issues 之前**不得**描述为已覆盖的合并门禁。配置见 [CD-52 §5.2](52-ai-workflow.md) |
 
 按宪法第二十四条，**未在本表标为"已启用"的项目不得在任何材料中描述为已覆盖**。新增门禁时同时改本表和 workflow。
 
