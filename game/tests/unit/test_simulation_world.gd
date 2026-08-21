@@ -1,6 +1,6 @@
 extends GutTest
 
-## SimulationWorld 骨架：Tick 计数、姿态读写、XZ/Y 离散扫掠阻挡、Canonical 状态哈希、可取出的 SimRng。
+## SimulationWorld 骨架：Tick 计数、姿态读写、占用检查瞬移、XZ/Y 离散扫掠阻挡、Canonical 状态哈希、可取出的 SimRng。
 
 const FixedClass := preload("res://src/shared/fixed/fixed.gd")
 const FixedResultClass := preload("res://src/shared/fixed/fixed_result.gd")
@@ -44,6 +44,107 @@ func test_spawn_capsule_ids_increment_and_pose_roundtrips() -> void:
 	assert_eq(updated_x, x + 1)
 	assert_eq(updated_yaw, 32)
 	assert_false(world.set_pose(99, 0, 0, 0, 0))
+
+
+func test_is_pose_blocked_unknown_id_is_blocked() -> void:
+	var world: SimulationWorld = SimulationWorld.new(1)
+	world.spawn_capsule(0, 0, 0, 0)
+	assert_true(world.is_pose_blocked(0, 0, 0, 0))
+	assert_true(world.is_pose_blocked(-1, 0, 0, 0))
+	assert_true(world.is_pose_blocked(99, 0, 0, 0))
+
+
+func test_is_pose_blocked_does_not_collide_with_self() -> void:
+	var world: SimulationWorld = SimulationWorld.new(1)
+	var radius: int = _whole(1)
+	var entity_id: int = world.spawn_capsule(0, 0, 0, 0, radius, _whole(2))
+	assert_false(world.is_pose_blocked(entity_id, 0, 0, 0))
+	assert_false(world.is_pose_blocked(entity_id, _whole(3), 0, 0))
+
+
+func test_try_set_pose_in_open_space_writes_xyz_and_yaw() -> void:
+	var world: SimulationWorld = SimulationWorld.new(1)
+	var entity_id: int = world.spawn_capsule(0, 0, 0, 8, _whole(1), _whole(2))
+	var dest_x: int = _whole(3)
+	var dest_y: int = _whole(4)
+	var dest_z: int = _whole(5)
+	assert_true(world.try_set_pose(entity_id, dest_x, dest_y, dest_z, 32))
+	_assert_pose(world, entity_id, dest_x, dest_y, dest_z, 32)
+
+
+func test_try_set_pose_rejects_closed_capsule_contact_and_keeps_pose() -> void:
+	var world: SimulationWorld = SimulationWorld.new(1)
+	var radius: int = _whole(1)
+	var start_yaw: int = 8
+	var mover_id: int = world.spawn_capsule(0, 0, 0, start_yaw, radius, 0)
+	world.spawn_capsule(_whole(4), 0, 0, 0, radius, 0)
+	assert_true(world.is_pose_blocked(mover_id, _whole(2), 0, 0))
+	assert_false(world.try_set_pose(mover_id, _whole(2), 0, 0, 16))
+	_assert_pose(world, mover_id, 0, 0, 0, start_yaw)
+	assert_false(world.is_pose_blocked(mover_id, 0, 0, 0))
+
+
+func test_try_set_pose_rejects_destination_inside_static_box() -> void:
+	var world: SimulationWorld = SimulationWorld.new(1)
+	var start_x: int = _whole(10)
+	var mover_id: int = world.spawn_capsule(start_x, 0, 0, 8, _whole(1), _whole(2))
+	assert_eq(world.spawn_static_box(0, 0, 0, _whole(1), _whole(1), _whole(1)), 1)
+	assert_true(world.is_pose_blocked(mover_id, 0, 0, 0))
+	assert_false(world.try_set_pose(mover_id, 0, 0, 0, 16))
+	_assert_pose(world, mover_id, start_x, 0, 0, 8)
+
+
+func test_try_set_pose_rejects_overlap_math_overflow() -> void:
+	var world: SimulationWorld = SimulationWorld.new(1)
+	var mover_id: int = world.spawn_capsule(0, 0, 0, 8, _whole(1), _whole(2))
+	world.spawn_capsule(FixedClass.INT64_MIN, 0, 0, 0, _whole(1), _whole(2))
+	assert_true(world.is_pose_blocked(mover_id, FixedClass.INT64_MAX, 0, 0))
+	assert_false(world.try_set_pose(mover_id, FixedClass.INT64_MAX, 0, 0, 16))
+	_assert_pose(world, mover_id, 0, 0, 0, 8)
+	var box_world: SimulationWorld = SimulationWorld.new(1)
+	var box_mover: int = box_world.spawn_capsule(0, 0, 0, 8, _whole(1), _whole(2))
+	assert_eq(box_world.spawn_static_box(FixedClass.INT64_MIN, 0, 0, 0, 0, 0), 1)
+	assert_false(box_world.try_set_pose(box_mover, FixedClass.INT64_MAX, 0, 0, 16))
+	_assert_pose(box_world, box_mover, 0, 0, 0, 8)
+
+
+func test_set_pose_still_writes_when_destination_occupied() -> void:
+	var world: SimulationWorld = SimulationWorld.new(1)
+	var radius: int = _whole(1)
+	var mover_id: int = world.spawn_capsule(0, 0, 0, 8, radius, 0)
+	world.spawn_capsule(_whole(4), 0, 0, 0, radius, 0)
+	var occupied_x: int = _whole(2)
+	assert_true(world.set_pose(mover_id, occupied_x, 0, 0, 16))
+	_assert_pose(world, mover_id, occupied_x, 0, 0, 16)
+	assert_true(world.is_pose_blocked(mover_id, occupied_x, 0, 0))
+
+
+func test_try_set_pose_teleports_across_thin_box_without_sweep() -> void:
+	var world: SimulationWorld = SimulationWorld.new(1)
+	var radius: int = _whole(1)
+	var dest_x: int = _whole(10)
+	var mover_id: int = world.spawn_capsule(0, 0, 0, 8, radius, _whole(2))
+	assert_eq(world.spawn_static_box(_whole(5), 0, 0, 1, _whole(1), _whole(1)), 1)
+	assert_true(world.try_set_pose(mover_id, dest_x, 0, 0, 16))
+	_assert_pose(world, mover_id, dest_x, 0, 0, 16)
+
+
+func test_try_set_pose_unknown_id_fails() -> void:
+	var world: SimulationWorld = SimulationWorld.new(1)
+	world.spawn_capsule(0, 0, 0, 0)
+	assert_false(world.try_set_pose(0, 0, 0, 0, 0))
+	assert_false(world.try_set_pose(-1, 0, 0, 0, 0))
+	assert_false(world.try_set_pose(99, 0, 0, 0, 0))
+
+
+func test_try_set_pose_blocked_keeps_hash_and_boxes_stay_out() -> void:
+	var world: SimulationWorld = SimulationWorld.new(1)
+	var mover_id: int = world.spawn_capsule(0, 0, 0, 8, _whole(1), _whole(2))
+	var before_hex: String = world.hash_state().hex_encode()
+	assert_eq(world.spawn_static_box(0, 0, 0, _whole(1), _whole(1), _whole(1)), 1)
+	assert_eq(world.hash_state().hex_encode(), before_hex)
+	assert_false(world.try_set_pose(mover_id, 0, 0, 0, 16))
+	assert_eq(world.hash_state().hex_encode(), before_hex)
 
 
 func test_hash_state_is_stable_until_a_coordinate_changes() -> void:

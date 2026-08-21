@@ -4,6 +4,9 @@ extends RefCounted
 ## Authoritative simulation skeleton. Tick is a counter, not a wall-clock duration.
 ## Pose fields are Q48.16; yaw is BAM. Hash order: tick_index, then id,x,y,z,yaw by id.
 ## Radius, cylinder_height, and static AABBs are Q48.16 geometry and are not part of hash_state.
+## try_set_pose occupancy-checks the landing pose then teleports; it is not a sweep
+## and not phase-through. Occupied or overflow destinations reject. set_pose still
+## writes without occupancy checks so respawn can teleport into a blocked pose.
 ## try_move_xz / try_move_y sample the displacement segment with discrete substeps
 ## (not continuous analytic TOI) against other upright capsules and static AABBs.
 ## A blocked sample or overflow rejects the whole move; there is no slide.
@@ -62,6 +65,19 @@ func set_pose(entity_id: int, x: int, y: int, z: int, yaw: int) -> bool:
 	_z[pose_index] = z
 	_yaw[pose_index] = yaw
 	return true
+
+
+func is_pose_blocked(entity_id: int, x: int, y: int, z: int) -> bool:
+	if not _has_entity(entity_id):
+		return true
+	var pose_index: int = entity_id - 1
+	return _destination_blocked(entity_id, pose_index, x, y, z)
+
+
+func try_set_pose(entity_id: int, x: int, y: int, z: int, yaw: int) -> bool:
+	if is_pose_blocked(entity_id, x, y, z):
+		return false
+	return set_pose(entity_id, x, y, z, yaw)
 
 
 func get_pose(entity_id: int) -> Dictionary:
