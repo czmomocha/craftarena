@@ -4,7 +4,7 @@ Godot 4 + UGC 双玩法（TRAPRUSH / BASTION）项目 Monorepo。代码与仓库
 
 - 工程规则入口：[AGENTS.md](AGENTS.md)
 - 规范唯一事实源：[Confirmed-docs](Confirmed-docs/README.md)
-- 当前阶段：M1 阶段 A 进行中（L0 信封、定点、L0 JSON Schema 与红线扫描已落地）。进度与退出条件见 [CD-61](Confirmed-docs/60-plan/61-milestones.md)。
+- 当前阶段：M1 阶段 A 进行中（A1–A4 门禁已齐，阶段 B 未启动）。进度与退出条件见 [CD-61](Confirmed-docs/60-plan/61-milestones.md)。
 
 ## 目录
 
@@ -89,12 +89,13 @@ export GODOT_AI_DISABLE_TELEMETRY=true
 | 类型检查 | `npm run typecheck` |
 | 后端与工具单元测试 | `npm test` |
 | 宪法红线扫描 | `npm run redline-scan` |
+| 手动补跑 worktree setup | `npm run setup-worktree` |
 | **一键拉起三个后端进程** | `npm run dev` |
 | 单独启动控制面 | `npm run control-plane` |
 | 单独启动实时网关 | `npm run gateway` |
 | 单独启动 MatchHost | `npm run match-host` |
 
-`npm run dev` 是 DevLauncher：顺序拉起控制面、网关、MatchHost，从各自日志里读出实际监听地址后轮询 `/readyz`，三个都就绪才放行；Ctrl+C 一起停。它不复制端口默认值，所以用 `CONTROL_PLANE_PORT` 等环境变量改端口时不需要同步改它。任一进程在就绪后意外退出，DevLauncher 会停掉其余进程并以非 0 退出，避免留下半死的环境。
+`npm run dev` 是 DevLauncher：启动前若仓库根有 `.env`，用 Node 24 `process.loadEnvFile` 读入（已在环境里的变量优先）。然后顺序拉起控制面、网关、MatchHost，从各自日志里读出实际监听地址后轮询 `/readyz`，三个都就绪才放行；Ctrl+C 一起停。它不复制端口默认值。任一进程在就绪后意外退出，DevLauncher 会停掉其余进程并以非 0 退出，避免留下半死的环境。
 
 DevLauncher 只管本地开发编排，不做守护、重启和资源限制；测试环境的编排见 [CD-44](Confirmed-docs/40-technical/44-deployment.md)。
 
@@ -114,4 +115,17 @@ CI 当前实际启用了哪些门禁、哪些还没实现，以 [CD-53 §4.1](Co
 
 ## 并行工作区
 
-多 Agent 并行**尚未启用**。启用判据见 [CD-52 §5.1](Confirmed-docs/50-engineering/52-ai-workflow.md)。启用后的固定命令与端口偏移会写在本节；在那之前禁止 Agent 自行猜测 worktree 端口、symlink `node_modules`，或把 Cursor Automations 配进项目。
+[CD-52 §5.1](Confirmed-docs/50-engineering/52-ai-workflow.md) 的 A1–A4 已成立，但阶段 B 尚未启动，**不要开启多域并行**。下面只服务「一个 Agent 在隔离 worktree 里干活」。禁止 symlink `node_modules`，禁止把 Cursor Automations 配进项目。
+
+Cursor 创建 worktree 时会跑 `.cursor/worktrees.json`：`npm install`、按需从 `$ROOT_WORKTREE_PATH` 拷 `.env` 与 `data/*.sqlite`、按 worktree 目录名写入端口偏移、用 `GODOT4`（Windows 优先 `GODOT4_CONSOLE`）对 `game/` 做 `--import`。主 checkout（与 `$ROOT_WORKTREE_PATH` 相同）不写 `.env`。
+
+端口公式（不要另猜）：`slot * 100` 加到各服务 `config.ts` 默认端口上。`slot` 为目录名哈希映射到 1–9；可用环境变量 `WORKTREE_SLOT=1`…`9` 覆盖。主 checkout 为 slot 0。写进该 worktree 的 `.env` 的键是 `CONTROL_PLANE_PORT`、`GATEWAY_PORT`、`MATCH_HOST_PORT`、`MATCH_HOST_PORT_RANGE_MIN`、`MATCH_HOST_PORT_RANGE_MAX`、`CONTROL_PLANE_URL`。
+
+| 用途 | 命令 |
+|---|---|
+| 在当前目录重跑 setup | `npm run setup-worktree` |
+| 后端与工具测试 | `npm test` |
+| 拉起该 worktree 的三个后端 | `npm run dev` |
+| GUT | 见上面 Godot 表，`--path game` |
+
+IDE 里用 `/worktree` 开隔离工作区。调试 setup 看 Output 面板的 `Worktrees Setup`。不要在 worktree 里放未提交且不可再生的东西（Cursor 可能自动清理）。

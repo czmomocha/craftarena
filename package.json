@@ -21,6 +21,7 @@
     "typecheck": "tsc --noEmit",
     "test": "node --test \"backend/**/tests/**/*.test.ts\" \"tools/**/tests/**/*.test.ts\"",
     "redline-scan": "node tools/redline-scanner/src/main.ts",
+    "setup-worktree": "node tools/dev-launcher/src/setup_worktree.ts",
     "dev": "node tools/dev-launcher/src/main.ts",
     "control-plane": "node backend/control-plane/src/main.ts",
     "gateway": "node backend/realtime-gateway/src/main.ts",

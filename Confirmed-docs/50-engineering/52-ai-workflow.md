@@ -122,11 +122,11 @@ AI 不得用"代码看起来正确"代替运行证据。
 | A3 | Schema 验证、禁止 API 扫描、worktree 并行环境三条门禁上线（是否已进 CI 以 [CD-53 §4.1](53-testing-and-ci.md) 为准） |
 | A4 | 仓库里走通至少一次「Agent 产出 → PR → CI 全绿 → 人类 review → 人类合并」 |
 
-当前（2026-08-21）**A1、A2、A4 已成立，A3 未成立。** A1 / A4 见 [PR #1](https://github.com/czmomocha/craftarena/pull/1)。A2：`.github/CODEOWNERS` 已入库，且 GitHub 已要求 code owner 审查。A3 已有 L0 JSON Schema 与红线扫描，worktree 基建仍缺。**A1–A4 不得报全绿**，不得开启多域并行。中间不并行。
+当前（2026-08-21）**A1–A4 已成立。** A1 / A4 见 [PR #1](https://github.com/czmomocha/craftarena/pull/1)。A2：`.github/CODEOWNERS` + GitHub code owner 审查。A3：L0 JSON Schema、红线扫描、`.cursor/worktrees.json` 与 DevLauncher `loadEnvFile` 已落地。阶段 B 角色定义与任务单「隔离方式」行尚未建，**本阶段不开启多域并行**。`.cursor/hooks.json` 仍未入库，不得描述为已生效拦截。
 
 ### 5.2 运行时形态
 
-一期使用 Cursor 原生能力，零自建编排框架。下表是已拍板的运行时形态，**不是当前磁盘事实**——仓库里此刻没有 `.cursor/` 目录；对应文件随阶段 A 待办落地，落地前不得声称并行环境已可用。
+一期使用 Cursor 原生能力，零自建编排框架。下表是已拍板的运行时形态。`.cursor/worktrees.json` 已入库；`.cursor/agents/`、`hooks.json`、`BUGBOT.md` 仍未建，不得声称并行角色或提交拦截已可用。
 
 | 能力 | 位置 / 用法 | 约束 |
 |---|---|---|
