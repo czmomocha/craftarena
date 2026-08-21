@@ -1,0 +1,8 @@
+{
+	"name": "@craftarena/shell-guard",
+	"version": "0.0.0",
+	"private": true,
+	"type": "module",
+	"description": "Cursor beforeShellExecution decision logic for protected-branch git writes.",
+	"license": "UNLICENSED"
+}

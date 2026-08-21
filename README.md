@@ -109,7 +109,7 @@ CI 当前实际启用了哪些门禁、哪些还没实现，以 [CD-53 §4.1](Co
 
 ## 协作规则
 
-提交、推送与合入 `main` 的边界见 [CD-52 §1.1](Confirmed-docs/50-engineering/52-ai-workflow.md)。宪法第十八条的人类门禁落在合入 `main`、部署与发布。GitHub 分支保护落地前，Agent 仍不得创建任何提交。
+提交、推送与合入 `main` 的边界见 [CD-52 §1.1](Confirmed-docs/50-engineering/52-ai-workflow.md)。宪法第十八条的人类门禁落在合入 `main`、部署与发布。项目级 `.cursor/hooks.json` 会拦向 `main` 的 git 提交/推送，以及 `git worktree remove --force`。
 
 任务完成判定见 [CD-53 §5 Definition of Done](Confirmed-docs/50-engineering/53-testing-and-ci.md)。
 

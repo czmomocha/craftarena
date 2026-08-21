@@ -15,7 +15,8 @@
     "backend/match-host",
     "tools/dev-launcher",
     "tools/content-validator",
-    "tools/redline-scanner"
+    "tools/redline-scanner",
+    "tools/shell-guard"
   ],
   "scripts": {
     "typecheck": "tsc --noEmit",
