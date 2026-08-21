@@ -1,0 +1,8 @@
+{
+	"name": "@craftarena/redline-scanner",
+	"version": "0.0.0",
+	"private": true,
+	"type": "module",
+	"description": "Scans game sources for constitution red lines that a machine can decide. No extra runtime dependencies.",
+	"license": "UNLICENSED"
+}

@@ -62,7 +62,7 @@
 
 ### M1：共享定点仿真与 TRAPRUSH 灰盒
 
-状态：**进行中（阶段 A）**（2026-08-21 启动）。L0 信封、定点运算与 L0 JSON Schema 正反例已落地。[CD-52 §5.1](../50-engineering/52-ai-workflow.md) 的 A1 与 A4 已成立。A2（`CODEOWNERS`）未成立。A3 只完成 Schema 验证一条，红线扫描与 worktree 仍缺，**A1–A4 不得报全绿**。并行仍禁止。
+状态：**进行中（阶段 A）**（2026-08-21 启动）。L0 信封、定点运算、L0 JSON Schema 正反例与宪法红线扫描已落地。[CD-52 §5.1](../50-engineering/52-ai-workflow.md) 的 A1 与 A4 已成立。A2（`CODEOWNERS`）未成立。A3 还缺 worktree 基建，**A1–A4 不得报全绿**。并行仍禁止。
 
 产出：
 

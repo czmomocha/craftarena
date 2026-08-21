@@ -4,14 +4,14 @@ Godot 4 + UGC 双玩法（TRAPRUSH / BASTION）项目 Monorepo。代码与仓库
 
 - 工程规则入口：[AGENTS.md](AGENTS.md)
 - 规范唯一事实源：[Confirmed-docs](Confirmed-docs/README.md)
-- 当前阶段：M1 阶段 A 进行中（L0 信封、定点运算与 L0 JSON Schema 正反例已落地）。进度与退出条件见 [CD-61](Confirmed-docs/60-plan/61-milestones.md)。
+- 当前阶段：M1 阶段 A 进行中（L0 信封、定点、L0 JSON Schema 与红线扫描已落地）。进度与退出条件见 [CD-61](Confirmed-docs/60-plan/61-milestones.md)。
 
 ## 目录
 
 ```text
 game/       Godot 4 工程（src 按 L0–L5 分层、content、tests）
 backend/    control-plane / realtime-gateway / match-host / contracts
-tools/      dev-launcher / bot-runner / content-validator / replay-inspector
+tools/      dev-launcher / bot-runner / content-validator / redline-scanner / replay-inspector
 infra/      compose / tencent-cloud
 docs/       adr / plans / runbooks
 ```
@@ -88,6 +88,7 @@ export GODOT_AI_DISABLE_TELEMETRY=true
 | 安装依赖 | `npm install` |
 | 类型检查 | `npm run typecheck` |
 | 后端与工具单元测试 | `npm test` |
+| 宪法红线扫描 | `npm run redline-scan` |
 | **一键拉起三个后端进程** | `npm run dev` |
 | 单独启动控制面 | `npm run control-plane` |
 | 单独启动实时网关 | `npm run gateway` |
@@ -101,7 +102,7 @@ DevLauncher 只管本地开发编排，不做守护、重启和资源限制；�
 
 ## 持续集成
 
-`.github/workflows/ci.yml` 在推送 `main` 和所有 PR 上运行两个 job：`backend`（`npm run typecheck` + `npm test`）与 `godot`（导入、逐文件 `--check-only`、Headless 启动烟测、GUT）。用的都是上面表里那些命令，本地跑一遍就能复现 CI 的结论。
+`.github/workflows/ci.yml` 在推送 `main` 和所有 PR 上运行两个 job：`backend`（`npm run typecheck` + `npm run redline-scan` + `npm test`）与 `godot`（导入、逐文件 `--check-only`、Headless 启动烟测、GUT）。用的都是上面表里那些命令，本地跑一遍就能复现 CI 的结论。
 
 CI 当前实际启用了哪些门禁、哪些还没实现，以 [CD-53 §4.1](Confirmed-docs/50-engineering/53-testing-and-ci.md) 的「当前实现状态」表为准。
 

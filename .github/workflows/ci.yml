@@ -1,8 +1,8 @@
 name: CI
 
-# CD-53 §4.1「每次变更」门禁的当前可实现子集：语法与类型检查、单元测试、L0 Schema 正反例。
-# L0 Schema 由根目录 `npm test` 收集，不另开 job。禁止 API 扫描和 PR Web 预览仍未落地。
-# 不要把本流水线描述成"已覆盖 §4.1 全部门禁"（宪法第二十四条）。
+# CD-53 §4.1「每次变更」门禁的当前可实现子集：语法与类型检查、单元测试、L0 Schema 正反例、宪法红线扫描。
+# L0 Schema 由根目录 `npm test` 收集。红线扫描另有 `npm run redline-scan` step。
+# PR Web 预览仍未落地。不要把本流水线描述成"已覆盖 §4.1 全部门禁"（宪法第二十四条）。
 
 on:
   push:
@@ -37,6 +37,9 @@ jobs:
       # 宪法第二十三条：backend 与 tools 静态类型、警告视为错误，由 tsconfig 的 strict 系列保证。
       - name: Typecheck
         run: npm run typecheck
+
+      - name: Constitution red-line scan
+        run: npm run redline-scan
 
       - name: Unit tests
         run: npm test
