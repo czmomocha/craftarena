@@ -1,0 +1,8 @@
+{
+	"setup-worktree-windows": [
+		"node tools/dev-launcher/src/setup_worktree.ts"
+	],
+	"setup-worktree-unix": [
+		"node tools/dev-launcher/src/setup_worktree.ts"
+	]
+}

@@ -1,6 +1,7 @@
 import { spawn, type ChildProcessByStdio } from "node:child_process";
+import { existsSync } from "node:fs";
+import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { dirname, resolve } from "node:path";
 import type { Readable } from "node:stream";
 
 import { probeReadyEndpoint, waitUntilReady } from "./readiness.ts";
@@ -14,6 +15,11 @@ import { SERVICES, parseListeningUrl, type ServiceSpec } from "./services.ts";
  */
 
 const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../../..");
+
+const envFile = join(REPO_ROOT, ".env");
+if (existsSync(envFile)) {
+	process.loadEnvFile(envFile);
+}
 
 const LISTEN_TIMEOUT_MS = 30_000;
 const READY_TIMEOUT_MS = 30_000;
