@@ -122,7 +122,7 @@ AI 不得用"代码看起来正确"代替运行证据。
 | A3 | Schema 验证、禁止 API 扫描、worktree 并行环境三条门禁上线（是否已进 CI 以 [CD-53 §4.1](53-testing-and-ci.md) 为准） |
 | A4 | 仓库里走通至少一次「Agent 产出 → PR → CI 全绿 → 人类 review → 人类合并」 |
 
-当前（2026-08-22）**A1–A4 已成立。** A1 / A4 见 [PR #1](https://github.com/czmomocha/craftarena/pull/1)。A2：`.github/CODEOWNERS` + GitHub code owner 审查。A3：L0 JSON Schema、红线扫描、`.cursor/worktrees.json` 与 DevLauncher `loadEnvFile` 已落地。`.cursor/hooks.json` 已入库（`failClosed: true`）。本地 `/review-bugbot` 已按 [ADR-0004](../../docs/adr/0004-multi-agent-adoption-timing-and-architecture.md) §6.1 第 9 项执行。`.cursor/agents/` 已按 §5.3 入库（无审查 Agent）。`.cursor/BUGBOT.md` 已入库。任务单「隔离方式」行见 §3。**GitHub PR 侧 Bugbot 已跳过**（Cursor SCM 安装对不上，审查改回 CI + 人类批准；本地 `/review-bugbot` 仍可用）。阶段 B 待办 14 第一轮：玩法 [PR #13](https://github.com/czmomocha/craftarena/pull/13)、仿真 [PR #14](https://github.com/czmomocha/craftarena/pull/14)。第二轮：玩法 [PR #17](https://github.com/czmomocha/craftarena/pull/17)、仿真 [PR #16](https://github.com/czmomocha/craftarena/pull/16)。第三轮：玩法 [PR #19](https://github.com/czmomocha/craftarena/pull/19)、仿真 [PR #20](https://github.com/czmomocha/craftarena/pull/20) 由人类合入。审查节奏可继续两域。第 3 域未开。
+当前（2026-08-22）**A1–A4 已成立。** A1 / A4 见 [PR #1](https://github.com/czmomocha/craftarena/pull/1)。A2：`.github/CODEOWNERS` + GitHub code owner 审查。A3：L0 JSON Schema、红线扫描、`.cursor/worktrees.json` 与 DevLauncher `loadEnvFile` 已落地。`.cursor/hooks.json` 已入库（`failClosed: true`）。本地 `/review-bugbot` 已按 [ADR-0004](../../docs/adr/0004-multi-agent-adoption-timing-and-architecture.md) §6.1 第 9 项执行。`.cursor/agents/` 已按 §5.3 入库（无审查 Agent）。`.cursor/BUGBOT.md` 已入库。任务单「隔离方式」行见 §3。**GitHub PR 侧 Bugbot 已跳过**（Cursor SCM 安装对不上，审查改回 CI + 人类批准；本地 `/review-bugbot` 仍可用）。阶段 B 待办 14 第一轮：玩法 [PR #13](https://github.com/czmomocha/craftarena/pull/13)、仿真 [PR #14](https://github.com/czmomocha/craftarena/pull/14)。第二轮：玩法 [PR #17](https://github.com/czmomocha/craftarena/pull/17)、仿真 [PR #16](https://github.com/czmomocha/craftarena/pull/16)。第三轮：玩法 [PR #19](https://github.com/czmomocha/craftarena/pull/19)、仿真 [PR #20](https://github.com/czmomocha/craftarena/pull/20)。第四轮：玩法 [PR #22](https://github.com/czmomocha/craftarena/pull/22)、仿真 [PR #23](https://github.com/czmomocha/craftarena/pull/23) 由人类合入。审查节奏可继续两域。第 3 域未开。
 
 ### 5.2 运行时形态
 
@@ -138,7 +138,7 @@ AI 不得用"代码看起来正确"代替运行证据。
 
 一期**不引入** Multica 类平台，**不用** Cursor Automations（配置无法入库）。重估触发点见 ADR-0004 §6.4。
 
-并行度上限 **3**，先跑 **2** 个域，确认审查节奏后再加第 3 个。不要一上来开 5 个。三轮已确认可继续两域；第 3 域仍未开。阶段 B 的域划分与 M2 启动前工具链评审见 [CD-61](../60-plan/61-milestones.md)。
+并行度上限 **3**，先跑 **2** 个域，确认审查节奏后再加第 3 个。不要一上来开 5 个。四轮已确认可继续两域；第 3 域仍未开。阶段 B 的域划分与 M2 启动前工具链评审见 [CD-61](../60-plan/61-milestones.md)。
 
 ### 5.3 角色
 
