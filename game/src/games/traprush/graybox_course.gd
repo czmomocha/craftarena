@@ -6,11 +6,12 @@ extends RefCounted
 ## 灰盒检查点垫走 PadAccept / CD-21 §8：完成由占用判定，客户端不得断言。
 ## 终点垫走 FinishAccept：冲线由占用 + 全部强制检查点完成判定；无 FinishIntent（CD-21 §6 / §8）。
 ## finish_tick 是权威 world.tick_index，未冲线哨兵为 -1；不写入 SimulationWorld.hash_state。
-## 位移、jump_dy、support_dy、max_hops、max_health、period、snapshot capacity 均由调用方传入，不锁定 Tick/快照 Hz（CD-63）。
+## 位移、jump_dy、support_dy、fall_dy、max_hops、max_health、period、snapshot capacity 均由调用方传入，不锁定 Tick/快照 Hz（CD-63）。
 ## 成功 PLAYER 意图写入 SimReplayBuffer（CD-43 命令日志 + 种子）；磁带不回放进 world。
 ## assemble 记录 tick 0 关键快照；try_commit_tick 推进 tick、按调用方周期切换 hazard 阻挡、再 record。
 ## try_step_intent(payload, jump_dy, support_dy) 把 support_dy 传给 apply；成功 PLAYER 意图入带。
-## try_interact / try_use_item 成功入带；打箱 / 传送 / 检查点 / 冲线不 tick、不 record、不入带。
+## try_apply_fall(fall_dy) 只调用 world.try_move_y_until_blocked；成功/失败与仿真一致。
+## try_interact / try_use_item 成功入带；打箱 / 传送 / 检查点 / 冲线 / 下落不 tick、不 record、不入带。
 ## try_interact 仅在 overlapping_static_boxes 含 crate 时按调用方 damage 走 Destructible；摧毁则关闭 crate 盒阻挡。
 ## try_use_item 用当前姿态加调用方 reach 得到候选坐标，overlapping_static_boxes_at 含 crate 时才伤害；伤害与 reach 不从 payload 读取。
 ## try_break_crate 保持测试入口：不要求重叠、不入带。
@@ -244,6 +245,12 @@ func try_step_intent(payload: Dictionary, jump_dy: int, support_dy: int) -> Dict
 		return result
 	_next_command_seq += 1
 	return result
+
+
+func try_apply_fall(fall_dy: int) -> bool:
+	if world == null:
+		return false
+	return world.try_move_y_until_blocked(entity_id, fall_dy)
 
 
 func try_interact(payload: Dictionary, damage: int) -> Dictionary:
