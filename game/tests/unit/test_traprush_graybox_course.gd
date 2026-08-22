@@ -2,6 +2,7 @@ extends GutTest
 
 ## TraprushGrayboxCourse：单人灰盒跑道夹具。几何、位移、jump_dy、support_dy、fall_dy、max_hops、max_health、period、capacity、interact/use-item damage 与 reach 只由调用方传入。
 ## CD-21 §4.2 / §5.2 / §8 与 CD-61 M1：有序检查点、占用垫盒、上下/侧向传送、墙阻挡、打掉箱子后开路、周期 hazard stub、爆破道具 stub。
+## Move 经 IntentStepper 走 try_move_xz_until_blocked：撞墙/箱停在最后未阻挡样本，不是整段拒绝。
 ## 成功 PLAYER 意图写入 SimReplayBuffer（CD-43）；磁带不回放进 world。
 ## assemble 记录 tick 0 关键快照；try_commit_tick(fall_dy) 先 fall 再 tick，再按调用方周期切换 hazard 阻挡。
 ## try_step_intent(payload, jump_dy, support_dy) 把 support_dy 传给 apply；成功 PLAYER 意图入带。
@@ -125,48 +126,64 @@ func test_assemble_exposes_world_ids_track_and_crate() -> void:
 
 func test_wall_blocks_forward_then_same_crate_displacement_passes_after_break() -> void:
 	var course: GrayboxCourse = GrayboxCourse.assemble(_valid_layout())
+	var oracle: GrayboxCourse = GrayboxCourse.assemble(_valid_layout())
+	var contrast: GrayboxCourse = GrayboxCourse.assemble(_valid_layout())
 	var wall_dx: int = _wall_dx()
 	var crate_dz: int = _crate_dz()
+	assert_false(contrast.world.try_move_xz(contrast.entity_id, wall_dx, 0))
+	_assert_pose(contrast, _start_x(), 0, 0, START_YAW)
+	assert_true(oracle.world.try_move_xz_until_blocked(oracle.entity_id, wall_dx, 0))
 	var wall_move: Dictionary = _step_intent(course, _move_payload(wall_dx, 0), 0)
 	assert_true(_ok(wall_move))
-	_assert_pose(course, _start_x(), 0, 0, START_YAW)
+	_assert_course_matches(course, oracle)
+	assert_false(oracle.world.try_move_xz(oracle.entity_id, 0, crate_dz))
+	_assert_course_matches(course, oracle)
+	assert_true(oracle.world.try_move_xz_until_blocked(oracle.entity_id, 0, crate_dz))
 	var crate_blocked: Dictionary = _step_intent(
 		course,
 		_move_payload(0, crate_dz, 999, 888, 777),
 		0
 	)
 	assert_true(_ok(crate_blocked))
-	_assert_pose(course, _start_x(), 0, 0, START_YAW)
+	_assert_course_matches(course, oracle)
 	var zero_damage: Dictionary = course.try_break_crate(0)
 	assert_false(_ok(zero_damage))
 	assert_false(zero_damage.has("destroyed"))
 	assert_eq(course.crate.current_health(), CRATE_MAX_HEALTH)
+	assert_false(oracle.world.try_move_xz(oracle.entity_id, 0, crate_dz))
+	assert_true(oracle.world.try_move_xz_until_blocked(oracle.entity_id, 0, crate_dz))
 	var still_blocked: Dictionary = _step_intent(course, _move_payload(0, crate_dz), 0)
 	assert_true(_ok(still_blocked))
-	_assert_pose(course, _start_x(), 0, 0, START_YAW)
+	_assert_course_matches(course, oracle)
 	var nick: Dictionary = course.try_break_crate(1)
 	assert_true(_ok(nick))
 	assert_false(_destroyed(nick))
 	assert_eq(_health(nick), CRATE_MAX_HEALTH - 1)
 	assert_false(course.crate.is_destroyed())
+	assert_false(oracle.world.try_move_xz(oracle.entity_id, 0, crate_dz))
+	assert_true(oracle.world.try_move_xz_until_blocked(oracle.entity_id, 0, crate_dz))
 	var nicked_blocked: Dictionary = _step_intent(course, _move_payload(0, crate_dz), 0)
 	assert_true(_ok(nicked_blocked))
-	_assert_pose(course, _start_x(), 0, 0, START_YAW)
+	_assert_course_matches(course, oracle)
 	var broken: Dictionary = course.try_break_crate(CRATE_MAX_HEALTH - 1)
 	assert_true(_ok(broken))
 	assert_true(_destroyed(broken))
 	assert_eq(course.crate.current_health(), 0)
 	assert_true(course.crate.is_destroyed())
+	assert_true(oracle.world.set_static_box_solid(oracle.crate_box_id, false))
+	assert_true(oracle.world.try_move_xz_until_blocked(oracle.entity_id, 0, crate_dz))
 	var passed: Dictionary = _step_intent(
 		course,
 		_move_payload(0, crate_dz, 999, 888, 777),
 		0
 	)
 	assert_true(_ok(passed))
-	_assert_pose(course, _start_x(), 0, crate_dz, START_YAW)
+	_assert_course_matches(course, oracle)
+	assert_false(oracle.world.try_move_xz(oracle.entity_id, wall_dx, 0))
+	assert_true(oracle.world.try_move_xz_until_blocked(oracle.entity_id, wall_dx, 0))
 	var wall_still: Dictionary = _step_intent(course, _move_payload(wall_dx, 0), 0)
 	assert_true(_ok(wall_still))
-	_assert_pose(course, _start_x(), 0, crate_dz, START_YAW)
+	_assert_course_matches(course, oracle)
 	assert_eq(course.world.tick_index, 0)
 
 
@@ -513,17 +530,23 @@ func test_assemble_records_tick_zero_snapshot_try_step_does_not_record() -> void
 
 func test_period_one_hazard_toggles_plus_x_blocking_on_commit() -> void:
 	var course: GrayboxCourse = GrayboxCourse.assemble(_valid_layout())
+	var oracle: GrayboxCourse = GrayboxCourse.assemble(_valid_layout())
+	var contrast: GrayboxCourse = GrayboxCourse.assemble(_valid_layout())
 	var dx: int = _hazard_dx()
 	var tape_before: int = course.tape.size()
+	assert_false(contrast.world.try_move_xz(contrast.entity_id, dx, 0))
+	_assert_pose(contrast, _start_x(), 0, 0, START_YAW)
+	assert_true(oracle.world.try_move_xz_until_blocked(oracle.entity_id, dx, 0))
 	var blocked: Dictionary = _step_intent(course, _move_payload(dx, 0), 0)
 	assert_true(_ok(blocked))
-	_assert_pose(course, _start_x(), 0, 0, START_YAW)
+	_assert_course_matches(course, oracle)
 	assert_eq(course.world.tick_index, 0)
 	assert_eq(course.tape.size(), tape_before + 1)
 	assert_true(course.try_commit_tick(0))
 	assert_eq(course.world.tick_index, 1)
 	assert_eq(course.tape.size(), tape_before + 1)
 	assert_eq(course.snapshots.size(), 2)
+	_set_pose(course, _start_x(), 0, 0, START_YAW)
 	var opened: Dictionary = _step_intent(course, _move_payload(dx, 0), 0)
 	assert_true(_ok(opened))
 	_assert_pose(course, _start_x() + dx, 0, 0, START_YAW)
@@ -651,10 +674,15 @@ func test_interact_on_crate_applies_damage_and_appends_player_command() -> void:
 
 func test_interact_destroy_opens_crate_path_without_tick() -> void:
 	var course: GrayboxCourse = GrayboxCourse.assemble(_valid_layout())
+	var oracle: GrayboxCourse = GrayboxCourse.assemble(_valid_layout())
+	var contrast: GrayboxCourse = GrayboxCourse.assemble(_valid_layout())
 	var crate_dz: int = _crate_dz()
+	assert_false(contrast.world.try_move_xz(contrast.entity_id, 0, crate_dz))
+	_assert_pose(contrast, _start_x(), 0, 0, START_YAW)
+	assert_true(oracle.world.try_move_xz_until_blocked(oracle.entity_id, 0, crate_dz))
 	var blocked: Dictionary = _step_intent(course, _move_payload(0, crate_dz), 0)
 	assert_true(_ok(blocked))
-	_assert_pose(course, _start_x(), 0, 0, START_YAW)
+	_assert_course_matches(course, oracle)
 	assert_false(_ok(course.try_interact(_interact_payload(), CRATE_MAX_HEALTH)))
 	assert_eq(course.crate.current_health(), CRATE_MAX_HEALTH)
 	assert_eq(course.tape.size(), 1)
@@ -799,10 +827,16 @@ func test_use_item_from_start_with_crate_reach_applies_damage_and_appends_player
 
 func test_use_item_destroy_from_start_opens_crate_path_without_tick_or_move() -> void:
 	var course: GrayboxCourse = GrayboxCourse.assemble(_valid_layout())
+	var oracle: GrayboxCourse = GrayboxCourse.assemble(_valid_layout())
+	var contrast: GrayboxCourse = GrayboxCourse.assemble(_valid_layout())
 	var crate_dz: int = _crate_dz()
+	assert_false(contrast.world.try_move_xz(contrast.entity_id, 0, crate_dz))
+	_assert_pose(contrast, _start_x(), 0, 0, START_YAW)
+	assert_true(oracle.world.try_move_xz_until_blocked(oracle.entity_id, 0, crate_dz))
 	var blocked: Dictionary = _step_intent(course, _move_payload(0, crate_dz), 0)
 	assert_true(_ok(blocked))
-	_assert_pose(course, _start_x(), 0, 0, START_YAW)
+	_assert_course_matches(course, oracle)
+	_set_pose(course, _start_x(), 0, 0, START_YAW)
 	assert_false(_ok(course.try_use_item(_use_item_payload(), CRATE_MAX_HEALTH, 0, 0, 0)))
 	assert_eq(course.crate.current_health(), CRATE_MAX_HEALTH)
 	assert_eq(course.tape.size(), 1)
@@ -1098,12 +1132,20 @@ func _run_move_and_commit_sequence(course: GrayboxCourse) -> void:
 
 
 func _run_tape_hash_sequence(course: GrayboxCourse) -> void:
-	var blocked: Dictionary = _step_intent(course, _move_payload(_wall_dx(), 0), 0)
+	var oracle: GrayboxCourse = GrayboxCourse.assemble(_valid_layout())
+	var contrast: GrayboxCourse = GrayboxCourse.assemble(_valid_layout())
+	var wall_dx: int = _wall_dx()
+	var open_dx: int = _whole(1)
+	assert_false(contrast.world.try_move_xz(contrast.entity_id, wall_dx, 0))
+	_assert_pose(contrast, _start_x(), 0, 0, START_YAW)
+	assert_true(oracle.world.try_move_xz_until_blocked(oracle.entity_id, wall_dx, 0))
+	var blocked: Dictionary = _step_intent(course, _move_payload(wall_dx, 0), 0)
 	assert_true(_ok(blocked))
-	_assert_pose(course, _start_x(), 0, 0, START_YAW)
-	var passed: Dictionary = _step_intent(course, _move_payload(_whole(1), 0), 0)
+	_assert_course_matches(course, oracle)
+	assert_true(oracle.world.try_move_xz_until_blocked(oracle.entity_id, open_dx, 0))
+	var passed: Dictionary = _step_intent(course, _move_payload(open_dx, 0), 0)
 	assert_true(_ok(passed))
-	_assert_pose(course, _start_x() + _whole(1), 0, 0, START_YAW)
+	_assert_course_matches(course, oracle)
 
 
 func _run_interact_on_crate(course: GrayboxCourse) -> void:
@@ -1342,6 +1384,15 @@ func _assert_pose(course: GrayboxCourse, x: int, y: int, z: int, yaw: int) -> vo
 	assert_eq(pose_y, y)
 	assert_eq(pose_z, z)
 	assert_eq(pose_yaw, yaw)
+
+
+func _assert_course_matches(course: GrayboxCourse, oracle: GrayboxCourse) -> void:
+	var expected: Dictionary = oracle.world.get_pose(oracle.entity_id)
+	var x: int = expected.get("x", -1)
+	var y: int = expected.get("y", -1)
+	var z: int = expected.get("z", -1)
+	var yaw: int = expected.get("yaw", -1)
+	_assert_pose(course, x, y, z, yaw)
 
 
 func _ok(result: Dictionary) -> bool:

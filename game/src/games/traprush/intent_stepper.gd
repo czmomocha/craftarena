@@ -4,9 +4,12 @@ extends RefCounted
 ## 把已解码的 Move / Jump / ResetToCheckpoint 接到 SimulationWorld。
 ## 依据 CD-21 §3 / §8：短跳是按钮意图，始终直立；客户端不得发送最终位置。
 ## 位移、jump_dy、support_dy 由调用方传入，不发明默认速度、跳跃高度、重力或 coyote。
-## Jump 仅当 world.is_supported_by_solid(entity_id, support_dy) 为 true 时才 try_move_y；
+## Move 只调用 try_move_xz_until_blocked：停在最后未阻挡 XZ 样本，剩余位移丢弃，非贴墙滑行。
+## 解码成功的 Move 仍 {ok: true}，不因接触或整段扫掠失败改为 false。不调用 try_move_xz。
+## Jump 仅当 world.is_supported_by_solid(entity_id, support_dy) 为 true 时才 try_move_y（整段拒绝）；
 ## 未支撑仍 {ok: true} 且不位移。Move / Reset 不读 support_dy。无二段跳缓冲。
-## 不调用 world.tick()；Tick 仍由调用方推进。本刀不处理 Shove、传送落地等待、道具或扫掠。
+## 可选 yaw 在 XZ 接触推进之后 set_pose。不调用 world.tick()；Tick 仍由调用方推进。
+## Shove 不在本步进器应用（ShoveApply 仍 try_move_xz）。不处理传送落地等待或道具。
 
 const MoveIntent := preload("res://src/games/traprush/move_intent.gd")
 const JumpIntent := preload("res://src/games/traprush/jump_intent.gd")
@@ -50,7 +53,7 @@ static func apply(
 static func _apply_move(world: SimulationWorld, entity_id: int, decoded: Dictionary) -> void:
 	var dx: int = decoded.get("dx", 0)
 	var dz: int = decoded.get("dz", 0)
-	world.try_move_xz(entity_id, dx, dz)
+	world.try_move_xz_until_blocked(entity_id, dx, dz)
 	var yaw_bam: int = decoded.get("yaw_bam", _YAW_BAM_OMITTED)
 	if yaw_bam == _YAW_BAM_OMITTED:
 		return

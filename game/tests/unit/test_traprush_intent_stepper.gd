@@ -2,8 +2,11 @@ extends GutTest
 
 ## TraprushIntentStepper：把 Move / Jump / ResetToCheckpoint 接到 SimulationWorld。
 ## CD-21 §3 / §8：短跳是按钮意图。位移、jump_dy、support_dy 由调用方传入。
-## 不发明默认速度、跳跃高度、重力或 coyote。Jump 仅在 is_supported_by_solid 时 try_move_y。
-## 本刀不调用 world.tick()，不应用 Shove。测试里的 support_dy / jump_dy 只写在本文件。
+## 不发明默认速度、跳跃高度、重力或 coyote。Jump 仅在 is_supported_by_solid 时 try_move_y（整段拒绝）。
+## Move 走 try_move_xz_until_blocked：开阔地终点与成功 try_move_xz 相同；路径上有盒/胶囊则
+## {ok: true} 且停在最后未阻挡样本；对照 try_move_xz 仍 false 且不写。第一步即挡则保持起点。
+## 可选 yaw 在接触推进之后写入。本刀不调用 world.tick()，不应用 Shove。
+## 测试里的位移 / support_dy / jump_dy 只写在本文件。
 
 const IntentStepper := preload("res://src/games/traprush/intent_stepper.gd")
 const CheckpointSpawn := preload("res://src/games/traprush/checkpoint_spawn.gd")
@@ -36,6 +39,33 @@ func test_open_space_move_changes_xz_not_y_or_tick() -> void:
 	assert_eq(world.tick_index, 0)
 
 
+func test_open_space_move_matches_successful_try_move_xz() -> void:
+	var start_x: int = _whole(3)
+	var y: int = _whole(4)
+	var start_z: int = _whole(5)
+	var dx: int = _whole(2)
+	var dz: int = _whole(-1)
+	var yaw: int = 16
+	var radius: int = _whole(1)
+	var height: int = _whole(2)
+	var stepper_world: SimulationWorld = SimulationWorld.new(1)
+	var stepper_id: int = stepper_world.spawn_capsule(start_x, y, start_z, yaw, radius, height)
+	var xz_world: SimulationWorld = SimulationWorld.new(1)
+	var xz_id: int = xz_world.spawn_capsule(start_x, y, start_z, yaw, radius, height)
+	assert_true(xz_world.try_move_xz(xz_id, dx, dz))
+	var result: Dictionary = _apply(
+		stepper_world,
+		stepper_id,
+		{"intent": PlayerIntentNames.MOVE, "dx": dx, "dz": dz},
+		0,
+		_unused_spawn(),
+		_unused_track()
+	)
+	assert_true(_ok(result))
+	_assert_pose_matches(stepper_world, stepper_id, xz_world, xz_id)
+	assert_eq(stepper_world.tick_index, 0)
+
+
 func test_move_blocked_by_other_capsule_is_ok_and_keeps_pose() -> void:
 	var world: SimulationWorld = SimulationWorld.new(1)
 	var radius: int = _whole(1)
@@ -43,6 +73,11 @@ func test_move_blocked_by_other_capsule_is_ok_and_keeps_pose() -> void:
 	var toward: int = _whole(2)
 	var mover_id: int = world.spawn_capsule(0, 0, 0, 0, radius, 0)
 	world.spawn_capsule(along_x, 0, 0, 0, radius, 0)
+	var contrast: SimulationWorld = SimulationWorld.new(1)
+	var contrast_id: int = contrast.spawn_capsule(0, 0, 0, 0, radius, 0)
+	contrast.spawn_capsule(along_x, 0, 0, 0, radius, 0)
+	assert_false(contrast.try_move_xz(contrast_id, toward, 0))
+	_assert_pose(contrast, contrast_id, 0, 0, 0, 0)
 	var result: Dictionary = _apply(
 		world,
 		mover_id,
@@ -53,6 +88,74 @@ func test_move_blocked_by_other_capsule_is_ok_and_keeps_pose() -> void:
 	)
 	assert_true(_ok(result))
 	_assert_pose(world, mover_id, 0, 0, 0, 0)
+
+
+func test_move_stops_at_last_unblocked_sample_before_box() -> void:
+	var radius: int = _whole(1)
+	var height: int = _whole(2)
+	var start_x: int = _whole(10)
+	var dx: int = -_whole(10)
+	var yaw: int = 8
+	var stepper_world: SimulationWorld = SimulationWorld.new(1)
+	var stepper_id: int = stepper_world.spawn_capsule(start_x, 0, 0, yaw, radius, height)
+	assert_eq(stepper_world.spawn_static_box(0, 0, 0, _whole(1), _whole(1), _whole(1)), 1)
+	var contrast: SimulationWorld = SimulationWorld.new(1)
+	var contrast_id: int = contrast.spawn_capsule(start_x, 0, 0, yaw, radius, height)
+	assert_eq(contrast.spawn_static_box(0, 0, 0, _whole(1), _whole(1), _whole(1)), 1)
+	assert_false(contrast.try_move_xz(contrast_id, dx, 0))
+	_assert_pose(contrast, contrast_id, start_x, 0, 0, yaw)
+	var oracle: SimulationWorld = SimulationWorld.new(1)
+	var oracle_id: int = oracle.spawn_capsule(start_x, 0, 0, yaw, radius, height)
+	assert_eq(oracle.spawn_static_box(0, 0, 0, _whole(1), _whole(1), _whole(1)), 1)
+	assert_true(oracle.try_move_xz_until_blocked(oracle_id, dx, 0))
+	var result: Dictionary = _apply(
+		stepper_world,
+		stepper_id,
+		{"intent": PlayerIntentNames.MOVE, "dx": dx, "dz": 0},
+		0,
+		_unused_spawn(),
+		_unused_track()
+	)
+	assert_true(_ok(result))
+	_assert_pose_matches(stepper_world, stepper_id, oracle, oracle_id)
+	var after: Dictionary = stepper_world.get_pose(stepper_id)
+	var after_x: int = after.get("x", start_x)
+	assert_ne(after_x, start_x)
+	assert_eq(stepper_world.tick_index, 0)
+
+
+func test_move_stops_at_last_unblocked_sample_before_capsule() -> void:
+	var radius: int = _whole(1)
+	var start_x: int = 0
+	var other_x: int = _whole(10)
+	var dx: int = _whole(10)
+	var yaw: int = 0
+	var stepper_world: SimulationWorld = SimulationWorld.new(1)
+	var stepper_id: int = stepper_world.spawn_capsule(start_x, 0, 0, yaw, radius, 0)
+	stepper_world.spawn_capsule(other_x, 0, 0, yaw, radius, 0)
+	var contrast: SimulationWorld = SimulationWorld.new(1)
+	var contrast_id: int = contrast.spawn_capsule(start_x, 0, 0, yaw, radius, 0)
+	contrast.spawn_capsule(other_x, 0, 0, yaw, radius, 0)
+	assert_false(contrast.try_move_xz(contrast_id, dx, 0))
+	_assert_pose(contrast, contrast_id, start_x, 0, 0, yaw)
+	var oracle: SimulationWorld = SimulationWorld.new(1)
+	var oracle_id: int = oracle.spawn_capsule(start_x, 0, 0, yaw, radius, 0)
+	oracle.spawn_capsule(other_x, 0, 0, yaw, radius, 0)
+	assert_true(oracle.try_move_xz_until_blocked(oracle_id, dx, 0))
+	var result: Dictionary = _apply(
+		stepper_world,
+		stepper_id,
+		{"intent": PlayerIntentNames.MOVE, "dx": dx, "dz": 0},
+		0,
+		_unused_spawn(),
+		_unused_track()
+	)
+	assert_true(_ok(result))
+	_assert_pose_matches(stepper_world, stepper_id, oracle, oracle_id)
+	var after: Dictionary = stepper_world.get_pose(stepper_id)
+	var after_x: int = after.get("x", start_x)
+	assert_ne(after_x, start_x)
+	assert_eq(stepper_world.tick_index, 0)
 
 
 func test_optional_yaw_updates_even_when_move_is_blocked() -> void:
@@ -77,6 +180,39 @@ func test_optional_yaw_updates_even_when_move_is_blocked() -> void:
 	)
 	assert_true(_ok(result))
 	_assert_pose(world, mover_id, 0, 0, 0, QUARTER_TURN_BAM)
+
+
+func test_optional_yaw_updates_after_contact_advance() -> void:
+	var radius: int = _whole(1)
+	var height: int = _whole(2)
+	var start_x: int = _whole(10)
+	var dx: int = -_whole(10)
+	var yaw: int = 8
+	var stepper_world: SimulationWorld = SimulationWorld.new(1)
+	var stepper_id: int = stepper_world.spawn_capsule(start_x, 0, 0, yaw, radius, height)
+	assert_eq(stepper_world.spawn_static_box(0, 0, 0, _whole(1), _whole(1), _whole(1)), 1)
+	var oracle: SimulationWorld = SimulationWorld.new(1)
+	var oracle_id: int = oracle.spawn_capsule(start_x, 0, 0, yaw, radius, height)
+	assert_eq(oracle.spawn_static_box(0, 0, 0, _whole(1), _whole(1), _whole(1)), 1)
+	assert_true(oracle.try_move_xz_until_blocked(oracle_id, dx, 0))
+	var contact: Dictionary = oracle.get_pose(oracle_id)
+	var contact_x: int = contact.get("x", start_x)
+	assert_ne(contact_x, start_x)
+	var result: Dictionary = _apply(
+		stepper_world,
+		stepper_id,
+		{
+			"intent": PlayerIntentNames.MOVE,
+			"dx": dx,
+			"dz": 0,
+			"yaw_bam": QUARTER_TURN_BAM,
+		},
+		0,
+		_unused_spawn(),
+		_unused_track()
+	)
+	assert_true(_ok(result))
+	_assert_pose(stepper_world, stepper_id, contact_x, 0, 0, QUARTER_TURN_BAM)
 
 
 func test_omitted_yaw_does_not_change_yaw_after_move() -> void:
@@ -475,6 +611,20 @@ func _assert_pose(world: SimulationWorld, entity_id: int, x: int, y: int, z: int
 	assert_eq(pose_y, y)
 	assert_eq(pose_z, z)
 	assert_eq(pose_yaw, yaw)
+
+
+func _assert_pose_matches(
+	left: SimulationWorld,
+	left_id: int,
+	right: SimulationWorld,
+	right_id: int
+) -> void:
+	var expected: Dictionary = right.get_pose(right_id)
+	var x: int = expected.get("x", -1)
+	var y: int = expected.get("y", -1)
+	var z: int = expected.get("z", -1)
+	var yaw: int = expected.get("yaw", -1)
+	_assert_pose(left, left_id, x, y, z, yaw)
 
 
 func _ok(result: Dictionary) -> bool:
