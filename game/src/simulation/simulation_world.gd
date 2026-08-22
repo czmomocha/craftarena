@@ -36,9 +36,11 @@ extends RefCounted
 ## (not continuous analytic TOI) against other upright capsules and static AABBs.
 ## A blocked sample or overflow rejects the whole move; there is no slide.
 ## try_move_y_until_blocked uses the same Y samples but commits the last unblocked
-## y (start if sample_i=1 is blocked). Unknown ids and add/mul/div overflow still
-## return false without writing. radius <= 0 keeps destination-only checks: a
-## blocked dest keeps start and returns true. radius is the only step scale.
+## y (start if sample_i=1 is blocked). try_move_xz_until_blocked is the XZ counterpart:
+## last unblocked (x, z), leftover displacement discarded, not a wall-slide.
+## Unknown ids and add/mul/div overflow still return false without writing.
+## radius <= 0 keeps destination-only checks: a blocked dest keeps start and
+## returns true. radius is the only step scale.
 
 var tick_index: int = 0
 
@@ -298,6 +300,27 @@ func try_move_xz(entity_id: int, dx: int, dz: int) -> bool:
 	return true
 
 
+## dx/dz are this-tick displacement in Q48.16 internal units, not metres per second.
+func try_move_xz_until_blocked(entity_id: int, dx: int, dz: int) -> bool:
+	if not _has_entity(entity_id):
+		return false
+	var pose_index: int = entity_id - 1
+	var new_x_res: FixedResult = Fixed.try_add(_x[pose_index], dx)
+	if not new_x_res.ok:
+		return false
+	var new_z_res: FixedResult = Fixed.try_add(_z[pose_index], dz)
+	if not new_z_res.ok:
+		return false
+	var contact_xz: Array[int] = _sweep_last_free_xz(
+		entity_id, pose_index, dx, dz, new_x_res.value, new_z_res.value
+	)
+	if contact_xz.size() != 2:
+		return false
+	_x[pose_index] = contact_xz[0]
+	_z[pose_index] = contact_xz[1]
+	return true
+
+
 ## dy is this-tick displacement in Q48.16 internal units, not metres per second.
 func try_move_y(entity_id: int, dy: int) -> bool:
 	if not _has_entity(entity_id):
@@ -394,6 +417,60 @@ func _sweep_clear_xz(
 			break
 		sample_i += 1
 	return true
+
+
+func _sweep_last_free_xz(
+	entity_id: int, pose_index: int, dx: int, dz: int, dest_x: int, dest_z: int
+) -> Array[int]:
+	var failed: Array[int] = []
+	var start_x: int = _x[pose_index]
+	var start_y: int = _y[pose_index]
+	var start_z: int = _z[pose_index]
+	var radius: int = _radius[pose_index]
+	if radius <= 0:
+		if _destination_blocked(entity_id, pose_index, dest_x, start_y, dest_z):
+			var start_xz: Array[int] = [start_x, start_z]
+			return start_xz
+		var dest_xz: Array[int] = [dest_x, dest_z]
+		return dest_xz
+	var abs_dx_res: FixedResult = _try_abs(dx)
+	if not abs_dx_res.ok:
+		return failed
+	var abs_dz_res: FixedResult = _try_abs(dz)
+	if not abs_dz_res.ok:
+		return failed
+	var chebyshev: int = abs_dx_res.value
+	if abs_dz_res.value > chebyshev:
+		chebyshev = abs_dz_res.value
+	var step_count: int = _sweep_step_count(chebyshev, radius)
+	var last_free_x: int = start_x
+	var last_free_z: int = start_z
+	var sample_i: int = 1
+	while true:
+		var step_dx_res: FixedResult = Fixed.try_mul_div(dx, sample_i, step_count)
+		if not step_dx_res.ok:
+			return failed
+		var step_dz_res: FixedResult = Fixed.try_mul_div(dz, sample_i, step_count)
+		if not step_dz_res.ok:
+			return failed
+		var sample_x_res: FixedResult = Fixed.try_add(start_x, step_dx_res.value)
+		if not sample_x_res.ok:
+			return failed
+		var sample_z_res: FixedResult = Fixed.try_add(start_z, step_dz_res.value)
+		if not sample_z_res.ok:
+			return failed
+		if _destination_blocked(
+			entity_id, pose_index, sample_x_res.value, start_y, sample_z_res.value
+		):
+			var blocked_xz: Array[int] = [last_free_x, last_free_z]
+			return blocked_xz
+		last_free_x = sample_x_res.value
+		last_free_z = sample_z_res.value
+		if sample_i == step_count:
+			break
+		sample_i += 1
+	var clear_xz: Array[int] = [last_free_x, last_free_z]
+	return clear_xz
 
 
 func _sweep_clear_y(entity_id: int, pose_index: int, dy: int, dest_y: int) -> bool:
