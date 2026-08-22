@@ -7,10 +7,13 @@ extends RefCounted
 ## 位移、jump_dy、max_hops、max_health、period、snapshot capacity 均由调用方传入，不锁定 Tick/快照 Hz（CD-63）。
 ## 成功 PLAYER 意图写入 SimReplayBuffer（CD-43 命令日志 + 种子）；磁带不回放进 world。
 ## assemble 记录 tick 0 关键快照；try_commit_tick 推进 tick、按调用方周期切换 hazard 阻挡、再 record。
-## try_step_intent / 打箱 / 传送 / 检查点不 tick、不 record。
-## 不从客户端 Dictionary 读最终位置或完成标志；不实现 Shove、道具、2p、名次或 Headless。
+## try_step_intent / try_interact 成功入带；打箱 / 传送 / 检查点不 tick、不 record。
+## try_interact 仅在 overlapping_static_boxes 含 crate 时按调用方 damage 走 Destructible；摧毁则关闭 crate 盒阻挡。
+## try_break_crate 保持测试入口：不要求重叠、不入带。
+## 不从客户端 Dictionary 读最终位置、障碍死亡或完成标志；不实现 UseItemIntent、道具栏、2p、名次或 Headless。
 
 const IntentStepper := preload("res://src/games/traprush/intent_stepper.gd")
+const InteractIntent := preload("res://src/games/traprush/interact_intent.gd")
 const PortalLanding := preload("res://src/games/traprush/portal_landing.gd")
 const PortalGraph := preload("res://src/games/traprush/portal_graph.gd")
 const PortalLink := preload("res://src/games/traprush/portal_link.gd")
@@ -196,6 +199,46 @@ func try_step_intent(payload: Dictionary, jump_dy: int) -> Dictionary:
 	var result: Dictionary = IntentStepper.apply(world, entity_id, payload, jump_dy, _spawn, track)
 	if not _flag(result):
 		return result
+	var command: SharedCommand = SharedCommand.create(
+		_next_command_seq,
+		_actor_id,
+		_next_command_seq,
+		world.tick_index,
+		0,
+		_content_version,
+		payload.duplicate(true),
+		_trace_id,
+		SharedCommand.Kind.PLAYER
+	)
+	if command == null:
+		push_error("TraprushGrayboxCourse: SharedCommand.create failed after accepted intent")
+		return result
+	if not tape.append(command):
+		push_error("TraprushGrayboxCourse: SimReplayBuffer.append failed after accepted intent")
+		return result
+	_next_command_seq += 1
+	return result
+
+
+func try_interact(payload: Dictionary, damage: int) -> Dictionary:
+	var failed: Dictionary = {"ok": false}
+	var decoded: Dictionary = InteractIntent.decode(payload)
+	if not _flag(decoded):
+		return failed
+	var overlapping: PackedInt32Array = world.overlapping_static_boxes(entity_id)
+	var crate_in_reach: bool = false
+	for index: int in range(overlapping.size()):
+		if overlapping[index] == crate_box_id:
+			crate_in_reach = true
+			break
+	if not crate_in_reach:
+		return failed
+	var result: Dictionary = crate.apply_damage(damage)
+	if not _flag(result):
+		return result
+	var destroyed: bool = result.get("destroyed", false)
+	if destroyed:
+		world.set_static_box_solid(crate_box_id, false)
 	var command: SharedCommand = SharedCommand.create(
 		_next_command_seq,
 		_actor_id,

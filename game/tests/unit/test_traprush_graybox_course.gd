@@ -1,12 +1,12 @@
 extends GutTest
 
-## TraprushGrayboxCourse：单人灰盒跑道夹具。几何、位移、jump_dy、max_hops、max_health、period、capacity 只由调用方传入。
+## TraprushGrayboxCourse：单人灰盒跑道夹具。几何、位移、jump_dy、max_hops、max_health、period、capacity、interact damage 只由调用方传入。
 ## CD-21 §4.2 / §5.2 / §8 与 CD-61 M1：有序检查点、占用垫盒、上下/侧向传送、墙阻挡、打掉箱子后开路、周期 hazard stub。
 ## 成功 PLAYER 意图写入 SimReplayBuffer（CD-43）；磁带不回放进 world。
 ## assemble 记录 tick 0 关键快照；try_commit_tick 推进 tick 并按调用方周期切换 hazard 阻挡。
-## try_step_intent / 打箱 / 传送 / 检查点不 tick、不 record。
-## 接受检查点前胶囊必须与该垫重叠；测试用 world.set_pose 挪到垫心，course API 不自动传送。
-## 不读客户端最终位置或完成标志；不覆盖 Shove、道具、2p。
+## try_step_intent / try_interact 成功入带；打箱 / 传送 / 检查点不 tick、不 record。
+## try_interact 要求 overlapping_static_boxes 含 crate；测试用 world.set_pose 挪到箱心，course API 不自动传送。
+## 不读客户端最终位置、障碍死亡或完成标志；不覆盖 UseItemIntent、道具栏、2p。
 
 const GrayboxCourse := preload("res://src/games/traprush/graybox_course.gd")
 const SharedCommand := preload("res://src/shared/commands/shared_command.gd")
@@ -430,6 +430,133 @@ func test_snapshot_capacity_two_drops_oldest_tick() -> void:
 	assert_ne(course.snapshots.hash_at_tick(3).size(), 0)
 
 
+func test_interact_outside_crate_is_rejected_without_damage_or_tape() -> void:
+	var course: GrayboxCourse = GrayboxCourse.assemble(_valid_layout())
+	assert_eq(course.tape.size(), 0)
+	assert_eq(course.crate.current_health(), CRATE_MAX_HEALTH)
+	var rejected: Dictionary = course.try_interact(_interact_payload(999, 888, 777, true), 1)
+	assert_false(_ok(rejected))
+	assert_false(rejected.has("health"))
+	assert_false(rejected.has("destroyed"))
+	assert_eq(course.crate.current_health(), CRATE_MAX_HEALTH)
+	assert_false(course.crate.is_destroyed())
+	assert_eq(course.tape.size(), 0)
+	assert_eq(course.world.tick_index, 0)
+	assert_eq(course.snapshots.size(), 1)
+	_assert_pose(course, _start_x(), 0, 0, START_YAW)
+
+
+func test_interact_decode_failure_on_crate_does_not_damage_or_append() -> void:
+	var course: GrayboxCourse = GrayboxCourse.assemble(_valid_layout())
+	_set_pose_on_crate(course)
+	assert_false(_ok(course.try_interact({}, 1)))
+	assert_false(_ok(course.try_interact({"intent": PlayerIntentNames.JUMP}, 1)))
+	assert_false(_ok(course.try_interact({"intent": 1}, 1)))
+	assert_eq(course.crate.current_health(), CRATE_MAX_HEALTH)
+	assert_eq(course.tape.size(), 0)
+	assert_eq(course.world.tick_index, 0)
+	assert_eq(course.snapshots.size(), 1)
+
+
+func test_interact_on_crate_rejects_zero_damage_without_tape() -> void:
+	var course: GrayboxCourse = GrayboxCourse.assemble(_valid_layout())
+	_set_pose_on_crate(course)
+	var rejected: Dictionary = course.try_interact(_interact_payload(), 0)
+	assert_false(_ok(rejected))
+	assert_false(rejected.has("health"))
+	assert_false(rejected.has("destroyed"))
+	assert_eq(course.crate.current_health(), CRATE_MAX_HEALTH)
+	assert_false(course.crate.is_destroyed())
+	assert_eq(course.tape.size(), 0)
+	assert_eq(course.world.tick_index, 0)
+	assert_eq(course.snapshots.size(), 1)
+
+
+func test_interact_on_crate_applies_damage_and_appends_player_command() -> void:
+	var course: GrayboxCourse = GrayboxCourse.assemble(_valid_layout())
+	assert_true(_ok(course.try_step_intent(_move_payload(0, 0), 0)))
+	assert_eq(course.tape.size(), 1)
+	_set_pose_on_crate(course)
+	var payload: Dictionary = _interact_payload(999, 888, 777, true)
+	var nicked: Dictionary = course.try_interact(payload, 1)
+	assert_true(_ok(nicked))
+	assert_false(_destroyed(nicked))
+	assert_eq(_health(nicked), CRATE_MAX_HEALTH - 1)
+	assert_eq(course.crate.current_health(), CRATE_MAX_HEALTH - 1)
+	assert_false(course.crate.is_destroyed())
+	assert_eq(course.tape.size(), 2)
+	var recorded: SharedCommand = course.tape.command_at(1)
+	assert_not_null(recorded)
+	assert_eq(recorded.command_id, 2)
+	assert_eq(recorded.sequence, 2)
+	assert_eq(recorded.actor_id, ACTOR_ID)
+	assert_eq(recorded.kind, SharedCommand.Kind.PLAYER)
+	assert_eq(recorded.target_tick, 0)
+	var stored_intent: String = recorded.payload.get("intent", "")
+	var stored_x: int = recorded.payload.get("x", -1)
+	var stored_destroyed: bool = recorded.payload.get("destroyed", false)
+	assert_eq(stored_intent, PlayerIntentNames.INTERACT)
+	assert_eq(stored_x, 999)
+	assert_eq(stored_destroyed, true)
+	assert_eq(course.world.tick_index, 0)
+	assert_eq(course.snapshots.size(), 1)
+
+
+func test_interact_destroy_opens_crate_path_without_tick() -> void:
+	var course: GrayboxCourse = GrayboxCourse.assemble(_valid_layout())
+	var crate_dz: int = _crate_dz()
+	var blocked: Dictionary = course.try_step_intent(_move_payload(0, crate_dz), 0)
+	assert_true(_ok(blocked))
+	_assert_pose(course, _start_x(), 0, 0, START_YAW)
+	assert_false(_ok(course.try_interact(_interact_payload(), CRATE_MAX_HEALTH)))
+	assert_eq(course.crate.current_health(), CRATE_MAX_HEALTH)
+	assert_eq(course.tape.size(), 1)
+	_set_pose_on_crate(course)
+	var broken: Dictionary = course.try_interact(_interact_payload(), CRATE_MAX_HEALTH)
+	assert_true(_ok(broken))
+	assert_true(_destroyed(broken))
+	assert_eq(course.crate.current_health(), 0)
+	assert_true(course.crate.is_destroyed())
+	assert_eq(course.tape.size(), 2)
+	assert_eq(course.world.tick_index, 0)
+	assert_eq(course.snapshots.size(), 1)
+	_set_pose(course, _start_x(), 0, 0, START_YAW)
+	var passed: Dictionary = course.try_step_intent(_move_payload(0, crate_dz), 0)
+	assert_true(_ok(passed))
+	_assert_pose(course, _start_x(), 0, crate_dz, START_YAW)
+	assert_eq(course.world.tick_index, 0)
+	assert_eq(course.snapshots.size(), 1)
+	assert_eq(course.tape.size(), 3)
+
+
+func test_try_break_crate_still_ignores_overlap_and_does_not_append() -> void:
+	var course: GrayboxCourse = GrayboxCourse.assemble(_valid_layout())
+	var nicked: Dictionary = course.try_break_crate(1)
+	assert_true(_ok(nicked))
+	assert_eq(course.crate.current_health(), CRATE_MAX_HEALTH - 1)
+	assert_eq(course.tape.size(), 0)
+	assert_eq(course.world.tick_index, 0)
+	assert_eq(course.snapshots.size(), 1)
+
+
+func test_two_courses_same_interact_match_tape_and_state_hash() -> void:
+	var layout: Dictionary = _valid_layout()
+	var left: GrayboxCourse = GrayboxCourse.assemble(layout)
+	var right: GrayboxCourse = GrayboxCourse.assemble(layout)
+	_run_interact_on_crate(left)
+	_run_interact_on_crate(right)
+	assert_eq(left.tape.size(), 1)
+	assert_eq(right.tape.size(), 1)
+	assert_eq(left.tape.hash_tape().hex_encode(), right.tape.hash_tape().hex_encode())
+	assert_eq(left.world.hash_state().hex_encode(), right.world.hash_state().hex_encode())
+	assert_eq(left.crate.current_health(), 0)
+	assert_eq(right.crate.current_health(), 0)
+	assert_eq(left.world.tick_index, 0)
+	assert_eq(right.world.tick_index, 0)
+	assert_eq(left.snapshots.size(), 1)
+	assert_eq(right.snapshots.size(), 1)
+
+
 func test_try_commit_tick_rejects_null_world_or_snapshots() -> void:
 	var empty: GrayboxCourse = GrayboxCourse.new()
 	assert_false(empty.try_commit_tick())
@@ -461,6 +588,14 @@ func _run_tape_hash_sequence(course: GrayboxCourse) -> void:
 	var passed: Dictionary = course.try_step_intent(_move_payload(_whole(1), 0), 0)
 	assert_true(_ok(passed))
 	_assert_pose(course, _start_x() + _whole(1), 0, 0, START_YAW)
+
+
+func _run_interact_on_crate(course: GrayboxCourse) -> void:
+	_set_pose_on_crate(course)
+	var broken: Dictionary = course.try_interact(_interact_payload(), CRATE_MAX_HEALTH)
+	assert_true(_ok(broken))
+	assert_true(_destroyed(broken))
+	assert_eq(course.crate.current_health(), 0)
 
 
 func _run_shared_sequence(course: GrayboxCourse) -> void:
@@ -508,7 +643,7 @@ func _valid_layout() -> Dictionary:
 		"crate": {
 			"x": start_x,
 			"y": 0,
-			"z": _whole(5),
+			"z": _crate_z(),
 			"half_x": half,
 			"half_y": half,
 			"half_z": half,
@@ -559,6 +694,21 @@ func _valid_layout() -> Dictionary:
 	}
 
 
+func _interact_payload(
+	decoy_x: int = 0,
+	decoy_y: int = 0,
+	decoy_z: int = 0,
+	destroyed: bool = false
+) -> Dictionary:
+	return {
+		"intent": PlayerIntentNames.INTERACT,
+		"x": decoy_x,
+		"y": decoy_y,
+		"z": decoy_z,
+		"destroyed": destroyed,
+	}
+
+
 func _move_payload(dx: int, dz: int, decoy_x: int = 0, decoy_y: int = 0, decoy_z: int = 0) -> Dictionary:
 	return {
 		"intent": PlayerIntentNames.MOVE,
@@ -580,6 +730,10 @@ func _wall_dx() -> int:
 
 func _crate_dz() -> int:
 	return _whole(10)
+
+
+func _crate_z() -> int:
+	return _whole(5)
 
 
 func _hazard_dx() -> int:
@@ -604,6 +758,10 @@ func _pad_box(x: int, y: int, z: int) -> Dictionary:
 		"half_y": half,
 		"half_z": half,
 	}
+
+
+func _set_pose_on_crate(course: GrayboxCourse) -> void:
+	_set_pose(course, _start_x(), 0, _crate_z(), START_YAW)
 
 
 func _set_pose(course: GrayboxCourse, x: int, y: int, z: int, yaw: int) -> void:
