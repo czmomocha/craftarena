@@ -7,12 +7,12 @@ extends RefCounted
 ## 终点垫走 FinishAccept：冲线由占用 + 全部强制检查点完成判定；无 FinishIntent（CD-21 §6 / §8）。
 ## finish_tick 是权威 world.tick_index，未冲线哨兵为 -1；不写入 SimulationWorld.hash_state。
 ## 位移、jump_dy、support_dy、fall_dy、范围边界、max_hops、max_health、period、snapshot capacity 均由调用方传入，不锁定 Tick/快照 Hz、重力或掉出次数 N（CD-63）。
-## 成功 PLAYER 意图写入 SimReplayBuffer（CD-43 命令日志 + 种子）。PLAYER 磁带由 TraprushGrayboxTapeReplay 回放到新 course；本夹具不在 SimulationWorld 里解码意图。
+## 成功 PLAYER 意图写入 SimReplayBuffer（CD-43 命令日志 + 种子）。成功的 place_pose / 检查点 / 落地传送 / 冲线写入 SYSTEM 占用记录（actor_id = 0），不是 FinishIntent。
 ## assemble 记录 tick 0 关键快照；try_commit_tick(fall_dy) 先 try_apply_fall，成功后再推进 tick、按调用方周期切换 hazard 阻挡、再 record。
 ## try_step_intent(payload, jump_dy, support_dy) 把 support_dy 传给 apply；Jump 走直到阻挡；成功 PLAYER 意图入带。
 ## try_apply_fall(fall_dy) 只调用 world.try_move_y_until_blocked；成功/失败与仿真一致。
 ## try_reset_if_out_of_range 用已合入的只读范围查询；出界则 set_pose 到最近检查点复活落点（CD-21 §6），不入带不 tick，不计数 N。
-## try_interact / try_use_item 成功入带；打箱 / 传送 / 检查点 / 冲线 / 下落 / 出界复位不 tick、不 record、不入带。
+## try_interact / try_use_item 成功入 PLAYER 带；try_place_pose / 成功检查点 / 成功落地传送 / 首次冲线入 SYSTEM 带。下落、出界复位、try_break_crate 仍不入带。
 ## try_interact 仅在 overlapping_static_boxes 含 crate 时按调用方 damage 走 Destructible；摧毁则关闭 crate 盒阻挡。
 ## try_use_item 用当前姿态加调用方 reach 得到候选坐标，overlapping_static_boxes_at 含 crate 时才伤害；伤害与 reach 不从 payload 读取。
 ## try_break_crate 保持测试入口：不要求重叠、不入带。
@@ -30,6 +30,7 @@ const CheckpointSpawn := preload("res://src/games/traprush/checkpoint_spawn.gd")
 const Destructible := preload("res://src/games/traprush/destructible.gd")
 const PadAccept := preload("res://src/games/traprush/pad_accept.gd")
 const FinishAccept := preload("res://src/games/traprush/finish_accept.gd")
+const SystemOps := preload("res://src/games/traprush/graybox_system_ops.gd")
 
 var world: SimulationWorld = null
 var entity_id: int = 0
@@ -228,24 +229,7 @@ func try_step_intent(payload: Dictionary, jump_dy: int, support_dy: int) -> Dict
 	)
 	if not _flag(result):
 		return result
-	var command: SharedCommand = SharedCommand.create(
-		_next_command_seq,
-		_actor_id,
-		_next_command_seq,
-		world.tick_index,
-		0,
-		_content_version,
-		payload.duplicate(true),
-		_trace_id,
-		SharedCommand.Kind.PLAYER
-	)
-	if command == null:
-		push_error("TraprushGrayboxCourse: SharedCommand.create failed after accepted intent")
-		return result
-	if not tape.append(command):
-		push_error("TraprushGrayboxCourse: SimReplayBuffer.append failed after accepted intent")
-		return result
-	_next_command_seq += 1
+	_append_command(payload, SharedCommand.Kind.PLAYER)
 	return result
 
 
@@ -308,24 +292,7 @@ func try_interact(payload: Dictionary, damage: int) -> Dictionary:
 	var destroyed: bool = result.get("destroyed", false)
 	if destroyed:
 		world.set_static_box_solid(crate_box_id, false)
-	var command: SharedCommand = SharedCommand.create(
-		_next_command_seq,
-		_actor_id,
-		_next_command_seq,
-		world.tick_index,
-		0,
-		_content_version,
-		payload.duplicate(true),
-		_trace_id,
-		SharedCommand.Kind.PLAYER
-	)
-	if command == null:
-		push_error("TraprushGrayboxCourse: SharedCommand.create failed after accepted intent")
-		return result
-	if not tape.append(command):
-		push_error("TraprushGrayboxCourse: SimReplayBuffer.append failed after accepted intent")
-		return result
-	_next_command_seq += 1
+	_append_command(payload, SharedCommand.Kind.PLAYER)
 	return result
 
 
@@ -371,24 +338,7 @@ func try_use_item(
 	var destroyed: bool = result.get("destroyed", false)
 	if destroyed:
 		world.set_static_box_solid(crate_box_id, false)
-	var command: SharedCommand = SharedCommand.create(
-		_next_command_seq,
-		_actor_id,
-		_next_command_seq,
-		world.tick_index,
-		0,
-		_content_version,
-		payload.duplicate(true),
-		_trace_id,
-		SharedCommand.Kind.PLAYER
-	)
-	if command == null:
-		push_error("TraprushGrayboxCourse: SharedCommand.create failed after accepted intent")
-		return result
-	if not tape.append(command):
-		push_error("TraprushGrayboxCourse: SimReplayBuffer.append failed after accepted intent")
-		return result
-	_next_command_seq += 1
+	_append_command(payload, SharedCommand.Kind.PLAYER)
 	return result
 
 
@@ -414,10 +364,44 @@ func try_break_crate(damage: int) -> Dictionary:
 	return result
 
 
+func try_place_pose(x: int, y: int, z: int, yaw_bam: int) -> bool:
+	if world == null:
+		return false
+	if not world.set_pose(entity_id, x, y, z, yaw_bam):
+		return false
+	_append_command(
+		{
+			"op": SystemOps.PLACE_POSE,
+			"x": x,
+			"y": y,
+			"z": z,
+			"yaw_bam": yaw_bam,
+		},
+		SharedCommand.Kind.SYSTEM
+	)
+	return true
+
+
 func try_land_portal(start_id: int, dest_checkpoint_id: int, max_hops: int) -> Dictionary:
 	if not track.can_use_portal(dest_checkpoint_id):
 		return {"ok": false}
-	return PortalLanding.try_land(world, entity_id, _graph, start_id, max_hops)
+	var landed: Dictionary = PortalLanding.try_land(
+		world, entity_id, _graph, start_id, max_hops
+	)
+	if not _flag(landed):
+		return landed
+	var did_land: bool = landed.get("landed", false)
+	if did_land:
+		_append_command(
+			{
+				"op": SystemOps.LAND_PORTAL,
+				"start_id": start_id,
+				"dest_checkpoint_id": dest_checkpoint_id,
+				"max_hops": max_hops,
+			},
+			SharedCommand.Kind.SYSTEM
+		)
+	return landed
 
 
 func try_accept_checkpoint(checkpoint_id: int) -> bool:
@@ -428,9 +412,15 @@ func try_accept_checkpoint(checkpoint_id: int) -> bool:
 			break
 	if pad_index < 0 or pad_index >= pad_box_ids.size():
 		return false
-	return PadAccept.try_accept_on_pad(
+	if not PadAccept.try_accept_on_pad(
 		world, entity_id, track, checkpoint_id, pad_box_ids[pad_index]
+	):
+		return false
+	_append_command(
+		{"op": SystemOps.ACCEPT_CHECKPOINT, "checkpoint_id": checkpoint_id},
+		SharedCommand.Kind.SYSTEM
 	)
+	return true
 
 
 func try_cross_finish() -> Dictionary:
@@ -441,7 +431,36 @@ func try_cross_finish() -> Dictionary:
 	if not _flag(crossed):
 		return failed
 	finish_tick = world.tick_index
+	_append_command({"op": SystemOps.CROSS_FINISH}, SharedCommand.Kind.SYSTEM)
 	return {"ok": true, "finish_tick": finish_tick}
+
+
+func _append_command(payload: Dictionary, kind: int) -> bool:
+	if tape == null or world == null:
+		push_error("TraprushGrayboxCourse: tape append missing world or tape")
+		return false
+	var actor_id: int = _actor_id
+	if kind == SharedCommand.Kind.SYSTEM:
+		actor_id = SharedIds.NULL_ID
+	var command: SharedCommand = SharedCommand.create(
+		_next_command_seq,
+		actor_id,
+		_next_command_seq,
+		world.tick_index,
+		0,
+		_content_version,
+		payload.duplicate(true),
+		_trace_id,
+		kind
+	)
+	if command == null:
+		push_error("TraprushGrayboxCourse: SharedCommand.create failed after accepted command")
+		return false
+	if not tape.append(command):
+		push_error("TraprushGrayboxCourse: SimReplayBuffer.append failed after accepted command")
+		return false
+	_next_command_seq += 1
+	return true
 
 
 static func _require_int(source: Dictionary, key: String) -> Dictionary:
