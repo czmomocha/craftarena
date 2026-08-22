@@ -79,7 +79,7 @@
 
 ### M2：共享 Edit 框架与 TRAPRUSH 工具
 
-状态：**可启动，尚未开工**。工具链评审已通过（2026-08-23，[ADR-0004 §8.1](../../docs/adr/0004-multi-agent-adoption-timing-and-architecture.md)）：Godot AI 生产级启用成立；并行保持 2 域，第 3 域仍未开。第一刀仍须串行锁 Component Schema v1，然后才按域并行 AuthoringWorld / EditCommand。不得把「用 MCP 搭两张赛道」写成唯一路径。
+状态：**可启动，尚未开工**。工具链评审已通过（2026-08-23，见 [PR #77](https://github.com/czmomocha/craftarena/pull/77)；[ADR-0004 §8.1](../../docs/adr/0004-multi-agent-adoption-timing-and-architecture.md)）：Godot AI 生产级启用成立；并行保持 2 域，第 3 域仍未开。第一刀仍须串行锁 Component Schema v1，然后才按域并行 AuthoringWorld / EditCommand。不得把「用 MCP 搭两张赛道」写成唯一路径。
 
 产出：
 
