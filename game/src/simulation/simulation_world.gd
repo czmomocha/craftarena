@@ -35,7 +35,10 @@ extends RefCounted
 ## try_move_xz / try_move_y sample the displacement segment with discrete substeps
 ## (not continuous analytic TOI) against other upright capsules and static AABBs.
 ## A blocked sample or overflow rejects the whole move; there is no slide.
-## radius <= 0 keeps destination-only checks; radius is the only step scale.
+## try_move_y_until_blocked uses the same Y samples but commits the last unblocked
+## y (start if sample_i=1 is blocked). Unknown ids and add/mul/div overflow still
+## return false without writing. radius <= 0 keeps destination-only checks: a
+## blocked dest keeps start and returns true. radius is the only step scale.
 
 var tick_index: int = 0
 
@@ -309,6 +312,23 @@ func try_move_y(entity_id: int, dy: int) -> bool:
 	return true
 
 
+## dy is this-tick displacement in Q48.16 internal units, not metres per second.
+func try_move_y_until_blocked(entity_id: int, dy: int) -> bool:
+	if not _has_entity(entity_id):
+		return false
+	var pose_index: int = entity_id - 1
+	var new_y_res: FixedResult = Fixed.try_add(_y[pose_index], dy)
+	if not new_y_res.ok:
+		return false
+	var contact_y_res: FixedResult = _sweep_last_free_y(
+		entity_id, pose_index, dy, new_y_res.value
+	)
+	if not contact_y_res.ok:
+		return false
+	_y[pose_index] = contact_y_res.value
+	return true
+
+
 func hash_state() -> PackedByteArray:
 	var hasher: StateHasher = StateHasher.new()
 	var values: Array[int] = [tick_index]
@@ -403,6 +423,41 @@ func _sweep_clear_y(entity_id: int, pose_index: int, dy: int, dest_y: int) -> bo
 			break
 		sample_i += 1
 	return true
+
+
+func _sweep_last_free_y(
+	entity_id: int, pose_index: int, dy: int, dest_y: int
+) -> FixedResult:
+	var start_x: int = _x[pose_index]
+	var start_y: int = _y[pose_index]
+	var start_z: int = _z[pose_index]
+	var radius: int = _radius[pose_index]
+	if radius <= 0:
+		if _destination_blocked(entity_id, pose_index, start_x, dest_y, start_z):
+			return FixedResult.success(start_y)
+		return FixedResult.success(dest_y)
+	var abs_dy_res: FixedResult = _try_abs(dy)
+	if not abs_dy_res.ok:
+		return FixedResult.fail()
+	var step_count: int = _sweep_step_count(abs_dy_res.value, radius)
+	var last_free_y: int = start_y
+	var sample_i: int = 1
+	while true:
+		var step_dy_res: FixedResult = Fixed.try_mul_div(dy, sample_i, step_count)
+		if not step_dy_res.ok:
+			return FixedResult.fail()
+		var sample_y_res: FixedResult = Fixed.try_add(start_y, step_dy_res.value)
+		if not sample_y_res.ok:
+			return FixedResult.fail()
+		if _destination_blocked(
+			entity_id, pose_index, start_x, sample_y_res.value, start_z
+		):
+			return FixedResult.success(last_free_y)
+		last_free_y = sample_y_res.value
+		if sample_i == step_count:
+			break
+		sample_i += 1
+	return FixedResult.success(last_free_y)
 
 
 func _sweep_step_count(length: int, radius: int) -> int:
