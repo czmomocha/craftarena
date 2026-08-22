@@ -41,9 +41,9 @@
 | 传送迷路或跳关 | 高，已治理 | 检查点序列、路径验证、镜头过渡、出口安全点 |
 | BASTION 互设障碍不公平 | 高，已治理 | 同预算、盲设、路径硬验证、槽位与补偿预设 |
 | 网页/微信包体超限 | 中，已治理 | Compatibility、资源变体、子包、按需资源模块 |
-| Godot 主 MCP 供应链与编辑器权限 | 中，已缓解 | 已选定唯一主 MCP 为 Godot AI（MIT，GDScript 插件 + 本机 Python）。接入烟测未签字前不当作可用能力；插件不入库；仅回环；禁止 `--allow-host` 与 Vision Routing。清单见 [ADR-0003](../../docs/adr/0003-godot-mcp-selection.md) |
+| Godot 主 MCP 供应链与编辑器权限 | 中，已缓解 | 已选定唯一主 MCP 为 Godot AI（MIT，GDScript 插件 + 本机 Python）。阶段 C 生产级启用已通过（2026-08-23）。插件不入库；仅回环；禁止 `--allow-host` 与 Vision Routing。清单见 [ADR-0003](../../docs/adr/0003-godot-mcp-selection.md) |
 | Godot AI 匿名遥测默认开启 | 中，已治理 | 第一次启用插件前写入 `GODOT_AI_DISABLE_TELEMETRY=true`，Dock 再关 Telemetry，Cursor attach 带 `--disable-telemetry`。口径见 [CD-51 §7.2](../50-engineering/51-dev-environment.md)，不属于 [CD-14](../10-product/14-data-and-telemetry.md) 玩家遥测 |
-| `_mcp_game_helper` 写入 `project.godot` 后进入 Headless | 高，已缓解 | 上游导出会剥 autoload，但 MatchServer 跑源码。已提交工程只保留 GUT 插件；本机启用后提交前必须还原。生产级启用前不得把 helper 当基础 Autoload |
+| `_mcp_game_helper` 写入 `project.godot` 后进入 Headless | 高，已缓解 | 上游导出会剥 autoload，但 MatchServer 跑源码。已提交工程只保留 GUT 插件；本机启用后提交前必须还原。生产级启用已成立，仍不得把 helper 当基础 Autoload 或写入 Git |
 | 多 Agent 并行放大 review 负担 | 高，已缓解 | 启用判据 A1–A4 与并行度上限见 [CD-52 §5](../50-engineering/52-ai-workflow.md)。门禁覆盖率不足时禁止并行 |
 | Cursor 托管 worktree 自动清理可能丢失未提交产出 | 中，已缓解 | 任务粒度半天到两天；任务结束即开 PR。隔离分支提交须等分支保护落地后才允许，见 [CD-52 §1.1](../50-engineering/52-ai-workflow.md) |
 | Bugbot / Cloud Agent 需要仓库读写权限 | 中，已接受 | 属安全边界扩大，随 [ADR-0004](../../docs/adr/0004-multi-agent-adoption-timing-and-architecture.md) 批准。GitHub PR 侧 Bugbot 已跳过（SCM 安装对不上）；合入靠 CI + 人类批准。不启用 fail-on-unresolved-issues。Cloud Agent 仍须分支保护 |

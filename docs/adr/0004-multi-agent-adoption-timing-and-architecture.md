@@ -1,7 +1,7 @@
 # ADR-0004 多 Agent 并行开发的启用时机与架构选型（Cursor 版）
 
-- 状态：**已拍板**（2026-08-21 由项目负责人裁定八项决策，结果见 §8）
-- 日期：2026-08-21（初稿，基于 CodeBuddy Code 能力） / 2026-08-21（**本版：改写为 Cursor 实际能力并拍板**）
+- 状态：**已拍板**（2026-08-21 八项决策见 §8；2026-08-23 决策 8 执行结论见 §8.1）
+- 日期：2026-08-21（初稿，基于 CodeBuddy Code 能力） / 2026-08-21（**本版：改写为 Cursor 实际能力并拍板**） / 2026-08-23（§8.1 工具链评审执行）
 - 提出背景：M0 已退出（2026-08-20），M1 尚未启动。项目负责人询问「多 Agent 何时真正 run 起来」以及「自建 / 用现成 CLI 编排 / 用 Multica 类平台」
 - 改写原因：初稿的架构选型建立在 CodeBuddy Code 的 **Agent Teams**、agent frontmatter 的 **`tools:` 白名单**、**`.worktreeinclude`**、**`worktree.symlinkDirectories`** 四项能力之上。经核对 Cursor 官方文档，**这四项 Cursor 全都没有**。初稿的时机判据（§3、§4.1、§4.2）与工具无关，本版保留；架构选型（§5）与落地清单（§6）整段重写
 - 相关：[CD-00 宪法](../../Confirmed-docs/00-constitution/CONSTITUTION.md) 第九、十、十八、二十条、[CD-52 §5](../../Confirmed-docs/50-engineering/52-ai-workflow.md)、[CD-53 §4.1](../../Confirmed-docs/50-engineering/53-testing-and-ci.md)、[CD-61](../../Confirmed-docs/60-plan/61-milestones.md)、[CD-62](../../Confirmed-docs/60-plan/62-risk-register.md)、[CD-91 D.6](../../Confirmed-docs/90-reference/91-decision-log.md)、[ADR-0003](0003-godot-mcp-selection.md)
@@ -406,7 +406,16 @@ Cursor Automations 是按计划（cron）或事件（PR opened/pushed/merged、C
 - [x] **决策 5**：初始并行度**上限 3，先跑 2 个域**，确认 review 节奏后再加第 3 个。
 - [x] **决策 6（新增）**：**引入 Bugbot**，启用顺序为「本地 `/review-bugbot` 先行 → 第一个 PR 走通后再开 PR 侧」。**不启用 fail-on-unresolved-issues**，因此按宪法第二十四条，它在 CD-53 §4.1 表中必须标为「非门禁」。
 - [x] **决策 7**：**批准 §4.2 三条门禁进入 M1 范围**，与 L0 契约交替进行。范围依据是 CD-61 阶段退出条件里的「AI 生成代码的自动化通过率和返工率可测量」与「人类仍能理解和接管核心模块」两项。
-- [x] **决策 8**：**设立「M2 启动前工具链评审」正式检查点**，一次性处理 ADR-0003 的 Godot 主 MCP 重估与本 ADR 阶段 B 的并行度提升。
+- [x] **决策 8**：**设立「M2 启动前工具链评审」正式检查点**，一次性处理 ADR-0003 的 Godot 主 MCP 重估与本 ADR 阶段 B 的并行度提升。执行结论见 §8.1。
+
+### 8.1 M2 启动前工具链评审（2026-08-23，见 [PR #77](https://github.com/czmomocha/craftarena/pull/77)）
+
+M1 退出后、M2 功能任务开工前，由项目负责人裁定决策 8 的两项执行结论。**不重选 MCP**（选型仍是 ADR-0003 选项 E）。
+
+- [x] **ADR-0003 阶段 C 通过（生产级启用）**：Windows / macOS 接入烟测已于 2026-08-21 签字；匿名遥测关闭已核实；已提交的 `project.godot` 无 `godot_ai` 插件项、无 `_mcp_game_helper` autoload；`game/addons/godot_ai/` 不入库。此后 M2 大型 `.tscn` 必须走 MCP / Editor API / UndoRedo。编辑器未开或 MCP 不可用时，README 命令行与文件方式仍是退路；MCP 不得进 CI、不得进入 MatchServer 或玩家包。
+- [x] **并行保持 2 域，第 3 域仍不开**：上限仍为 3。M1 审查瓶颈是合入次数，不是 Agent 产量。M2 第一刀仍须串行锁 Component Schema v1，然后才按域并行。第 3 域（含 `bot-runner/` / `replay-inspector/`）不在此次打开；升到 3 须另一次人类拍板。
+
+本检查点通过后，M2 **可以**开工，但本记录本身不开功能任务。
 
 ### 生效内容
 
@@ -418,4 +427,4 @@ Cursor Automations 是按计划（cron）或事件（PR opened/pushed/merged、C
 
 ### 已同步
 
-[CD-52 §1.1 / §3 / §5 / §7.3](../../Confirmed-docs/50-engineering/52-ai-workflow.md)、[CD-53 §4.1 / §4.5](../../Confirmed-docs/50-engineering/53-testing-and-ci.md)、[CD-61](../../Confirmed-docs/60-plan/61-milestones.md)、[CD-62](../../Confirmed-docs/60-plan/62-risk-register.md)、[CD-63 §2](../../Confirmed-docs/60-plan/63-open-decisions.md)、[CD-91 D.6](../../Confirmed-docs/90-reference/91-decision-log.md)、[Confirmed-docs 索引](../../Confirmed-docs/README.md)、[README.md](../../README.md)、[`.gitignore`](../../.gitignore)、[AGENTS.md](../../AGENTS.md) §2。
+[CD-52 §1.1 / §3 / §5 / §7](../../Confirmed-docs/50-engineering/52-ai-workflow.md)、[CD-53 §4.1 / §4.5](../../Confirmed-docs/50-engineering/53-testing-and-ci.md)、[CD-61](../../Confirmed-docs/60-plan/61-milestones.md)、[CD-62](../../Confirmed-docs/60-plan/62-risk-register.md)、[CD-63 §2](../../Confirmed-docs/60-plan/63-open-decisions.md)、[CD-91 D.6](../../Confirmed-docs/90-reference/91-decision-log.md)、[Confirmed-docs 索引](../../Confirmed-docs/README.md)、[README.md](../../README.md)、[`.gitignore`](../../.gitignore)、[AGENTS.md](../../AGENTS.md) §2、[ADR-0003](0003-godot-mcp-selection.md) 阶段 C、[CD-51 §7](../../Confirmed-docs/50-engineering/51-dev-environment.md)。§8.1（2026-08-23）另同步 [Godot AI 接入烟测](../runbooks/godot-ai-mcp-setup.md)。

@@ -1,7 +1,7 @@
 # ADR-0003 Godot 主 MCP 的选择
 
-- 状态：**已拍板——选定 Godot AI**（2026-08-21 由项目负责人裁定；覆盖 2026-08-20 的选项 A）
-- 日期：2026-08-20（初稿） / 2026-08-21（选定）
+- 状态：**已拍板——选定 Godot AI**（2026-08-21 由项目负责人裁定；覆盖 2026-08-20 的选项 A）。阶段 C 生产级启用已通过（2026-08-23，见 [ADR-0004 §8.1](0004-multi-agent-adoption-timing-and-architecture.md)）
+- 日期：2026-08-20（初稿） / 2026-08-21（选定） / 2026-08-23（阶段 C 通过）
 - 相关：[CD-00 宪法](../../Confirmed-docs/00-constitution/CONSTITUTION.md) 第七、十二、十八条、[CD-51](../../Confirmed-docs/50-engineering/51-dev-environment.md)、[CD-52](../../Confirmed-docs/50-engineering/52-ai-workflow.md)、[CD-61](../../Confirmed-docs/60-plan/61-milestones.md)、[CD-62](../../Confirmed-docs/60-plan/62-risk-register.md)
 
 ## 背景
@@ -102,6 +102,8 @@ M2 及以后
 
 未满足以上四条，不得把「用 MCP 搭两张赛道」写成 M2 任务的唯一路径。命令行与文件方式仍是 MCP 不可用时的退路。
 
+**2026-08-23**：以上四条已成立（烟测签字见 [接入清单第 10 步](../runbooks/godot-ai-mcp-setup.md)；入库卫生以已提交 `project.godot` 为准）。阶段 C **通过**。不重选 MCP。大型 `.tscn` 的默认路径切换见 [CD-52 §7.1](../../Confirmed-docs/50-engineering/52-ai-workflow.md)。
+
 ### 阶段 D — M2 及以后：真正的生产级应用
 
 MCP 的正式主场是内容生产平面里的**编辑器侧**工作，不是对局数据平面：
@@ -148,7 +150,7 @@ MCP 的正式主场是内容生产平面里的**编辑器侧**工作，不是对
 
 - 唯一主 MCP 为 Godot AI；精确版本与安装步骤见 CD-51 §1 / §7；
 - 匿名遥测必须关闭，关闭时机是**第一次启动带插件的编辑器之前**；
-- 接入烟测与 M1 SimulationCore 拆开；M2 启动前完成生产级启用；
+- 接入烟测与 M1 SimulationCore 拆开；阶段 C 生产级启用已于 2026-08-23 通过（[ADR-0004 §8.1](0004-multi-agent-adoption-timing-and-architecture.md)）；
 - 插件不入库；禁止第二套 Godot MCP；
 - 在人类按接入清单签字前，任何 Agent 不得以「提高效率」为由自行安装或把 MCP 写进 CI（宪法第十八条：新依赖属人类门禁，本 ADR 只授权按 CD-51 执行，不授权跳过烟测）。
 

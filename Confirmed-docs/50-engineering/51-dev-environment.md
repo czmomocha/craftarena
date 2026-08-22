@@ -140,7 +140,7 @@ export GODOT_AI_DISABLE_TELEMETRY=true
 | 文档拍板 | M0 已退出、M1 启动前（已完成） | 锁定唯一主 MCP 与遥测政策 | 不改 `game/` 工程 |
 | 接入烟测 | M1 期间可并行的**独立环境任务** | 本机装 uv、先写 §7.2、装 3.1.5 插件、Configure Cursor、按 ADR 清单签字 | 不并入 SimulationCore；不改 CI；不提交插件与 `project.godot` 脏写入 |
 | M1 默认路径 | 接入烟测签字之前 / 之后 | 签字前：`.gd` + GUT + Headless。签字后：允许 MCP 改表现层占位场景 | MCP 不是 M1 退出条件；编辑器没开时任务仍须能用命令行完成 |
-| 生产级启用 | **M2 启动门禁** | 清单全绿、遥测核实、入库卫生、大型 `.tscn` 走 MCP / UndoRedo | 不把 Godot AI 打进玩家包、MatchServer 或 CI |
+| 生产级启用 | **已通过**（2026-08-23，[ADR-0004 §8.1](../../docs/adr/0004-multi-agent-adoption-timing-and-architecture.md)） | 清单全绿、遥测核实、入库卫生；此后大型 `.tscn` 走 MCP / UndoRedo | 不把 Godot AI 打进玩家包、MatchServer 或 CI |
 | 生产级应用 | M2 及以后的编辑器工作 | AuthoringWorld、Edit UI、官方赛道表现场景 | `game_eval`、Vision Routing、`--allow-host`、第二套 MCP、用 `McpTestSuite` 替代 GUT |
 
 升级插件或 PyPI 包视为依赖变更：改本文件 §1 版本行、runbook 里的 sha256、再在开发机重跑接入烟测。大版本只在里程碑边界试验，且必须可回退（§2）。
