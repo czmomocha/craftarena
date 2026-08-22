@@ -1,6 +1,6 @@
 extends GutTest
 
-## SimulationWorld 骨架：Tick 计数、姿态读写、占用检查瞬移、XZ/Y 离散扫掠阻挡、静态盒阻挡开关、静态盒体积查询、相交静态盒枚举、固体占用查询、胶囊占用查询、相交胶囊枚举、候选姿态占用查询、Canonical 状态哈希、可取出的 SimRng。
+## SimulationWorld 骨架：Tick 计数、姿态读写、占用检查瞬移、XZ/Y 离散扫掠阻挡、静态盒阻挡开关、静态盒体积查询、相交静态盒枚举、固体占用查询、胶囊占用查询、相交胶囊枚举、候选姿态占用查询、固体支撑探测、Canonical 状态哈希、可取出的 SimRng。
 
 const FixedClass := preload("res://src/shared/fixed/fixed.gd")
 const FixedResultClass := preload("res://src/shared/fixed/fixed_result.gd")
@@ -1255,6 +1255,251 @@ func test_current_solid_queries_match_at_with_current_coordinates() -> void:
 		world.overlapping_solid_static_boxes_at(entity_id, 0, 0, 0)
 	)
 	_assert_pose(world, entity_id, 0, 0, 0, 8)
+	assert_eq(world.tick_index, 0)
+
+
+func test_supporting_solid_static_boxes_at_box_underfoot_needs_negative_dy() -> void:
+	var world: SimulationWorld = SimulationWorld.new(1)
+	var radius: int = _whole(1)
+	var cylinder_height: int = _whole(2)
+	var stand_y: int = _whole(4)
+	var support_dy: int = -_whole(1)
+	var probe_res: FixedResultClass = FixedClass.try_add(stand_y, support_dy)
+	assert_true(probe_res.ok)
+	var probe_y: int = probe_res.value
+	var entity_id: int = world.spawn_capsule(0, stand_y, 0, 8, radius, cylinder_height)
+	assert_eq(world.spawn_static_box(_whole(10), 0, 0, _whole(1), _whole(1), _whole(1)), 1)
+	assert_eq(world.spawn_static_box(0, 0, 0, _whole(1), _whole(1), _whole(1)), 2)
+	assert_eq(world.spawn_static_box(0, 0, 0, _whole(1), _whole(1), _whole(1)), 3)
+	_assert_ids(world.overlapping_solid_static_boxes(entity_id), PackedInt32Array())
+	_assert_ids(world.overlapping_solid_static_boxes_at(entity_id, 0, stand_y, 0), PackedInt32Array())
+	_assert_ids(
+		world.overlapping_solid_static_boxes_at(entity_id, 0, probe_y, 0),
+		PackedInt32Array([2, 3])
+	)
+	_assert_ids(
+		world.supporting_solid_static_boxes_at(entity_id, 0, stand_y, 0, support_dy),
+		PackedInt32Array([2, 3])
+	)
+	_assert_ids(
+		world.supporting_solid_static_boxes_at(entity_id, 0, stand_y, 0, support_dy),
+		world.overlapping_solid_static_boxes_at(entity_id, 0, probe_y, 0)
+	)
+	assert_true(world.is_supported_by_solid_at(entity_id, 0, stand_y, 0, support_dy))
+	assert_false(world.is_supported_by_solid_at(entity_id, 0, stand_y, 0, 0))
+	_assert_ids(
+		world.supporting_solid_static_boxes_at(entity_id, 0, stand_y, 0, 0),
+		PackedInt32Array()
+	)
+	_assert_pose(world, entity_id, 0, stand_y, 0, 8)
+	assert_eq(world.tick_index, 0)
+
+
+func test_supporting_solid_static_boxes_at_excludes_non_solid_underfoot() -> void:
+	var world: SimulationWorld = SimulationWorld.new(1)
+	var stand_y: int = _whole(4)
+	var support_dy: int = -_whole(1)
+	var probe_res: FixedResultClass = FixedClass.try_add(stand_y, support_dy)
+	assert_true(probe_res.ok)
+	var probe_y: int = probe_res.value
+	var entity_id: int = world.spawn_capsule(0, stand_y, 0, 8, _whole(1), _whole(2))
+	assert_eq(world.spawn_static_box(0, 0, 0, _whole(1), _whole(1), _whole(1)), 1)
+	assert_true(world.set_static_box_solid(1, false))
+	_assert_ids(world.overlapping_solid_static_boxes(entity_id), PackedInt32Array())
+	_assert_ids(world.overlapping_static_boxes_at(entity_id, 0, probe_y, 0), PackedInt32Array([1]))
+	_assert_ids(
+		world.overlapping_solid_static_boxes_at(entity_id, 0, probe_y, 0),
+		PackedInt32Array()
+	)
+	_assert_ids(
+		world.supporting_solid_static_boxes_at(entity_id, 0, stand_y, 0, support_dy),
+		PackedInt32Array()
+	)
+	assert_false(world.is_supported_by_solid_at(entity_id, 0, stand_y, 0, support_dy))
+	_assert_pose(world, entity_id, 0, stand_y, 0, 8)
+	assert_eq(world.tick_index, 0)
+
+
+func test_supporting_solid_static_boxes_unknown_entity_is_empty() -> void:
+	var world: SimulationWorld = SimulationWorld.new(1)
+	var support_dy: int = -_whole(1)
+	_assert_ids(
+		world.supporting_solid_static_boxes_at(0, 0, 0, 0, support_dy), PackedInt32Array()
+	)
+	_assert_ids(
+		world.supporting_solid_static_boxes_at(-1, 0, 0, 0, support_dy), PackedInt32Array()
+	)
+	_assert_ids(
+		world.supporting_solid_static_boxes_at(1, 0, 0, 0, support_dy), PackedInt32Array()
+	)
+	_assert_ids(
+		world.supporting_solid_static_boxes_at(99, 0, 0, 0, support_dy), PackedInt32Array()
+	)
+	_assert_ids(world.supporting_solid_static_boxes(0, support_dy), PackedInt32Array())
+	_assert_ids(world.supporting_solid_static_boxes(-1, support_dy), PackedInt32Array())
+	assert_false(world.is_supported_by_solid_at(0, 0, 0, 0, support_dy))
+	assert_false(world.is_supported_by_solid_at(-1, 0, 0, 0, support_dy))
+	assert_false(world.is_supported_by_solid_at(1, 0, 0, 0, support_dy))
+	assert_false(world.is_supported_by_solid_at(99, 0, 0, 0, support_dy))
+	assert_false(world.is_supported_by_solid(0, support_dy))
+	assert_false(world.is_supported_by_solid(-1, support_dy))
+	var entity_id: int = world.spawn_capsule(0, _whole(4), 0, 8, _whole(1), _whole(2))
+	assert_eq(world.spawn_static_box(0, 0, 0, _whole(1), _whole(1), _whole(1)), 1)
+	var before_hex: String = world.hash_state().hex_encode()
+	_assert_ids(
+		world.supporting_solid_static_boxes_at(0, 0, _whole(4), 0, support_dy),
+		PackedInt32Array()
+	)
+	_assert_ids(
+		world.supporting_solid_static_boxes_at(-1, 0, _whole(4), 0, support_dy),
+		PackedInt32Array()
+	)
+	_assert_ids(
+		world.supporting_solid_static_boxes_at(99, 0, _whole(4), 0, support_dy),
+		PackedInt32Array()
+	)
+	_assert_ids(world.supporting_solid_static_boxes(0, support_dy), PackedInt32Array())
+	_assert_ids(world.supporting_solid_static_boxes(99, support_dy), PackedInt32Array())
+	assert_false(world.is_supported_by_solid_at(0, 0, _whole(4), 0, support_dy))
+	assert_false(world.is_supported_by_solid_at(99, 0, _whole(4), 0, support_dy))
+	assert_false(world.is_supported_by_solid(0, support_dy))
+	assert_false(world.is_supported_by_solid(99, support_dy))
+	_assert_ids(
+		world.supporting_solid_static_boxes_at(entity_id, 0, _whole(4), 0, support_dy),
+		PackedInt32Array([1])
+	)
+	assert_true(world.is_supported_by_solid_at(entity_id, 0, _whole(4), 0, support_dy))
+	assert_eq(world.tick_index, 0)
+	_assert_pose(world, entity_id, 0, _whole(4), 0, 8)
+	assert_eq(world.hash_state().hex_encode(), before_hex)
+
+
+func test_supporting_solid_static_boxes_add_overflow_is_empty() -> void:
+	var world: SimulationWorld = SimulationWorld.new(1)
+	var stand_y: int = _whole(4)
+	var support_dy: int = -_whole(1)
+	var entity_id: int = world.spawn_capsule(0, stand_y, 0, 8, _whole(1), _whole(2))
+	assert_eq(world.spawn_static_box(0, 0, 0, _whole(1), _whole(1), _whole(1)), 1)
+	_assert_ids(
+		world.supporting_solid_static_boxes_at(entity_id, 0, FixedClass.INT64_MAX, 0, 1),
+		PackedInt32Array()
+	)
+	assert_false(world.is_supported_by_solid_at(entity_id, 0, FixedClass.INT64_MAX, 0, 1))
+	_assert_ids(
+		world.supporting_solid_static_boxes_at(entity_id, 0, FixedClass.INT64_MIN, 0, -1),
+		PackedInt32Array()
+	)
+	assert_false(world.is_supported_by_solid_at(entity_id, 0, FixedClass.INT64_MIN, 0, -1))
+	assert_true(world.set_pose(entity_id, 0, FixedClass.INT64_MAX, 0, 8))
+	_assert_ids(world.supporting_solid_static_boxes(entity_id, 1), PackedInt32Array())
+	assert_false(world.is_supported_by_solid(entity_id, 1))
+	_assert_ids(
+		world.supporting_solid_static_boxes_at(entity_id, 0, stand_y, 0, support_dy),
+		PackedInt32Array([1])
+	)
+	assert_true(world.is_supported_by_solid_at(entity_id, 0, stand_y, 0, support_dy))
+	_assert_pose(world, entity_id, 0, FixedClass.INT64_MAX, 0, 8)
+	assert_eq(world.tick_index, 0)
+
+
+func test_supporting_solid_static_boxes_zero_dy_matches_current_solid() -> void:
+	var world: SimulationWorld = SimulationWorld.new(1)
+	var entity_id: int = world.spawn_capsule(0, 0, 0, 8, _whole(1), _whole(2))
+	assert_eq(world.spawn_static_box(0, 0, 0, _whole(1), _whole(1), _whole(1)), 1)
+	assert_eq(world.spawn_static_box(_whole(10), 0, 0, _whole(1), _whole(1), _whole(1)), 2)
+	_assert_ids(world.overlapping_solid_static_boxes(entity_id), PackedInt32Array([1]))
+	_assert_ids(world.supporting_solid_static_boxes(entity_id, 0), PackedInt32Array([1]))
+	_assert_ids(
+		world.supporting_solid_static_boxes_at(entity_id, 0, 0, 0, 0),
+		world.overlapping_solid_static_boxes_at(entity_id, 0, 0, 0)
+	)
+	assert_true(world.is_supported_by_solid(entity_id, 0))
+	assert_true(world.is_supported_by_solid_at(entity_id, 0, 0, 0, 0))
+	assert_true(world.set_static_box_solid(1, false))
+	_assert_ids(world.overlapping_static_boxes(entity_id), PackedInt32Array([1]))
+	_assert_ids(world.overlapping_solid_static_boxes(entity_id), PackedInt32Array())
+	_assert_ids(world.supporting_solid_static_boxes(entity_id, 0), PackedInt32Array())
+	assert_false(world.is_supported_by_solid(entity_id, 0))
+	_assert_pose(world, entity_id, 0, 0, 0, 8)
+	assert_eq(world.tick_index, 0)
+
+
+func test_supporting_solid_static_boxes_delegates_current_pose() -> void:
+	var world: SimulationWorld = SimulationWorld.new(1)
+	var stand_y: int = _whole(4)
+	var support_dy: int = -_whole(1)
+	var entity_id: int = world.spawn_capsule(0, stand_y, 0, 8, _whole(1), _whole(2))
+	assert_eq(world.spawn_static_box(0, 0, 0, _whole(1), _whole(1), _whole(1)), 1)
+	_assert_ids(world.overlapping_solid_static_boxes(entity_id), PackedInt32Array())
+	_assert_ids(world.supporting_solid_static_boxes(entity_id, 0), PackedInt32Array())
+	assert_false(world.is_supported_by_solid(entity_id, 0))
+	_assert_ids(world.supporting_solid_static_boxes_at(entity_id, 0, 0, 0, 0), PackedInt32Array([1]))
+	assert_true(world.is_supported_by_solid_at(entity_id, 0, 0, 0, 0))
+	_assert_ids(world.supporting_solid_static_boxes(entity_id, support_dy), PackedInt32Array([1]))
+	_assert_ids(
+		world.supporting_solid_static_boxes(entity_id, support_dy),
+		world.supporting_solid_static_boxes_at(entity_id, 0, stand_y, 0, support_dy)
+	)
+	assert_eq(
+		world.is_supported_by_solid(entity_id, support_dy),
+		world.is_supported_by_solid_at(entity_id, 0, stand_y, 0, support_dy)
+	)
+	assert_true(world.is_supported_by_solid(entity_id, support_dy))
+	_assert_pose(world, entity_id, 0, stand_y, 0, 8)
+	assert_eq(world.tick_index, 0)
+
+
+func test_support_queries_do_not_change_hash_pose_or_tick() -> void:
+	var world: SimulationWorld = SimulationWorld.new(1)
+	var stand_y: int = _whole(4)
+	var support_dy: int = -_whole(1)
+	var entity_id: int = world.spawn_capsule(0, stand_y, 0, 8, _whole(1), _whole(2))
+	assert_eq(world.spawn_static_box(0, 0, 0, _whole(1), _whole(1), _whole(1)), 1)
+	assert_eq(world.spawn_static_box(_whole(10), 0, 0, _whole(1), _whole(1), _whole(1)), 2)
+	var before_hex: String = world.hash_state().hex_encode()
+	_assert_ids(
+		world.supporting_solid_static_boxes_at(entity_id, 0, stand_y, 0, support_dy),
+		PackedInt32Array([1])
+	)
+	assert_true(world.is_supported_by_solid_at(entity_id, 0, stand_y, 0, support_dy))
+	_assert_ids(world.supporting_solid_static_boxes(entity_id, support_dy), PackedInt32Array([1]))
+	assert_true(world.is_supported_by_solid(entity_id, support_dy))
+	_assert_ids(world.supporting_solid_static_boxes(entity_id, 0), PackedInt32Array())
+	assert_false(world.is_supported_by_solid(entity_id, 0))
+	_assert_ids(world.supporting_solid_static_boxes(0, support_dy), PackedInt32Array())
+	assert_false(world.is_supported_by_solid(0, support_dy))
+	_assert_ids(
+		world.supporting_solid_static_boxes_at(entity_id, 0, FixedClass.INT64_MAX, 0, 1),
+		PackedInt32Array()
+	)
+	assert_false(world.is_supported_by_solid_at(entity_id, 0, FixedClass.INT64_MAX, 0, 1))
+	assert_eq(world.hash_state().hex_encode(), before_hex)
+	_assert_pose(world, entity_id, 0, stand_y, 0, 8)
+	assert_eq(world.tick_index, 0)
+
+
+func test_support_probe_keeps_overlapping_solid_blocked_and_try_move_contracts() -> void:
+	var world: SimulationWorld = SimulationWorld.new(1)
+	var radius: int = _whole(1)
+	var stand_y: int = _whole(4)
+	var support_dy: int = -_whole(1)
+	var probe_res: FixedResultClass = FixedClass.try_add(stand_y, support_dy)
+	assert_true(probe_res.ok)
+	var probe_y: int = probe_res.value
+	var entity_id: int = world.spawn_capsule(0, stand_y, 0, 8, radius, _whole(2))
+	assert_eq(world.spawn_static_box(0, 0, 0, _whole(1), _whole(1), _whole(1)), 1)
+	_assert_ids(world.overlapping_solid_static_boxes(entity_id), PackedInt32Array())
+	assert_false(world.is_pose_blocked(entity_id, 0, stand_y, 0))
+	assert_true(world.is_pose_blocked(entity_id, 0, probe_y, 0))
+	_assert_ids(
+		world.supporting_solid_static_boxes_at(entity_id, 0, stand_y, 0, support_dy),
+		PackedInt32Array([1])
+	)
+	assert_true(world.is_supported_by_solid_at(entity_id, 0, stand_y, 0, support_dy))
+	assert_false(world.try_move_y(entity_id, support_dy))
+	_assert_pose(world, entity_id, 0, stand_y, 0, 8)
+	_assert_ids(world.overlapping_solid_static_boxes(entity_id), PackedInt32Array())
+	assert_false(world.is_pose_blocked(entity_id, 0, stand_y, 0))
 	assert_eq(world.tick_index, 0)
 
 
