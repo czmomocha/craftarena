@@ -2,10 +2,12 @@ extends GutTest
 
 ## TraprushGrayboxCourse：单人灰盒跑道夹具。几何、位移、jump_dy、max_hops、max_health 只由调用方传入。
 ## CD-21 §4.2 / §5.2 / §8 与 CD-61 M1：有序检查点、占用垫盒、上下/侧向传送、墙阻挡、打掉箱子后开路。
+## 成功 PLAYER 意图写入 SimReplayBuffer（CD-43）；磁带不回放进 world。
 ## 接受检查点前胶囊必须与该垫重叠；测试用 world.set_pose 挪到垫心，course API 不自动传送。
 ## 不调用 world.tick()；不读客户端最终位置或完成标志；不覆盖 Shove、道具、2p。
 
 const GrayboxCourse := preload("res://src/games/traprush/graybox_course.gd")
+const SharedCommand := preload("res://src/shared/commands/shared_command.gd")
 const FixedClass := preload("res://src/shared/fixed/fixed.gd")
 const FixedResultClass := preload("res://src/shared/fixed/fixed_result.gd")
 const PlayerIntentNames := preload("res://src/shared/commands/player_intent_names.gd")
@@ -18,6 +20,9 @@ const SIDE_SOURCE_ID: int = 3
 const CRATE_MAX_HEALTH: int = 4
 const MAX_HOPS: int = 1
 const START_YAW: int = 8
+const ACTOR_ID: int = 9
+const CONTENT_VERSION: String = "content-v1"
+const TRACE_ID: String = "trace-1"
 
 
 func test_assemble_rejects_missing_fields_bad_health_and_failed_spawn() -> void:
@@ -88,6 +93,9 @@ func test_assemble_exposes_world_ids_track_and_crate() -> void:
 	assert_false(course.crate.is_destroyed())
 	assert_false(course.track.is_finished())
 	assert_eq(course.world.tick_index, 0)
+	assert_not_null(course.tape)
+	assert_eq(course.tape.size(), 0)
+	assert_eq(course.tape.get_seed(), 1)
 	_assert_pose(course, _start_x(), 0, 0, START_YAW)
 
 
@@ -192,6 +200,7 @@ func test_identical_inputs_on_two_worlds_match_hash_finished_and_health() -> voi
 	_run_shared_sequence(left)
 	_run_shared_sequence(right)
 	assert_eq(left.world.hash_state().hex_encode(), right.world.hash_state().hex_encode())
+	assert_eq(left.tape.hash_tape().hex_encode(), right.tape.hash_tape().hex_encode())
 	assert_true(left.track.is_finished())
 	assert_true(right.track.is_finished())
 	assert_eq(left.crate.current_health(), 0)
@@ -202,6 +211,91 @@ func test_identical_inputs_on_two_worlds_match_hash_finished_and_health() -> voi
 	assert_eq(left.track.is_finished(), right.track.is_finished())
 
 
+func test_assemble_rejects_missing_or_invalid_tape_envelope() -> void:
+	var missing_actor: Dictionary = _valid_layout()
+	missing_actor.erase("actor_id")
+	assert_eq(GrayboxCourse.assemble(missing_actor), null)
+	var missing_version: Dictionary = _valid_layout()
+	missing_version.erase("content_version")
+	assert_eq(GrayboxCourse.assemble(missing_version), null)
+	var missing_trace: Dictionary = _valid_layout()
+	missing_trace.erase("trace_id")
+	assert_eq(GrayboxCourse.assemble(missing_trace), null)
+	var zero_actor: Dictionary = _valid_layout()
+	zero_actor["actor_id"] = 0
+	assert_eq(GrayboxCourse.assemble(zero_actor), null)
+	var negative_actor: Dictionary = _valid_layout()
+	negative_actor["actor_id"] = -1
+	assert_eq(GrayboxCourse.assemble(negative_actor), null)
+	var float_actor: Dictionary = _valid_layout()
+	float_actor["actor_id"] = 1.0
+	assert_eq(GrayboxCourse.assemble(float_actor), null)
+	var empty_version: Dictionary = _valid_layout()
+	empty_version["content_version"] = ""
+	assert_eq(GrayboxCourse.assemble(empty_version), null)
+	var empty_trace: Dictionary = _valid_layout()
+	empty_trace["trace_id"] = ""
+	assert_eq(GrayboxCourse.assemble(empty_trace), null)
+	var int_version: Dictionary = _valid_layout()
+	int_version["content_version"] = 1
+	assert_eq(GrayboxCourse.assemble(int_version), null)
+	var int_trace: Dictionary = _valid_layout()
+	int_trace["trace_id"] = 1
+	assert_eq(GrayboxCourse.assemble(int_trace), null)
+
+
+func test_failed_intent_does_not_append_to_tape() -> void:
+	var course: GrayboxCourse = GrayboxCourse.assemble(_valid_layout())
+	assert_eq(course.tape.size(), 0)
+	assert_false(_ok(course.try_step_intent({}, 0)))
+	assert_eq(course.tape.size(), 0)
+	assert_false(_ok(course.try_step_intent({"intent": PlayerIntentNames.MOVE}, 0)))
+	assert_eq(course.tape.size(), 0)
+	assert_false(_ok(course.try_step_intent({"intent": PlayerIntentNames.SHOVE}, 0)))
+	assert_eq(course.tape.size(), 0)
+	assert_true(_ok(course.try_step_intent(_move_payload(0, 0), 0)))
+	assert_eq(course.tape.size(), 1)
+	var recorded: SharedCommand = course.tape.command_at(0)
+	assert_not_null(recorded)
+	assert_eq(recorded.command_id, 1)
+	assert_eq(recorded.sequence, 1)
+	assert_eq(recorded.actor_id, ACTOR_ID)
+	assert_eq(recorded.kind, SharedCommand.Kind.PLAYER)
+	assert_eq(course.world.tick_index, 0)
+
+
+func test_crate_portal_checkpoint_do_not_append_to_tape() -> void:
+	var course: GrayboxCourse = GrayboxCourse.assemble(_valid_layout())
+	assert_true(_ok(course.try_step_intent(_move_payload(_wall_dx(), 0), 0)))
+	assert_eq(course.tape.size(), 1)
+	assert_true(_ok(course.try_break_crate(1)))
+	assert_eq(course.tape.size(), 1)
+	assert_false(_ok(course.try_land_portal(UP_SOURCE_ID, CHECKPOINT_B, MAX_HOPS)))
+	assert_eq(course.tape.size(), 1)
+	assert_true(course.try_accept_checkpoint(CHECKPOINT_A))
+	assert_eq(course.tape.size(), 1)
+	assert_true(_ok(course.try_land_portal(UP_SOURCE_ID, CHECKPOINT_B, MAX_HOPS)))
+	assert_eq(course.tape.size(), 1)
+	assert_eq(course.world.tick_index, 0)
+
+
+func test_two_courses_same_intents_match_tape_and_state_hash() -> void:
+	var layout: Dictionary = _valid_layout()
+	var left: GrayboxCourse = GrayboxCourse.assemble(layout)
+	var right: GrayboxCourse = GrayboxCourse.assemble(layout)
+	_run_tape_hash_sequence(left)
+	_run_tape_hash_sequence(right)
+	assert_eq(left.tape.size(), 2)
+	assert_eq(right.tape.size(), 2)
+	var layout_seed: int = layout.get("seed", 0)
+	assert_eq(left.tape.get_seed(), layout_seed)
+	assert_eq(right.tape.get_seed(), layout_seed)
+	assert_eq(left.tape.hash_tape().hex_encode(), right.tape.hash_tape().hex_encode())
+	assert_eq(left.world.hash_state().hex_encode(), right.world.hash_state().hex_encode())
+	assert_eq(left.world.tick_index, 0)
+	assert_eq(right.world.tick_index, 0)
+
+
 func test_try_step_intent_does_not_call_tick() -> void:
 	var course: GrayboxCourse = GrayboxCourse.assemble(_valid_layout())
 	assert_eq(course.world.tick_index, 0)
@@ -210,6 +304,15 @@ func test_try_step_intent_does_not_call_tick() -> void:
 	assert_true(_ok(course.try_step_intent({"intent": PlayerIntentNames.JUMP}, _whole(1))))
 	assert_eq(course.world.tick_index, 0)
 	_assert_pose(course, _start_x(), _whole(1), 0, START_YAW)
+
+
+func _run_tape_hash_sequence(course: GrayboxCourse) -> void:
+	var blocked: Dictionary = course.try_step_intent(_move_payload(_wall_dx(), 0), 0)
+	assert_true(_ok(blocked))
+	_assert_pose(course, _start_x(), 0, 0, START_YAW)
+	var passed: Dictionary = course.try_step_intent(_move_payload(_whole(1), 0), 0)
+	assert_true(_ok(passed))
+	_assert_pose(course, _start_x() + _whole(1), 0, 0, START_YAW)
 
 
 func _run_shared_sequence(course: GrayboxCourse) -> void:
@@ -236,6 +339,9 @@ func _valid_layout() -> Dictionary:
 	var half: int = _whole(1)
 	return {
 		"seed": 1,
+		"actor_id": ACTOR_ID,
+		"content_version": CONTENT_VERSION,
+		"trace_id": TRACE_ID,
 		"start_x": start_x,
 		"start_y": start_y,
 		"start_z": start_z,
