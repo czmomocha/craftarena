@@ -1,20 +1,21 @@
 extends GutTest
 
-## TraprushGrayboxCourse：单人灰盒跑道夹具。几何、位移、jump_dy、support_dy、fall_dy、范围边界、max_hops、max_health、period、capacity、interact/use-item damage 与 reach 只由调用方传入。
-## CD-21 §4.2 / §5.2 / §8 与 CD-61 M1：有序检查点、占用垫盒、上下/侧向传送、墙阻挡、打掉箱子后开路、周期 hazard stub、爆破道具 stub。
-## Move / Jump 经 IntentStepper 走直到阻挡：撞墙/箱/天花停在最后未阻挡样本，不是整段拒绝。
+## TraprushGrayboxCourse：单人灰盒跑道夹具。几何、位移、jump_dy、support_dy、fall_dy、范围边界、max_hops、max_health、period、capacity、interact/use-item damage 与 reach、shove cooldown/dx/dz 只由调用方传入。
+## CD-21 §4.2 / §5.2 / §8 与 CD-61 M1：有序检查点、占用垫盒、上下/侧向传送、墙阻挡、打掉箱子后开路、周期 hazard stub、爆破道具 stub、可选第二胶囊基础推击。
+## Move / Jump 经 IntentStepper 走直到阻挡：撞墙/箱/天花停在最后未阻挡样本，不是整段拒绝。Shove 走 try_shove / ShoveApply，不经 IntentStepper。
 ## 成功 PLAYER 意图写入 SimReplayBuffer（CD-43）；成功占用、成功 try_commit_tick 与成功 try_apply_fall 写入 SYSTEM。PLAYER + SYSTEM 磁带由 TraprushGrayboxTapeReplay 回放到新 course。
-## assemble 记录 tick 0 关键快照；try_commit_tick(fall_dy) 先 fall 再 tick，再按调用方周期切换 hazard 阻挡，成功入 SYSTEM 带。
-## try_step_intent(payload, jump_dy, support_dy) 把 support_dy 传给 apply；成功 PLAYER 意图入带。
+## assemble 记录 tick 0 关键快照；layout 可选 shove_target 生成第二胶囊。try_commit_tick(fall_dy) 先 fall 再 tick，再按调用方周期切换 hazard 阻挡，成功入 SYSTEM 带。
+## try_step_intent(payload, jump_dy, support_dy) 把 support_dy 传给 apply；成功 PLAYER 意图入带。Shove 仍失败。
+## try_shove 委托 ShoveApply；ok 入 PLAYER 带；无目标、解码失败不入带。冷却未就绪 ok 且入带但不位移。不 tick。
 ## try_apply_fall(fall_dy) 委托 try_move_y_until_blocked；成功入 SYSTEM 带，不 tick、不 record。
 ## try_reset_if_out_of_range 用调用方边界；出界回到最近检查点落点，成功复位入 SYSTEM 带，不 tick，不计数 N。
-## try_interact / try_use_item 成功入 PLAYER 带；try_place_pose / 成功检查点 / 成功落地传送 / 首次冲线 / 成功出界复位 / 成功 try_break_crate / 成功 try_commit_tick / 成功 try_apply_fall 入 SYSTEM 带。
-## 失败传送、等待未落地、冲线失败、world.set_pose、范围内复位、零伤害 try_break_crate、失败 try_commit_tick、失败 try_apply_fall 不入带。try_commit_tick 内部下落不另记 apply_fall。
+## try_interact / try_use_item / 成功 try_shove 入 PLAYER 带；try_place_pose / 成功检查点 / 成功落地传送 / 首次冲线 / 成功出界复位 / 成功 try_break_crate / 成功 try_commit_tick / 成功 try_apply_fall 入 SYSTEM 带。
+## 失败传送、等待未落地、冲线失败、world.set_pose、范围内复位、零伤害 try_break_crate、失败 try_commit_tick、失败 try_apply_fall、无目标 try_shove 不入带。try_commit_tick 内部下落不另记 apply_fall。
 ## try_interact 要求 overlapping_static_boxes 含 crate；测试用 world.set_pose 挪到箱心，course API 不自动传送。
 ## try_use_item 用当前姿态加调用方 reach 做 overlapping_static_boxes_at；测试站在起点，reach 指向 _crate_z，不 set_pose 到箱上。
 ## 终点垫与起点不重合；冲线用 set_pose 到终点盒心。finish_tick 未冲线为 -1，不入 hash_state。
-## TraprushGrayboxAcceptance.try_run 用同一套调用方数值跑完 CD-61 §4.1 M1 切片；try_place_pose 入 SYSTEM 带。
-## TraprushGrayboxTapeReplay.try_replay 把 PLAYER 与 SYSTEM 磁带经 course API 回放到 tick 0 的新 course。
+## TraprushGrayboxAcceptance.try_run 用同一套调用方数值跑完 CD-61 §4.1 M1 切片；try_place_pose 入 SYSTEM 带。Acceptance 不含推击。
+## TraprushGrayboxTapeReplay.try_replay 把 PLAYER 与 SYSTEM 磁带经 course API 回放到 tick 0 的新 course。Shove 走 try_shove。
 ## 不读客户端最终位置、障碍死亡、道具命中、冲线结果或完成标志；不覆盖道具栏、2p。
 
 const GrayboxCourse := preload("res://src/games/traprush/graybox_course.gd")
@@ -116,6 +117,7 @@ func test_assemble_exposes_world_ids_track_and_crate() -> void:
 	assert_eq(course.pad_box_ids[1], 5)
 	assert_eq(course.pad_box_ids[2], 6)
 	assert_eq(course.finish_box_id, 7)
+	assert_eq(course.shove_target_id, 0)
 	assert_eq(course.finish_tick, -1)
 	assert_false(course.world.is_static_box_solid(course.finish_box_id))
 	assert_false(course.world.overlaps_static_box(course.entity_id, course.finish_box_id))
@@ -314,6 +316,83 @@ func test_failed_intent_does_not_append_to_tape() -> void:
 	assert_eq(recorded.actor_id, ACTOR_ID)
 	assert_eq(recorded.kind, SharedCommand.Kind.PLAYER)
 	assert_eq(course.world.tick_index, 0)
+
+
+func test_assemble_rejects_invalid_shove_target() -> void:
+	var missing_yaw: Dictionary = _valid_layout()
+	missing_yaw["shove_target"] = {"x": 0, "y": 0, "z": 0}
+	assert_eq(GrayboxCourse.assemble(missing_yaw), null)
+	var not_dict: Dictionary = _valid_layout()
+	not_dict["shove_target"] = 1
+	assert_eq(GrayboxCourse.assemble(not_dict), null)
+
+
+func test_assemble_with_shove_target_spawns_second_capsule() -> void:
+	var course: GrayboxCourse = GrayboxCourse.assemble(_shove_layout())
+	assert_not_null(course)
+	assert_eq(course.entity_id, 1)
+	assert_eq(course.shove_target_id, 2)
+	assert_eq(course.finish_box_id, 7)
+	_assert_pose(course, _start_x(), 0, 0, START_YAW)
+	_assert_target_pose(course, _start_x(), 0, _shove_target_z(), START_YAW)
+
+
+func test_try_shove_without_target_does_not_append() -> void:
+	var course: GrayboxCourse = GrayboxCourse.assemble(_valid_layout())
+	assert_eq(course.shove_target_id, 0)
+	assert_false(_ok(course.try_shove(_shove_payload(), 1, _shove_dx(), _shove_dz())))
+	assert_eq(course.tape.size(), 0)
+	_assert_pose(course, _start_x(), 0, 0, START_YAW)
+
+
+func test_try_shove_decode_failure_does_not_append() -> void:
+	var course: GrayboxCourse = GrayboxCourse.assemble(_shove_layout())
+	assert_false(_ok(course.try_shove({}, 1, _shove_dx(), _shove_dz())))
+	assert_false(_ok(course.try_shove({"intent": PlayerIntentNames.MOVE}, 1, _shove_dx(), _shove_dz())))
+	assert_eq(course.tape.size(), 0)
+	_assert_target_pose(course, _start_x(), 0, _shove_target_z(), START_YAW)
+
+
+func test_try_shove_moves_target_not_actor_logs_player_keeps_tick() -> void:
+	var course: GrayboxCourse = GrayboxCourse.assemble(_shove_layout())
+	var dx: int = _shove_dx()
+	var dz: int = _shove_dz()
+	var result: Dictionary = course.try_shove(_shove_payload(_whole(9), _whole(9)), 1, dx, dz)
+	assert_true(_ok(result))
+	assert_true(_shoved(result))
+	_assert_pose(course, _start_x(), 0, 0, START_YAW)
+	_assert_target_pose(course, _start_x() + dx, 0, _shove_target_z() + dz, START_YAW)
+	assert_eq(course.world.tick_index, 0)
+	assert_eq(course.snapshots.size(), 1)
+	assert_eq(course.tape.size(), 1)
+	var recorded: SharedCommand = course.tape.command_at(0)
+	assert_not_null(recorded)
+	assert_eq(recorded.kind, SharedCommand.Kind.PLAYER)
+	assert_eq(recorded.actor_id, ACTOR_ID)
+	var intent_name: String = recorded.payload.get("intent", "")
+	assert_eq(intent_name, PlayerIntentNames.SHOVE)
+
+
+func test_try_shove_cooldown_not_ready_logs_without_move() -> void:
+	var course: GrayboxCourse = GrayboxCourse.assemble(_shove_layout())
+	var dx: int = _shove_dx()
+	var dz: int = _shove_dz()
+	assert_true(_shoved(course.try_shove(_shove_payload(), 1, dx, dz)))
+	var blocked: Dictionary = course.try_shove(_shove_payload(), 1, dx, dz)
+	assert_true(_ok(blocked))
+	assert_false(_shoved(blocked))
+	_assert_target_pose(course, _start_x() + dx, 0, _shove_target_z() + dz, START_YAW)
+	assert_eq(course.tape.size(), 2)
+	assert_eq(course.world.tick_index, 0)
+
+
+func test_two_courses_same_shove_match_tape_and_state_hash() -> void:
+	var left: GrayboxCourse = GrayboxCourse.assemble(_shove_layout())
+	var right: GrayboxCourse = GrayboxCourse.assemble(_shove_layout())
+	assert_true(_shoved(left.try_shove(_shove_payload(), 1, _shove_dx(), _shove_dz())))
+	assert_true(_shoved(right.try_shove(_shove_payload(), 1, _shove_dx(), _shove_dz())))
+	assert_eq(left.tape.hash_tape().hex_encode(), right.tape.hash_tape().hex_encode())
+	assert_eq(left.world.hash_state().hex_encode(), right.world.hash_state().hex_encode())
 
 
 func test_break_crate_appends_system_failed_portal_stays_off_tape() -> void:
@@ -1414,6 +1493,9 @@ func test_tape_replay_rejects_incomplete_script_dirty_course_and_bad_until() -> 
 	var missing_until: Dictionary = _replay_script(2)
 	missing_until.erase("until_tick")
 	assert_false(_ok(GrayboxTapeReplay.try_replay(dest, source.tape, missing_until)))
+	var missing_shove: Dictionary = _replay_script(2)
+	missing_shove.erase("shove_dx")
+	assert_false(_ok(GrayboxTapeReplay.try_replay(dest, source.tape, missing_shove)))
 	var negative: Dictionary = _replay_script(-1)
 	assert_false(_ok(GrayboxTapeReplay.try_replay(dest, source.tape, negative)))
 	assert_true(_ok(_step_intent(dest, _move_payload(_whole(1), 0), 0)))
@@ -1614,6 +1696,46 @@ func test_tape_replay_apply_fall_matches_source_hashes() -> void:
 	assert_eq(dest.world.tick_index, 0)
 
 
+func test_tape_replay_shove_matches_source_hashes() -> void:
+	var source: GrayboxCourse = GrayboxCourse.assemble(_shove_layout())
+	var dx: int = _shove_dx()
+	var dz: int = _shove_dz()
+	assert_true(_shoved(source.try_shove(_shove_payload(), 1, dx, dz)))
+	assert_eq(source.tape.size(), 1)
+	var dest: GrayboxCourse = GrayboxCourse.assemble(_shove_layout())
+	var script: Dictionary = _replay_script(0)
+	script["shove_dx"] = dx
+	script["shove_dz"] = dz
+	script["shove_cooldown_ticks"] = 1
+	assert_true(_ok(GrayboxTapeReplay.try_replay(dest, source.tape, script)))
+	_assert_replay_matches(source, dest)
+	_assert_pose(dest, _start_x(), 0, 0, START_YAW)
+	_assert_target_pose(dest, _start_x() + dx, 0, _shove_target_z() + dz, START_YAW)
+	assert_eq(dest.tape.size(), 1)
+	assert_eq(dest.world.tick_index, 0)
+
+
+func test_tape_replay_shove_cooldown_matches_source_hashes() -> void:
+	var source: GrayboxCourse = GrayboxCourse.assemble(_shove_layout())
+	var dx: int = _shove_dx()
+	var dz: int = _shove_dz()
+	assert_true(_shoved(source.try_shove(_shove_payload(), 1, dx, dz)))
+	var blocked: Dictionary = source.try_shove(_shove_payload(), 1, dx, dz)
+	assert_true(_ok(blocked))
+	assert_false(_shoved(blocked))
+	assert_eq(source.tape.size(), 2)
+	var dest: GrayboxCourse = GrayboxCourse.assemble(_shove_layout())
+	var script: Dictionary = _replay_script(0)
+	script["shove_dx"] = dx
+	script["shove_dz"] = dz
+	script["shove_cooldown_ticks"] = 1
+	assert_true(_ok(GrayboxTapeReplay.try_replay(dest, source.tape, script)))
+	_assert_replay_matches(source, dest)
+	_assert_target_pose(dest, _start_x() + dx, 0, _shove_target_z() + dz, START_YAW)
+	assert_eq(dest.tape.size(), 2)
+	assert_eq(dest.world.tick_index, 0)
+
+
 func _run_finish_after_commit(course: GrayboxCourse) -> void:
 	_accept_ordered_checkpoints(course)
 	assert_true(course.try_commit_tick(0))
@@ -1721,6 +1843,9 @@ func _replay_script(until_tick: int) -> Dictionary:
 		"reach_dx": 0,
 		"reach_dy": 0,
 		"reach_dz": _crate_z(),
+		"shove_cooldown_ticks": 1,
+		"shove_dx": 0,
+		"shove_dz": 0,
 		"until_tick": until_tick,
 	}
 
@@ -1836,6 +1961,17 @@ func _valid_layout() -> Dictionary:
 	}
 
 
+func _shove_layout() -> Dictionary:
+	var layout: Dictionary = _valid_layout()
+	layout["shove_target"] = {
+		"x": _start_x(),
+		"y": 0,
+		"z": _shove_target_z(),
+		"yaw_bam": START_YAW,
+	}
+	return layout
+
+
 func _interact_payload(
 	decoy_x: int = 0,
 	decoy_y: int = 0,
@@ -1897,6 +2033,27 @@ func _crate_dz() -> int:
 
 func _crate_z() -> int:
 	return _whole(5)
+
+
+func _shove_target_z() -> int:
+	return -_whole(8)
+
+
+func _shove_dx() -> int:
+	return 0
+
+
+func _shove_dz() -> int:
+	return _whole(2)
+
+
+func _shove_payload(decoy_dx: int = 0, decoy_dz: int = 0) -> Dictionary:
+	return {
+		"intent": PlayerIntentNames.SHOVE,
+		"dx": decoy_dx,
+		"dz": decoy_dz,
+		"impulse": 99,
+	}
 
 
 func _hazard_dx() -> int:
@@ -1961,6 +2118,18 @@ func _assert_pose(course: GrayboxCourse, x: int, y: int, z: int, yaw: int) -> vo
 	assert_eq(pose_yaw, yaw)
 
 
+func _assert_target_pose(course: GrayboxCourse, x: int, y: int, z: int, yaw: int) -> void:
+	var pose: Dictionary = course.world.get_pose(course.shove_target_id)
+	var pose_x: int = pose.get("x", -1)
+	var pose_y: int = pose.get("y", -1)
+	var pose_z: int = pose.get("z", -1)
+	var pose_yaw: int = pose.get("yaw", -1)
+	assert_eq(pose_x, x)
+	assert_eq(pose_y, y)
+	assert_eq(pose_z, z)
+	assert_eq(pose_yaw, yaw)
+
+
 func _assert_course_matches(course: GrayboxCourse, oracle: GrayboxCourse) -> void:
 	var expected: Dictionary = oracle.world.get_pose(oracle.entity_id)
 	var x: int = expected.get("x", -1)
@@ -1980,6 +2149,11 @@ func _assert_system_command(command: SharedCommand, op_name: String) -> void:
 
 func _ok(result: Dictionary) -> bool:
 	var flag: bool = result.get("ok", false)
+	return flag
+
+
+func _shoved(result: Dictionary) -> bool:
+	var flag: bool = result.get("shoved", false)
 	return flag
 
 
