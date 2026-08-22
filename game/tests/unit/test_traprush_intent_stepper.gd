@@ -1,8 +1,9 @@
 extends GutTest
 
 ## TraprushIntentStepper：把 Move / Jump / ResetToCheckpoint 接到 SimulationWorld。
-## CD-21 §8：客户端只发意图。位移与跳跃 dy 由调用方传入，不发明默认速度或跳跃高度。
-## 本刀不调用 world.tick()，不依赖 spawn_static_box，不应用 Shove。
+## CD-21 §3 / §8：短跳是按钮意图。位移、jump_dy、support_dy 由调用方传入。
+## 不发明默认速度、跳跃高度、重力或 coyote。Jump 仅在 is_supported_by_solid 时 try_move_y。
+## 本刀不调用 world.tick()，不应用 Shove。测试里的 support_dy / jump_dy 只写在本文件。
 
 const IntentStepper := preload("res://src/games/traprush/intent_stepper.gd")
 const CheckpointSpawn := preload("res://src/games/traprush/checkpoint_spawn.gd")
@@ -22,7 +23,7 @@ func test_open_space_move_changes_xz_not_y_or_tick() -> void:
 	var entity_id: int = world.spawn_capsule(0, y, 0, 16)
 	var dx: int = _whole(2)
 	var dz: int = _whole(-1)
-	var result: Dictionary = IntentStepper.apply(
+	var result: Dictionary = _apply(
 		world,
 		entity_id,
 		{"intent": PlayerIntentNames.MOVE, "dx": dx, "dz": dz},
@@ -42,7 +43,7 @@ func test_move_blocked_by_other_capsule_is_ok_and_keeps_pose() -> void:
 	var toward: int = _whole(2)
 	var mover_id: int = world.spawn_capsule(0, 0, 0, 0, radius, 0)
 	world.spawn_capsule(along_x, 0, 0, 0, radius, 0)
-	var result: Dictionary = IntentStepper.apply(
+	var result: Dictionary = _apply(
 		world,
 		mover_id,
 		{"intent": PlayerIntentNames.MOVE, "dx": toward, "dz": 0},
@@ -61,7 +62,7 @@ func test_optional_yaw_updates_even_when_move_is_blocked() -> void:
 	var toward: int = _whole(2)
 	var mover_id: int = world.spawn_capsule(0, 0, 0, 8, radius, 0)
 	world.spawn_capsule(along_x, 0, 0, 0, radius, 0)
-	var result: Dictionary = IntentStepper.apply(
+	var result: Dictionary = _apply(
 		world,
 		mover_id,
 		{
@@ -82,7 +83,7 @@ func test_omitted_yaw_does_not_change_yaw_after_move() -> void:
 	var world: SimulationWorld = SimulationWorld.new(1)
 	var entity_id: int = world.spawn_capsule(0, 0, 0, 16)
 	var dx: int = _whole(1)
-	var result: Dictionary = IntentStepper.apply(
+	var result: Dictionary = _apply(
 		world,
 		entity_id,
 		{"intent": PlayerIntentNames.MOVE, "dx": dx, "dz": 0},
@@ -98,9 +99,13 @@ func test_jump_uses_caller_dy_not_payload_metrics() -> void:
 	var world: SimulationWorld = SimulationWorld.new(1)
 	var x: int = _whole(3)
 	var z: int = _whole(5)
-	var entity_id: int = world.spawn_capsule(x, 0, z, 16)
-	var caller_dy: int = _whole(-1)
-	var result: Dictionary = IntentStepper.apply(
+	var stand_y: int = _whole(4)
+	var support_dy: int = -_whole(1)
+	var caller_dy: int = _whole(2)
+	var entity_id: int = world.spawn_capsule(x, stand_y, z, 16, _whole(1), _whole(2))
+	assert_eq(world.spawn_static_box(x, 0, z, _whole(1), _whole(1), _whole(1)), 1)
+	assert_true(world.is_supported_by_solid(entity_id, support_dy))
+	var result: Dictionary = _apply(
 		world,
 		entity_id,
 		{
@@ -113,16 +118,151 @@ func test_jump_uses_caller_dy_not_payload_metrics() -> void:
 		},
 		caller_dy,
 		_unused_spawn(),
-		_unused_track()
+		_unused_track(),
+		support_dy
 	)
 	assert_true(_ok(result))
-	_assert_pose(world, entity_id, x, caller_dy, z, 16)
+	_assert_pose(world, entity_id, x, stand_y + caller_dy, z, 16)
+	assert_eq(world.tick_index, 0)
+
+
+func test_airborne_jump_is_ok_and_keeps_pose() -> void:
+	var world: SimulationWorld = SimulationWorld.new(1)
+	var x: int = _whole(3)
+	var y: int = _whole(4)
+	var z: int = _whole(5)
+	var support_dy: int = -_whole(1)
+	var jump_dy: int = _whole(2)
+	var entity_id: int = world.spawn_capsule(x, y, z, 16, _whole(1), _whole(2))
+	assert_false(world.is_supported_by_solid(entity_id, support_dy))
+	var result: Dictionary = _apply(
+		world,
+		entity_id,
+		{"intent": PlayerIntentNames.JUMP, "dy": _whole(9), "height": 64},
+		jump_dy,
+		_unused_spawn(),
+		_unused_track(),
+		support_dy
+	)
+	assert_true(_ok(result))
+	_assert_pose(world, entity_id, x, y, z, 16)
+	assert_eq(world.tick_index, 0)
+
+
+func test_support_dy_zero_overlapping_solid_can_jump() -> void:
+	var world: SimulationWorld = SimulationWorld.new(1)
+	var jump_dy: int = _whole(2)
+	var entity_id: int = world.spawn_capsule(0, 0, 0, 16)
+	assert_eq(world.spawn_static_box(0, 0, 0, _whole(1), _whole(1), _whole(1)), 1)
+	assert_true(world.is_supported_by_solid(entity_id, 0))
+	var result: Dictionary = _apply(
+		world,
+		entity_id,
+		{"intent": PlayerIntentNames.JUMP},
+		jump_dy,
+		_unused_spawn(),
+		_unused_track(),
+		0
+	)
+	assert_true(_ok(result))
+	_assert_pose(world, entity_id, 0, jump_dy, 0, 16)
+	assert_eq(world.tick_index, 0)
+
+
+func test_non_solid_underfoot_cannot_jump() -> void:
+	var world: SimulationWorld = SimulationWorld.new(1)
+	var stand_y: int = _whole(4)
+	var support_dy: int = -_whole(1)
+	var jump_dy: int = _whole(2)
+	var entity_id: int = world.spawn_capsule(0, stand_y, 0, 16, _whole(1), _whole(2))
+	assert_eq(world.spawn_static_box(0, 0, 0, _whole(1), _whole(1), _whole(1)), 1)
+	assert_true(world.set_static_box_solid(1, false))
+	assert_false(world.is_supported_by_solid(entity_id, support_dy))
+	assert_false(world.is_supported_by_solid(entity_id, 0))
+	var result: Dictionary = _apply(
+		world,
+		entity_id,
+		{"intent": PlayerIntentNames.JUMP},
+		jump_dy,
+		_unused_spawn(),
+		_unused_track(),
+		support_dy
+	)
+	assert_true(_ok(result))
+	_assert_pose(world, entity_id, 0, stand_y, 0, 16)
+	assert_eq(world.tick_index, 0)
+
+
+func test_move_ignores_support_dy() -> void:
+	var world: SimulationWorld = SimulationWorld.new(1)
+	var y: int = _whole(4)
+	var dx: int = _whole(2)
+	var support_dy: int = -_whole(1)
+	var entity_id: int = world.spawn_capsule(0, y, 0, 16, _whole(1), _whole(2))
+	assert_eq(world.spawn_static_box(0, 0, 0, _whole(1), _whole(1), _whole(1)), 1)
+	assert_true(world.is_supported_by_solid(entity_id, support_dy))
+	var result: Dictionary = _apply(
+		world,
+		entity_id,
+		{"intent": PlayerIntentNames.MOVE, "dx": dx, "dz": 0},
+		_whole(3),
+		_unused_spawn(),
+		_unused_track(),
+		support_dy
+	)
+	assert_true(_ok(result))
+	_assert_pose(world, entity_id, dx, y, 0, 16)
+	assert_eq(world.tick_index, 0)
+
+
+func test_reset_ignores_support_dy() -> void:
+	var world: SimulationWorld = SimulationWorld.new(1)
+	var start_x: int = 0
+	var start_y: int = ONE_METER_Q48_16
+	var entity_id: int = world.spawn_capsule(_whole(9), _whole(8), _whole(7), 99)
+	var spawn: CheckpointSpawn = _two_checkpoint_spawn()
+	var track: Track = Track.new(PackedInt32Array([10, 20]))
+	var result: Dictionary = _apply(
+		world,
+		entity_id,
+		{"intent": PlayerIntentNames.RESET_TO_CHECKPOINT},
+		_whole(3),
+		spawn,
+		track,
+		-_whole(1)
+	)
+	assert_true(_ok(result))
+	_assert_pose(world, entity_id, start_x, start_y, 0, 0)
+	assert_eq(world.tick_index, 0)
+
+
+func test_grounded_jump_blocked_by_overhead_is_ok_and_keeps_pose() -> void:
+	var world: SimulationWorld = SimulationWorld.new(1)
+	var stand_y: int = _whole(4)
+	var support_dy: int = -_whole(1)
+	var jump_dy: int = _whole(1)
+	var entity_id: int = world.spawn_capsule(0, stand_y, 0, 16, _whole(1), _whole(2))
+	assert_eq(world.spawn_static_box(0, 0, 0, _whole(1), _whole(1), _whole(1)), 1)
+	assert_eq(world.spawn_static_box(0, _whole(8), 0, _whole(1), _whole(1), _whole(1)), 2)
+	assert_true(world.is_supported_by_solid(entity_id, support_dy))
+	var result: Dictionary = _apply(
+		world,
+		entity_id,
+		{"intent": PlayerIntentNames.JUMP},
+		jump_dy,
+		_unused_spawn(),
+		_unused_track(),
+		support_dy
+	)
+	assert_true(_ok(result))
+	_assert_pose(world, entity_id, 0, stand_y, 0, 16)
+	assert_eq(world.tick_index, 0)
 
 
 func test_zero_displacement_and_zero_jump_dy_are_legal() -> void:
 	var world: SimulationWorld = SimulationWorld.new(1)
 	var entity_id: int = world.spawn_capsule(1, 2, 3, 4)
-	var move_result: Dictionary = IntentStepper.apply(
+	var move_result: Dictionary = _apply(
 		world,
 		entity_id,
 		{"intent": PlayerIntentNames.MOVE, "dx": 0, "dz": 0},
@@ -132,7 +272,7 @@ func test_zero_displacement_and_zero_jump_dy_are_legal() -> void:
 	)
 	assert_true(_ok(move_result))
 	_assert_pose(world, entity_id, 1, 2, 3, 4)
-	var jump_result: Dictionary = IntentStepper.apply(
+	var jump_result: Dictionary = _apply(
 		world,
 		entity_id,
 		{"intent": PlayerIntentNames.JUMP},
@@ -151,7 +291,7 @@ func test_reset_lands_on_spawn_table_and_ignores_payload_coordinates() -> void:
 	var entity_id: int = world.spawn_capsule(_whole(9), _whole(8), _whole(7), 99)
 	var spawn: CheckpointSpawn = _two_checkpoint_spawn()
 	var track: Track = Track.new(PackedInt32Array([10, 20]))
-	var result: Dictionary = IntentStepper.apply(
+	var result: Dictionary = _apply(
 		world,
 		entity_id,
 		{
@@ -168,7 +308,7 @@ func test_reset_lands_on_spawn_table_and_ignores_payload_coordinates() -> void:
 	assert_true(_ok(result))
 	_assert_pose(world, entity_id, start_x, start_y, 0, 0)
 	assert_true(track.try_accept(10))
-	var after_checkpoint: Dictionary = IntentStepper.apply(
+	var after_checkpoint: Dictionary = _apply(
 		world,
 		entity_id,
 		{"intent": PlayerIntentNames.RESET_TO_CHECKPOINT, "x": 1, "y": 2, "z": 3},
@@ -189,7 +329,7 @@ func test_failed_reset_pose_does_not_set_pose() -> void:
 	)
 	var track: Track = Track.new(PackedInt32Array([10]))
 	assert_true(track.try_accept(10))
-	var result: Dictionary = IntentStepper.apply(
+	var result: Dictionary = _apply(
 		world,
 		entity_id,
 		{"intent": PlayerIntentNames.RESET_TO_CHECKPOINT},
@@ -204,7 +344,7 @@ func test_failed_reset_pose_does_not_set_pose() -> void:
 func test_shove_is_not_applied() -> void:
 	var world: SimulationWorld = SimulationWorld.new(1)
 	var entity_id: int = world.spawn_capsule(1, 2, 3, 4)
-	var result: Dictionary = IntentStepper.apply(
+	var result: Dictionary = _apply(
 		world,
 		entity_id,
 		{"intent": PlayerIntentNames.SHOVE, "dx": _whole(4), "dz": _whole(5)},
@@ -221,16 +361,16 @@ func test_unknown_or_malformed_intent_fails_and_keeps_pose() -> void:
 	var entity_id: int = world.spawn_capsule(1, 2, 3, 4)
 	var spawn: CheckpointSpawn = _unused_spawn()
 	var track: Track = _unused_track()
-	assert_false(_ok(IntentStepper.apply(
+	assert_false(_ok(_apply(
 		world, entity_id, {}, 0, spawn, track
 	)))
-	assert_false(_ok(IntentStepper.apply(
+	assert_false(_ok(_apply(
 		world, entity_id, {"intent": 1}, 0, spawn, track
 	)))
-	assert_false(_ok(IntentStepper.apply(
+	assert_false(_ok(_apply(
 		world, entity_id, {"intent": PlayerIntentNames.USE_ITEM}, 0, spawn, track
 	)))
-	assert_false(_ok(IntentStepper.apply(
+	assert_false(_ok(_apply(
 		world,
 		entity_id,
 		{"intent": PlayerIntentNames.MOVE, "dz": 1},
@@ -244,7 +384,7 @@ func test_unknown_or_malformed_intent_fails_and_keeps_pose() -> void:
 func test_unknown_entity_id_fails() -> void:
 	var world: SimulationWorld = SimulationWorld.new(1)
 	world.spawn_capsule(0, 0, 0, 0)
-	var result: Dictionary = IntentStepper.apply(
+	var result: Dictionary = _apply(
 		world,
 		99,
 		{"intent": PlayerIntentNames.MOVE, "dx": 1, "dz": 1},
@@ -269,11 +409,11 @@ func test_identical_inputs_yield_identical_hash_state() -> void:
 	}
 	var spawn: CheckpointSpawn = _unused_spawn()
 	var track: Track = _unused_track()
-	assert_true(_ok(IntentStepper.apply(left, left_id, payload, 0, spawn, track)))
-	assert_true(_ok(IntentStepper.apply(right, right_id, payload, 0, spawn, track)))
+	assert_true(_ok(_apply(left, left_id, payload, 0, spawn, track)))
+	assert_true(_ok(_apply(right, right_id, payload, 0, spawn, track)))
 	assert_eq(left.hash_state().hex_encode(), right.hash_state().hex_encode())
-	assert_true(_ok(IntentStepper.apply(left, left_id, payload, 0, spawn, track)))
-	assert_true(_ok(IntentStepper.apply(right, right_id, payload, 0, spawn, track)))
+	assert_true(_ok(_apply(left, left_id, payload, 0, spawn, track)))
+	assert_true(_ok(_apply(right, right_id, payload, 0, spawn, track)))
 	assert_eq(left.hash_state().hex_encode(), right.hash_state().hex_encode())
 	assert_eq(left.tick_index, 0)
 	assert_eq(right.tick_index, 0)
@@ -309,6 +449,20 @@ func _unused_spawn() -> CheckpointSpawn:
 
 func _unused_track() -> Track:
 	return Track.new(PackedInt32Array())
+
+
+func _apply(
+	world: SimulationWorld,
+	entity_id: int,
+	payload: Dictionary,
+	jump_dy: int,
+	spawn: CheckpointSpawn,
+	track: Track,
+	support_dy: int = 0
+) -> Dictionary:
+	return IntentStepper.apply(
+		world, entity_id, payload, jump_dy, spawn, track, support_dy
+	)
 
 
 func _assert_pose(world: SimulationWorld, entity_id: int, x: int, y: int, z: int, yaw: int) -> void:

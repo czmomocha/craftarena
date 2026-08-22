@@ -1,10 +1,11 @@
 extends GutTest
 
-## TraprushGrayboxCourse：单人灰盒跑道夹具。几何、位移、jump_dy、max_hops、max_health、period、capacity、interact/use-item damage 与 reach 只由调用方传入。
+## TraprushGrayboxCourse：单人灰盒跑道夹具。几何、位移、jump_dy、support_dy、max_hops、max_health、period、capacity、interact/use-item damage 与 reach 只由调用方传入。
 ## CD-21 §4.2 / §5.2 / §8 与 CD-61 M1：有序检查点、占用垫盒、上下/侧向传送、墙阻挡、打掉箱子后开路、周期 hazard stub、爆破道具 stub。
 ## 成功 PLAYER 意图写入 SimReplayBuffer（CD-43）；磁带不回放进 world。
 ## assemble 记录 tick 0 关键快照；try_commit_tick 推进 tick 并按调用方周期切换 hazard 阻挡。
-## try_step_intent / try_interact / try_use_item 成功入带；打箱 / 传送 / 检查点 / 冲线不 tick、不 record。
+## try_step_intent(payload, jump_dy, support_dy) 把 support_dy 传给 apply；成功 PLAYER 意图入带。
+## try_interact / try_use_item 成功入带；打箱 / 传送 / 检查点 / 冲线不 tick、不 record。
 ## try_interact 要求 overlapping_static_boxes 含 crate；测试用 world.set_pose 挪到箱心，course API 不自动传送。
 ## try_use_item 用当前姿态加调用方 reach 做 overlapping_static_boxes_at；测试站在起点，reach 指向 _crate_z，不 set_pose 到箱上。
 ## 终点垫与起点不重合；冲线用 set_pose 到终点盒心。finish_tick 未冲线为 -1，不入 hash_state。
@@ -125,10 +126,11 @@ func test_wall_blocks_forward_then_same_crate_displacement_passes_after_break() 
 	var course: GrayboxCourse = GrayboxCourse.assemble(_valid_layout())
 	var wall_dx: int = _wall_dx()
 	var crate_dz: int = _crate_dz()
-	var wall_move: Dictionary = course.try_step_intent(_move_payload(wall_dx, 0), 0)
+	var wall_move: Dictionary = _step_intent(course, _move_payload(wall_dx, 0), 0)
 	assert_true(_ok(wall_move))
 	_assert_pose(course, _start_x(), 0, 0, START_YAW)
-	var crate_blocked: Dictionary = course.try_step_intent(
+	var crate_blocked: Dictionary = _step_intent(
+		course,
 		_move_payload(0, crate_dz, 999, 888, 777),
 		0
 	)
@@ -138,7 +140,7 @@ func test_wall_blocks_forward_then_same_crate_displacement_passes_after_break() 
 	assert_false(_ok(zero_damage))
 	assert_false(zero_damage.has("destroyed"))
 	assert_eq(course.crate.current_health(), CRATE_MAX_HEALTH)
-	var still_blocked: Dictionary = course.try_step_intent(_move_payload(0, crate_dz), 0)
+	var still_blocked: Dictionary = _step_intent(course, _move_payload(0, crate_dz), 0)
 	assert_true(_ok(still_blocked))
 	_assert_pose(course, _start_x(), 0, 0, START_YAW)
 	var nick: Dictionary = course.try_break_crate(1)
@@ -146,7 +148,7 @@ func test_wall_blocks_forward_then_same_crate_displacement_passes_after_break() 
 	assert_false(_destroyed(nick))
 	assert_eq(_health(nick), CRATE_MAX_HEALTH - 1)
 	assert_false(course.crate.is_destroyed())
-	var nicked_blocked: Dictionary = course.try_step_intent(_move_payload(0, crate_dz), 0)
+	var nicked_blocked: Dictionary = _step_intent(course, _move_payload(0, crate_dz), 0)
 	assert_true(_ok(nicked_blocked))
 	_assert_pose(course, _start_x(), 0, 0, START_YAW)
 	var broken: Dictionary = course.try_break_crate(CRATE_MAX_HEALTH - 1)
@@ -154,13 +156,14 @@ func test_wall_blocks_forward_then_same_crate_displacement_passes_after_break() 
 	assert_true(_destroyed(broken))
 	assert_eq(course.crate.current_health(), 0)
 	assert_true(course.crate.is_destroyed())
-	var passed: Dictionary = course.try_step_intent(
+	var passed: Dictionary = _step_intent(
+		course,
 		_move_payload(0, crate_dz, 999, 888, 777),
 		0
 	)
 	assert_true(_ok(passed))
 	_assert_pose(course, _start_x(), 0, crate_dz, START_YAW)
-	var wall_still: Dictionary = course.try_step_intent(_move_payload(wall_dx, 0), 0)
+	var wall_still: Dictionary = _step_intent(course, _move_payload(wall_dx, 0), 0)
 	assert_true(_ok(wall_still))
 	_assert_pose(course, _start_x(), 0, crate_dz, START_YAW)
 	assert_eq(course.world.tick_index, 0)
@@ -269,13 +272,13 @@ func test_assemble_rejects_missing_or_invalid_tape_envelope() -> void:
 func test_failed_intent_does_not_append_to_tape() -> void:
 	var course: GrayboxCourse = GrayboxCourse.assemble(_valid_layout())
 	assert_eq(course.tape.size(), 0)
-	assert_false(_ok(course.try_step_intent({}, 0)))
+	assert_false(_ok(_step_intent(course, {}, 0)))
 	assert_eq(course.tape.size(), 0)
-	assert_false(_ok(course.try_step_intent({"intent": PlayerIntentNames.MOVE}, 0)))
+	assert_false(_ok(_step_intent(course, {"intent": PlayerIntentNames.MOVE}, 0)))
 	assert_eq(course.tape.size(), 0)
-	assert_false(_ok(course.try_step_intent({"intent": PlayerIntentNames.SHOVE}, 0)))
+	assert_false(_ok(_step_intent(course, {"intent": PlayerIntentNames.SHOVE}, 0)))
 	assert_eq(course.tape.size(), 0)
-	assert_true(_ok(course.try_step_intent(_move_payload(0, 0), 0)))
+	assert_true(_ok(_step_intent(course, _move_payload(0, 0), 0)))
 	assert_eq(course.tape.size(), 1)
 	var recorded: SharedCommand = course.tape.command_at(0)
 	assert_not_null(recorded)
@@ -288,7 +291,7 @@ func test_failed_intent_does_not_append_to_tape() -> void:
 
 func test_crate_portal_checkpoint_do_not_append_to_tape() -> void:
 	var course: GrayboxCourse = GrayboxCourse.assemble(_valid_layout())
-	assert_true(_ok(course.try_step_intent(_move_payload(_wall_dx(), 0), 0)))
+	assert_true(_ok(_step_intent(course, _move_payload(_wall_dx(), 0), 0)))
 	assert_eq(course.tape.size(), 1)
 	assert_true(_ok(course.try_break_crate(1)))
 	assert_eq(course.tape.size(), 1)
@@ -321,11 +324,51 @@ func test_two_courses_same_intents_match_tape_and_state_hash() -> void:
 func test_try_step_intent_does_not_call_tick() -> void:
 	var course: GrayboxCourse = GrayboxCourse.assemble(_valid_layout())
 	assert_eq(course.world.tick_index, 0)
-	assert_true(_ok(course.try_step_intent(_move_payload(0, 0), 0)))
+	assert_true(_ok(_step_intent(course, _move_payload(0, 0), 0)))
 	assert_eq(course.world.tick_index, 0)
-	assert_true(_ok(course.try_step_intent({"intent": PlayerIntentNames.JUMP}, _whole(1))))
+	assert_eq(course.tape.size(), 1)
+	var jump_dy: int = _whole(1)
+	var support_dy: int = -_whole(1)
+	assert_true(_ok(_step_intent(course, {"intent": PlayerIntentNames.JUMP}, jump_dy, support_dy)))
 	assert_eq(course.world.tick_index, 0)
-	_assert_pose(course, _start_x(), _whole(1), 0, START_YAW)
+	assert_eq(course.tape.size(), 2)
+	_assert_pose(course, _start_x(), 0, 0, START_YAW)
+
+
+func test_airborne_jump_keeps_pose_and_appends_tape() -> void:
+	var course: GrayboxCourse = GrayboxCourse.assemble(_valid_layout())
+	var jump_dy: int = _whole(2)
+	var support_dy: int = -_whole(1)
+	assert_false(course.world.is_supported_by_solid(course.entity_id, support_dy))
+	var jumped: Dictionary = _step_intent(
+		course, {"intent": PlayerIntentNames.JUMP}, jump_dy, support_dy
+	)
+	assert_true(_ok(jumped))
+	_assert_pose(course, _start_x(), 0, 0, START_YAW)
+	assert_eq(course.world.tick_index, 0)
+	assert_eq(course.tape.size(), 1)
+	assert_eq(course.snapshots.size(), 1)
+
+
+func test_grounded_jump_uses_caller_support_dy() -> void:
+	var course: GrayboxCourse = GrayboxCourse.assemble(_valid_layout())
+	var stand_y: int = _whole(4)
+	var support_dy: int = -_whole(1)
+	var jump_dy: int = _whole(1)
+	_set_pose(course, _start_x(), stand_y, 0, START_YAW)
+	assert_eq(
+		course.world.spawn_static_box(_start_x(), 0, 0, _whole(1), _whole(1), _whole(1)),
+		8
+	)
+	assert_true(course.world.is_supported_by_solid(course.entity_id, support_dy))
+	var jumped: Dictionary = _step_intent(
+		course, {"intent": PlayerIntentNames.JUMP}, jump_dy, support_dy
+	)
+	assert_true(_ok(jumped))
+	_assert_pose(course, _start_x(), stand_y + jump_dy, 0, START_YAW)
+	assert_eq(course.world.tick_index, 0)
+	assert_eq(course.tape.size(), 1)
+	assert_eq(course.snapshots.size(), 1)
 
 
 func test_assemble_rejects_missing_or_invalid_snapshot_hazard_and_period() -> void:
@@ -370,7 +413,7 @@ func test_assemble_records_tick_zero_snapshot_try_step_does_not_record() -> void
 	var tick0_hex: String = course.snapshots.hash_at_tick(0).hex_encode()
 	assert_eq(tick0_hex, course.world.hash_state().hex_encode())
 	assert_eq(course.world.tick_index, 0)
-	assert_true(_ok(course.try_step_intent(_move_payload(_whole(1), 0), 0)))
+	assert_true(_ok(_step_intent(course, _move_payload(_whole(1), 0), 0)))
 	_assert_pose(course, _start_x() + _whole(1), 0, 0, START_YAW)
 	assert_eq(course.world.tick_index, 0)
 	assert_eq(course.snapshots.size(), 1)
@@ -382,7 +425,7 @@ func test_period_one_hazard_toggles_plus_x_blocking_on_commit() -> void:
 	var course: GrayboxCourse = GrayboxCourse.assemble(_valid_layout())
 	var dx: int = _hazard_dx()
 	var tape_before: int = course.tape.size()
-	var blocked: Dictionary = course.try_step_intent(_move_payload(dx, 0), 0)
+	var blocked: Dictionary = _step_intent(course, _move_payload(dx, 0), 0)
 	assert_true(_ok(blocked))
 	_assert_pose(course, _start_x(), 0, 0, START_YAW)
 	assert_eq(course.world.tick_index, 0)
@@ -391,14 +434,14 @@ func test_period_one_hazard_toggles_plus_x_blocking_on_commit() -> void:
 	assert_eq(course.world.tick_index, 1)
 	assert_eq(course.tape.size(), tape_before + 1)
 	assert_eq(course.snapshots.size(), 2)
-	var opened: Dictionary = course.try_step_intent(_move_payload(dx, 0), 0)
+	var opened: Dictionary = _step_intent(course, _move_payload(dx, 0), 0)
 	assert_true(_ok(opened))
 	_assert_pose(course, _start_x() + dx, 0, 0, START_YAW)
 	assert_eq(course.world.tick_index, 1)
 	assert_true(course.try_commit_tick())
 	assert_eq(course.world.tick_index, 2)
 	assert_eq(course.tape.size(), tape_before + 2)
-	var reblocked: Dictionary = course.try_step_intent(_move_payload(dx, 0), 0)
+	var reblocked: Dictionary = _step_intent(course, _move_payload(dx, 0), 0)
 	assert_true(_ok(reblocked))
 	_assert_pose(course, _start_x() + dx, 0, 0, START_YAW)
 	assert_eq(course.world.tick_index, 2)
@@ -488,7 +531,7 @@ func test_interact_on_crate_rejects_zero_damage_without_tape() -> void:
 
 func test_interact_on_crate_applies_damage_and_appends_player_command() -> void:
 	var course: GrayboxCourse = GrayboxCourse.assemble(_valid_layout())
-	assert_true(_ok(course.try_step_intent(_move_payload(0, 0), 0)))
+	assert_true(_ok(_step_intent(course, _move_payload(0, 0), 0)))
 	assert_eq(course.tape.size(), 1)
 	_set_pose_on_crate(course)
 	var payload: Dictionary = _interact_payload(999, 888, 777, true)
@@ -519,7 +562,7 @@ func test_interact_on_crate_applies_damage_and_appends_player_command() -> void:
 func test_interact_destroy_opens_crate_path_without_tick() -> void:
 	var course: GrayboxCourse = GrayboxCourse.assemble(_valid_layout())
 	var crate_dz: int = _crate_dz()
-	var blocked: Dictionary = course.try_step_intent(_move_payload(0, crate_dz), 0)
+	var blocked: Dictionary = _step_intent(course, _move_payload(0, crate_dz), 0)
 	assert_true(_ok(blocked))
 	_assert_pose(course, _start_x(), 0, 0, START_YAW)
 	assert_false(_ok(course.try_interact(_interact_payload(), CRATE_MAX_HEALTH)))
@@ -535,7 +578,7 @@ func test_interact_destroy_opens_crate_path_without_tick() -> void:
 	assert_eq(course.world.tick_index, 0)
 	assert_eq(course.snapshots.size(), 1)
 	_set_pose(course, _start_x(), 0, 0, START_YAW)
-	var passed: Dictionary = course.try_step_intent(_move_payload(0, crate_dz), 0)
+	var passed: Dictionary = _step_intent(course, _move_payload(0, crate_dz), 0)
 	assert_true(_ok(passed))
 	_assert_pose(course, _start_x(), 0, crate_dz, START_YAW)
 	assert_eq(course.world.tick_index, 0)
@@ -632,7 +675,7 @@ func test_use_item_in_reach_rejects_zero_damage_without_tape() -> void:
 
 func test_use_item_from_start_with_crate_reach_applies_damage_and_appends_player_command() -> void:
 	var course: GrayboxCourse = GrayboxCourse.assemble(_valid_layout())
-	assert_true(_ok(course.try_step_intent(_move_payload(0, 0), 0)))
+	assert_true(_ok(_step_intent(course, _move_payload(0, 0), 0)))
 	assert_eq(course.tape.size(), 1)
 	var payload: Dictionary = _use_item_payload(999, 888, 777, 42, true, true, 99)
 	var nicked: Dictionary = course.try_use_item(payload, 1, 0, 0, _crate_z())
@@ -667,7 +710,7 @@ func test_use_item_from_start_with_crate_reach_applies_damage_and_appends_player
 func test_use_item_destroy_from_start_opens_crate_path_without_tick_or_move() -> void:
 	var course: GrayboxCourse = GrayboxCourse.assemble(_valid_layout())
 	var crate_dz: int = _crate_dz()
-	var blocked: Dictionary = course.try_step_intent(_move_payload(0, crate_dz), 0)
+	var blocked: Dictionary = _step_intent(course, _move_payload(0, crate_dz), 0)
 	assert_true(_ok(blocked))
 	_assert_pose(course, _start_x(), 0, 0, START_YAW)
 	assert_false(_ok(course.try_use_item(_use_item_payload(), CRATE_MAX_HEALTH, 0, 0, 0)))
@@ -682,7 +725,7 @@ func test_use_item_destroy_from_start_opens_crate_path_without_tick_or_move() ->
 	assert_eq(course.world.tick_index, 0)
 	assert_eq(course.snapshots.size(), 1)
 	_assert_pose(course, _start_x(), 0, 0, START_YAW)
-	var passed: Dictionary = course.try_step_intent(_move_payload(0, crate_dz), 0)
+	var passed: Dictionary = _step_intent(course, _move_payload(0, crate_dz), 0)
 	assert_true(_ok(passed))
 	_assert_pose(course, _start_x(), 0, crate_dz, START_YAW)
 	assert_eq(course.world.tick_index, 0)
@@ -853,10 +896,10 @@ func _run_finish_after_commit(course: GrayboxCourse) -> void:
 
 
 func _run_move_and_commit_sequence(course: GrayboxCourse) -> void:
-	assert_true(_ok(course.try_step_intent(_move_payload(_whole(1), 0), 0)))
+	assert_true(_ok(_step_intent(course, _move_payload(_whole(1), 0), 0)))
 	_assert_pose(course, _start_x() + _whole(1), 0, 0, START_YAW)
 	assert_true(course.try_commit_tick())
-	assert_true(_ok(course.try_step_intent(_move_payload(_whole(1), 0), 0)))
+	assert_true(_ok(_step_intent(course, _move_payload(_whole(1), 0), 0)))
 	_assert_pose(course, _start_x() + _whole(2), 0, 0, START_YAW)
 	assert_true(course.try_commit_tick())
 	assert_eq(course.world.tick_index, 2)
@@ -865,10 +908,10 @@ func _run_move_and_commit_sequence(course: GrayboxCourse) -> void:
 
 
 func _run_tape_hash_sequence(course: GrayboxCourse) -> void:
-	var blocked: Dictionary = course.try_step_intent(_move_payload(_wall_dx(), 0), 0)
+	var blocked: Dictionary = _step_intent(course, _move_payload(_wall_dx(), 0), 0)
 	assert_true(_ok(blocked))
 	_assert_pose(course, _start_x(), 0, 0, START_YAW)
-	var passed: Dictionary = course.try_step_intent(_move_payload(_whole(1), 0), 0)
+	var passed: Dictionary = _step_intent(course, _move_payload(_whole(1), 0), 0)
 	assert_true(_ok(passed))
 	_assert_pose(course, _start_x() + _whole(1), 0, 0, START_YAW)
 
@@ -890,10 +933,10 @@ func _run_use_item_destroy_from_start(course: GrayboxCourse) -> void:
 
 
 func _run_shared_sequence(course: GrayboxCourse) -> void:
-	assert_true(_ok(course.try_step_intent(_move_payload(_wall_dx(), 0), 0)))
-	assert_true(_ok(course.try_step_intent(_move_payload(0, _crate_dz()), 0)))
+	assert_true(_ok(_step_intent(course, _move_payload(_wall_dx(), 0), 0)))
+	assert_true(_ok(_step_intent(course, _move_payload(0, _crate_dz()), 0)))
 	assert_true(_ok(course.try_break_crate(CRATE_MAX_HEALTH)))
-	assert_true(_ok(course.try_step_intent(_move_payload(0, _crate_dz()), 0)))
+	assert_true(_ok(_step_intent(course, _move_payload(0, _crate_dz()), 0)))
 	assert_false(course.try_accept_checkpoint(CHECKPOINT_B))
 	assert_false(_ok(course.try_land_portal(UP_SOURCE_ID, CHECKPOINT_B, MAX_HOPS)))
 	_set_pose(course, _start_x(), 0, 0, START_YAW)
@@ -1114,6 +1157,15 @@ func _assert_pose(course: GrayboxCourse, x: int, y: int, z: int, yaw: int) -> vo
 func _ok(result: Dictionary) -> bool:
 	var flag: bool = result.get("ok", false)
 	return flag
+
+
+func _step_intent(
+	course: GrayboxCourse,
+	payload: Dictionary,
+	jump_dy: int,
+	support_dy: int = 0
+) -> Dictionary:
+	return course.try_step_intent(payload, jump_dy, support_dy)
 
 
 func _destroyed(result: Dictionary) -> bool:
