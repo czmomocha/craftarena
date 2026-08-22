@@ -5,7 +5,7 @@ extends RefCounted
 ## 覆盖：3 个有序检查点、向上传送、侧向传送、周期 hazard 窗口、可破坏箱、UseItem 爆破、危险捷径开路、冲线。
 ## 不覆盖 2p Headless 与单局名次（M3）。不锁定 Tick/重力/伤害/掉出次数 N（CD-63）。不改 hash_state 字段集。
 ## 安全路 = 调用方 commit 后 hazard 非 solid 的 +x 窗口；危险捷径 = 爆破后 crate 非 solid 的 +z 开路。
-## 检查点 / 传送 / 冲线仍走占用判定：脚本用 set_pose 放到垫上，不发明寻路。磁带不回放进 world。
+## 检查点 / 传送 / 冲线仍走占用判定：脚本用 set_pose 放到垫上，不发明寻路。PLAYER 磁带可由 TraprushGrayboxTapeReplay 回放；本夹具的 set_pose 不入带。
 ## jump_dy、support_dy、fall_dy、blast_damage、reach、max_hops、位移 payload 与垫姿态均由调用方传入。
 
 const FixedClass := preload("res://src/shared/fixed/fixed.gd")

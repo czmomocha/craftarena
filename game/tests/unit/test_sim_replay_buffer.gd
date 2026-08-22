@@ -1,6 +1,6 @@
 extends GutTest
 
-## SimReplayBuffer：CD-43 命令日志 + 种子磁带。不应用意图，只校验追加与稳定哈希。
+## SimReplayBuffer：CD-43 命令日志 + 种子磁带。本类型不应用意图，只校验追加与稳定哈希。
 
 const SharedCommand := preload("res://src/shared/commands/shared_command.gd")
 const SimReplayBuffer := preload("res://src/simulation/replay_buffer.gd")
