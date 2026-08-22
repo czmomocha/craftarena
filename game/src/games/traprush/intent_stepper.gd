@@ -2,8 +2,10 @@ class_name TraprushIntentStepper
 extends RefCounted
 
 ## 把已解码的 Move / Jump / ResetToCheckpoint 接到 SimulationWorld。
-## 依据 CD-21 §8：客户端只发意图，不得发送最终位置。位移与跳跃 dy 由调用方传入，
-## 不发明默认速度或跳跃高度（跳跃数值见 CD-63，本刀不锁定）。
+## 依据 CD-21 §3 / §8：短跳是按钮意图，始终直立；客户端不得发送最终位置。
+## 位移、jump_dy、support_dy 由调用方传入，不发明默认速度、跳跃高度、重力或 coyote。
+## Jump 仅当 world.is_supported_by_solid(entity_id, support_dy) 为 true 时才 try_move_y；
+## 未支撑仍 {ok: true} 且不位移。Move / Reset 不读 support_dy。无二段跳缓冲。
 ## 不调用 world.tick()；Tick 仍由调用方推进。本刀不处理 Shove、传送落地等待、道具或扫掠。
 
 const MoveIntent := preload("res://src/games/traprush/move_intent.gd")
@@ -20,7 +22,8 @@ static func apply(
 	payload: Dictionary,
 	jump_dy: int,
 	spawn: TraprushCheckpointSpawn,
-	track: TraprushCheckpointTrack
+	track: TraprushCheckpointTrack,
+	support_dy: int
 ) -> Dictionary:
 	var failed: Dictionary = {"ok": false}
 	if world == null:
@@ -36,7 +39,8 @@ static func apply(
 	var jump_decoded: Dictionary = JumpIntent.decode(payload)
 	var jump_ok: bool = jump_decoded.get("ok", false)
 	if jump_ok:
-		world.try_move_y(entity_id, jump_dy)
+		if world.is_supported_by_solid(entity_id, support_dy):
+			world.try_move_y(entity_id, jump_dy)
 		return {"ok": true}
 	if CheckpointSpawn.is_reset_intent(payload):
 		return _apply_reset(world, entity_id, spawn, track)
