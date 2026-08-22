@@ -1,12 +1,13 @@
 extends GutTest
 
-## TraprushGrayboxCourse：单人灰盒跑道夹具。几何、位移、jump_dy、max_hops、max_health、period、capacity、interact damage 只由调用方传入。
-## CD-21 §4.2 / §5.2 / §8 与 CD-61 M1：有序检查点、占用垫盒、上下/侧向传送、墙阻挡、打掉箱子后开路、周期 hazard stub。
+## TraprushGrayboxCourse：单人灰盒跑道夹具。几何、位移、jump_dy、max_hops、max_health、period、capacity、interact/use-item damage 与 reach 只由调用方传入。
+## CD-21 §4.2 / §5.2 / §8 与 CD-61 M1：有序检查点、占用垫盒、上下/侧向传送、墙阻挡、打掉箱子后开路、周期 hazard stub、爆破道具 stub。
 ## 成功 PLAYER 意图写入 SimReplayBuffer（CD-43）；磁带不回放进 world。
 ## assemble 记录 tick 0 关键快照；try_commit_tick 推进 tick 并按调用方周期切换 hazard 阻挡。
-## try_step_intent / try_interact 成功入带；打箱 / 传送 / 检查点不 tick、不 record。
+## try_step_intent / try_interact / try_use_item 成功入带；打箱 / 传送 / 检查点不 tick、不 record。
 ## try_interact 要求 overlapping_static_boxes 含 crate；测试用 world.set_pose 挪到箱心，course API 不自动传送。
-## 不读客户端最终位置、障碍死亡或完成标志；不覆盖 UseItemIntent、道具栏、2p。
+## try_use_item 用当前姿态加调用方 reach 做 overlapping_static_boxes_at；测试站在起点，reach 指向 _crate_z，不 set_pose 到箱上。
+## 不读客户端最终位置、障碍死亡、道具命中或完成标志；不覆盖道具栏、2p。
 
 const GrayboxCourse := preload("res://src/games/traprush/graybox_course.gd")
 const SharedCommand := preload("res://src/shared/commands/shared_command.gd")
@@ -557,6 +558,162 @@ func test_two_courses_same_interact_match_tape_and_state_hash() -> void:
 	assert_eq(right.snapshots.size(), 1)
 
 
+func test_use_item_decode_failure_does_not_damage_or_append() -> void:
+	var course: GrayboxCourse = GrayboxCourse.assemble(_valid_layout())
+	assert_false(_ok(course.try_use_item({}, 1, 0, 0, _crate_z())))
+	assert_false(_ok(course.try_use_item({"intent": PlayerIntentNames.JUMP}, 1, 0, 0, _crate_z())))
+	assert_false(_ok(course.try_use_item({"intent": 1}, 1, 0, 0, _crate_z())))
+	assert_eq(course.crate.current_health(), CRATE_MAX_HEALTH)
+	assert_eq(course.tape.size(), 0)
+	assert_eq(course.world.tick_index, 0)
+	assert_eq(course.snapshots.size(), 1)
+	_assert_pose(course, _start_x(), 0, 0, START_YAW)
+
+
+func test_use_item_pose_add_overflow_does_not_damage_or_append() -> void:
+	var course: GrayboxCourse = GrayboxCourse.assemble(_valid_layout())
+	var rejected: Dictionary = course.try_use_item(
+		_use_item_payload(),
+		CRATE_MAX_HEALTH,
+		FixedClass.INT64_MAX,
+		0,
+		0
+	)
+	assert_false(_ok(rejected))
+	assert_false(rejected.has("health"))
+	assert_false(rejected.has("destroyed"))
+	assert_eq(course.crate.current_health(), CRATE_MAX_HEALTH)
+	assert_eq(course.tape.size(), 0)
+	assert_eq(course.world.tick_index, 0)
+	assert_eq(course.snapshots.size(), 1)
+	_assert_pose(course, _start_x(), 0, 0, START_YAW)
+
+
+func test_use_item_zero_reach_from_start_is_rejected_without_damage_or_tape() -> void:
+	var course: GrayboxCourse = GrayboxCourse.assemble(_valid_layout())
+	var rejected: Dictionary = course.try_use_item(_use_item_payload(999, 888, 777, 42, true, true, 99), 1, 0, 0, 0)
+	assert_false(_ok(rejected))
+	assert_false(rejected.has("health"))
+	assert_false(rejected.has("destroyed"))
+	assert_eq(course.crate.current_health(), CRATE_MAX_HEALTH)
+	assert_false(course.crate.is_destroyed())
+	assert_eq(course.tape.size(), 0)
+	assert_eq(course.world.tick_index, 0)
+	assert_eq(course.snapshots.size(), 1)
+	_assert_pose(course, _start_x(), 0, 0, START_YAW)
+
+
+func test_use_item_in_reach_rejects_zero_damage_without_tape() -> void:
+	var course: GrayboxCourse = GrayboxCourse.assemble(_valid_layout())
+	var rejected: Dictionary = course.try_use_item(_use_item_payload(), 0, 0, 0, _crate_z())
+	assert_false(_ok(rejected))
+	assert_false(rejected.has("health"))
+	assert_false(rejected.has("destroyed"))
+	assert_eq(course.crate.current_health(), CRATE_MAX_HEALTH)
+	assert_false(course.crate.is_destroyed())
+	assert_eq(course.tape.size(), 0)
+	assert_eq(course.world.tick_index, 0)
+	assert_eq(course.snapshots.size(), 1)
+	_assert_pose(course, _start_x(), 0, 0, START_YAW)
+
+
+func test_use_item_from_start_with_crate_reach_applies_damage_and_appends_player_command() -> void:
+	var course: GrayboxCourse = GrayboxCourse.assemble(_valid_layout())
+	assert_true(_ok(course.try_step_intent(_move_payload(0, 0), 0)))
+	assert_eq(course.tape.size(), 1)
+	var payload: Dictionary = _use_item_payload(999, 888, 777, 42, true, true, 99)
+	var nicked: Dictionary = course.try_use_item(payload, 1, 0, 0, _crate_z())
+	assert_true(_ok(nicked))
+	assert_false(_destroyed(nicked))
+	assert_eq(_health(nicked), CRATE_MAX_HEALTH - 1)
+	assert_eq(course.crate.current_health(), CRATE_MAX_HEALTH - 1)
+	assert_false(course.crate.is_destroyed())
+	assert_eq(course.tape.size(), 2)
+	var recorded: SharedCommand = course.tape.command_at(1)
+	assert_not_null(recorded)
+	assert_eq(recorded.command_id, 2)
+	assert_eq(recorded.sequence, 2)
+	assert_eq(recorded.actor_id, ACTOR_ID)
+	assert_eq(recorded.kind, SharedCommand.Kind.PLAYER)
+	assert_eq(recorded.target_tick, 0)
+	var stored_intent: String = recorded.payload.get("intent", "")
+	var stored_x: int = recorded.payload.get("x", -1)
+	var stored_item_id: int = recorded.payload.get("item_id", -1)
+	var stored_hit: bool = recorded.payload.get("hit", false)
+	var stored_destroyed: bool = recorded.payload.get("destroyed", false)
+	assert_eq(stored_intent, PlayerIntentNames.USE_ITEM)
+	assert_eq(stored_x, 999)
+	assert_eq(stored_item_id, 42)
+	assert_eq(stored_hit, true)
+	assert_eq(stored_destroyed, true)
+	assert_eq(course.world.tick_index, 0)
+	assert_eq(course.snapshots.size(), 1)
+	_assert_pose(course, _start_x(), 0, 0, START_YAW)
+
+
+func test_use_item_destroy_from_start_opens_crate_path_without_tick_or_move() -> void:
+	var course: GrayboxCourse = GrayboxCourse.assemble(_valid_layout())
+	var crate_dz: int = _crate_dz()
+	var blocked: Dictionary = course.try_step_intent(_move_payload(0, crate_dz), 0)
+	assert_true(_ok(blocked))
+	_assert_pose(course, _start_x(), 0, 0, START_YAW)
+	assert_false(_ok(course.try_use_item(_use_item_payload(), CRATE_MAX_HEALTH, 0, 0, 0)))
+	assert_eq(course.crate.current_health(), CRATE_MAX_HEALTH)
+	assert_eq(course.tape.size(), 1)
+	var broken: Dictionary = course.try_use_item(_use_item_payload(), CRATE_MAX_HEALTH, 0, 0, _crate_z())
+	assert_true(_ok(broken))
+	assert_true(_destroyed(broken))
+	assert_eq(course.crate.current_health(), 0)
+	assert_true(course.crate.is_destroyed())
+	assert_eq(course.tape.size(), 2)
+	assert_eq(course.world.tick_index, 0)
+	assert_eq(course.snapshots.size(), 1)
+	_assert_pose(course, _start_x(), 0, 0, START_YAW)
+	var passed: Dictionary = course.try_step_intent(_move_payload(0, crate_dz), 0)
+	assert_true(_ok(passed))
+	_assert_pose(course, _start_x(), 0, crate_dz, START_YAW)
+	assert_eq(course.world.tick_index, 0)
+	assert_eq(course.snapshots.size(), 1)
+	assert_eq(course.tape.size(), 3)
+
+
+func test_try_interact_still_requires_current_crate_occupancy() -> void:
+	var course: GrayboxCourse = GrayboxCourse.assemble(_valid_layout())
+	assert_false(_ok(course.try_interact(_interact_payload(), 1)))
+	assert_eq(course.crate.current_health(), CRATE_MAX_HEALTH)
+	assert_eq(course.tape.size(), 0)
+	var nicked: Dictionary = course.try_use_item(_use_item_payload(), 1, 0, 0, _crate_z())
+	assert_true(_ok(nicked))
+	assert_eq(course.crate.current_health(), CRATE_MAX_HEALTH - 1)
+	assert_eq(course.tape.size(), 1)
+	assert_false(_ok(course.try_interact(_interact_payload(), 1)))
+	assert_eq(course.crate.current_health(), CRATE_MAX_HEALTH - 1)
+	assert_eq(course.tape.size(), 1)
+	assert_eq(course.world.tick_index, 0)
+	assert_eq(course.snapshots.size(), 1)
+	_assert_pose(course, _start_x(), 0, 0, START_YAW)
+
+
+func test_two_courses_same_use_item_destroy_match_tape_and_state_hash() -> void:
+	var layout: Dictionary = _valid_layout()
+	var left: GrayboxCourse = GrayboxCourse.assemble(layout)
+	var right: GrayboxCourse = GrayboxCourse.assemble(layout)
+	_run_use_item_destroy_from_start(left)
+	_run_use_item_destroy_from_start(right)
+	assert_eq(left.tape.size(), 1)
+	assert_eq(right.tape.size(), 1)
+	assert_eq(left.tape.hash_tape().hex_encode(), right.tape.hash_tape().hex_encode())
+	assert_eq(left.world.hash_state().hex_encode(), right.world.hash_state().hex_encode())
+	assert_eq(left.crate.current_health(), 0)
+	assert_eq(right.crate.current_health(), 0)
+	assert_eq(left.world.tick_index, 0)
+	assert_eq(right.world.tick_index, 0)
+	assert_eq(left.snapshots.size(), 1)
+	assert_eq(right.snapshots.size(), 1)
+	_assert_pose(left, _start_x(), 0, 0, START_YAW)
+	_assert_pose(right, _start_x(), 0, 0, START_YAW)
+
+
 func test_try_commit_tick_rejects_null_world_or_snapshots() -> void:
 	var empty: GrayboxCourse = GrayboxCourse.new()
 	assert_false(empty.try_commit_tick())
@@ -596,6 +753,14 @@ func _run_interact_on_crate(course: GrayboxCourse) -> void:
 	assert_true(_ok(broken))
 	assert_true(_destroyed(broken))
 	assert_eq(course.crate.current_health(), 0)
+
+
+func _run_use_item_destroy_from_start(course: GrayboxCourse) -> void:
+	var broken: Dictionary = course.try_use_item(_use_item_payload(), CRATE_MAX_HEALTH, 0, 0, _crate_z())
+	assert_true(_ok(broken))
+	assert_true(_destroyed(broken))
+	assert_eq(course.crate.current_health(), 0)
+	_assert_pose(course, _start_x(), 0, 0, START_YAW)
 
 
 func _run_shared_sequence(course: GrayboxCourse) -> void:
@@ -706,6 +871,27 @@ func _interact_payload(
 		"y": decoy_y,
 		"z": decoy_z,
 		"destroyed": destroyed,
+	}
+
+
+func _use_item_payload(
+	decoy_x: int = 0,
+	decoy_y: int = 0,
+	decoy_z: int = 0,
+	item_id: int = 0,
+	hit: bool = false,
+	destroyed: bool = false,
+	damage: int = 0
+) -> Dictionary:
+	return {
+		"intent": PlayerIntentNames.USE_ITEM,
+		"item_id": item_id,
+		"x": decoy_x,
+		"y": decoy_y,
+		"z": decoy_z,
+		"hit": hit,
+		"destroyed": destroyed,
+		"damage": damage,
 	}
 
 
