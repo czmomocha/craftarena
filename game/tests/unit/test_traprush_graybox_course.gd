@@ -7,9 +7,9 @@ extends GutTest
 ## assemble 记录 tick 0 关键快照；try_commit_tick(fall_dy) 先 fall 再 tick，再按调用方周期切换 hazard 阻挡。
 ## try_step_intent(payload, jump_dy, support_dy) 把 support_dy 传给 apply；成功 PLAYER 意图入带。
 ## try_apply_fall(fall_dy) 委托 try_move_y_until_blocked；不 tick、不 record、不入带。
-## try_reset_if_out_of_range 用调用方边界；出界回到最近检查点落点，不入带不 tick，不计数 N。
-## try_interact / try_use_item 成功入 PLAYER 带；try_place_pose / 成功检查点 / 成功落地传送 / 首次冲线入 SYSTEM 带。
-## try_break_crate、失败传送、等待未落地、冲线失败、world.set_pose、下落、出界复位不入带。
+## try_reset_if_out_of_range 用调用方边界；出界回到最近检查点落点，成功复位入 SYSTEM 带，不 tick，不计数 N。
+## try_interact / try_use_item 成功入 PLAYER 带；try_place_pose / 成功检查点 / 成功落地传送 / 首次冲线 / 成功出界复位 / 成功 try_break_crate 入 SYSTEM 带。
+## 失败传送、等待未落地、冲线失败、world.set_pose、下落、范围内复位、零伤害 try_break_crate 不入带。
 ## try_interact 要求 overlapping_static_boxes 含 crate；测试用 world.set_pose 挪到箱心，course API 不自动传送。
 ## try_use_item 用当前姿态加调用方 reach 做 overlapping_static_boxes_at；测试站在起点，reach 指向 _crate_z，不 set_pose 到箱上。
 ## 终点垫与起点不重合；冲线用 set_pose 到终点盒心。finish_tick 未冲线为 -1，不入 hash_state。
@@ -316,20 +316,21 @@ func test_failed_intent_does_not_append_to_tape() -> void:
 	assert_eq(course.world.tick_index, 0)
 
 
-func test_break_crate_and_failed_portal_stay_off_tape_success_occupancy_appends_system() -> void:
+func test_break_crate_appends_system_failed_portal_stays_off_tape() -> void:
 	var course: GrayboxCourse = GrayboxCourse.assemble(_valid_layout())
 	assert_true(_ok(_step_intent(course, _move_payload(_wall_dx(), 0), 0)))
 	assert_eq(course.tape.size(), 1)
 	assert_true(_ok(course.try_break_crate(1)))
-	assert_eq(course.tape.size(), 1)
-	assert_false(_ok(course.try_land_portal(UP_SOURCE_ID, CHECKPOINT_B, MAX_HOPS)))
-	assert_eq(course.tape.size(), 1)
-	assert_true(course.try_accept_checkpoint(CHECKPOINT_A))
 	assert_eq(course.tape.size(), 2)
-	_assert_system_command(course.tape.command_at(1), SystemOps.ACCEPT_CHECKPOINT)
-	assert_true(_ok(course.try_land_portal(UP_SOURCE_ID, CHECKPOINT_B, MAX_HOPS)))
+	_assert_system_command(course.tape.command_at(1), SystemOps.BREAK_CRATE)
+	assert_false(_ok(course.try_land_portal(UP_SOURCE_ID, CHECKPOINT_B, MAX_HOPS)))
+	assert_eq(course.tape.size(), 2)
+	assert_true(course.try_accept_checkpoint(CHECKPOINT_A))
 	assert_eq(course.tape.size(), 3)
-	_assert_system_command(course.tape.command_at(2), SystemOps.LAND_PORTAL)
+	_assert_system_command(course.tape.command_at(2), SystemOps.ACCEPT_CHECKPOINT)
+	assert_true(_ok(course.try_land_portal(UP_SOURCE_ID, CHECKPOINT_B, MAX_HOPS)))
+	assert_eq(course.tape.size(), 4)
+	_assert_system_command(course.tape.command_at(3), SystemOps.LAND_PORTAL)
 	assert_eq(course.world.tick_index, 0)
 
 
@@ -734,12 +735,16 @@ func test_interact_destroy_opens_crate_path_without_tick() -> void:
 	assert_eq(course.tape.size(), 3)
 
 
-func test_try_break_crate_still_ignores_overlap_and_does_not_append() -> void:
+func test_try_break_crate_still_ignores_overlap_and_appends_system() -> void:
 	var course: GrayboxCourse = GrayboxCourse.assemble(_valid_layout())
+	assert_false(_ok(course.try_break_crate(0)))
+	assert_eq(course.crate.current_health(), CRATE_MAX_HEALTH)
+	assert_eq(course.tape.size(), 0)
 	var nicked: Dictionary = course.try_break_crate(1)
 	assert_true(_ok(nicked))
 	assert_eq(course.crate.current_health(), CRATE_MAX_HEALTH - 1)
-	assert_eq(course.tape.size(), 0)
+	assert_eq(course.tape.size(), 1)
+	_assert_system_command(course.tape.command_at(0), SystemOps.BREAK_CRATE)
 	assert_eq(course.world.tick_index, 0)
 	assert_eq(course.snapshots.size(), 1)
 
@@ -1084,7 +1089,7 @@ func test_on_min_y_and_xz_edge_does_not_reset() -> void:
 	assert_eq(course.world.tick_index, 0)
 
 
-func test_below_min_y_resets_to_start_without_tape_or_tick() -> void:
+func test_below_min_y_resets_to_start_without_tick() -> void:
 	var course: GrayboxCourse = GrayboxCourse.assemble(_valid_layout())
 	_set_pose(course, _start_x(), -_whole(2), 0, START_YAW)
 	var result: Dictionary = course.try_reset_if_out_of_range(
@@ -1099,7 +1104,8 @@ func test_below_min_y_resets_to_start_without_tape_or_tick() -> void:
 	assert_true(_reset_flag(result))
 	_assert_pose(course, _start_x(), 0, 0, START_YAW)
 	assert_eq(course.world.tick_index, 0)
-	assert_eq(course.tape.size(), 0)
+	assert_eq(course.tape.size(), 1)
+	_assert_system_command(course.tape.command_at(0), SystemOps.RESET_IF_OUT_OF_RANGE)
 	assert_eq(course.snapshots.size(), 1)
 	assert_eq(course.finish_tick, -1)
 
@@ -1118,6 +1124,8 @@ func test_above_max_y_resets_to_start() -> void:
 	assert_true(_ok(result))
 	assert_true(_reset_flag(result))
 	_assert_pose(course, _start_x(), 0, 0, START_YAW)
+	assert_eq(course.tape.size(), 1)
+	assert_eq(course.world.tick_index, 0)
 
 
 func test_outside_xz_resets_to_start() -> void:
@@ -1134,7 +1142,8 @@ func test_outside_xz_resets_to_start() -> void:
 	assert_true(_ok(result))
 	assert_true(_reset_flag(result))
 	_assert_pose(course, _start_x(), 0, 0, START_YAW)
-	assert_eq(course.tape.size(), 0)
+	assert_eq(course.tape.size(), 1)
+	_assert_system_command(course.tape.command_at(0), SystemOps.RESET_IF_OUT_OF_RANGE)
 
 
 func test_out_of_range_after_checkpoint_b_resets_to_checkpoint_pose() -> void:
@@ -1156,7 +1165,8 @@ func test_out_of_range_after_checkpoint_b_resets_to_checkpoint_pose() -> void:
 	assert_true(_reset_flag(result))
 	_assert_pose(course, _start_x(), _up_dest_y(), 0, 0)
 	assert_eq(course.world.tick_index, 0)
-	assert_eq(course.tape.size(), 2)
+	assert_eq(course.tape.size(), 3)
+	_assert_system_command(course.tape.command_at(2), SystemOps.RESET_IF_OUT_OF_RANGE)
 	assert_eq(course.track.last_accepted_id(), CHECKPOINT_B)
 
 
@@ -1192,6 +1202,8 @@ func test_two_courses_same_out_of_range_reset_match_hash_state() -> void:
 	assert_eq(right.world.tick_index, 0)
 	_assert_pose(left, _start_x(), 0, 0, START_YAW)
 	_assert_pose(right, _start_x(), 0, 0, START_YAW)
+	assert_eq(left.tape.size(), 1)
+	assert_eq(right.tape.size(), 1)
 
 
 func test_start_pose_does_not_cross_finish() -> void:
@@ -1502,6 +1514,45 @@ func test_tape_replay_acceptance_matches_source_hashes() -> void:
 	assert_true(dest.crate.is_destroyed())
 	assert_false(dest.world.is_static_box_solid(dest.crate_box_id))
 	assert_false(dest.world.is_static_box_solid(dest.hazard_box_id))
+
+
+func test_tape_replay_break_crate_matches_source_hashes() -> void:
+	var source: GrayboxCourse = GrayboxCourse.assemble(_valid_layout())
+	assert_true(_ok(source.try_break_crate(CRATE_MAX_HEALTH)))
+	assert_eq(source.tape.size(), 1)
+	_assert_system_command(source.tape.command_at(0), SystemOps.BREAK_CRATE)
+	var dest: GrayboxCourse = GrayboxCourse.assemble(_valid_layout())
+	assert_true(_ok(GrayboxTapeReplay.try_replay(dest, source.tape, _replay_script(0))))
+	_assert_replay_matches(source, dest)
+	assert_true(dest.crate.is_destroyed())
+	assert_false(dest.world.is_static_box_solid(dest.crate_box_id))
+	assert_eq(dest.tape.size(), 1)
+	assert_eq(dest.world.tick_index, 0)
+
+
+func test_tape_replay_out_of_range_reset_matches_source_hashes() -> void:
+	var source: GrayboxCourse = GrayboxCourse.assemble(_valid_layout())
+	assert_true(source.try_place_pose(_start_x(), -_whole(2), 0, START_YAW))
+	var reset_result: Dictionary = source.try_reset_if_out_of_range(
+		0,
+		_wide_max(),
+		_wide_min(),
+		_wide_max(),
+		_wide_min(),
+		_wide_max()
+	)
+	assert_true(_ok(reset_result))
+	assert_true(_reset_flag(reset_result))
+	assert_eq(source.tape.size(), 2)
+	_assert_system_command(source.tape.command_at(0), SystemOps.PLACE_POSE)
+	_assert_system_command(source.tape.command_at(1), SystemOps.RESET_IF_OUT_OF_RANGE)
+	_assert_pose(source, _start_x(), 0, 0, START_YAW)
+	var dest: GrayboxCourse = GrayboxCourse.assemble(_valid_layout())
+	assert_true(_ok(GrayboxTapeReplay.try_replay(dest, source.tape, _replay_script(0))))
+	_assert_replay_matches(source, dest)
+	_assert_pose(dest, _start_x(), 0, 0, START_YAW)
+	assert_eq(dest.tape.size(), 2)
+	assert_eq(dest.world.tick_index, 0)
 
 
 func _run_finish_after_commit(course: GrayboxCourse) -> void:

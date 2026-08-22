@@ -4,10 +4,10 @@ extends RefCounted
 ## 把 SimReplayBuffer 里的 PLAYER 与 SYSTEM 命令回放到一张刚 assemble 的 GrayboxCourse。
 ## 依据 CD-43：相同种子与输入必须得到相同关键状态哈希。本夹具走 course API，不让 SimulationWorld 解码意图。
 ## Move / Jump / ResetToCheckpoint 走 try_step_intent；Interact 走 try_interact；UseItem 走 try_use_item。
-## SYSTEM 的 place_pose / accept_checkpoint / land_portal / cross_finish 走对应 course API；land_portal 必须落地。
+## SYSTEM 的 place_pose / accept_checkpoint / land_portal / cross_finish / reset_if_out_of_range / break_crate 走对应 course API；land_portal 必须落地；复位必须真正 reset。
 ## 命令 target_tick 大于当前 tick 时用调用方 fall_dy 做 try_commit_tick 追上；结尾再追到 until_tick。
 ## jump_dy、support_dy、fall_dy、伤害与 reach 均由调用方传入，不从 payload 读取，不锁定 CD-63 数值。
-## try_break_crate、出界复位、try_commit_tick 仍不入带；回放靠 target_tick / until_tick 追上 commit。
+## try_commit_tick 仍不入带；回放靠 target_tick / until_tick 追上 commit。
 ## Shove 与 BASTION 意图、EDIT / ADMIN、未知 SYSTEM op、已有磁带或非 tick 0 的 course 一律失败。磁带类型本身仍不应用意图。
 
 const PlayerIntentNames := preload("res://src/shared/commands/player_intent_names.gd")
@@ -107,6 +107,40 @@ static func _apply_system(course: TraprushGrayboxCourse, command: SharedCommand)
 	if op_name == SystemOps.CROSS_FINISH:
 		var crossed: Dictionary = course.try_cross_finish()
 		return _flag(crossed)
+	if op_name == SystemOps.RESET_IF_OUT_OF_RANGE:
+		var min_y_read: Dictionary = _require_int(payload, "min_y")
+		var max_y_read: Dictionary = _require_int(payload, "max_y")
+		var min_x_read: Dictionary = _require_int(payload, "min_x")
+		var max_x_read: Dictionary = _require_int(payload, "max_x")
+		var min_z_read: Dictionary = _require_int(payload, "min_z")
+		var max_z_read: Dictionary = _require_int(payload, "max_z")
+		if (
+			not _flag(min_y_read)
+			or not _flag(max_y_read)
+			or not _flag(min_x_read)
+			or not _flag(max_x_read)
+			or not _flag(min_z_read)
+			or not _flag(max_z_read)
+		):
+			return false
+		var reset_result: Dictionary = course.try_reset_if_out_of_range(
+			_value(min_y_read),
+			_value(max_y_read),
+			_value(min_x_read),
+			_value(max_x_read),
+			_value(min_z_read),
+			_value(max_z_read)
+		)
+		if not _flag(reset_result):
+			return false
+		var did_reset: bool = reset_result.get("reset", false)
+		return did_reset
+	if op_name == SystemOps.BREAK_CRATE:
+		var damage_read: Dictionary = _require_int(payload, "damage")
+		if not _flag(damage_read):
+			return false
+		var broken: Dictionary = course.try_break_crate(_value(damage_read))
+		return _flag(broken)
 	return false
 
 
