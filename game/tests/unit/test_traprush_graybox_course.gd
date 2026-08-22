@@ -1,8 +1,9 @@
 extends GutTest
 
 ## TraprushGrayboxCourse：单人灰盒跑道夹具。几何、位移、jump_dy、max_hops、max_health 只由调用方传入。
-## CD-21 §4.2 / §5.2 与 CD-61 M1：有序检查点、上下/侧向传送、墙阻挡、打掉箱子后开路。
-## 不调用 overlaps_static_box 或 world.tick()；不读客户端最终位置；不覆盖 Shove、道具、2p。
+## CD-21 §4.2 / §5.2 / §8 与 CD-61 M1：有序检查点、占用垫盒、上下/侧向传送、墙阻挡、打掉箱子后开路。
+## 接受检查点前胶囊必须与该垫重叠；测试用 world.set_pose 挪到垫心，course API 不自动传送。
+## 不调用 world.tick()；不读客户端最终位置或完成标志；不覆盖 Shove、道具、2p。
 
 const GrayboxCourse := preload("res://src/games/traprush/graybox_course.gd")
 const FixedClass := preload("res://src/shared/fixed/fixed.gd")
@@ -43,6 +44,33 @@ func test_assemble_rejects_missing_fields_bad_health_and_failed_spawn() -> void:
 	var float_start: Dictionary = _valid_layout()
 	float_start["start_x"] = 1.0
 	assert_eq(GrayboxCourse.assemble(float_start), null)
+	var missing_pads: Dictionary = _valid_layout()
+	missing_pads.erase("checkpoint_pads")
+	assert_eq(GrayboxCourse.assemble(missing_pads), null)
+	var short_pads: Dictionary = _valid_layout()
+	var short_list: Array = short_pads["checkpoint_pads"]
+	short_list.remove_at(short_list.size() - 1)
+	short_pads["checkpoint_pads"] = short_list
+	assert_eq(GrayboxCourse.assemble(short_pads), null)
+	var long_pads: Dictionary = _valid_layout()
+	var long_list: Array = long_pads["checkpoint_pads"]
+	long_list.append(_pad_box(_start_x(), 0, 0))
+	long_pads["checkpoint_pads"] = long_list
+	assert_eq(GrayboxCourse.assemble(long_pads), null)
+	var missing_pad_field: Dictionary = _valid_layout()
+	var pads_missing_field: Array = missing_pad_field["checkpoint_pads"]
+	var first_pad: Dictionary = _dup_dict(pads_missing_field[0])
+	first_pad.erase("half_x")
+	pads_missing_field[0] = first_pad
+	missing_pad_field["checkpoint_pads"] = pads_missing_field
+	assert_eq(GrayboxCourse.assemble(missing_pad_field), null)
+	var bad_pad_spawn: Dictionary = _valid_layout()
+	var pads_bad_spawn: Array = bad_pad_spawn["checkpoint_pads"]
+	var failing_pad: Dictionary = _dup_dict(pads_bad_spawn[1])
+	failing_pad["half_x"] = -1
+	pads_bad_spawn[1] = failing_pad
+	bad_pad_spawn["checkpoint_pads"] = pads_bad_spawn
+	assert_eq(GrayboxCourse.assemble(bad_pad_spawn), null)
 
 
 func test_assemble_exposes_world_ids_track_and_crate() -> void:
@@ -51,6 +79,10 @@ func test_assemble_exposes_world_ids_track_and_crate() -> void:
 	assert_eq(course.entity_id, 1)
 	assert_eq(course.wall_box_id, 1)
 	assert_eq(course.crate_box_id, 2)
+	assert_eq(course.pad_box_ids.size(), 3)
+	assert_eq(course.pad_box_ids[0], 3)
+	assert_eq(course.pad_box_ids[1], 4)
+	assert_eq(course.pad_box_ids[2], 5)
 	assert_eq(course.crate.max_health(), CRATE_MAX_HEALTH)
 	assert_eq(course.crate.current_health(), CRATE_MAX_HEALTH)
 	assert_false(course.crate.is_destroyed())
@@ -125,17 +157,32 @@ func test_portal_fails_until_checkpoint_then_up_changes_y_and_side_changes_z() -
 
 func test_ordered_checkpoints_finish_and_out_of_order_try_accept_fails() -> void:
 	var course: GrayboxCourse = GrayboxCourse.assemble(_valid_layout())
+	assert_false(course.try_accept_checkpoint(99))
+	_set_pose(course, _start_x(), _up_dest_y(), 0, 0)
 	assert_false(course.try_accept_checkpoint(CHECKPOINT_B))
+	_set_pose(course, _start_x(), 0, _side_dest_z(), START_YAW)
 	assert_false(course.try_accept_checkpoint(CHECKPOINT_C))
+	_set_pose(course, _start_x(), 0, 0, START_YAW)
 	assert_false(course.track.is_finished())
 	assert_true(course.try_accept_checkpoint(CHECKPOINT_A))
 	assert_false(course.try_accept_checkpoint(CHECKPOINT_C))
 	assert_false(course.track.is_finished())
+	_set_pose(course, _start_x(), _up_dest_y(), 0, 0)
 	assert_true(course.try_accept_checkpoint(CHECKPOINT_B))
+	_set_pose(course, _start_x(), 0, _side_dest_z(), START_YAW)
 	assert_true(course.try_accept_checkpoint(CHECKPOINT_C))
 	assert_true(course.track.is_finished())
 	assert_false(course.try_accept_checkpoint(CHECKPOINT_A))
 	assert_true(course.track.is_finished())
+
+
+func test_accept_b_fails_when_not_overlapping_pad_b() -> void:
+	var course: GrayboxCourse = GrayboxCourse.assemble(_valid_layout())
+	assert_true(course.try_accept_checkpoint(CHECKPOINT_A))
+	assert_false(course.try_accept_checkpoint(CHECKPOINT_B))
+	assert_false(course.track.is_finished())
+	assert_eq(course.world.tick_index, 0)
+	_assert_pose(course, _start_x(), 0, 0, START_YAW)
 
 
 func test_identical_inputs_on_two_worlds_match_hash_finished_and_health() -> void:
@@ -172,6 +219,7 @@ func _run_shared_sequence(course: GrayboxCourse) -> void:
 	assert_true(_ok(course.try_step_intent(_move_payload(0, _crate_dz()), 0)))
 	assert_false(course.try_accept_checkpoint(CHECKPOINT_B))
 	assert_false(_ok(course.try_land_portal(UP_SOURCE_ID, CHECKPOINT_B, MAX_HOPS)))
+	_set_pose(course, _start_x(), 0, 0, START_YAW)
 	assert_true(course.try_accept_checkpoint(CHECKPOINT_A))
 	assert_true(_ok(course.try_land_portal(UP_SOURCE_ID, CHECKPOINT_B, MAX_HOPS)))
 	assert_true(course.try_accept_checkpoint(CHECKPOINT_B))
@@ -212,6 +260,11 @@ func _valid_layout() -> Dictionary:
 		},
 		"crate_max_health": CRATE_MAX_HEALTH,
 		"checkpoint_ids": [CHECKPOINT_A, CHECKPOINT_B, CHECKPOINT_C],
+		"checkpoint_pads": [
+			_pad_box(start_x, 0, 0),
+			_pad_box(start_x, _up_dest_y(), 0),
+			_pad_box(start_x, 0, _side_dest_z()),
+		],
 		"spawn_start": {
 			"x": start_x,
 			"y": start_y,
@@ -271,6 +324,22 @@ func _up_dest_y() -> int:
 
 func _side_dest_z() -> int:
 	return _whole(20)
+
+
+func _pad_box(x: int, y: int, z: int) -> Dictionary:
+	var half: int = _whole(1)
+	return {
+		"x": x,
+		"y": y,
+		"z": z,
+		"half_x": half,
+		"half_y": half,
+		"half_z": half,
+	}
+
+
+func _set_pose(course: GrayboxCourse, x: int, y: int, z: int, yaw: int) -> void:
+	assert_true(course.world.set_pose(course.entity_id, x, y, z, yaw))
 
 
 func _assert_pose(course: GrayboxCourse, x: int, y: int, z: int, yaw: int) -> void:
