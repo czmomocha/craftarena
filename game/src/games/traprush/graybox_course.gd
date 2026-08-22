@@ -6,12 +6,13 @@ extends RefCounted
 ## 灰盒检查点垫走 PadAccept / CD-21 §8：完成由占用判定，客户端不得断言。
 ## 终点垫走 FinishAccept：冲线由占用 + 全部强制检查点完成判定；无 FinishIntent（CD-21 §6 / §8）。
 ## finish_tick 是权威 world.tick_index，未冲线哨兵为 -1；不写入 SimulationWorld.hash_state。
-## 位移、jump_dy、support_dy、fall_dy、max_hops、max_health、period、snapshot capacity 均由调用方传入，不锁定 Tick/快照 Hz（CD-63）。
+## 位移、jump_dy、support_dy、fall_dy、范围边界、max_hops、max_health、period、snapshot capacity 均由调用方传入，不锁定 Tick/快照 Hz、重力或掉出次数 N（CD-63）。
 ## 成功 PLAYER 意图写入 SimReplayBuffer（CD-43 命令日志 + 种子）；磁带不回放进 world。
 ## assemble 记录 tick 0 关键快照；try_commit_tick(fall_dy) 先 try_apply_fall，成功后再推进 tick、按调用方周期切换 hazard 阻挡、再 record。
-## try_step_intent(payload, jump_dy, support_dy) 把 support_dy 传给 apply；成功 PLAYER 意图入带。
+## try_step_intent(payload, jump_dy, support_dy) 把 support_dy 传给 apply；Jump 走直到阻挡；成功 PLAYER 意图入带。
 ## try_apply_fall(fall_dy) 只调用 world.try_move_y_until_blocked；成功/失败与仿真一致。
-## try_interact / try_use_item 成功入带；打箱 / 传送 / 检查点 / 冲线 / 下落不 tick、不 record、不入带。
+## try_reset_if_out_of_range 用已合入的只读范围查询；出界则 set_pose 到最近检查点复活落点（CD-21 §6），不入带不 tick，不计数 N。
+## try_interact / try_use_item 成功入带；打箱 / 传送 / 检查点 / 冲线 / 下落 / 出界复位不 tick、不 record、不入带。
 ## try_interact 仅在 overlapping_static_boxes 含 crate 时按调用方 damage 走 Destructible；摧毁则关闭 crate 盒阻挡。
 ## try_use_item 用当前姿态加调用方 reach 得到候选坐标，overlapping_static_boxes_at 含 crate 时才伤害；伤害与 reach 不从 payload 读取。
 ## try_break_crate 保持测试入口：不要求重叠、不入带。
@@ -251,6 +252,40 @@ func try_apply_fall(fall_dy: int) -> bool:
 	if world == null:
 		return false
 	return world.try_move_y_until_blocked(entity_id, fall_dy)
+
+
+func try_reset_if_out_of_range(
+	min_y: int,
+	max_y: int,
+	min_x: int,
+	max_x: int,
+	min_z: int,
+	max_z: int
+) -> Dictionary:
+	var failed: Dictionary = {"ok": false}
+	if world == null:
+		return failed
+	var current: Dictionary = world.get_pose(entity_id)
+	if current.is_empty():
+		return failed
+	var below: bool = world.is_below_min_y(entity_id, min_y)
+	var above: bool = world.is_above_max_y(entity_id, max_y)
+	var outside_xz: bool = world.is_outside_xz(entity_id, min_x, max_x, min_z, max_z)
+	if not below and not above and not outside_xz:
+		return {"ok": true, "reset": false}
+	if _spawn == null:
+		return failed
+	var pose: Dictionary = _spawn.pose_for(track)
+	var pose_ok: bool = pose.get("ok", false)
+	if not pose_ok:
+		return failed
+	var x: int = pose.get("x", 0)
+	var y: int = pose.get("y", 0)
+	var z: int = pose.get("z", 0)
+	var yaw_bam: int = pose.get("yaw_bam", 0)
+	if not world.set_pose(entity_id, x, y, z, yaw_bam):
+		return failed
+	return {"ok": true, "reset": true}
 
 
 func try_interact(payload: Dictionary, damage: int) -> Dictionary:

@@ -2,6 +2,8 @@ extends GutTest
 
 ## TraprushShoveApply：解码 + 冷却门闩通过后，用调用方 Q48.16 dx/dz 推开目标。
 ## CD-21 §2 / §5.3：基础推击独立于道具；力度与冷却秒数见 CD-63，本刀不锁定。
+## 位移走 try_move_xz_until_blocked：开阔地终点与成功 try_move_xz 相同；路径上有盒则
+## shoved 仍 true 且停在最后未阻挡样本；对照 try_move_xz 仍 false 且不写。
 ## 不发明默认位移，不从 payload 读 impulse/dx/dz，不调用 world.tick()。
 
 const ShoveApply := preload("res://src/games/traprush/shove_apply.gd")
@@ -144,14 +146,28 @@ func test_payload_dx_does_not_override_caller_displacement() -> void:
 	_assert_pose(world, target_id, caller_dx, 0, _whole(8), 8)
 
 
-func test_blocked_shove_is_still_shoved_and_does_not_pass_through_wall() -> void:
-	var world: SimulationWorld = SimulationWorld.new(1)
+func test_blocked_shove_matches_until_blocked_and_does_not_use_try_move_xz() -> void:
 	var radius: int = _whole(1)
+	var height: int = _whole(2)
 	var start_x: int = _whole(4)
 	var into_box: int = -_whole(2)
-	var actor_id: int = world.spawn_capsule(0, 0, _whole(10), 16, radius, _whole(2))
-	var target_id: int = world.spawn_capsule(start_x, 0, 0, 8, radius, _whole(2))
+	var actor_z: int = _whole(10)
+	var world: SimulationWorld = SimulationWorld.new(1)
+	var actor_id: int = world.spawn_capsule(0, 0, actor_z, 16, radius, height)
+	var target_id: int = world.spawn_capsule(start_x, 0, 0, 8, radius, height)
 	assert_eq(world.spawn_static_box(0, 0, 0, _whole(1), _whole(1), _whole(1)), 1)
+	var contrast: SimulationWorld = SimulationWorld.new(1)
+	var contrast_actor: int = contrast.spawn_capsule(0, 0, actor_z, 16, radius, height)
+	var contrast_target: int = contrast.spawn_capsule(start_x, 0, 0, 8, radius, height)
+	assert_eq(contrast.spawn_static_box(0, 0, 0, _whole(1), _whole(1), _whole(1)), 1)
+	assert_false(contrast.try_move_xz(contrast_target, into_box, 0))
+	_assert_pose(contrast, contrast_actor, 0, 0, actor_z, 16)
+	_assert_pose(contrast, contrast_target, start_x, 0, 0, 8)
+	var oracle: SimulationWorld = SimulationWorld.new(1)
+	oracle.spawn_capsule(0, 0, actor_z, 16, radius, height)
+	var oracle_target: int = oracle.spawn_capsule(start_x, 0, 0, 8, radius, height)
+	assert_eq(oracle.spawn_static_box(0, 0, 0, _whole(1), _whole(1), _whole(1)), 1)
+	assert_true(oracle.try_move_xz_until_blocked(oracle_target, into_box, 0))
 	var result: Dictionary = _apply(
 		world,
 		actor_id,
@@ -165,8 +181,48 @@ func test_blocked_shove_is_still_shoved_and_does_not_pass_through_wall() -> void
 	)
 	assert_true(_ok(result))
 	assert_true(_shoved(result))
-	_assert_pose(world, actor_id, 0, 0, _whole(10), 16)
-	_assert_pose(world, target_id, start_x, 0, 0, 8)
+	_assert_pose(world, actor_id, 0, 0, actor_z, 16)
+	_assert_pose_matches(world, target_id, oracle, oracle_target)
+	assert_eq(world.tick_index, 0)
+
+
+func test_shove_stops_at_last_unblocked_sample_before_box() -> void:
+	var radius: int = _whole(1)
+	var height: int = _whole(2)
+	var start_x: int = _whole(10)
+	var dx: int = -_whole(10)
+	var actor_z: int = _whole(10)
+	var world: SimulationWorld = SimulationWorld.new(1)
+	var actor_id: int = world.spawn_capsule(0, 0, actor_z, 16, radius, height)
+	var target_id: int = world.spawn_capsule(start_x, 0, 0, 8, radius, height)
+	assert_eq(world.spawn_static_box(0, 0, 0, _whole(1), _whole(1), _whole(1)), 1)
+	var contrast: SimulationWorld = SimulationWorld.new(1)
+	var contrast_target: int = contrast.spawn_capsule(start_x, 0, 0, 8, radius, height)
+	assert_eq(contrast.spawn_static_box(0, 0, 0, _whole(1), _whole(1), _whole(1)), 1)
+	assert_false(contrast.try_move_xz(contrast_target, dx, 0))
+	_assert_pose(contrast, contrast_target, start_x, 0, 0, 8)
+	var oracle: SimulationWorld = SimulationWorld.new(1)
+	var oracle_target: int = oracle.spawn_capsule(start_x, 0, 0, 8, radius, height)
+	assert_eq(oracle.spawn_static_box(0, 0, 0, _whole(1), _whole(1), _whole(1)), 1)
+	assert_true(oracle.try_move_xz_until_blocked(oracle_target, dx, 0))
+	var result: Dictionary = _apply(
+		world,
+		actor_id,
+		target_id,
+		{"intent": PlayerIntentNames.SHOVE},
+		0,
+		-1,
+		1,
+		dx,
+		0
+	)
+	assert_true(_ok(result))
+	assert_true(_shoved(result))
+	_assert_pose(world, actor_id, 0, 0, actor_z, 16)
+	_assert_pose_matches(world, target_id, oracle, oracle_target)
+	var after: Dictionary = world.get_pose(target_id)
+	var after_x: int = after.get("x", start_x)
+	assert_ne(after_x, start_x)
 	assert_eq(world.tick_index, 0)
 
 
@@ -239,6 +295,20 @@ func _assert_pose(world: SimulationWorld, entity_id: int, x: int, y: int, z: int
 	assert_eq(pose_y, y)
 	assert_eq(pose_z, z)
 	assert_eq(pose_yaw, yaw)
+
+
+func _assert_pose_matches(
+	left: SimulationWorld,
+	left_id: int,
+	right: SimulationWorld,
+	right_id: int
+) -> void:
+	var expected: Dictionary = right.get_pose(right_id)
+	var x: int = expected.get("x", -1)
+	var y: int = expected.get("y", -1)
+	var z: int = expected.get("z", -1)
+	var yaw: int = expected.get("yaw", -1)
+	_assert_pose(left, left_id, x, y, z, yaw)
 
 
 func _ok(result: Dictionary) -> bool:

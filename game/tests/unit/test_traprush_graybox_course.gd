@@ -1,13 +1,14 @@
 extends GutTest
 
-## TraprushGrayboxCourse：单人灰盒跑道夹具。几何、位移、jump_dy、support_dy、fall_dy、max_hops、max_health、period、capacity、interact/use-item damage 与 reach 只由调用方传入。
+## TraprushGrayboxCourse：单人灰盒跑道夹具。几何、位移、jump_dy、support_dy、fall_dy、范围边界、max_hops、max_health、period、capacity、interact/use-item damage 与 reach 只由调用方传入。
 ## CD-21 §4.2 / §5.2 / §8 与 CD-61 M1：有序检查点、占用垫盒、上下/侧向传送、墙阻挡、打掉箱子后开路、周期 hazard stub、爆破道具 stub。
-## Move 经 IntentStepper 走 try_move_xz_until_blocked：撞墙/箱停在最后未阻挡样本，不是整段拒绝。
+## Move / Jump 经 IntentStepper 走直到阻挡：撞墙/箱/天花停在最后未阻挡样本，不是整段拒绝。
 ## 成功 PLAYER 意图写入 SimReplayBuffer（CD-43）；磁带不回放进 world。
 ## assemble 记录 tick 0 关键快照；try_commit_tick(fall_dy) 先 fall 再 tick，再按调用方周期切换 hazard 阻挡。
 ## try_step_intent(payload, jump_dy, support_dy) 把 support_dy 传给 apply；成功 PLAYER 意图入带。
 ## try_apply_fall(fall_dy) 委托 try_move_y_until_blocked；不 tick、不 record、不入带。
-## try_interact / try_use_item 成功入带；打箱 / 传送 / 检查点 / 冲线 / 下落不 tick、不 record。
+## try_reset_if_out_of_range 用调用方边界；出界回到最近检查点落点，不入带不 tick，不计数 N。
+## try_interact / try_use_item 成功入带；打箱 / 传送 / 检查点 / 冲线 / 下落 / 出界复位不 tick、不 record。
 ## try_interact 要求 overlapping_static_boxes 含 crate；测试用 world.set_pose 挪到箱心，course API 不自动传送。
 ## try_use_item 用当前姿态加调用方 reach 做 overlapping_static_boxes_at；测试站在起点，reach 指向 _crate_z，不 set_pose 到箱上。
 ## 终点垫与起点不重合；冲线用 set_pose 到终点盒心。finish_tick 未冲线为 -1，不入 hash_state。
@@ -1006,6 +1007,164 @@ func test_two_courses_same_commit_fall_match_hash_state_and_tick() -> void:
 	_assert_pose(right, _start_x(), dest_y_res.value, 0, START_YAW)
 
 
+func test_try_reset_if_out_of_range_rejects_null_world_or_unknown_entity() -> void:
+	var empty: GrayboxCourse = GrayboxCourse.new()
+	assert_false(_ok(_reset_wide(empty)))
+	var missing_world: GrayboxCourse = GrayboxCourse.assemble(_valid_layout())
+	missing_world.world = null
+	assert_false(_ok(_reset_wide(missing_world)))
+	var course: GrayboxCourse = GrayboxCourse.assemble(_valid_layout())
+	var original_id: int = course.entity_id
+	course.entity_id = 99
+	assert_false(_ok(_reset_wide(course)))
+	assert_eq(course.world.tick_index, 0)
+	assert_eq(course.tape.size(), 0)
+	assert_eq(course.snapshots.size(), 1)
+	var pose: Dictionary = course.world.get_pose(original_id)
+	var pose_y: int = pose.get("y", -1)
+	assert_eq(pose_y, 0)
+
+
+func test_in_range_pose_does_not_reset() -> void:
+	var course: GrayboxCourse = GrayboxCourse.assemble(_valid_layout())
+	var before_hex: String = course.world.hash_state().hex_encode()
+	var result: Dictionary = _reset_wide(course)
+	assert_true(_ok(result))
+	assert_false(_reset_flag(result))
+	_assert_pose(course, _start_x(), 0, 0, START_YAW)
+	assert_eq(course.world.tick_index, 0)
+	assert_eq(course.tape.size(), 0)
+	assert_eq(course.snapshots.size(), 1)
+	assert_eq(course.world.hash_state().hex_encode(), before_hex)
+
+
+func test_on_min_y_and_xz_edge_does_not_reset() -> void:
+	var course: GrayboxCourse = GrayboxCourse.assemble(_valid_layout())
+	var result: Dictionary = course.try_reset_if_out_of_range(
+		0,
+		_wide_max(),
+		_start_x(),
+		_start_x(),
+		0,
+		0
+	)
+	assert_true(_ok(result))
+	assert_false(_reset_flag(result))
+	_assert_pose(course, _start_x(), 0, 0, START_YAW)
+	assert_eq(course.tape.size(), 0)
+	assert_eq(course.world.tick_index, 0)
+
+
+func test_below_min_y_resets_to_start_without_tape_or_tick() -> void:
+	var course: GrayboxCourse = GrayboxCourse.assemble(_valid_layout())
+	_set_pose(course, _start_x(), -_whole(2), 0, START_YAW)
+	var result: Dictionary = course.try_reset_if_out_of_range(
+		0,
+		_wide_max(),
+		_wide_min(),
+		_wide_max(),
+		_wide_min(),
+		_wide_max()
+	)
+	assert_true(_ok(result))
+	assert_true(_reset_flag(result))
+	_assert_pose(course, _start_x(), 0, 0, START_YAW)
+	assert_eq(course.world.tick_index, 0)
+	assert_eq(course.tape.size(), 0)
+	assert_eq(course.snapshots.size(), 1)
+	assert_eq(course.finish_tick, -1)
+
+
+func test_above_max_y_resets_to_start() -> void:
+	var course: GrayboxCourse = GrayboxCourse.assemble(_valid_layout())
+	_set_pose(course, _start_x(), _whole(20), 0, START_YAW)
+	var result: Dictionary = course.try_reset_if_out_of_range(
+		_wide_min(),
+		_whole(10),
+		_wide_min(),
+		_wide_max(),
+		_wide_min(),
+		_wide_max()
+	)
+	assert_true(_ok(result))
+	assert_true(_reset_flag(result))
+	_assert_pose(course, _start_x(), 0, 0, START_YAW)
+
+
+func test_outside_xz_resets_to_start() -> void:
+	var course: GrayboxCourse = GrayboxCourse.assemble(_valid_layout())
+	_set_pose(course, _start_x(), 0, _whole(50), START_YAW)
+	var result: Dictionary = course.try_reset_if_out_of_range(
+		_wide_min(),
+		_wide_max(),
+		_wide_min(),
+		_wide_max(),
+		0,
+		_whole(10)
+	)
+	assert_true(_ok(result))
+	assert_true(_reset_flag(result))
+	_assert_pose(course, _start_x(), 0, 0, START_YAW)
+	assert_eq(course.tape.size(), 0)
+
+
+func test_out_of_range_after_checkpoint_b_resets_to_checkpoint_pose() -> void:
+	var course: GrayboxCourse = GrayboxCourse.assemble(_valid_layout())
+	_set_pose(course, _start_x(), 0, 0, START_YAW)
+	assert_true(course.try_accept_checkpoint(CHECKPOINT_A))
+	_set_pose(course, _start_x(), _up_dest_y(), 0, 0)
+	assert_true(course.try_accept_checkpoint(CHECKPOINT_B))
+	_set_pose(course, _start_x(), -_whole(2), 0, START_YAW)
+	var result: Dictionary = course.try_reset_if_out_of_range(
+		0,
+		_wide_max(),
+		_wide_min(),
+		_wide_max(),
+		_wide_min(),
+		_wide_max()
+	)
+	assert_true(_ok(result))
+	assert_true(_reset_flag(result))
+	_assert_pose(course, _start_x(), _up_dest_y(), 0, 0)
+	assert_eq(course.world.tick_index, 0)
+	assert_eq(course.tape.size(), 0)
+	assert_eq(course.track.last_accepted_id(), CHECKPOINT_B)
+
+
+func test_two_courses_same_out_of_range_reset_match_hash_state() -> void:
+	var layout: Dictionary = _valid_layout()
+	var left: GrayboxCourse = GrayboxCourse.assemble(layout)
+	var right: GrayboxCourse = GrayboxCourse.assemble(layout)
+	_set_pose(left, _start_x(), -_whole(2), 0, START_YAW)
+	_set_pose(right, _start_x(), -_whole(2), 0, START_YAW)
+	var left_result: Dictionary = left.try_reset_if_out_of_range(
+		0,
+		_wide_max(),
+		_wide_min(),
+		_wide_max(),
+		_wide_min(),
+		_wide_max()
+	)
+	var right_result: Dictionary = right.try_reset_if_out_of_range(
+		0,
+		_wide_max(),
+		_wide_min(),
+		_wide_max(),
+		_wide_min(),
+		_wide_max()
+	)
+	assert_true(_ok(left_result))
+	assert_true(_ok(right_result))
+	assert_true(_reset_flag(left_result))
+	assert_true(_reset_flag(right_result))
+	assert_eq(left.world.hash_state().hex_encode(), right.world.hash_state().hex_encode())
+	assert_eq(left.tape.hash_tape().hex_encode(), right.tape.hash_tape().hex_encode())
+	assert_eq(left.world.tick_index, 0)
+	assert_eq(right.world.tick_index, 0)
+	_assert_pose(left, _start_x(), 0, 0, START_YAW)
+	_assert_pose(right, _start_x(), 0, 0, START_YAW)
+
+
 func test_start_pose_does_not_cross_finish() -> void:
 	var course: GrayboxCourse = GrayboxCourse.assemble(_valid_layout())
 	assert_eq(course.finish_tick, -1)
@@ -1398,6 +1557,30 @@ func _assert_course_matches(course: GrayboxCourse, oracle: GrayboxCourse) -> voi
 func _ok(result: Dictionary) -> bool:
 	var flag: bool = result.get("ok", false)
 	return flag
+
+
+func _reset_flag(result: Dictionary) -> bool:
+	var flag: bool = result.get("reset", false)
+	return flag
+
+
+func _wide_min() -> int:
+	return -_whole(100)
+
+
+func _wide_max() -> int:
+	return _whole(100)
+
+
+func _reset_wide(course: GrayboxCourse) -> Dictionary:
+	return course.try_reset_if_out_of_range(
+		_wide_min(),
+		_wide_max(),
+		_wide_min(),
+		_wide_max(),
+		_wide_min(),
+		_wide_max()
+	)
 
 
 func _step_intent(
