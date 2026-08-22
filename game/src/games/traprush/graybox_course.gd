@@ -1,12 +1,14 @@
 class_name TraprushGrayboxCourse
 extends RefCounted
 
-## TRAPRUSH 单人灰盒跑道夹具：组装检查点、上下/侧向传送、墙盒、可破坏箱。
-## 依据 CD-21 §4.2 / §5.2 与 CD-61 M1 灰盒：有序检查点、传送不得跳点、破坏后开路。
+## TRAPRUSH 单人灰盒跑道夹具：组装检查点、上下/侧向传送、墙盒、可破坏箱、周期 hazard。
+## 依据 CD-21 §4.2 / §5.2 / §8 与 CD-61 M1 灰盒：有序检查点、传送不得跳点、破坏后开路、1 个周期障碍 stub。
 ## 灰盒检查点垫走 PadAccept / CD-21 §8：完成由占用判定，客户端不得断言。
-## 位移、jump_dy、max_hops、max_health 均由调用方传入，本文件不发明产品常数。
+## 位移、jump_dy、max_hops、max_health、period、snapshot capacity 均由调用方传入，不锁定 Tick/快照 Hz（CD-63）。
 ## 成功 PLAYER 意图写入 SimReplayBuffer（CD-43 命令日志 + 种子）；磁带不回放进 world。
-## 不调用 world.tick()；不从客户端 Dictionary 读最终位置或完成标志；不实现 Shove、道具、2p、名次或 Headless。
+## assemble 记录 tick 0 关键快照；try_commit_tick 推进 tick、按调用方周期切换 hazard 阻挡、再 record。
+## try_step_intent / 打箱 / 传送 / 检查点不 tick、不 record。
+## 不从客户端 Dictionary 读最终位置或完成标志；不实现 Shove、道具、2p、名次或 Headless。
 
 const IntentStepper := preload("res://src/games/traprush/intent_stepper.gd")
 const PortalLanding := preload("res://src/games/traprush/portal_landing.gd")
@@ -22,9 +24,11 @@ var entity_id: int = 0
 var track: TraprushCheckpointTrack = null
 var wall_box_id: int = 0
 var crate_box_id: int = 0
+var hazard_box_id: int = 0
 var crate: TraprushDestructible = null
 var pad_box_ids: Array[int] = []
 var tape: SimReplayBuffer = null
+var snapshots: SimSnapshotRing = null
 
 var _spawn: TraprushCheckpointSpawn = null
 var _graph: TraprushPortalGraph = null
@@ -33,6 +37,7 @@ var _actor_id: int = 0
 var _content_version: String = ""
 var _trace_id: String = ""
 var _next_command_seq: int = 1
+var _hazard_period_ticks: int = 0
 
 
 static func assemble(layout: Dictionary) -> TraprushGrayboxCourse:
@@ -55,6 +60,9 @@ static func assemble(layout: Dictionary) -> TraprushGrayboxCourse:
 	var actor_read: Dictionary = _require_actor_id(layout)
 	var version_read: Dictionary = _require_nonempty_string(layout, "content_version")
 	var trace_read: Dictionary = _require_nonempty_string(layout, "trace_id")
+	var capacity_read: Dictionary = _require_int(layout, "snapshot_capacity")
+	var hazard_read: Dictionary = _require_box(layout, "hazard")
+	var period_read: Dictionary = _require_int(layout, "hazard_period_ticks")
 	if (
 		not _flag(seed_read)
 		or not _flag(start_x_read)
@@ -75,7 +83,16 @@ static func assemble(layout: Dictionary) -> TraprushGrayboxCourse:
 		or not _flag(actor_read)
 		or not _flag(version_read)
 		or not _flag(trace_read)
+		or not _flag(capacity_read)
+		or not _flag(hazard_read)
+		or not _flag(period_read)
 	):
+		return null
+	var hazard_period_ticks: int = _value(period_read)
+	if hazard_period_ticks < 1:
+		return null
+	var ring: SimSnapshotRing = SimSnapshotRing.create(_value(capacity_read))
+	if ring == null:
 		return null
 	var crate_max_health: int = _value(health_read)
 	var crate_obj: TraprushDestructible = Destructible.create(crate_max_health)
@@ -119,6 +136,16 @@ static func assemble(layout: Dictionary) -> TraprushGrayboxCourse:
 	)
 	if crate_id < 1:
 		return null
+	var hazard_id: int = sim.spawn_static_box(
+		_int_at(hazard_read, "x"),
+		_int_at(hazard_read, "y"),
+		_int_at(hazard_read, "z"),
+		_int_at(hazard_read, "half_x"),
+		_int_at(hazard_read, "half_y"),
+		_int_at(hazard_read, "half_z")
+	)
+	if hazard_id < 1:
+		return null
 	var spawned_pad_ids: Array[int] = []
 	spawned_pad_ids.resize(pad_boxes.size())
 	for pad_index: int in range(pad_boxes.size()):
@@ -147,16 +174,21 @@ static func assemble(layout: Dictionary) -> TraprushGrayboxCourse:
 	course.track = CheckpointTrack.from_int_array(ids)
 	course.wall_box_id = wall_id
 	course.crate_box_id = crate_id
+	course.hazard_box_id = hazard_id
 	course.crate = crate_obj
 	course.pad_box_ids = spawned_pad_ids
 	course._spawn = spawn
 	course._graph = graph
 	course._checkpoint_ids = ids
 	course.tape = SimReplayBuffer.new(_value(seed_read))
+	course.snapshots = ring
 	course._actor_id = _value(actor_read)
 	course._content_version = _text(version_read)
 	course._trace_id = _text(trace_read)
 	course._next_command_seq = 1
+	course._hazard_period_ticks = hazard_period_ticks
+	if not course.snapshots.record(course.world):
+		return null
 	return course
 
 
@@ -183,6 +215,18 @@ func try_step_intent(payload: Dictionary, jump_dy: int) -> Dictionary:
 		return result
 	_next_command_seq += 1
 	return result
+
+
+func try_commit_tick() -> bool:
+	if world == null or snapshots == null:
+		return false
+	world.tick()
+	var solid: bool = ((world.tick_index / _hazard_period_ticks) % 2) == 0
+	if not world.set_static_box_solid(hazard_box_id, solid):
+		return false
+	if not snapshots.record(world):
+		return false
+	return true
 
 
 func try_break_crate(damage: int) -> Dictionary:
