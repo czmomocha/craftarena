@@ -5,6 +5,7 @@ extends RefCounted
 ## 依据 CD-21 §4.2 / §5.2 与 CD-61 M1 灰盒：有序检查点、传送不得跳点、破坏后开路。
 ## 灰盒检查点垫走 PadAccept / CD-21 §8：完成由占用判定，客户端不得断言。
 ## 位移、jump_dy、max_hops、max_health 均由调用方传入，本文件不发明产品常数。
+## 成功 PLAYER 意图写入 SimReplayBuffer（CD-43 命令日志 + 种子）；磁带不回放进 world。
 ## 不调用 world.tick()；不从客户端 Dictionary 读最终位置或完成标志；不实现 Shove、道具、2p、名次或 Headless。
 
 const IntentStepper := preload("res://src/games/traprush/intent_stepper.gd")
@@ -23,10 +24,15 @@ var wall_box_id: int = 0
 var crate_box_id: int = 0
 var crate: TraprushDestructible = null
 var pad_box_ids: Array[int] = []
+var tape: SimReplayBuffer = null
 
 var _spawn: TraprushCheckpointSpawn = null
 var _graph: TraprushPortalGraph = null
 var _checkpoint_ids: Array[int] = []
+var _actor_id: int = 0
+var _content_version: String = ""
+var _trace_id: String = ""
+var _next_command_seq: int = 1
 
 
 static func assemble(layout: Dictionary) -> TraprushGrayboxCourse:
@@ -46,6 +52,9 @@ static func assemble(layout: Dictionary) -> TraprushGrayboxCourse:
 	var poses_read: Dictionary = _require_pose_list(layout, "checkpoint_poses")
 	var up_read: Dictionary = _require_portal(layout, "up_portal")
 	var side_read: Dictionary = _require_portal(layout, "side_portal")
+	var actor_read: Dictionary = _require_actor_id(layout)
+	var version_read: Dictionary = _require_nonempty_string(layout, "content_version")
+	var trace_read: Dictionary = _require_nonempty_string(layout, "trace_id")
 	if (
 		not _flag(seed_read)
 		or not _flag(start_x_read)
@@ -63,6 +72,9 @@ static func assemble(layout: Dictionary) -> TraprushGrayboxCourse:
 		or not _flag(poses_read)
 		or not _flag(up_read)
 		or not _flag(side_read)
+		or not _flag(actor_read)
+		or not _flag(version_read)
+		or not _flag(trace_read)
 	):
 		return null
 	var crate_max_health: int = _value(health_read)
@@ -140,11 +152,37 @@ static func assemble(layout: Dictionary) -> TraprushGrayboxCourse:
 	course._spawn = spawn
 	course._graph = graph
 	course._checkpoint_ids = ids
+	course.tape = SimReplayBuffer.new(_value(seed_read))
+	course._actor_id = _value(actor_read)
+	course._content_version = _text(version_read)
+	course._trace_id = _text(trace_read)
+	course._next_command_seq = 1
 	return course
 
 
 func try_step_intent(payload: Dictionary, jump_dy: int) -> Dictionary:
-	return IntentStepper.apply(world, entity_id, payload, jump_dy, _spawn, track)
+	var result: Dictionary = IntentStepper.apply(world, entity_id, payload, jump_dy, _spawn, track)
+	if not _flag(result):
+		return result
+	var command: SharedCommand = SharedCommand.create(
+		_next_command_seq,
+		_actor_id,
+		_next_command_seq,
+		world.tick_index,
+		0,
+		_content_version,
+		payload.duplicate(true),
+		_trace_id,
+		SharedCommand.Kind.PLAYER
+	)
+	if command == null:
+		push_error("TraprushGrayboxCourse: SharedCommand.create failed after accepted intent")
+		return result
+	if not tape.append(command):
+		push_error("TraprushGrayboxCourse: SimReplayBuffer.append failed after accepted intent")
+		return result
+	_next_command_seq += 1
+	return result
 
 
 func try_break_crate(damage: int) -> Dictionary:
@@ -182,6 +220,28 @@ static func _require_int(source: Dictionary, key: String) -> Dictionary:
 		return {"ok": false, "value": 0}
 	var number: int = raw
 	return {"ok": true, "value": number}
+
+
+static func _require_actor_id(source: Dictionary) -> Dictionary:
+	var read: Dictionary = _require_int(source, "actor_id")
+	if not _flag(read):
+		return {"ok": false, "value": 0}
+	var actor_id: int = _value(read)
+	if not SharedIds.is_valid(actor_id):
+		return {"ok": false, "value": 0}
+	return {"ok": true, "value": actor_id}
+
+
+static func _require_nonempty_string(source: Dictionary, key: String) -> Dictionary:
+	if not source.has(key):
+		return {"ok": false, "value": ""}
+	var raw: Variant = source[key]
+	if typeof(raw) != TYPE_STRING:
+		return {"ok": false, "value": ""}
+	var text: String = raw
+	if text.is_empty():
+		return {"ok": false, "value": ""}
+	return {"ok": true, "value": text}
 
 
 static func _require_nested(source: Dictionary, key: String) -> Dictionary:
@@ -422,3 +482,11 @@ static func _flag(result: Dictionary) -> bool:
 static func _value(result: Dictionary) -> int:
 	var number: int = result.get("value", 0)
 	return number
+
+
+static func _text(result: Dictionary) -> String:
+	var raw: Variant = result.get("value", "")
+	if typeof(raw) != TYPE_STRING:
+		return ""
+	var text: String = raw
+	return text
