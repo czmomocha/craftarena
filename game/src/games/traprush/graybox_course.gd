@@ -7,13 +7,15 @@ extends RefCounted
 ## 位移、jump_dy、max_hops、max_health、period、snapshot capacity 均由调用方传入，不锁定 Tick/快照 Hz（CD-63）。
 ## 成功 PLAYER 意图写入 SimReplayBuffer（CD-43 命令日志 + 种子）；磁带不回放进 world。
 ## assemble 记录 tick 0 关键快照；try_commit_tick 推进 tick、按调用方周期切换 hazard 阻挡、再 record。
-## try_step_intent / try_interact 成功入带；打箱 / 传送 / 检查点不 tick、不 record。
+## try_step_intent / try_interact / try_use_item 成功入带；打箱 / 传送 / 检查点不 tick、不 record。
 ## try_interact 仅在 overlapping_static_boxes 含 crate 时按调用方 damage 走 Destructible；摧毁则关闭 crate 盒阻挡。
+## try_use_item 用当前姿态加调用方 reach 得到候选坐标，overlapping_static_boxes_at 含 crate 时才伤害；伤害与 reach 不从 payload 读取。
 ## try_break_crate 保持测试入口：不要求重叠、不入带。
-## 不从客户端 Dictionary 读最终位置、障碍死亡或完成标志；不实现 UseItemIntent、道具栏、2p、名次或 Headless。
+## 不从客户端 Dictionary 读最终位置、障碍死亡、道具命中或完成标志；不实现道具栏、2p、名次或 Headless。
 
 const IntentStepper := preload("res://src/games/traprush/intent_stepper.gd")
 const InteractIntent := preload("res://src/games/traprush/interact_intent.gd")
+const UseItemIntent := preload("res://src/games/traprush/use_item_intent.gd")
 const PortalLanding := preload("res://src/games/traprush/portal_landing.gd")
 const PortalGraph := preload("res://src/games/traprush/portal_graph.gd")
 const PortalLink := preload("res://src/games/traprush/portal_link.gd")
@@ -226,6 +228,69 @@ func try_interact(payload: Dictionary, damage: int) -> Dictionary:
 	if not _flag(decoded):
 		return failed
 	var overlapping: PackedInt32Array = world.overlapping_static_boxes(entity_id)
+	var crate_in_reach: bool = false
+	for index: int in range(overlapping.size()):
+		if overlapping[index] == crate_box_id:
+			crate_in_reach = true
+			break
+	if not crate_in_reach:
+		return failed
+	var result: Dictionary = crate.apply_damage(damage)
+	if not _flag(result):
+		return result
+	var destroyed: bool = result.get("destroyed", false)
+	if destroyed:
+		world.set_static_box_solid(crate_box_id, false)
+	var command: SharedCommand = SharedCommand.create(
+		_next_command_seq,
+		_actor_id,
+		_next_command_seq,
+		world.tick_index,
+		0,
+		_content_version,
+		payload.duplicate(true),
+		_trace_id,
+		SharedCommand.Kind.PLAYER
+	)
+	if command == null:
+		push_error("TraprushGrayboxCourse: SharedCommand.create failed after accepted intent")
+		return result
+	if not tape.append(command):
+		push_error("TraprushGrayboxCourse: SimReplayBuffer.append failed after accepted intent")
+		return result
+	_next_command_seq += 1
+	return result
+
+
+func try_use_item(
+	payload: Dictionary,
+	damage: int,
+	reach_dx: int,
+	reach_dy: int,
+	reach_dz: int
+) -> Dictionary:
+	var failed: Dictionary = {"ok": false}
+	var decoded: Dictionary = UseItemIntent.decode(payload)
+	if not _flag(decoded):
+		return failed
+	var pose: Dictionary = world.get_pose(entity_id)
+	if pose.is_empty():
+		return failed
+	var pose_x: int = pose.get("x", 0)
+	var pose_y: int = pose.get("y", 0)
+	var pose_z: int = pose.get("z", 0)
+	var cand_x_res: FixedResult = Fixed.try_add(pose_x, reach_dx)
+	if not cand_x_res.ok:
+		return failed
+	var cand_y_res: FixedResult = Fixed.try_add(pose_y, reach_dy)
+	if not cand_y_res.ok:
+		return failed
+	var cand_z_res: FixedResult = Fixed.try_add(pose_z, reach_dz)
+	if not cand_z_res.ok:
+		return failed
+	var overlapping: PackedInt32Array = world.overlapping_static_boxes_at(
+		entity_id, cand_x_res.value, cand_y_res.value, cand_z_res.value
+	)
 	var crate_in_reach: bool = false
 	for index: int in range(overlapping.size()):
 		if overlapping[index] == crate_box_id:
