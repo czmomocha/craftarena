@@ -4,8 +4,8 @@ extends RefCounted
 ## 把 SimReplayBuffer 里的 PLAYER 与 SYSTEM 命令回放到一张刚 assemble 的 GrayboxCourse。
 ## 依据 CD-43：相同种子与输入必须得到相同关键状态哈希。本夹具走 course API，不让 SimulationWorld 解码意图。
 ## Move / Jump / ResetToCheckpoint 走 try_step_intent；Interact 走 try_interact；UseItem 走 try_use_item。
-## SYSTEM 的 place_pose / accept_checkpoint / land_portal / cross_finish / reset_if_out_of_range / break_crate / commit_tick 走对应 course API；land_portal 必须落地；复位必须真正 reset；commit 必须推进到 command.target_tick。
-## commit_tick 的 fall_dy 从 SYSTEM payload 读取。其余 PLAYER 的 jump_dy / support_dy / 伤害 / reach 仍由调用方脚本传入，不锁定 CD-63 数值。
+## SYSTEM 的 place_pose / accept_checkpoint / land_portal / cross_finish / reset_if_out_of_range / break_crate / commit_tick / apply_fall 走对应 course API；land_portal 必须落地；复位必须真正 reset；commit 必须推进到 command.target_tick。
+## commit_tick 与 apply_fall 的 fall_dy 从 SYSTEM payload 读取。其余 PLAYER 的 jump_dy / support_dy / 伤害 / reach 仍由调用方脚本传入，不锁定 CD-63 数值。
 ## 非 commit 命令若 target_tick 大于当前 tick，用脚本 fall_dy 做 try_commit_tick 追上；结尾再追到 until_tick。commit_tick 本身不先 catch_up，避免重复 tick。
 ## Shove 与 BASTION 意图、EDIT / ADMIN、未知 SYSTEM op、已有磁带或非 tick 0 的 course 一律失败。磁带类型本身仍不应用意图。
 
@@ -145,10 +145,19 @@ static func _apply_system(course: TraprushGrayboxCourse, command: SharedCommand)
 		var broken: Dictionary = course.try_break_crate(_value(damage_read))
 		return _flag(broken)
 	if op_name == SystemOps.COMMIT_TICK:
-		var fall_read: Dictionary = _require_int(payload, "fall_dy")
-		if not _flag(fall_read):
+		var commit_fall_read: Dictionary = _require_int(payload, "fall_dy")
+		if not _flag(commit_fall_read):
 			return false
-		if not course.try_commit_tick(_value(fall_read)):
+		if not course.try_commit_tick(_value(commit_fall_read)):
+			return false
+		if course.world == null:
+			return false
+		return course.world.tick_index == command.target_tick
+	if op_name == SystemOps.APPLY_FALL:
+		var apply_fall_read: Dictionary = _require_int(payload, "fall_dy")
+		if not _flag(apply_fall_read):
+			return false
+		if not course.try_apply_fall(_value(apply_fall_read)):
 			return false
 		if course.world == null:
 			return false
