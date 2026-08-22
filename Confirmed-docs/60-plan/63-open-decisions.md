@@ -32,7 +32,7 @@ AI 不得把其他文档中的示例表格、推荐项或"建议"当成已确认
 
 已关闭并迁出本清单：唯一 Godot 主 MCP 选定为 Godot AI，插件不入库，遥测强制关（2026-08-21，[ADR-0003](../../docs/adr/0003-godot-mcp-selection.md)、[CD-51 §7](../50-engineering/51-dev-environment.md)）。未完成接入烟测签字前，Agent 仍不得自行安装或写入 CI——那是执行门禁，不是未决选型。
 
-已关闭并迁出本清单：多 Agent 启用时机与运行时（2026-08-21，[ADR-0004](../../docs/adr/0004-multi-agent-adoption-timing-and-architecture.md)）。Cursor 原生 worktree + subagent + hooks；一期不引入 Multica 与 Automations；审查由 Bugbot 承担。启用判据与权限边界见 [CD-52](../50-engineering/52-ai-workflow.md)。A1–A4 已成立；两域已改为按弧开 PR，灰盒基础推击入带见 [PR #75](https://github.com/czmomocha/craftarena/pull/75)，第 3 域未开。
+已关闭并迁出本清单：多 Agent 启用时机与运行时（2026-08-21，[ADR-0004](../../docs/adr/0004-multi-agent-adoption-timing-and-architecture.md)）。Cursor 原生 worktree + subagent + hooks；一期不引入 Multica 与 Automations；审查由 Bugbot 承担。启用判据与权限边界见 [CD-52](../50-engineering/52-ai-workflow.md)。A1–A4 已成立；M1 已退出（2026-08-23）；第 3 域未开；M2 启动前须工具链评审。
 
 已关闭并迁出本清单：定点数单位尺度、舍入、溢出与三角函数（2026-08-21，[ADR-0005](../../docs/adr/0005-fixed-point-numeric-model.md) 选项 1）。合同见 [CD-42 §1.1](../40-technical/42-contracts-and-rulevm.md)。
 
