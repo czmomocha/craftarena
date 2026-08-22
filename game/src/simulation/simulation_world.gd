@@ -14,6 +14,11 @@ extends RefCounted
 ## Overflowing overlap math counts as intersecting. Queries are not hashed.
 ## overlapping_entities lists every other intersecting capsule id in spawn order,
 ## including overflow and excluding self; unknown entities return empty. Queries are not hashed.
+## overlaps_static_box_at / overlapping_static_boxes_at / overlaps_entity_at /
+## overlapping_entities_at use the entity's current radius and height at a candidate
+## (x, y, z) without writing pose. Other capsules stay at their current pose.
+## Unknown ids are false or empty; self is false; overflow counts as intersecting.
+## Non-solid boxes stay queryable. Queries are not hashed.
 ## try_set_pose occupancy-checks the landing pose then teleports; it is not a sweep
 ## and not phase-through. Occupied or overflow destinations reject. set_pose still
 ## writes without occupancy checks so respawn can teleport into a blocked pose.
@@ -76,36 +81,59 @@ func set_static_box_solid(box_id: int, solid: bool) -> bool:
 
 
 func overlaps_static_box(entity_id: int, box_id: int) -> bool:
+	if not _has_entity(entity_id):
+		return false
+	var pose_index: int = entity_id - 1
+	return overlaps_static_box_at(
+		entity_id, box_id, _x[pose_index], _y[pose_index], _z[pose_index]
+	)
+
+
+func overlaps_static_box_at(entity_id: int, box_id: int, x: int, y: int, z: int) -> bool:
 	if not _has_entity(entity_id) or not _has_box(box_id):
 		return false
 	var pose_index: int = entity_id - 1
-	var capsule: KinematicCapsule = _capsule_at(
-		pose_index, _x[pose_index], _y[pose_index], _z[pose_index]
-	)
+	var capsule: KinematicCapsule = _capsule_at(pose_index, x, y, z)
 	var box: StaticAabb = _boxes[box_id - 1]
 	return box.overlaps_capsule(capsule) or not box.overlap_math_ok
 
 
 func overlapping_static_boxes(entity_id: int) -> PackedInt32Array:
+	if not _has_entity(entity_id):
+		return PackedInt32Array()
+	var pose_index: int = entity_id - 1
+	return overlapping_static_boxes_at(
+		entity_id, _x[pose_index], _y[pose_index], _z[pose_index]
+	)
+
+
+func overlapping_static_boxes_at(entity_id: int, x: int, y: int, z: int) -> PackedInt32Array:
 	var ids: PackedInt32Array = PackedInt32Array()
 	if not _has_entity(entity_id):
 		return ids
 	for box_id: int in range(1, _boxes.size() + 1):
-		if overlaps_static_box(entity_id, box_id):
+		if overlaps_static_box_at(entity_id, box_id, x, y, z):
 			ids.append(box_id)
 	return ids
 
 
 func overlaps_entity(entity_id: int, other_id: int) -> bool:
+	if not _has_entity(entity_id):
+		return false
+	var pose_index: int = entity_id - 1
+	return overlaps_entity_at(
+		entity_id, other_id, _x[pose_index], _y[pose_index], _z[pose_index]
+	)
+
+
+func overlaps_entity_at(entity_id: int, other_id: int, x: int, y: int, z: int) -> bool:
 	if not _has_entity(entity_id) or not _has_entity(other_id):
 		return false
 	if entity_id == other_id:
 		return false
 	var pose_index: int = entity_id - 1
 	var other_index: int = other_id - 1
-	var mover: KinematicCapsule = _capsule_at(
-		pose_index, _x[pose_index], _y[pose_index], _z[pose_index]
-	)
+	var mover: KinematicCapsule = _capsule_at(pose_index, x, y, z)
 	var other: KinematicCapsule = _capsule_at(
 		other_index, _x[other_index], _y[other_index], _z[other_index]
 	)
@@ -113,11 +141,20 @@ func overlaps_entity(entity_id: int, other_id: int) -> bool:
 
 
 func overlapping_entities(entity_id: int) -> PackedInt32Array:
+	if not _has_entity(entity_id):
+		return PackedInt32Array()
+	var pose_index: int = entity_id - 1
+	return overlapping_entities_at(
+		entity_id, _x[pose_index], _y[pose_index], _z[pose_index]
+	)
+
+
+func overlapping_entities_at(entity_id: int, x: int, y: int, z: int) -> PackedInt32Array:
 	var ids: PackedInt32Array = PackedInt32Array()
 	if not _has_entity(entity_id):
 		return ids
 	for other_id: int in range(1, _x.size() + 1):
-		if overlaps_entity(entity_id, other_id):
+		if overlaps_entity_at(entity_id, other_id, x, y, z):
 			ids.append(other_id)
 	return ids
 
