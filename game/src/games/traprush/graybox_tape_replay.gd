@@ -1,15 +1,17 @@
 class_name TraprushGrayboxTapeReplay
 extends RefCounted
 
-## 把 SimReplayBuffer 里的 PLAYER 命令回放到一张刚 assemble 的 GrayboxCourse。
+## 把 SimReplayBuffer 里的 PLAYER 与 SYSTEM 命令回放到一张刚 assemble 的 GrayboxCourse。
 ## 依据 CD-43：相同种子与输入必须得到相同关键状态哈希。本夹具走 course API，不让 SimulationWorld 解码意图。
 ## Move / Jump / ResetToCheckpoint 走 try_step_intent；Interact 走 try_interact；UseItem 走 try_use_item。
+## SYSTEM 的 place_pose / accept_checkpoint / land_portal / cross_finish 走对应 course API；land_portal 必须落地。
 ## 命令 target_tick 大于当前 tick 时用调用方 fall_dy 做 try_commit_tick 追上；结尾再追到 until_tick。
 ## jump_dy、support_dy、fall_dy、伤害与 reach 均由调用方传入，不从 payload 读取，不锁定 CD-63 数值。
-## 检查点 / 传送 / 冲线 / set_pose / try_break_crate 不在 PLAYER 磁带上；整段 Acceptance 切片不能只靠本夹具复现。
-## Shove 与 BASTION 意图、非 PLAYER kind、已有磁带或非 tick 0 的 course 一律失败。磁带类型本身仍不应用意图。
+## try_break_crate、出界复位、try_commit_tick 仍不入带；回放靠 target_tick / until_tick 追上 commit。
+## Shove 与 BASTION 意图、EDIT / ADMIN、未知 SYSTEM op、已有磁带或非 tick 0 的 course 一律失败。磁带类型本身仍不应用意图。
 
 const PlayerIntentNames := preload("res://src/shared/commands/player_intent_names.gd")
+const SystemOps := preload("res://src/games/traprush/graybox_system_ops.gd")
 
 
 static func try_replay(
@@ -40,17 +42,72 @@ static func try_replay(
 		var command: SharedCommand = tape.command_at(index)
 		if command == null:
 			return failed
-		if command.kind != SharedCommand.Kind.PLAYER:
-			return failed
 		if command.target_tick < 0 or command.target_tick > until_tick:
 			return failed
 		if not _catch_up(course, command.target_tick, fall_dy):
 			return failed
-		if not _apply_player(course, command, parsed):
+		if not _apply_command(course, command, parsed):
 			return failed
 	if not _catch_up(course, until_tick, fall_dy):
 		return failed
 	return {"ok": true}
+
+
+static func _apply_command(
+	course: TraprushGrayboxCourse,
+	command: SharedCommand,
+	parsed: Dictionary
+) -> bool:
+	if command.kind == SharedCommand.Kind.PLAYER:
+		return _apply_player(course, command, parsed)
+	if command.kind == SharedCommand.Kind.SYSTEM:
+		return _apply_system(course, command)
+	return false
+
+
+static func _apply_system(course: TraprushGrayboxCourse, command: SharedCommand) -> bool:
+	var payload: Dictionary = command.payload
+	var op_raw: Variant = payload.get("op", "")
+	if typeof(op_raw) != TYPE_STRING:
+		return false
+	var op_name: String = op_raw
+	if op_name == SystemOps.PLACE_POSE:
+		var x_read: Dictionary = _require_int(payload, "x")
+		var y_read: Dictionary = _require_int(payload, "y")
+		var z_read: Dictionary = _require_int(payload, "z")
+		var yaw_read: Dictionary = _require_int(payload, "yaw_bam")
+		if (
+			not _flag(x_read)
+			or not _flag(y_read)
+			or not _flag(z_read)
+			or not _flag(yaw_read)
+		):
+			return false
+		return course.try_place_pose(
+			_value(x_read), _value(y_read), _value(z_read), _value(yaw_read)
+		)
+	if op_name == SystemOps.ACCEPT_CHECKPOINT:
+		var id_read: Dictionary = _require_int(payload, "checkpoint_id")
+		if not _flag(id_read):
+			return false
+		return course.try_accept_checkpoint(_value(id_read))
+	if op_name == SystemOps.LAND_PORTAL:
+		var start_read: Dictionary = _require_int(payload, "start_id")
+		var dest_read: Dictionary = _require_int(payload, "dest_checkpoint_id")
+		var hops_read: Dictionary = _require_int(payload, "max_hops")
+		if not _flag(start_read) or not _flag(dest_read) or not _flag(hops_read):
+			return false
+		var landed: Dictionary = course.try_land_portal(
+			_value(start_read), _value(dest_read), _value(hops_read)
+		)
+		if not _flag(landed):
+			return false
+		var did_land: bool = landed.get("landed", false)
+		return did_land
+	if op_name == SystemOps.CROSS_FINISH:
+		var crossed: Dictionary = course.try_cross_finish()
+		return _flag(crossed)
+	return false
 
 
 static func _apply_player(

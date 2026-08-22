@@ -4,7 +4,7 @@ Godot 4 + UGC 双玩法（TRAPRUSH / BASTION）项目 Monorepo。代码与仓库
 
 - 工程规则入口：[AGENTS.md](AGENTS.md)
 - 规范唯一事实源：[Confirmed-docs](Confirmed-docs/README.md)
-- 当前阶段：M1 阶段 B 进行中（弧节奏；PLAYER 磁带回放见 [PR #70](https://github.com/czmomocha/craftarena/pull/70)；第 3 域未开）。进度与退出条件见 [CD-61](Confirmed-docs/60-plan/61-milestones.md)。
+- 当前阶段：M1 阶段 B 进行中（弧节奏；SYSTEM 占用日志见 [PR #71](https://github.com/czmomocha/craftarena/pull/71)；第 3 域未开）。进度与退出条件见 [CD-61](Confirmed-docs/60-plan/61-milestones.md)。
 
 ## 目录
 
@@ -115,7 +115,7 @@ CI 当前实际启用了哪些门禁、哪些还没实现，以 [CD-53 §4.1](Co
 
 ## 并行工作区
 
-[CD-52 §5.1](Confirmed-docs/50-engineering/52-ai-workflow.md) 的 A1–A4 已成立，`.cursor/agents/` 与 `.cursor/BUGBOT.md` 已入库。GitHub PR 侧 Bugbot 已跳过，合入靠 CI + 人类批准。阶段 B 已改为按弧开 PR：一弧一个主问题，弧内连续提交后再审；无独立仿真切片时允许只有玩法一个 PR。文档跟弧走。PLAYER 磁带回放见 [PR #70](https://github.com/czmomocha/craftarena/pull/70)，第 3 域未开；继续两域时按 [CD-52 §5](Confirmed-docs/50-engineering/52-ai-workflow.md) 使用隔离 worktree。下面只服务「一个 Agent 在隔离 worktree 里干活」。禁止 symlink `node_modules`，禁止把 Cursor Automations 配进项目。
+[CD-52 §5.1](Confirmed-docs/50-engineering/52-ai-workflow.md) 的 A1–A4 已成立，`.cursor/agents/` 与 `.cursor/BUGBOT.md` 已入库。GitHub PR 侧 Bugbot 已跳过，合入靠 CI + 人类批准。阶段 B 已改为按弧开 PR：一弧一个主问题，弧内连续提交后再审；无独立仿真切片时允许只有玩法一个 PR。文档跟弧走。SYSTEM 占用日志见 [PR #71](https://github.com/czmomocha/craftarena/pull/71)，第 3 域未开；继续两域时按 [CD-52 §5](Confirmed-docs/50-engineering/52-ai-workflow.md) 使用隔离 worktree。下面只服务「一个 Agent 在隔离 worktree 里干活」。禁止 symlink `node_modules`，禁止把 Cursor Automations 配进项目。
 
 Cursor 创建 worktree 时会跑 `.cursor/worktrees.json`：`npm install`、按需从 `$ROOT_WORKTREE_PATH` 拷 `.env` 与 `data/*.sqlite`、按 worktree 目录名写入端口偏移、用 `GODOT4`（Windows 优先 `GODOT4_CONSOLE`）对 `game/` 做 `--import`。主 checkout（与 `$ROOT_WORKTREE_PATH` 相同）不写 `.env`。
 
