@@ -1,6 +1,6 @@
 extends GutTest
 
-## SimulationWorld 骨架：Tick 计数、姿态读写、占用检查瞬移、XZ/Y 离散扫掠阻挡、静态盒阻挡开关、静态盒体积查询、Canonical 状态哈希、可取出的 SimRng。
+## SimulationWorld 骨架：Tick 计数、姿态读写、占用检查瞬移、XZ/Y 离散扫掠阻挡、静态盒阻挡开关、静态盒体积查询、相交静态盒枚举、Canonical 状态哈希、可取出的 SimRng。
 
 const FixedClass := preload("res://src/shared/fixed/fixed.gd")
 const FixedResultClass := preload("res://src/shared/fixed/fixed_result.gd")
@@ -426,6 +426,90 @@ func test_overlaps_static_box_treats_overlap_math_overflow_as_true() -> void:
 	assert_eq(world.tick_index, 0)
 
 
+func test_overlapping_static_boxes_lists_intersecting_ids_in_spawn_order() -> void:
+	var world: SimulationWorld = SimulationWorld.new(1)
+	var entity_id: int = world.spawn_capsule(0, 0, 0, 8, _whole(1), _whole(2))
+	_assert_ids(world.overlapping_static_boxes(entity_id), PackedInt32Array())
+	assert_eq(world.spawn_static_box(_whole(10), 0, 0, _whole(1), _whole(1), _whole(1)), 1)
+	_assert_ids(world.overlapping_static_boxes(entity_id), PackedInt32Array())
+	assert_eq(world.spawn_static_box(0, 0, 0, _whole(1), _whole(1), _whole(1)), 2)
+	assert_eq(world.spawn_static_box(_whole(20), 0, 0, _whole(1), _whole(1), _whole(1)), 3)
+	assert_eq(world.spawn_static_box(0, 0, 0, _whole(2), _whole(2), _whole(2)), 4)
+	_assert_ids(world.overlapping_static_boxes(entity_id), PackedInt32Array([2, 4]))
+	assert_false(world.overlaps_static_box(entity_id, 1))
+	assert_true(world.overlaps_static_box(entity_id, 2))
+	assert_false(world.overlaps_static_box(entity_id, 3))
+	assert_true(world.overlaps_static_box(entity_id, 4))
+	_assert_pose(world, entity_id, 0, 0, 0, 8)
+	assert_eq(world.tick_index, 0)
+
+
+func test_overlapping_static_boxes_unknown_entity_is_empty() -> void:
+	var world: SimulationWorld = SimulationWorld.new(1)
+	_assert_ids(world.overlapping_static_boxes(0), PackedInt32Array())
+	_assert_ids(world.overlapping_static_boxes(-1), PackedInt32Array())
+	_assert_ids(world.overlapping_static_boxes(1), PackedInt32Array())
+	_assert_ids(world.overlapping_static_boxes(99), PackedInt32Array())
+	var entity_id: int = world.spawn_capsule(0, 0, 0, 8, _whole(1), _whole(2))
+	_assert_ids(world.overlapping_static_boxes(0), PackedInt32Array())
+	_assert_ids(world.overlapping_static_boxes(-1), PackedInt32Array())
+	_assert_ids(world.overlapping_static_boxes(99), PackedInt32Array())
+	assert_eq(world.spawn_static_box(0, 0, 0, _whole(1), _whole(1), _whole(1)), 1)
+	var before_hex: String = world.hash_state().hex_encode()
+	_assert_ids(world.overlapping_static_boxes(0), PackedInt32Array())
+	_assert_ids(world.overlapping_static_boxes(-1), PackedInt32Array())
+	_assert_ids(world.overlapping_static_boxes(99), PackedInt32Array())
+	_assert_ids(world.overlapping_static_boxes(entity_id), PackedInt32Array([1]))
+	assert_eq(world.tick_index, 0)
+	_assert_pose(world, entity_id, 0, 0, 0, 8)
+	assert_eq(world.hash_state().hex_encode(), before_hex)
+
+
+func test_overlapping_static_boxes_includes_non_solid() -> void:
+	var world: SimulationWorld = SimulationWorld.new(1)
+	var radius: int = _whole(1)
+	var start_x: int = _whole(4)
+	var into_box: int = -_whole(2)
+	var mover_id: int = world.spawn_capsule(0, 0, 0, 8, radius, _whole(2))
+	assert_eq(world.spawn_static_box(0, 0, 0, _whole(1), _whole(1), _whole(1)), 1)
+	_assert_ids(world.overlapping_static_boxes(mover_id), PackedInt32Array([1]))
+	assert_true(world.set_static_box_solid(1, false))
+	_assert_ids(world.overlapping_static_boxes(mover_id), PackedInt32Array([1]))
+	assert_true(world.overlaps_static_box(mover_id, 1))
+	assert_false(world.is_pose_blocked(mover_id, 0, 0, 0))
+	assert_true(world.try_set_pose(mover_id, 0, 0, 0, 16))
+	_assert_pose(world, mover_id, 0, 0, 0, 16)
+	_assert_ids(world.overlapping_static_boxes(mover_id), PackedInt32Array([1]))
+	assert_true(world.set_pose(mover_id, start_x, 0, 0, 8))
+	assert_true(world.try_move_xz(mover_id, into_box, 0))
+	_assert_pose(world, mover_id, start_x + into_box, 0, 0, 8)
+
+
+func test_overlapping_static_boxes_includes_overlap_math_overflow() -> void:
+	var world: SimulationWorld = SimulationWorld.new(1)
+	var mover_id: int = world.spawn_capsule(
+		FixedClass.INT64_MAX, 0, 0, 8, _whole(1), _whole(2)
+	)
+	assert_eq(world.spawn_static_box(FixedClass.INT64_MIN, 0, 0, 0, 0, 0), 1)
+	assert_true(world.overlaps_static_box(mover_id, 1))
+	_assert_ids(world.overlapping_static_boxes(mover_id), PackedInt32Array([1]))
+	_assert_pose(world, mover_id, FixedClass.INT64_MAX, 0, 0, 8)
+	assert_eq(world.tick_index, 0)
+
+
+func test_overlapping_static_boxes_does_not_change_hash_state() -> void:
+	var world: SimulationWorld = SimulationWorld.new(1)
+	var entity_id: int = world.spawn_capsule(0, 0, 0, 8, _whole(1), _whole(2))
+	assert_eq(world.spawn_static_box(0, 0, 0, _whole(1), _whole(1), _whole(1)), 1)
+	assert_eq(world.spawn_static_box(_whole(10), 0, 0, _whole(1), _whole(1), _whole(1)), 2)
+	var before_hex: String = world.hash_state().hex_encode()
+	_assert_ids(world.overlapping_static_boxes(entity_id), PackedInt32Array([1]))
+	_assert_ids(world.overlapping_static_boxes(0), PackedInt32Array())
+	assert_eq(world.hash_state().hex_encode(), before_hex)
+	_assert_pose(world, entity_id, 0, 0, 0, 8)
+	assert_eq(world.tick_index, 0)
+
+
 func test_set_static_box_solid_keeps_ids_and_only_toggles_that_box() -> void:
 	var world: SimulationWorld = SimulationWorld.new(1)
 	var radius: int = _whole(1)
@@ -592,6 +676,12 @@ func _assert_pose(world: SimulationWorld, entity_id: int, x: int, y: int, z: int
 	assert_eq(pose_y, y)
 	assert_eq(pose_z, z)
 	assert_eq(pose_yaw, yaw)
+
+
+func _assert_ids(actual: PackedInt32Array, expected: PackedInt32Array) -> void:
+	assert_eq(actual.size(), expected.size())
+	for i: int in range(expected.size()):
+		assert_eq(actual[i], expected[i])
 
 
 func _whole(units: int) -> int:
