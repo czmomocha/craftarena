@@ -24,6 +24,11 @@ extends RefCounted
 ## Unknown ids are false or empty; self is false; overflow counts as intersecting
 ## except non-solid boxes, which solid queries skip. Geometry queries still include
 ## non-solid boxes. Queries are not hashed.
+## supporting_solid_static_boxes / supporting_solid_static_boxes_at add caller-supplied
+## support_dy (Q48.16) to y via Fixed.try_add, then reuse overlapping_solid_static_boxes_at.
+## Unknown ids and y-add overflow return empty. is_supported_by_solid /
+## is_supported_by_solid_at are true when that list is non-empty. These queries do not
+## write pose, tick, or hash_state, and do not invent a default drop distance.
 ## try_set_pose occupancy-checks the landing pose then teleports; it is not a sweep
 ## and not phase-through. Occupied or overflow destinations reject. set_pose still
 ## writes without occupancy checks so respawn can teleport into a blocked pose.
@@ -160,6 +165,36 @@ func overlapping_solid_static_boxes_at(entity_id: int, x: int, y: int, z: int) -
 		if overlaps_solid_static_box_at(entity_id, box_id, x, y, z):
 			ids.append(box_id)
 	return ids
+
+
+func supporting_solid_static_boxes(entity_id: int, support_dy: int) -> PackedInt32Array:
+	if not _has_entity(entity_id):
+		return PackedInt32Array()
+	var pose_index: int = entity_id - 1
+	return supporting_solid_static_boxes_at(
+		entity_id, _x[pose_index], _y[pose_index], _z[pose_index], support_dy
+	)
+
+
+func supporting_solid_static_boxes_at(
+	entity_id: int, x: int, y: int, z: int, support_dy: int
+) -> PackedInt32Array:
+	if not _has_entity(entity_id):
+		return PackedInt32Array()
+	var probe_y_res: FixedResult = Fixed.try_add(y, support_dy)
+	if not probe_y_res.ok:
+		return PackedInt32Array()
+	return overlapping_solid_static_boxes_at(entity_id, x, probe_y_res.value, z)
+
+
+func is_supported_by_solid(entity_id: int, support_dy: int) -> bool:
+	return supporting_solid_static_boxes(entity_id, support_dy).size() > 0
+
+
+func is_supported_by_solid_at(
+	entity_id: int, x: int, y: int, z: int, support_dy: int
+) -> bool:
+	return supporting_solid_static_boxes_at(entity_id, x, y, z, support_dy).size() > 0
 
 
 func overlaps_entity(entity_id: int, other_id: int) -> bool:
