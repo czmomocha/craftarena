@@ -1,10 +1,12 @@
 extends GutTest
 
-## TraprushGrayboxCourse：单人灰盒跑道夹具。几何、位移、jump_dy、max_hops、max_health 只由调用方传入。
-## CD-21 §4.2 / §5.2 / §8 与 CD-61 M1：有序检查点、占用垫盒、上下/侧向传送、墙阻挡、打掉箱子后开路。
+## TraprushGrayboxCourse：单人灰盒跑道夹具。几何、位移、jump_dy、max_hops、max_health、period、capacity 只由调用方传入。
+## CD-21 §4.2 / §5.2 / §8 与 CD-61 M1：有序检查点、占用垫盒、上下/侧向传送、墙阻挡、打掉箱子后开路、周期 hazard stub。
 ## 成功 PLAYER 意图写入 SimReplayBuffer（CD-43）；磁带不回放进 world。
+## assemble 记录 tick 0 关键快照；try_commit_tick 推进 tick 并按调用方周期切换 hazard 阻挡。
+## try_step_intent / 打箱 / 传送 / 检查点不 tick、不 record。
 ## 接受检查点前胶囊必须与该垫重叠；测试用 world.set_pose 挪到垫心，course API 不自动传送。
-## 不调用 world.tick()；不读客户端最终位置或完成标志；不覆盖 Shove、道具、2p。
+## 不读客户端最终位置或完成标志；不覆盖 Shove、道具、2p。
 
 const GrayboxCourse := preload("res://src/games/traprush/graybox_course.gd")
 const SharedCommand := preload("res://src/shared/commands/shared_command.gd")
@@ -23,6 +25,8 @@ const START_YAW: int = 8
 const ACTOR_ID: int = 9
 const CONTENT_VERSION: String = "content-v1"
 const TRACE_ID: String = "trace-1"
+const SNAPSHOT_CAPACITY: int = 4
+const HAZARD_PERIOD_TICKS: int = 1
 
 
 func test_assemble_rejects_missing_fields_bad_health_and_failed_spawn() -> void:
@@ -84,10 +88,11 @@ func test_assemble_exposes_world_ids_track_and_crate() -> void:
 	assert_eq(course.entity_id, 1)
 	assert_eq(course.wall_box_id, 1)
 	assert_eq(course.crate_box_id, 2)
+	assert_eq(course.hazard_box_id, 3)
 	assert_eq(course.pad_box_ids.size(), 3)
-	assert_eq(course.pad_box_ids[0], 3)
-	assert_eq(course.pad_box_ids[1], 4)
-	assert_eq(course.pad_box_ids[2], 5)
+	assert_eq(course.pad_box_ids[0], 4)
+	assert_eq(course.pad_box_ids[1], 5)
+	assert_eq(course.pad_box_ids[2], 6)
 	assert_eq(course.crate.max_health(), CRATE_MAX_HEALTH)
 	assert_eq(course.crate.current_health(), CRATE_MAX_HEALTH)
 	assert_false(course.crate.is_destroyed())
@@ -96,6 +101,9 @@ func test_assemble_exposes_world_ids_track_and_crate() -> void:
 	assert_not_null(course.tape)
 	assert_eq(course.tape.size(), 0)
 	assert_eq(course.tape.get_seed(), 1)
+	assert_not_null(course.snapshots)
+	assert_eq(course.snapshots.capacity(), SNAPSHOT_CAPACITY)
+	assert_eq(course.snapshots.size(), 1)
 	_assert_pose(course, _start_x(), 0, 0, START_YAW)
 
 
@@ -306,6 +314,146 @@ func test_try_step_intent_does_not_call_tick() -> void:
 	_assert_pose(course, _start_x(), _whole(1), 0, START_YAW)
 
 
+func test_assemble_rejects_missing_or_invalid_snapshot_hazard_and_period() -> void:
+	var missing_capacity: Dictionary = _valid_layout()
+	missing_capacity.erase("snapshot_capacity")
+	assert_eq(GrayboxCourse.assemble(missing_capacity), null)
+	var zero_capacity: Dictionary = _valid_layout()
+	zero_capacity["snapshot_capacity"] = 0
+	assert_eq(GrayboxCourse.assemble(zero_capacity), null)
+	var negative_capacity: Dictionary = _valid_layout()
+	negative_capacity["snapshot_capacity"] = -1
+	assert_eq(GrayboxCourse.assemble(negative_capacity), null)
+	var float_capacity: Dictionary = _valid_layout()
+	float_capacity["snapshot_capacity"] = 1.0
+	assert_eq(GrayboxCourse.assemble(float_capacity), null)
+	var missing_hazard: Dictionary = _valid_layout()
+	missing_hazard.erase("hazard")
+	assert_eq(GrayboxCourse.assemble(missing_hazard), null)
+	var bad_hazard: Dictionary = _valid_layout()
+	var hazard: Dictionary = _dup_dict(bad_hazard["hazard"])
+	hazard["half_x"] = -1
+	bad_hazard["hazard"] = hazard
+	assert_eq(GrayboxCourse.assemble(bad_hazard), null)
+	var missing_period: Dictionary = _valid_layout()
+	missing_period.erase("hazard_period_ticks")
+	assert_eq(GrayboxCourse.assemble(missing_period), null)
+	var zero_period: Dictionary = _valid_layout()
+	zero_period["hazard_period_ticks"] = 0
+	assert_eq(GrayboxCourse.assemble(zero_period), null)
+	var negative_period: Dictionary = _valid_layout()
+	negative_period["hazard_period_ticks"] = -2
+	assert_eq(GrayboxCourse.assemble(negative_period), null)
+	var float_period: Dictionary = _valid_layout()
+	float_period["hazard_period_ticks"] = 1.0
+	assert_eq(GrayboxCourse.assemble(float_period), null)
+
+
+func test_assemble_records_tick_zero_snapshot_try_step_does_not_record() -> void:
+	var course: GrayboxCourse = GrayboxCourse.assemble(_valid_layout())
+	assert_not_null(course)
+	assert_eq(course.snapshots.size(), 1)
+	var tick0_hex: String = course.snapshots.hash_at_tick(0).hex_encode()
+	assert_eq(tick0_hex, course.world.hash_state().hex_encode())
+	assert_eq(course.world.tick_index, 0)
+	assert_true(_ok(course.try_step_intent(_move_payload(_whole(1), 0), 0)))
+	_assert_pose(course, _start_x() + _whole(1), 0, 0, START_YAW)
+	assert_eq(course.world.tick_index, 0)
+	assert_eq(course.snapshots.size(), 1)
+	assert_ne(course.world.hash_state().hex_encode(), tick0_hex)
+	assert_eq(course.snapshots.hash_at_tick(0).hex_encode(), tick0_hex)
+
+
+func test_period_one_hazard_toggles_plus_x_blocking_on_commit() -> void:
+	var course: GrayboxCourse = GrayboxCourse.assemble(_valid_layout())
+	var dx: int = _hazard_dx()
+	var tape_before: int = course.tape.size()
+	var blocked: Dictionary = course.try_step_intent(_move_payload(dx, 0), 0)
+	assert_true(_ok(blocked))
+	_assert_pose(course, _start_x(), 0, 0, START_YAW)
+	assert_eq(course.world.tick_index, 0)
+	assert_eq(course.tape.size(), tape_before + 1)
+	assert_true(course.try_commit_tick())
+	assert_eq(course.world.tick_index, 1)
+	assert_eq(course.tape.size(), tape_before + 1)
+	assert_eq(course.snapshots.size(), 2)
+	var opened: Dictionary = course.try_step_intent(_move_payload(dx, 0), 0)
+	assert_true(_ok(opened))
+	_assert_pose(course, _start_x() + dx, 0, 0, START_YAW)
+	assert_eq(course.world.tick_index, 1)
+	assert_true(course.try_commit_tick())
+	assert_eq(course.world.tick_index, 2)
+	assert_eq(course.tape.size(), tape_before + 2)
+	var reblocked: Dictionary = course.try_step_intent(_move_payload(dx, 0), 0)
+	assert_true(_ok(reblocked))
+	_assert_pose(course, _start_x() + dx, 0, 0, START_YAW)
+	assert_eq(course.world.tick_index, 2)
+
+
+func test_two_courses_same_move_and_commit_match_tape_state_and_snapshots() -> void:
+	var layout: Dictionary = _valid_layout()
+	var left: GrayboxCourse = GrayboxCourse.assemble(layout)
+	var right: GrayboxCourse = GrayboxCourse.assemble(layout)
+	_run_move_and_commit_sequence(left)
+	_run_move_and_commit_sequence(right)
+	assert_eq(left.tape.hash_tape().hex_encode(), right.tape.hash_tape().hex_encode())
+	assert_eq(left.world.hash_state().hex_encode(), right.world.hash_state().hex_encode())
+	assert_eq(left.world.tick_index, right.world.tick_index)
+	assert_eq(left.snapshots.size(), right.snapshots.size())
+	for tick: int in range(left.world.tick_index + 1):
+		assert_eq(
+			left.snapshots.hash_at_tick(tick).hex_encode(),
+			right.snapshots.hash_at_tick(tick).hex_encode()
+		)
+
+
+func test_snapshot_capacity_two_drops_oldest_tick() -> void:
+	var layout: Dictionary = _valid_layout()
+	layout["snapshot_capacity"] = 2
+	var course: GrayboxCourse = GrayboxCourse.assemble(layout)
+	assert_eq(course.snapshots.capacity(), 2)
+	assert_eq(course.snapshots.size(), 1)
+	assert_ne(course.snapshots.hash_at_tick(0).size(), 0)
+	assert_true(course.try_commit_tick())
+	assert_true(course.try_commit_tick())
+	assert_eq(course.world.tick_index, 2)
+	assert_eq(course.snapshots.size(), 2)
+	assert_eq(course.snapshots.hash_at_tick(0).size(), 0)
+	assert_ne(course.snapshots.hash_at_tick(1).size(), 0)
+	assert_ne(course.snapshots.hash_at_tick(2).size(), 0)
+	assert_true(course.try_commit_tick())
+	assert_eq(course.world.tick_index, 3)
+	assert_eq(course.snapshots.size(), 2)
+	assert_eq(course.snapshots.hash_at_tick(0).size(), 0)
+	assert_eq(course.snapshots.hash_at_tick(1).size(), 0)
+	assert_ne(course.snapshots.hash_at_tick(2).size(), 0)
+	assert_ne(course.snapshots.hash_at_tick(3).size(), 0)
+
+
+func test_try_commit_tick_rejects_null_world_or_snapshots() -> void:
+	var empty: GrayboxCourse = GrayboxCourse.new()
+	assert_false(empty.try_commit_tick())
+	var missing_world: GrayboxCourse = GrayboxCourse.assemble(_valid_layout())
+	missing_world.world = null
+	assert_false(missing_world.try_commit_tick())
+	var missing_ring: GrayboxCourse = GrayboxCourse.assemble(_valid_layout())
+	missing_ring.snapshots = null
+	assert_false(missing_ring.try_commit_tick())
+	assert_eq(missing_ring.world.tick_index, 0)
+
+
+func _run_move_and_commit_sequence(course: GrayboxCourse) -> void:
+	assert_true(_ok(course.try_step_intent(_move_payload(_whole(1), 0), 0)))
+	_assert_pose(course, _start_x() + _whole(1), 0, 0, START_YAW)
+	assert_true(course.try_commit_tick())
+	assert_true(_ok(course.try_step_intent(_move_payload(_whole(1), 0), 0)))
+	_assert_pose(course, _start_x() + _whole(2), 0, 0, START_YAW)
+	assert_true(course.try_commit_tick())
+	assert_eq(course.world.tick_index, 2)
+	assert_eq(course.tape.size(), 2)
+	assert_eq(course.snapshots.size(), 3)
+
+
 func _run_tape_hash_sequence(course: GrayboxCourse) -> void:
 	var blocked: Dictionary = course.try_step_intent(_move_payload(_wall_dx(), 0), 0)
 	assert_true(_ok(blocked))
@@ -342,6 +490,7 @@ func _valid_layout() -> Dictionary:
 		"actor_id": ACTOR_ID,
 		"content_version": CONTENT_VERSION,
 		"trace_id": TRACE_ID,
+		"snapshot_capacity": SNAPSHOT_CAPACITY,
 		"start_x": start_x,
 		"start_y": start_y,
 		"start_z": start_z,
@@ -364,6 +513,15 @@ func _valid_layout() -> Dictionary:
 			"half_y": half,
 			"half_z": half,
 		},
+		"hazard": {
+			"x": start_x + _hazard_dx(),
+			"y": 0,
+			"z": 0,
+			"half_x": half,
+			"half_y": half,
+			"half_z": half,
+		},
+		"hazard_period_ticks": HAZARD_PERIOD_TICKS,
 		"crate_max_health": CRATE_MAX_HEALTH,
 		"checkpoint_ids": [CHECKPOINT_A, CHECKPOINT_B, CHECKPOINT_C],
 		"checkpoint_pads": [
@@ -422,6 +580,10 @@ func _wall_dx() -> int:
 
 func _crate_dz() -> int:
 	return _whole(10)
+
+
+func _hazard_dx() -> int:
+	return _whole(6)
 
 
 func _up_dest_y() -> int:
