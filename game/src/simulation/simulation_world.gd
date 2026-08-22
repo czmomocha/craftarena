@@ -8,6 +8,8 @@ extends RefCounted
 ## 1-based and non-solid boxes stay in the array. Solidity is not part of hash_state.
 ## overlaps_static_box queries the current capsule against one AABB; non-solid boxes
 ## stay queryable. Overflowing overlap math counts as intersecting. Queries are not hashed.
+## overlapping_static_boxes lists every intersecting AABB id in spawn order, including
+## non-solid and overflow; unknown entities return empty. Queries are not hashed.
 ## try_set_pose occupancy-checks the landing pose then teleports; it is not a sweep
 ## and not phase-through. Occupied or overflow destinations reject. set_pose still
 ## writes without occupancy checks so respawn can teleport into a blocked pose.
@@ -78,6 +80,16 @@ func overlaps_static_box(entity_id: int, box_id: int) -> bool:
 	)
 	var box: StaticAabb = _boxes[box_id - 1]
 	return box.overlaps_capsule(capsule) or not box.overlap_math_ok
+
+
+func overlapping_static_boxes(entity_id: int) -> PackedInt32Array:
+	var ids: PackedInt32Array = PackedInt32Array()
+	if not _has_entity(entity_id):
+		return ids
+	for box_id: int in range(1, _boxes.size() + 1):
+		if overlaps_static_box(entity_id, box_id):
+			ids.append(box_id)
+	return ids
 
 
 func set_pose(entity_id: int, x: int, y: int, z: int, yaw: int) -> bool:
