@@ -4,10 +4,11 @@ extends GutTest
 ## CD-21 §4.2 / §5.2 / §8 与 CD-61 M1：有序检查点、占用垫盒、上下/侧向传送、墙阻挡、打掉箱子后开路、周期 hazard stub、爆破道具 stub。
 ## 成功 PLAYER 意图写入 SimReplayBuffer（CD-43）；磁带不回放进 world。
 ## assemble 记录 tick 0 关键快照；try_commit_tick 推进 tick 并按调用方周期切换 hazard 阻挡。
-## try_step_intent / try_interact / try_use_item 成功入带；打箱 / 传送 / 检查点不 tick、不 record。
+## try_step_intent / try_interact / try_use_item 成功入带；打箱 / 传送 / 检查点 / 冲线不 tick、不 record。
 ## try_interact 要求 overlapping_static_boxes 含 crate；测试用 world.set_pose 挪到箱心，course API 不自动传送。
 ## try_use_item 用当前姿态加调用方 reach 做 overlapping_static_boxes_at；测试站在起点，reach 指向 _crate_z，不 set_pose 到箱上。
-## 不读客户端最终位置、障碍死亡、道具命中或完成标志；不覆盖道具栏、2p。
+## 终点垫与起点不重合；冲线用 set_pose 到终点盒心。finish_tick 未冲线为 -1，不入 hash_state。
+## 不读客户端最终位置、障碍死亡、道具命中、冲线结果或完成标志；不覆盖道具栏、2p。
 
 const GrayboxCourse := preload("res://src/games/traprush/graybox_course.gd")
 const SharedCommand := preload("res://src/shared/commands/shared_command.gd")
@@ -81,6 +82,14 @@ func test_assemble_rejects_missing_fields_bad_health_and_failed_spawn() -> void:
 	pads_bad_spawn[1] = failing_pad
 	bad_pad_spawn["checkpoint_pads"] = pads_bad_spawn
 	assert_eq(GrayboxCourse.assemble(bad_pad_spawn), null)
+	var missing_finish: Dictionary = _valid_layout()
+	missing_finish.erase("finish")
+	assert_eq(GrayboxCourse.assemble(missing_finish), null)
+	var bad_finish: Dictionary = _valid_layout()
+	var finish_box: Dictionary = _dup_dict(bad_finish["finish"])
+	finish_box["half_x"] = -1
+	bad_finish["finish"] = finish_box
+	assert_eq(GrayboxCourse.assemble(bad_finish), null)
 
 
 func test_assemble_exposes_world_ids_track_and_crate() -> void:
@@ -94,6 +103,10 @@ func test_assemble_exposes_world_ids_track_and_crate() -> void:
 	assert_eq(course.pad_box_ids[0], 4)
 	assert_eq(course.pad_box_ids[1], 5)
 	assert_eq(course.pad_box_ids[2], 6)
+	assert_eq(course.finish_box_id, 7)
+	assert_eq(course.finish_tick, -1)
+	assert_false(course.world.is_static_box_solid(course.finish_box_id))
+	assert_false(course.world.overlaps_static_box(course.entity_id, course.finish_box_id))
 	assert_eq(course.crate.max_health(), CRATE_MAX_HEALTH)
 	assert_eq(course.crate.current_health(), CRATE_MAX_HEALTH)
 	assert_false(course.crate.is_destroyed())
@@ -726,6 +739,119 @@ func test_try_commit_tick_rejects_null_world_or_snapshots() -> void:
 	assert_eq(missing_ring.world.tick_index, 0)
 
 
+func test_start_pose_does_not_cross_finish() -> void:
+	var course: GrayboxCourse = GrayboxCourse.assemble(_valid_layout())
+	assert_eq(course.finish_tick, -1)
+	assert_false(course.world.overlaps_static_box(course.entity_id, course.finish_box_id))
+	var rejected: Dictionary = course.try_cross_finish()
+	assert_false(_ok(rejected))
+	assert_false(rejected.has("finish_tick"))
+	assert_eq(course.finish_tick, -1)
+	assert_eq(course.tape.size(), 0)
+	assert_eq(course.world.tick_index, 0)
+	assert_eq(course.snapshots.size(), 1)
+	_assert_pose(course, _start_x(), 0, 0, START_YAW)
+
+
+func test_finish_occupancy_without_all_checkpoints_fails() -> void:
+	var course: GrayboxCourse = GrayboxCourse.assemble(_valid_layout())
+	_set_pose_on_finish(course)
+	assert_true(course.world.overlaps_static_box(course.entity_id, course.finish_box_id))
+	assert_false(course.track.is_finished())
+	var rejected: Dictionary = course.try_cross_finish()
+	assert_false(_ok(rejected))
+	assert_eq(course.finish_tick, -1)
+	assert_eq(course.tape.size(), 0)
+	assert_eq(course.world.tick_index, 0)
+	assert_eq(course.snapshots.size(), 1)
+	_assert_pose(course, _start_x(), 0, _finish_z(), START_YAW)
+
+
+func test_all_checkpoints_without_finish_occupancy_fails() -> void:
+	var course: GrayboxCourse = GrayboxCourse.assemble(_valid_layout())
+	_accept_ordered_checkpoints(course)
+	assert_true(course.track.is_finished())
+	assert_false(course.world.overlaps_static_box(course.entity_id, course.finish_box_id))
+	var rejected: Dictionary = course.try_cross_finish()
+	assert_false(_ok(rejected))
+	assert_eq(course.finish_tick, -1)
+	assert_eq(course.tape.size(), 0)
+	assert_eq(course.world.tick_index, 0)
+	assert_eq(course.snapshots.size(), 1)
+
+
+func test_all_checkpoints_and_finish_occupancy_records_tick_index() -> void:
+	var course: GrayboxCourse = GrayboxCourse.assemble(_valid_layout())
+	_accept_ordered_checkpoints(course)
+	_set_pose_on_finish(course)
+	var crossed: Dictionary = course.try_cross_finish()
+	assert_true(_ok(crossed))
+	assert_eq(_finish_tick(crossed), 0)
+	assert_eq(course.finish_tick, 0)
+	assert_eq(course.finish_tick, course.world.tick_index)
+	assert_eq(course.tape.size(), 0)
+	assert_eq(course.world.tick_index, 0)
+	assert_eq(course.snapshots.size(), 1)
+	_assert_pose(course, _start_x(), 0, _finish_z(), START_YAW)
+
+
+func test_cross_finish_after_commit_uses_world_tick_and_is_idempotent() -> void:
+	var course: GrayboxCourse = GrayboxCourse.assemble(_valid_layout())
+	_accept_ordered_checkpoints(course)
+	assert_true(course.try_commit_tick())
+	assert_eq(course.world.tick_index, 1)
+	assert_eq(course.snapshots.size(), 2)
+	_set_pose_on_finish(course)
+	var crossed: Dictionary = course.try_cross_finish()
+	assert_true(_ok(crossed))
+	assert_eq(_finish_tick(crossed), 1)
+	assert_eq(course.finish_tick, 1)
+	assert_eq(course.tape.size(), 0)
+	assert_eq(course.world.tick_index, 1)
+	assert_eq(course.snapshots.size(), 2)
+	assert_true(course.try_commit_tick())
+	assert_eq(course.world.tick_index, 2)
+	_set_pose(course, _start_x(), 0, 0, START_YAW)
+	assert_false(course.world.overlaps_static_box(course.entity_id, course.finish_box_id))
+	var again: Dictionary = course.try_cross_finish()
+	assert_true(_ok(again))
+	assert_eq(_finish_tick(again), 1)
+	assert_eq(course.finish_tick, 1)
+	assert_eq(course.tape.size(), 0)
+	assert_eq(course.world.tick_index, 2)
+	assert_eq(course.snapshots.size(), 3)
+
+
+func test_two_courses_same_finish_match_tick_tape_and_state() -> void:
+	var layout: Dictionary = _valid_layout()
+	var left: GrayboxCourse = GrayboxCourse.assemble(layout)
+	var right: GrayboxCourse = GrayboxCourse.assemble(layout)
+	_run_finish_after_commit(left)
+	_run_finish_after_commit(right)
+	assert_eq(left.finish_tick, 1)
+	assert_eq(right.finish_tick, 1)
+	assert_eq(left.finish_tick, right.finish_tick)
+	assert_eq(left.tape.hash_tape().hex_encode(), right.tape.hash_tape().hex_encode())
+	assert_eq(left.world.hash_state().hex_encode(), right.world.hash_state().hex_encode())
+	assert_eq(left.world.tick_index, right.world.tick_index)
+	assert_eq(left.tape.size(), 0)
+	assert_eq(right.tape.size(), 0)
+
+
+func _run_finish_after_commit(course: GrayboxCourse) -> void:
+	_accept_ordered_checkpoints(course)
+	assert_true(course.try_commit_tick())
+	_set_pose_on_finish(course)
+	var crossed: Dictionary = course.try_cross_finish()
+	assert_true(_ok(crossed))
+	assert_eq(_finish_tick(crossed), 1)
+	assert_eq(course.finish_tick, 1)
+	assert_eq(course.finish_tick, course.world.tick_index)
+	assert_eq(course.tape.size(), 0)
+	assert_eq(course.world.tick_index, 1)
+	assert_eq(course.snapshots.size(), 2)
+
+
 func _run_move_and_commit_sequence(course: GrayboxCourse) -> void:
 	assert_true(_ok(course.try_step_intent(_move_payload(_whole(1), 0), 0)))
 	_assert_pose(course, _start_x() + _whole(1), 0, 0, START_YAW)
@@ -823,6 +949,7 @@ func _valid_layout() -> Dictionary:
 		},
 		"hazard_period_ticks": HAZARD_PERIOD_TICKS,
 		"crate_max_health": CRATE_MAX_HEALTH,
+		"finish": _pad_box(start_x, 0, _finish_z()),
 		"checkpoint_ids": [CHECKPOINT_A, CHECKPOINT_B, CHECKPOINT_C],
 		"checkpoint_pads": [
 			_pad_box(start_x, 0, 0),
@@ -934,6 +1061,10 @@ func _side_dest_z() -> int:
 	return _whole(20)
 
 
+func _finish_z() -> int:
+	return _whole(30)
+
+
 func _pad_box(x: int, y: int, z: int) -> Dictionary:
 	var half: int = _whole(1)
 	return {
@@ -948,6 +1079,20 @@ func _pad_box(x: int, y: int, z: int) -> Dictionary:
 
 func _set_pose_on_crate(course: GrayboxCourse) -> void:
 	_set_pose(course, _start_x(), 0, _crate_z(), START_YAW)
+
+
+func _set_pose_on_finish(course: GrayboxCourse) -> void:
+	_set_pose(course, _start_x(), 0, _finish_z(), START_YAW)
+
+
+func _accept_ordered_checkpoints(course: GrayboxCourse) -> void:
+	_set_pose(course, _start_x(), 0, 0, START_YAW)
+	assert_true(course.try_accept_checkpoint(CHECKPOINT_A))
+	_set_pose(course, _start_x(), _up_dest_y(), 0, 0)
+	assert_true(course.try_accept_checkpoint(CHECKPOINT_B))
+	_set_pose(course, _start_x(), 0, _side_dest_z(), START_YAW)
+	assert_true(course.try_accept_checkpoint(CHECKPOINT_C))
+	assert_true(course.track.is_finished())
 
 
 func _set_pose(course: GrayboxCourse, x: int, y: int, z: int, yaw: int) -> void:
@@ -984,6 +1129,11 @@ func _landed(result: Dictionary) -> bool:
 func _health(result: Dictionary) -> int:
 	var remaining: int = result.get("health", -1)
 	return remaining
+
+
+func _finish_tick(result: Dictionary) -> int:
+	var tick: int = result.get("finish_tick", -2)
+	return tick
 
 
 func _dup_dict(raw: Variant) -> Dictionary:
