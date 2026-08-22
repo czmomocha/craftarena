@@ -4,14 +4,16 @@ extends RefCounted
 ## TRAPRUSH 单人灰盒跑道夹具：组装检查点、上下/侧向传送、墙盒、可破坏箱、周期 hazard。
 ## 依据 CD-21 §4.2 / §5.2 / §8 与 CD-61 M1 灰盒：有序检查点、传送不得跳点、破坏后开路、1 个周期障碍 stub。
 ## 灰盒检查点垫走 PadAccept / CD-21 §8：完成由占用判定，客户端不得断言。
+## 终点垫走 FinishAccept：冲线由占用 + 全部强制检查点完成判定；无 FinishIntent（CD-21 §6 / §8）。
+## finish_tick 是权威 world.tick_index，未冲线哨兵为 -1；不写入 SimulationWorld.hash_state。
 ## 位移、jump_dy、max_hops、max_health、period、snapshot capacity 均由调用方传入，不锁定 Tick/快照 Hz（CD-63）。
 ## 成功 PLAYER 意图写入 SimReplayBuffer（CD-43 命令日志 + 种子）；磁带不回放进 world。
 ## assemble 记录 tick 0 关键快照；try_commit_tick 推进 tick、按调用方周期切换 hazard 阻挡、再 record。
-## try_step_intent / try_interact / try_use_item 成功入带；打箱 / 传送 / 检查点不 tick、不 record。
+## try_step_intent / try_interact / try_use_item 成功入带；打箱 / 传送 / 检查点 / 冲线不 tick、不 record、不入带。
 ## try_interact 仅在 overlapping_static_boxes 含 crate 时按调用方 damage 走 Destructible；摧毁则关闭 crate 盒阻挡。
 ## try_use_item 用当前姿态加调用方 reach 得到候选坐标，overlapping_static_boxes_at 含 crate 时才伤害；伤害与 reach 不从 payload 读取。
 ## try_break_crate 保持测试入口：不要求重叠、不入带。
-## 不从客户端 Dictionary 读最终位置、障碍死亡、道具命中或完成标志；不实现道具栏、2p、名次或 Headless。
+## 不从客户端 Dictionary 读最终位置、障碍死亡、道具命中、冲线结果或完成标志；不实现道具栏、2p、名次或 Headless。
 
 const IntentStepper := preload("res://src/games/traprush/intent_stepper.gd")
 const InteractIntent := preload("res://src/games/traprush/interact_intent.gd")
@@ -23,6 +25,7 @@ const CheckpointTrack := preload("res://src/games/traprush/checkpoint_track.gd")
 const CheckpointSpawn := preload("res://src/games/traprush/checkpoint_spawn.gd")
 const Destructible := preload("res://src/games/traprush/destructible.gd")
 const PadAccept := preload("res://src/games/traprush/pad_accept.gd")
+const FinishAccept := preload("res://src/games/traprush/finish_accept.gd")
 
 var world: SimulationWorld = null
 var entity_id: int = 0
@@ -30,6 +33,8 @@ var track: TraprushCheckpointTrack = null
 var wall_box_id: int = 0
 var crate_box_id: int = 0
 var hazard_box_id: int = 0
+var finish_box_id: int = 0
+var finish_tick: int = -1
 var crate: TraprushDestructible = null
 var pad_box_ids: Array[int] = []
 var tape: SimReplayBuffer = null
@@ -68,6 +73,7 @@ static func assemble(layout: Dictionary) -> TraprushGrayboxCourse:
 	var capacity_read: Dictionary = _require_int(layout, "snapshot_capacity")
 	var hazard_read: Dictionary = _require_box(layout, "hazard")
 	var period_read: Dictionary = _require_int(layout, "hazard_period_ticks")
+	var finish_read: Dictionary = _require_box(layout, "finish")
 	if (
 		not _flag(seed_read)
 		or not _flag(start_x_read)
@@ -91,6 +97,7 @@ static func assemble(layout: Dictionary) -> TraprushGrayboxCourse:
 		or not _flag(capacity_read)
 		or not _flag(hazard_read)
 		or not _flag(period_read)
+		or not _flag(finish_read)
 	):
 		return null
 	var hazard_period_ticks: int = _value(period_read)
@@ -168,6 +175,18 @@ static func assemble(layout: Dictionary) -> TraprushGrayboxCourse:
 		if not sim.set_static_box_solid(pad_id, false):
 			return null
 		spawned_pad_ids[pad_index] = pad_id
+	var finish_id: int = sim.spawn_static_box(
+		_int_at(finish_read, "x"),
+		_int_at(finish_read, "y"),
+		_int_at(finish_read, "z"),
+		_int_at(finish_read, "half_x"),
+		_int_at(finish_read, "half_y"),
+		_int_at(finish_read, "half_z")
+	)
+	if finish_id < 1:
+		return null
+	if not sim.set_static_box_solid(finish_id, false):
+		return null
 	var graph: TraprushPortalGraph = PortalGraph.new()
 	if not graph.add_link(_portal_from(up_read)):
 		return null
@@ -180,6 +199,8 @@ static func assemble(layout: Dictionary) -> TraprushGrayboxCourse:
 	course.wall_box_id = wall_id
 	course.crate_box_id = crate_id
 	course.hazard_box_id = hazard_id
+	course.finish_box_id = finish_id
+	course.finish_tick = -1
 	course.crate = crate_obj
 	course.pad_box_ids = spawned_pad_ids
 	course._spawn = spawn
@@ -362,6 +383,17 @@ func try_accept_checkpoint(checkpoint_id: int) -> bool:
 	return PadAccept.try_accept_on_pad(
 		world, entity_id, track, checkpoint_id, pad_box_ids[pad_index]
 	)
+
+
+func try_cross_finish() -> Dictionary:
+	var failed: Dictionary = {"ok": false}
+	if finish_tick != -1:
+		return {"ok": true, "finish_tick": finish_tick}
+	var crossed: Dictionary = FinishAccept.try_cross(world, entity_id, track, finish_box_id)
+	if not _flag(crossed):
+		return failed
+	finish_tick = world.tick_index
+	return {"ok": true, "finish_tick": finish_tick}
 
 
 static func _require_int(source: Dictionary, key: String) -> Dictionary:
