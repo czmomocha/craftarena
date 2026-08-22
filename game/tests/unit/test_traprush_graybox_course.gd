@@ -3,13 +3,13 @@ extends GutTest
 ## TraprushGrayboxCourse：单人灰盒跑道夹具。几何、位移、jump_dy、support_dy、fall_dy、范围边界、max_hops、max_health、period、capacity、interact/use-item damage 与 reach 只由调用方传入。
 ## CD-21 §4.2 / §5.2 / §8 与 CD-61 M1：有序检查点、占用垫盒、上下/侧向传送、墙阻挡、打掉箱子后开路、周期 hazard stub、爆破道具 stub。
 ## Move / Jump 经 IntentStepper 走直到阻挡：撞墙/箱/天花停在最后未阻挡样本，不是整段拒绝。
-## 成功 PLAYER 意图写入 SimReplayBuffer（CD-43）；成功占用写入 SYSTEM。PLAYER + SYSTEM 磁带由 TraprushGrayboxTapeReplay 回放到新 course。
-## assemble 记录 tick 0 关键快照；try_commit_tick(fall_dy) 先 fall 再 tick，再按调用方周期切换 hazard 阻挡。
+## 成功 PLAYER 意图写入 SimReplayBuffer（CD-43）；成功占用与成功 try_commit_tick 写入 SYSTEM。PLAYER + SYSTEM 磁带由 TraprushGrayboxTapeReplay 回放到新 course。
+## assemble 记录 tick 0 关键快照；try_commit_tick(fall_dy) 先 fall 再 tick，再按调用方周期切换 hazard 阻挡，成功入 SYSTEM 带。
 ## try_step_intent(payload, jump_dy, support_dy) 把 support_dy 传给 apply；成功 PLAYER 意图入带。
 ## try_apply_fall(fall_dy) 委托 try_move_y_until_blocked；不 tick、不 record、不入带。
 ## try_reset_if_out_of_range 用调用方边界；出界回到最近检查点落点，成功复位入 SYSTEM 带，不 tick，不计数 N。
-## try_interact / try_use_item 成功入 PLAYER 带；try_place_pose / 成功检查点 / 成功落地传送 / 首次冲线 / 成功出界复位 / 成功 try_break_crate 入 SYSTEM 带。
-## 失败传送、等待未落地、冲线失败、world.set_pose、下落、范围内复位、零伤害 try_break_crate 不入带。
+## try_interact / try_use_item 成功入 PLAYER 带；try_place_pose / 成功检查点 / 成功落地传送 / 首次冲线 / 成功出界复位 / 成功 try_break_crate / 成功 try_commit_tick 入 SYSTEM 带。
+## 失败传送、等待未落地、冲线失败、world.set_pose、下落、范围内复位、零伤害 try_break_crate、失败 try_commit_tick 不入带。
 ## try_interact 要求 overlapping_static_boxes 含 crate；测试用 world.set_pose 挪到箱心，course API 不自动传送。
 ## try_use_item 用当前姿态加调用方 reach 做 overlapping_static_boxes_at；测试站在起点，reach 指向 _crate_z，不 set_pose 到箱上。
 ## 终点垫与起点不重合；冲线用 set_pose 到终点盒心。finish_tick 未冲线为 -1，不入 hash_state。
@@ -40,7 +40,7 @@ const CONTENT_VERSION: String = "content-v1"
 const TRACE_ID: String = "trace-1"
 const SNAPSHOT_CAPACITY: int = 4
 const HAZARD_PERIOD_TICKS: int = 1
-const ACCEPTANCE_TAPE_SIZE: int = 21
+const ACCEPTANCE_TAPE_SIZE: int = 22
 
 
 func test_assemble_rejects_missing_fields_bad_health_and_failed_spawn() -> void:
@@ -488,7 +488,8 @@ func test_try_apply_fall_stops_on_floor_then_commit_advances_tick_only() -> void
 	assert_true(course.world.is_supported_by_solid(course.entity_id, -_whole(1)))
 	assert_true(course.try_commit_tick(0))
 	assert_eq(course.world.tick_index, 1)
-	assert_eq(course.tape.size(), 0)
+	assert_eq(course.tape.size(), 1)
+	_assert_system_command(course.tape.command_at(0), SystemOps.COMMIT_TICK)
 	assert_eq(course.snapshots.size(), 2)
 	_assert_pose(course, _start_x(), last_free_y, 0, START_YAW)
 
@@ -575,7 +576,8 @@ func test_period_one_hazard_toggles_plus_x_blocking_on_commit() -> void:
 	assert_eq(course.tape.size(), tape_before + 1)
 	assert_true(course.try_commit_tick(0))
 	assert_eq(course.world.tick_index, 1)
-	assert_eq(course.tape.size(), tape_before + 1)
+	assert_eq(course.tape.size(), tape_before + 2)
+	_assert_system_command(course.tape.command_at(tape_before + 1), SystemOps.COMMIT_TICK)
 	assert_eq(course.snapshots.size(), 2)
 	_set_pose(course, _start_x(), 0, 0, START_YAW)
 	var opened: Dictionary = _step_intent(course, _move_payload(dx, 0), 0)
@@ -584,7 +586,7 @@ func test_period_one_hazard_toggles_plus_x_blocking_on_commit() -> void:
 	assert_eq(course.world.tick_index, 1)
 	assert_true(course.try_commit_tick(0))
 	assert_eq(course.world.tick_index, 2)
-	assert_eq(course.tape.size(), tape_before + 2)
+	assert_eq(course.tape.size(), tape_before + 4)
 	var reblocked: Dictionary = _step_intent(course, _move_payload(dx, 0), 0)
 	assert_true(_ok(reblocked))
 	_assert_pose(course, _start_x() + dx, 0, 0, START_YAW)
@@ -952,7 +954,10 @@ func test_try_commit_tick_zero_keeps_pose_and_advances_tick() -> void:
 	assert_true(course.try_commit_tick(fall_dy))
 	_assert_pose(course, _start_x(), 0, 0, START_YAW)
 	assert_eq(course.world.tick_index, 1)
-	assert_eq(course.tape.size(), 0)
+	assert_eq(course.tape.size(), 1)
+	_assert_system_command(course.tape.command_at(0), SystemOps.COMMIT_TICK)
+	var logged_zero: int = course.tape.command_at(0).payload.get("fall_dy", -1)
+	assert_eq(logged_zero, fall_dy)
 	assert_eq(course.snapshots.size(), 2)
 	assert_eq(course.snapshots.hash_at_tick(0).hex_encode(), tick0_hex)
 	assert_eq(course.snapshots.hash_at_tick(1).hex_encode(), course.world.hash_state().hex_encode())
@@ -968,7 +973,8 @@ func test_try_commit_tick_open_space_falls_then_ticks_and_records() -> void:
 	assert_true(course.try_commit_tick(fall_dy))
 	_assert_pose(course, _start_x(), dest_y, 0, START_YAW)
 	assert_eq(course.world.tick_index, 1)
-	assert_eq(course.tape.size(), 0)
+	assert_eq(course.tape.size(), 1)
+	_assert_system_command(course.tape.command_at(0), SystemOps.COMMIT_TICK)
 	assert_eq(course.snapshots.size(), 2)
 	assert_eq(course.snapshots.hash_at_tick(0).hex_encode(), tick0_hex)
 	assert_eq(course.snapshots.hash_at_tick(1).hex_encode(), course.world.hash_state().hex_encode())
@@ -991,7 +997,8 @@ func test_try_commit_tick_stops_on_floor_then_ticks() -> void:
 	assert_true(course.try_commit_tick(fall_dy))
 	_assert_pose(course, _start_x(), last_free_y, 0, START_YAW)
 	assert_eq(course.world.tick_index, 1)
-	assert_eq(course.tape.size(), 0)
+	assert_eq(course.tape.size(), 1)
+	_assert_system_command(course.tape.command_at(0), SystemOps.COMMIT_TICK)
 	assert_eq(course.snapshots.size(), 2)
 	assert_true(course.world.is_supported_by_solid(course.entity_id, -_whole(1)))
 	assert_eq(course.snapshots.hash_at_tick(1).hex_encode(), course.world.hash_state().hex_encode())
@@ -1027,8 +1034,10 @@ func test_two_courses_same_commit_fall_match_hash_state_and_tick() -> void:
 	assert_eq(left.world.hash_state().hex_encode(), right.world.hash_state().hex_encode())
 	assert_eq(left.world.tick_index, right.world.tick_index)
 	assert_eq(left.world.tick_index, 1)
-	assert_eq(left.tape.size(), 0)
-	assert_eq(right.tape.size(), 0)
+	assert_eq(left.tape.size(), 1)
+	assert_eq(right.tape.size(), 1)
+	_assert_system_command(left.tape.command_at(0), SystemOps.COMMIT_TICK)
+	_assert_system_command(right.tape.command_at(0), SystemOps.COMMIT_TICK)
 	assert_eq(left.snapshots.size(), 2)
 	assert_eq(right.snapshots.size(), 2)
 	assert_eq(
@@ -1274,7 +1283,9 @@ func test_cross_finish_after_commit_uses_world_tick_and_is_idempotent() -> void:
 	assert_true(_ok(crossed))
 	assert_eq(_finish_tick(crossed), 1)
 	assert_eq(course.finish_tick, 1)
-	assert_eq(course.tape.size(), 4)
+	assert_eq(course.tape.size(), 5)
+	_assert_system_command(course.tape.command_at(3), SystemOps.COMMIT_TICK)
+	_assert_system_command(course.tape.command_at(4), SystemOps.CROSS_FINISH)
 	assert_eq(course.world.tick_index, 1)
 	assert_eq(course.snapshots.size(), 2)
 	assert_true(course.try_commit_tick(0))
@@ -1285,7 +1296,7 @@ func test_cross_finish_after_commit_uses_world_tick_and_is_idempotent() -> void:
 	assert_true(_ok(again))
 	assert_eq(_finish_tick(again), 1)
 	assert_eq(course.finish_tick, 1)
-	assert_eq(course.tape.size(), 4)
+	assert_eq(course.tape.size(), 6)
 	assert_eq(course.world.tick_index, 2)
 	assert_eq(course.snapshots.size(), 3)
 
@@ -1302,8 +1313,8 @@ func test_two_courses_same_finish_match_tick_tape_and_state() -> void:
 	assert_eq(left.tape.hash_tape().hex_encode(), right.tape.hash_tape().hex_encode())
 	assert_eq(left.world.hash_state().hex_encode(), right.world.hash_state().hex_encode())
 	assert_eq(left.world.tick_index, right.world.tick_index)
-	assert_eq(left.tape.size(), 4)
-	assert_eq(right.tape.size(), 4)
+	assert_eq(left.tape.size(), 5)
+	assert_eq(right.tape.size(), 5)
 
 
 func test_acceptance_rejects_incomplete_script() -> void:
@@ -1354,8 +1365,9 @@ func test_acceptance_full_run_covers_m1_slice() -> void:
 	assert_eq(wall_cmd.kind, SharedCommand.Kind.PLAYER)
 	assert_eq(wall_intent, PlayerIntentNames.MOVE)
 	assert_eq(blast_intent, PlayerIntentNames.USE_ITEM)
-	_assert_system_command(course.tape.command_at(14), SystemOps.ACCEPT_CHECKPOINT)
-	_assert_system_command(course.tape.command_at(20), SystemOps.CROSS_FINISH)
+	_assert_system_command(course.tape.command_at(15), SystemOps.ACCEPT_CHECKPOINT)
+	_assert_system_command(course.tape.command_at(11), SystemOps.COMMIT_TICK)
+	_assert_system_command(course.tape.command_at(21), SystemOps.CROSS_FINISH)
 
 
 func test_two_courses_same_acceptance_match_tape_state_snapshots_and_finish() -> void:
@@ -1434,7 +1446,7 @@ func test_tape_replay_move_and_commit_matches_source_hashes() -> void:
 	var dest: GrayboxCourse = GrayboxCourse.assemble(_valid_layout())
 	assert_true(_ok(GrayboxTapeReplay.try_replay(dest, source.tape, _replay_script(2))))
 	_assert_replay_matches(source, dest)
-	assert_eq(dest.tape.size(), 2)
+	assert_eq(dest.tape.size(), 4)
 	assert_eq(dest.world.tick_index, 2)
 	assert_eq(dest.snapshots.size(), 3)
 
@@ -1555,6 +1567,25 @@ func test_tape_replay_out_of_range_reset_matches_source_hashes() -> void:
 	assert_eq(dest.world.tick_index, 0)
 
 
+func test_tape_replay_commit_tick_matches_source_hashes() -> void:
+	var source: GrayboxCourse = GrayboxCourse.assemble(_valid_layout())
+	var fall_dy: int = -_whole(2)
+	assert_true(source.try_commit_tick(fall_dy))
+	assert_eq(source.tape.size(), 1)
+	_assert_system_command(source.tape.command_at(0), SystemOps.COMMIT_TICK)
+	var logged_fall: int = source.tape.command_at(0).payload.get("fall_dy", 0)
+	assert_eq(logged_fall, fall_dy)
+	assert_eq(source.world.tick_index, 1)
+	var dest: GrayboxCourse = GrayboxCourse.assemble(_valid_layout())
+	var script: Dictionary = _replay_script(1)
+	script["fall_dy"] = 0
+	assert_true(_ok(GrayboxTapeReplay.try_replay(dest, source.tape, script)))
+	_assert_replay_matches(source, dest)
+	_assert_pose(dest, _start_x(), -_whole(2), 0, START_YAW)
+	assert_eq(dest.tape.size(), 1)
+	assert_eq(dest.world.tick_index, 1)
+
+
 func _run_finish_after_commit(course: GrayboxCourse) -> void:
 	_accept_ordered_checkpoints(course)
 	assert_true(course.try_commit_tick(0))
@@ -1564,7 +1595,9 @@ func _run_finish_after_commit(course: GrayboxCourse) -> void:
 	assert_eq(_finish_tick(crossed), 1)
 	assert_eq(course.finish_tick, 1)
 	assert_eq(course.finish_tick, course.world.tick_index)
-	assert_eq(course.tape.size(), 4)
+	assert_eq(course.tape.size(), 5)
+	_assert_system_command(course.tape.command_at(3), SystemOps.COMMIT_TICK)
+	_assert_system_command(course.tape.command_at(4), SystemOps.CROSS_FINISH)
 	assert_eq(course.world.tick_index, 1)
 	assert_eq(course.snapshots.size(), 2)
 
@@ -1577,7 +1610,9 @@ func _run_move_and_commit_sequence(course: GrayboxCourse) -> void:
 	_assert_pose(course, _start_x() + _whole(2), 0, 0, START_YAW)
 	assert_true(course.try_commit_tick(0))
 	assert_eq(course.world.tick_index, 2)
-	assert_eq(course.tape.size(), 2)
+	assert_eq(course.tape.size(), 4)
+	_assert_system_command(course.tape.command_at(1), SystemOps.COMMIT_TICK)
+	_assert_system_command(course.tape.command_at(3), SystemOps.COMMIT_TICK)
 	assert_eq(course.snapshots.size(), 3)
 
 
