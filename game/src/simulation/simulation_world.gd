@@ -36,6 +36,12 @@ extends RefCounted
 ## Non-_at methods read the current pose and delegate. _at uses candidate (x, y, z)
 ## without writing pose. Unknown ids are false. Integer compare only; no Fixed.try_add.
 ## These queries do not tick or change hash_state, and do not invent a drop-count N.
+## is_volume_blocked tests a candidate upright capsule without an entity_id.
+## Solid-box or existing-capsule overlap, including overflow, is blocked.
+## Non-solid boxes are skipped, matching is_pose_blocked. Negative radius or
+## cylinder_height is blocked. Empty legal volume is open. The query does not
+## spawn, write pose, tick, or change hash_state. spawn_capsule still skips
+## occupancy checks.
 ## try_set_pose occupancy-checks the landing pose then teleports; it is not a sweep
 ## and not phase-through. Occupied or overflow destinations reject. set_pose still
 ## writes without occupancy checks so respawn can teleport into a blocked pose.
@@ -325,6 +331,30 @@ func is_pose_blocked(entity_id: int, x: int, y: int, z: int) -> bool:
 		overlapping_solid_static_boxes_at(entity_id, x, y, z).size() > 0
 		or overlapping_entities_at(entity_id, x, y, z).size() > 0
 	)
+
+
+func is_volume_blocked(x: int, y: int, z: int, radius: int, cylinder_height: int) -> bool:
+	if radius < 0 or cylinder_height < 0:
+		return true
+	var probe: KinematicCapsule = KinematicCapsule.new()
+	probe.x = x
+	probe.y = y
+	probe.z = z
+	probe.radius = radius
+	probe.cylinder_height = cylinder_height
+	for box_index: int in range(_boxes.size()):
+		if not _box_solid[box_index]:
+			continue
+		var box: StaticAabb = _boxes[box_index]
+		if box.overlaps_capsule(probe) or not box.overlap_math_ok:
+			return true
+	for pose_index: int in range(_x.size()):
+		var other: KinematicCapsule = _capsule_at(
+			pose_index, _x[pose_index], _y[pose_index], _z[pose_index]
+		)
+		if probe.overlaps(other) or not probe.overlap_math_ok:
+			return true
+	return false
 
 
 func try_set_pose(entity_id: int, x: int, y: int, z: int, yaw: int) -> bool:
