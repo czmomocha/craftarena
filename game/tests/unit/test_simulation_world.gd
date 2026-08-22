@@ -1,6 +1,6 @@
 extends GutTest
 
-## SimulationWorld 骨架：Tick 计数、姿态读写、占用检查瞬移、XZ/Y 离散扫掠阻挡、Y/XZ 轴接触推进到最后未阻挡样本、静态盒阻挡开关、静态盒体积查询、相交静态盒枚举、固体占用查询、胶囊占用查询、相交胶囊枚举、候选姿态占用查询、固体支撑探测、Canonical 状态哈希、可取出的 SimRng。
+## SimulationWorld 骨架：Tick 计数、姿态读写、占用检查瞬移、XZ/Y 离散扫掠阻挡、Y/XZ 轴接触推进到最后未阻挡样本、静态盒阻挡开关、静态盒体积查询、相交静态盒枚举、固体占用查询、胶囊占用查询、相交胶囊枚举、候选姿态占用查询、固体支撑探测、掉出范围查询、Canonical 状态哈希、可取出的 SimRng。
 
 const FixedClass := preload("res://src/shared/fixed/fixed.gd")
 const FixedResultClass := preload("res://src/shared/fixed/fixed_result.gd")
@@ -1475,6 +1475,228 @@ func test_support_queries_do_not_change_hash_pose_or_tick() -> void:
 	assert_false(world.is_supported_by_solid_at(entity_id, 0, FixedClass.INT64_MAX, 0, 1))
 	assert_eq(world.hash_state().hex_encode(), before_hex)
 	_assert_pose(world, entity_id, 0, stand_y, 0, 8)
+	assert_eq(world.tick_index, 0)
+
+
+func test_range_queries_unknown_id_are_false() -> void:
+	var world: SimulationWorld = SimulationWorld.new(1)
+	var min_y: int = _whole(4)
+	var max_y: int = _whole(8)
+	var min_x: int = -_whole(10)
+	var max_x: int = _whole(10)
+	var min_z: int = -_whole(10)
+	var max_z: int = _whole(10)
+	var below_y: int = min_y - 1
+	var above_y: int = max_y + 1
+	var outside_x: int = min_x - 1
+	var outside_z: int = min_z - 1
+	assert_false(world.is_below_min_y(0, min_y))
+	assert_false(world.is_below_min_y(-1, min_y))
+	assert_false(world.is_below_min_y(1, min_y))
+	assert_false(world.is_below_min_y(99, min_y))
+	assert_false(world.is_below_min_y_at(0, 0, below_y, 0, min_y))
+	assert_false(world.is_below_min_y_at(-1, 0, below_y, 0, min_y))
+	assert_false(world.is_below_min_y_at(1, 0, below_y, 0, min_y))
+	assert_false(world.is_below_min_y_at(99, 0, below_y, 0, min_y))
+	assert_false(world.is_above_max_y(0, max_y))
+	assert_false(world.is_above_max_y(-1, max_y))
+	assert_false(world.is_above_max_y(1, max_y))
+	assert_false(world.is_above_max_y(99, max_y))
+	assert_false(world.is_above_max_y_at(0, 0, above_y, 0, max_y))
+	assert_false(world.is_above_max_y_at(-1, 0, above_y, 0, max_y))
+	assert_false(world.is_above_max_y_at(1, 0, above_y, 0, max_y))
+	assert_false(world.is_above_max_y_at(99, 0, above_y, 0, max_y))
+	assert_false(world.is_outside_xz(0, min_x, max_x, min_z, max_z))
+	assert_false(world.is_outside_xz(-1, min_x, max_x, min_z, max_z))
+	assert_false(world.is_outside_xz(1, min_x, max_x, min_z, max_z))
+	assert_false(world.is_outside_xz(99, min_x, max_x, min_z, max_z))
+	assert_false(world.is_outside_xz_at(0, outside_x, 0, outside_z, min_x, max_x, min_z, max_z))
+	assert_false(world.is_outside_xz_at(-1, outside_x, 0, outside_z, min_x, max_x, min_z, max_z))
+	assert_false(world.is_outside_xz_at(1, outside_x, 0, outside_z, min_x, max_x, min_z, max_z))
+	assert_false(world.is_outside_xz_at(99, outside_x, 0, outside_z, min_x, max_x, min_z, max_z))
+	var entity_id: int = world.spawn_capsule(0, below_y, 0, 8, _whole(1), _whole(2))
+	assert_false(world.is_below_min_y(0, min_y))
+	assert_false(world.is_below_min_y(99, min_y))
+	assert_false(world.is_below_min_y_at(0, 0, below_y, 0, min_y))
+	assert_false(world.is_above_max_y(0, max_y))
+	assert_false(world.is_above_max_y_at(99, 0, above_y, 0, max_y))
+	assert_false(world.is_outside_xz(0, min_x, max_x, min_z, max_z))
+	assert_false(world.is_outside_xz_at(99, outside_x, 0, outside_z, min_x, max_x, min_z, max_z))
+	assert_true(world.is_below_min_y(entity_id, min_y))
+	assert_eq(world.tick_index, 0)
+	_assert_pose(world, entity_id, 0, below_y, 0, 8)
+
+
+func test_is_below_min_y_on_plane_is_false_one_below_is_true() -> void:
+	var world: SimulationWorld = SimulationWorld.new(1)
+	var min_y: int = _whole(4)
+	var entity_id: int = world.spawn_capsule(0, min_y, 0, 8, _whole(1), _whole(2))
+	assert_false(world.is_below_min_y(entity_id, min_y))
+	assert_false(world.is_below_min_y_at(entity_id, 0, min_y, 0, min_y))
+	assert_true(world.set_pose(entity_id, 0, min_y - 1, 0, 8))
+	assert_true(world.is_below_min_y(entity_id, min_y))
+	assert_true(world.is_below_min_y_at(entity_id, 0, min_y - 1, 0, min_y))
+	_assert_pose(world, entity_id, 0, min_y - 1, 0, 8)
+	assert_eq(world.tick_index, 0)
+
+
+func test_is_above_max_y_on_plane_is_false_one_above_is_true() -> void:
+	var world: SimulationWorld = SimulationWorld.new(1)
+	var max_y: int = _whole(8)
+	var entity_id: int = world.spawn_capsule(0, max_y, 0, 8, _whole(1), _whole(2))
+	assert_false(world.is_above_max_y(entity_id, max_y))
+	assert_false(world.is_above_max_y_at(entity_id, 0, max_y, 0, max_y))
+	assert_true(world.set_pose(entity_id, 0, max_y + 1, 0, 8))
+	assert_true(world.is_above_max_y(entity_id, max_y))
+	assert_true(world.is_above_max_y_at(entity_id, 0, max_y + 1, 0, max_y))
+	_assert_pose(world, entity_id, 0, max_y + 1, 0, 8)
+	assert_eq(world.tick_index, 0)
+
+
+func test_is_outside_xz_closed_interval_false_and_axis_exit_true() -> void:
+	var world: SimulationWorld = SimulationWorld.new(1)
+	var min_x: int = -_whole(5)
+	var max_x: int = _whole(5)
+	var min_z: int = -_whole(7)
+	var max_z: int = _whole(7)
+	var entity_id: int = world.spawn_capsule(0, 0, 0, 8, _whole(1), _whole(2))
+	assert_false(world.is_outside_xz(entity_id, min_x, max_x, min_z, max_z))
+	assert_false(world.is_outside_xz_at(entity_id, 0, 0, 0, min_x, max_x, min_z, max_z))
+	assert_true(world.set_pose(entity_id, min_x, 0, 0, 8))
+	assert_false(world.is_outside_xz(entity_id, min_x, max_x, min_z, max_z))
+	assert_true(world.set_pose(entity_id, max_x, 0, 0, 8))
+	assert_false(world.is_outside_xz(entity_id, min_x, max_x, min_z, max_z))
+	assert_true(world.set_pose(entity_id, 0, 0, min_z, 8))
+	assert_false(world.is_outside_xz(entity_id, min_x, max_x, min_z, max_z))
+	assert_true(world.set_pose(entity_id, 0, 0, max_z, 8))
+	assert_false(world.is_outside_xz(entity_id, min_x, max_x, min_z, max_z))
+	assert_true(world.set_pose(entity_id, min_x, 0, min_z, 8))
+	assert_false(world.is_outside_xz(entity_id, min_x, max_x, min_z, max_z))
+	assert_true(world.set_pose(entity_id, max_x, 0, max_z, 8))
+	assert_false(world.is_outside_xz(entity_id, min_x, max_x, min_z, max_z))
+	assert_true(world.set_pose(entity_id, min_x - 1, 0, 0, 8))
+	assert_true(world.is_outside_xz(entity_id, min_x, max_x, min_z, max_z))
+	assert_true(world.set_pose(entity_id, max_x + 1, 0, 0, 8))
+	assert_true(world.is_outside_xz(entity_id, min_x, max_x, min_z, max_z))
+	assert_true(world.set_pose(entity_id, 0, 0, min_z - 1, 8))
+	assert_true(world.is_outside_xz(entity_id, min_x, max_x, min_z, max_z))
+	assert_true(world.set_pose(entity_id, 0, 0, max_z + 1, 8))
+	assert_true(world.is_outside_xz(entity_id, min_x, max_x, min_z, max_z))
+	assert_true(world.set_pose(entity_id, 0, 0, 0, 8))
+	assert_true(world.is_outside_xz_at(entity_id, min_x - 1, 0, 0, min_x, max_x, min_z, max_z))
+	assert_true(world.is_outside_xz_at(entity_id, max_x + 1, 0, 0, min_x, max_x, min_z, max_z))
+	assert_true(world.is_outside_xz_at(entity_id, 0, 0, min_z - 1, min_x, max_x, min_z, max_z))
+	assert_true(world.is_outside_xz_at(entity_id, 0, 0, max_z + 1, min_x, max_x, min_z, max_z))
+	assert_false(world.is_outside_xz_at(entity_id, min_x, 0, max_z, min_x, max_x, min_z, max_z))
+	assert_true(world.set_pose(entity_id, min_x, 0, min_z, 8))
+	assert_false(world.is_outside_xz(entity_id, min_x, min_x, min_z, min_z))
+	_assert_pose(world, entity_id, min_x, 0, min_z, 8)
+	assert_eq(world.tick_index, 0)
+
+
+func test_is_outside_xz_empty_interval_is_true() -> void:
+	var world: SimulationWorld = SimulationWorld.new(1)
+	var entity_id: int = world.spawn_capsule(0, 0, 0, 8, _whole(1), _whole(2))
+	assert_true(world.is_outside_xz(entity_id, _whole(1), 0, -_whole(10), _whole(10)))
+	assert_true(world.is_outside_xz_at(entity_id, 0, 0, 0, _whole(1), 0, -_whole(10), _whole(10)))
+	assert_true(world.is_outside_xz(entity_id, -_whole(10), _whole(10), _whole(1), 0))
+	assert_true(world.is_outside_xz_at(entity_id, 0, 0, 0, -_whole(10), _whole(10), _whole(1), 0))
+	assert_true(world.is_outside_xz(entity_id, 1, 0, 1, 0))
+	assert_true(world.is_outside_xz_at(entity_id, 1, 0, 0, 1, 0, -_whole(10), _whole(10)))
+	assert_true(world.is_outside_xz_at(entity_id, 0, 0, 1, -_whole(10), _whole(10), 1, 0))
+	_assert_pose(world, entity_id, 0, 0, 0, 8)
+	assert_eq(world.tick_index, 0)
+
+
+func test_range_queries_at_do_not_write_pose() -> void:
+	var world: SimulationWorld = SimulationWorld.new(1)
+	var min_y: int = _whole(4)
+	var max_y: int = _whole(8)
+	var min_x: int = -_whole(5)
+	var max_x: int = _whole(5)
+	var min_z: int = -_whole(7)
+	var max_z: int = _whole(7)
+	var far: int = _whole(99)
+	var entity_id: int = world.spawn_capsule(0, min_y, 0, 8, _whole(1), _whole(2))
+	assert_false(world.is_below_min_y(entity_id, min_y))
+	assert_true(world.is_below_min_y_at(entity_id, far, min_y - 1, far, min_y))
+	assert_false(world.is_above_max_y(entity_id, max_y))
+	assert_true(world.is_above_max_y_at(entity_id, far, max_y + 1, far, max_y))
+	assert_false(world.is_outside_xz(entity_id, min_x, max_x, min_z, max_z))
+	assert_true(world.is_outside_xz_at(entity_id, min_x - 1, min_y, 0, min_x, max_x, min_z, max_z))
+	assert_true(world.is_outside_xz_at(entity_id, 0, far, max_z + 1, min_x, max_x, min_z, max_z))
+	_assert_pose(world, entity_id, 0, min_y, 0, 8)
+	assert_eq(world.tick_index, 0)
+
+
+func test_range_queries_do_not_change_hash_or_tick() -> void:
+	var world: SimulationWorld = SimulationWorld.new(1)
+	var min_y: int = _whole(4)
+	var max_y: int = _whole(8)
+	var min_x: int = -_whole(5)
+	var max_x: int = _whole(5)
+	var min_z: int = -_whole(7)
+	var max_z: int = _whole(7)
+	var entity_id: int = world.spawn_capsule(0, min_y, 0, 8, _whole(1), _whole(2))
+	var before_hex: String = world.hash_state().hex_encode()
+	assert_false(world.is_below_min_y(entity_id, min_y))
+	assert_true(world.is_below_min_y_at(entity_id, 0, min_y - 1, 0, min_y))
+	assert_false(world.is_above_max_y(entity_id, max_y))
+	assert_true(world.is_above_max_y_at(entity_id, 0, max_y + 1, 0, max_y))
+	assert_false(world.is_outside_xz(entity_id, min_x, max_x, min_z, max_z))
+	assert_true(world.is_outside_xz_at(entity_id, min_x - 1, min_y, 0, min_x, max_x, min_z, max_z))
+	assert_false(world.is_below_min_y(0, min_y))
+	assert_false(world.is_above_max_y(99, max_y))
+	assert_false(world.is_outside_xz_at(0, 0, 0, 0, min_x, max_x, min_z, max_z))
+	assert_true(world.is_outside_xz(entity_id, max_x, min_x, min_z, max_z))
+	assert_eq(world.hash_state().hex_encode(), before_hex)
+	_assert_pose(world, entity_id, 0, min_y, 0, 8)
+	assert_eq(world.tick_index, 0)
+
+
+func test_current_range_queries_match_at_with_current_coordinates() -> void:
+	var world: SimulationWorld = SimulationWorld.new(1)
+	var min_y: int = _whole(4)
+	var max_y: int = _whole(8)
+	var min_x: int = -_whole(5)
+	var max_x: int = _whole(5)
+	var min_z: int = -_whole(7)
+	var max_z: int = _whole(7)
+	var x: int = _whole(2)
+	var y: int = min_y
+	var z: int = -_whole(3)
+	var entity_id: int = world.spawn_capsule(x, y, z, 8, _whole(1), _whole(2))
+	assert_eq(
+		world.is_below_min_y(entity_id, min_y),
+		world.is_below_min_y_at(entity_id, x, y, z, min_y)
+	)
+	assert_eq(
+		world.is_above_max_y(entity_id, max_y),
+		world.is_above_max_y_at(entity_id, x, y, z, max_y)
+	)
+	assert_eq(
+		world.is_outside_xz(entity_id, min_x, max_x, min_z, max_z),
+		world.is_outside_xz_at(entity_id, x, y, z, min_x, max_x, min_z, max_z)
+	)
+	assert_true(world.set_pose(entity_id, x, min_y - 1, z, 8))
+	assert_eq(
+		world.is_below_min_y(entity_id, min_y),
+		world.is_below_min_y_at(entity_id, x, min_y - 1, z, min_y)
+	)
+	assert_true(world.is_below_min_y(entity_id, min_y))
+	assert_true(world.set_pose(entity_id, x, max_y + 1, z, 8))
+	assert_eq(
+		world.is_above_max_y(entity_id, max_y),
+		world.is_above_max_y_at(entity_id, x, max_y + 1, z, max_y)
+	)
+	assert_true(world.is_above_max_y(entity_id, max_y))
+	assert_true(world.set_pose(entity_id, max_x + 1, y, min_z, 8))
+	assert_eq(
+		world.is_outside_xz(entity_id, min_x, max_x, min_z, max_z),
+		world.is_outside_xz_at(entity_id, max_x + 1, y, min_z, min_x, max_x, min_z, max_z)
+	)
+	assert_true(world.is_outside_xz(entity_id, min_x, max_x, min_z, max_z))
+	_assert_pose(world, entity_id, max_x + 1, y, min_z, 8)
 	assert_eq(world.tick_index, 0)
 
 

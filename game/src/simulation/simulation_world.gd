@@ -29,6 +29,13 @@ extends RefCounted
 ## Unknown ids and y-add overflow return empty. is_supported_by_solid /
 ## is_supported_by_solid_at are true when that list is non-empty. These queries do not
 ## write pose, tick, or hash_state, and do not invent a default drop distance.
+## is_below_min_y / is_below_min_y_at are true iff y < min_y (on-plane is false).
+## is_above_max_y / is_above_max_y_at are true iff y > max_y. is_outside_xz /
+## is_outside_xz_at are true when (x, z) is not inside the closed interval
+## [min_x, max_x] x [min_z, max_z]; empty intervals (min > max) are always outside.
+## Non-_at methods read the current pose and delegate. _at uses candidate (x, y, z)
+## without writing pose. Unknown ids are false. Integer compare only; no Fixed.try_add.
+## These queries do not tick or change hash_state, and do not invent a drop-count N.
 ## try_set_pose occupancy-checks the landing pose then teleports; it is not a sweep
 ## and not phase-through. Occupied or overflow destinations reject. set_pose still
 ## writes without occupancy checks so respawn can teleport into a blocked pose.
@@ -200,6 +207,62 @@ func is_supported_by_solid_at(
 	entity_id: int, x: int, y: int, z: int, support_dy: int
 ) -> bool:
 	return supporting_solid_static_boxes_at(entity_id, x, y, z, support_dy).size() > 0
+
+
+func is_below_min_y(entity_id: int, min_y: int) -> bool:
+	if not _has_entity(entity_id):
+		return false
+	var pose_index: int = entity_id - 1
+	return is_below_min_y_at(
+		entity_id, _x[pose_index], _y[pose_index], _z[pose_index], min_y
+	)
+
+
+func is_below_min_y_at(entity_id: int, x: int, y: int, z: int, min_y: int) -> bool:
+	if not _has_entity(entity_id):
+		return false
+	return y < min_y
+
+
+func is_above_max_y(entity_id: int, max_y: int) -> bool:
+	if not _has_entity(entity_id):
+		return false
+	var pose_index: int = entity_id - 1
+	return is_above_max_y_at(
+		entity_id, _x[pose_index], _y[pose_index], _z[pose_index], max_y
+	)
+
+
+func is_above_max_y_at(entity_id: int, x: int, y: int, z: int, max_y: int) -> bool:
+	if not _has_entity(entity_id):
+		return false
+	return y > max_y
+
+
+func is_outside_xz(
+	entity_id: int, min_x: int, max_x: int, min_z: int, max_z: int
+) -> bool:
+	if not _has_entity(entity_id):
+		return false
+	var pose_index: int = entity_id - 1
+	return is_outside_xz_at(
+		entity_id,
+		_x[pose_index],
+		_y[pose_index],
+		_z[pose_index],
+		min_x,
+		max_x,
+		min_z,
+		max_z
+	)
+
+
+func is_outside_xz_at(
+	entity_id: int, x: int, y: int, z: int, min_x: int, max_x: int, min_z: int, max_z: int
+) -> bool:
+	if not _has_entity(entity_id):
+		return false
+	return not (min_x <= x and x <= max_x and min_z <= z and z <= max_z)
 
 
 func overlaps_entity(entity_id: int, other_id: int) -> bool:
