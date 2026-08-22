@@ -10,6 +10,10 @@ extends RefCounted
 ## stay queryable. Overflowing overlap math counts as intersecting. Queries are not hashed.
 ## overlapping_static_boxes lists every intersecting AABB id in spawn order, including
 ## non-solid and overflow; unknown entities return empty. Queries are not hashed.
+## overlaps_entity queries two current capsules; unknown or identical ids are false.
+## Overflowing overlap math counts as intersecting. Queries are not hashed.
+## overlapping_entities lists every other intersecting capsule id in spawn order,
+## including overflow and excluding self; unknown entities return empty. Queries are not hashed.
 ## try_set_pose occupancy-checks the landing pose then teleports; it is not a sweep
 ## and not phase-through. Occupied or overflow destinations reject. set_pose still
 ## writes without occupancy checks so respawn can teleport into a blocked pose.
@@ -89,6 +93,32 @@ func overlapping_static_boxes(entity_id: int) -> PackedInt32Array:
 	for box_id: int in range(1, _boxes.size() + 1):
 		if overlaps_static_box(entity_id, box_id):
 			ids.append(box_id)
+	return ids
+
+
+func overlaps_entity(entity_id: int, other_id: int) -> bool:
+	if not _has_entity(entity_id) or not _has_entity(other_id):
+		return false
+	if entity_id == other_id:
+		return false
+	var pose_index: int = entity_id - 1
+	var other_index: int = other_id - 1
+	var mover: KinematicCapsule = _capsule_at(
+		pose_index, _x[pose_index], _y[pose_index], _z[pose_index]
+	)
+	var other: KinematicCapsule = _capsule_at(
+		other_index, _x[other_index], _y[other_index], _z[other_index]
+	)
+	return mover.overlaps(other) or not mover.overlap_math_ok
+
+
+func overlapping_entities(entity_id: int) -> PackedInt32Array:
+	var ids: PackedInt32Array = PackedInt32Array()
+	if not _has_entity(entity_id):
+		return ids
+	for other_id: int in range(1, _x.size() + 1):
+		if overlaps_entity(entity_id, other_id):
+			ids.append(other_id)
 	return ids
 
 

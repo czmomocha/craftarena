@@ -1,6 +1,6 @@
 extends GutTest
 
-## SimulationWorld 骨架：Tick 计数、姿态读写、占用检查瞬移、XZ/Y 离散扫掠阻挡、静态盒阻挡开关、静态盒体积查询、相交静态盒枚举、Canonical 状态哈希、可取出的 SimRng。
+## SimulationWorld 骨架：Tick 计数、姿态读写、占用检查瞬移、XZ/Y 离散扫掠阻挡、静态盒阻挡开关、静态盒体积查询、相交静态盒枚举、胶囊占用查询、相交胶囊枚举、Canonical 状态哈希、可取出的 SimRng。
 
 const FixedClass := preload("res://src/shared/fixed/fixed.gd")
 const FixedResultClass := preload("res://src/shared/fixed/fixed_result.gd")
@@ -507,6 +507,149 @@ func test_overlapping_static_boxes_does_not_change_hash_state() -> void:
 	_assert_ids(world.overlapping_static_boxes(0), PackedInt32Array())
 	assert_eq(world.hash_state().hex_encode(), before_hex)
 	_assert_pose(world, entity_id, 0, 0, 0, 8)
+	assert_eq(world.tick_index, 0)
+
+
+func test_overlaps_entity_true_when_intersecting_false_when_separated() -> void:
+	var world: SimulationWorld = SimulationWorld.new(1)
+	var radius: int = _whole(1)
+	var left_id: int = world.spawn_capsule(0, 0, 0, 8, radius, _whole(2))
+	var far_id: int = world.spawn_capsule(_whole(10), 0, 0, 0, radius, _whole(2))
+	var near_id: int = world.spawn_capsule(_whole(2), 0, 0, 0, radius, 0)
+	assert_false(world.overlaps_entity(left_id, far_id))
+	assert_true(world.overlaps_entity(left_id, near_id))
+	assert_true(world.overlaps_entity(near_id, left_id))
+	assert_false(world.overlaps_entity(near_id, far_id))
+	_assert_pose(world, left_id, 0, 0, 0, 8)
+	assert_eq(world.tick_index, 0)
+
+
+func test_overlaps_entity_unknown_ids_and_self_return_false() -> void:
+	var world: SimulationWorld = SimulationWorld.new(1)
+	assert_false(world.overlaps_entity(0, 0))
+	assert_false(world.overlaps_entity(-1, -1))
+	assert_false(world.overlaps_entity(1, 1))
+	assert_false(world.overlaps_entity(99, 99))
+	var first_id: int = world.spawn_capsule(0, 0, 0, 8, _whole(1), _whole(2))
+	assert_false(world.overlaps_entity(first_id, 0))
+	assert_false(world.overlaps_entity(first_id, -1))
+	assert_false(world.overlaps_entity(first_id, first_id))
+	assert_false(world.overlaps_entity(first_id, 2))
+	assert_false(world.overlaps_entity(first_id, 99))
+	var second_id: int = world.spawn_capsule(_whole(2), 0, 0, 0, _whole(1), 0)
+	var before_hex: String = world.hash_state().hex_encode()
+	assert_false(world.overlaps_entity(0, first_id))
+	assert_false(world.overlaps_entity(-1, first_id))
+	assert_false(world.overlaps_entity(99, first_id))
+	assert_false(world.overlaps_entity(first_id, 0))
+	assert_false(world.overlaps_entity(first_id, -1))
+	assert_false(world.overlaps_entity(first_id, 99))
+	assert_false(world.overlaps_entity(first_id, first_id))
+	assert_false(world.overlaps_entity(second_id, second_id))
+	assert_true(world.overlaps_entity(first_id, second_id))
+	assert_eq(world.tick_index, 0)
+	_assert_pose(world, first_id, 0, 0, 0, 8)
+	assert_eq(world.hash_state().hex_encode(), before_hex)
+
+
+func test_overlaps_entity_treats_overlap_math_overflow_as_true() -> void:
+	var world: SimulationWorld = SimulationWorld.new(1)
+	var mover_id: int = world.spawn_capsule(
+		FixedClass.INT64_MAX, 0, 0, 8, _whole(1), _whole(2)
+	)
+	var other_id: int = world.spawn_capsule(
+		FixedClass.INT64_MIN, 0, 0, 0, _whole(1), _whole(2)
+	)
+	assert_true(world.overlaps_entity(mover_id, other_id))
+	assert_true(world.overlaps_entity(other_id, mover_id))
+	_assert_pose(world, mover_id, FixedClass.INT64_MAX, 0, 0, 8)
+	assert_eq(world.tick_index, 0)
+
+
+func test_overlaps_entity_does_not_change_hash_state() -> void:
+	var world: SimulationWorld = SimulationWorld.new(1)
+	var left_id: int = world.spawn_capsule(0, 0, 0, 8, _whole(1), _whole(2))
+	var far_id: int = world.spawn_capsule(_whole(10), 0, 0, 0, _whole(1), _whole(2))
+	var near_id: int = world.spawn_capsule(_whole(2), 0, 0, 0, _whole(1), 0)
+	var before_hex: String = world.hash_state().hex_encode()
+	assert_true(world.overlaps_entity(left_id, near_id))
+	assert_false(world.overlaps_entity(left_id, far_id))
+	assert_false(world.overlaps_entity(left_id, left_id))
+	assert_false(world.overlaps_entity(0, left_id))
+	assert_eq(world.hash_state().hex_encode(), before_hex)
+	_assert_pose(world, left_id, 0, 0, 0, 8)
+	assert_eq(world.tick_index, 0)
+
+
+func test_overlapping_entities_lists_other_ids_in_spawn_order() -> void:
+	var world: SimulationWorld = SimulationWorld.new(1)
+	var first_id: int = world.spawn_capsule(0, 0, 0, 8, _whole(1), _whole(2))
+	_assert_ids(world.overlapping_entities(first_id), PackedInt32Array())
+	var far_id: int = world.spawn_capsule(_whole(10), 0, 0, 0, _whole(1), _whole(2))
+	_assert_ids(world.overlapping_entities(first_id), PackedInt32Array())
+	var third_id: int = world.spawn_capsule(_whole(2), 0, 0, 0, _whole(1), 0)
+	var fourth_id: int = world.spawn_capsule(_whole(20), 0, 0, 0, _whole(1), _whole(2))
+	var fifth_id: int = world.spawn_capsule(0, 0, 0, 0, _whole(2), _whole(2))
+	_assert_ids(world.overlapping_entities(first_id), PackedInt32Array([3, 5]))
+	assert_false(world.overlaps_entity(first_id, far_id))
+	assert_true(world.overlaps_entity(first_id, third_id))
+	assert_false(world.overlaps_entity(first_id, fourth_id))
+	assert_true(world.overlaps_entity(first_id, fifth_id))
+	assert_false(world.overlaps_entity(first_id, first_id))
+	_assert_ids(world.overlapping_entities(third_id), PackedInt32Array([1, 5]))
+	_assert_ids(world.overlapping_entities(far_id), PackedInt32Array())
+	_assert_pose(world, first_id, 0, 0, 0, 8)
+	assert_eq(world.tick_index, 0)
+
+
+func test_overlapping_entities_unknown_entity_is_empty() -> void:
+	var world: SimulationWorld = SimulationWorld.new(1)
+	_assert_ids(world.overlapping_entities(0), PackedInt32Array())
+	_assert_ids(world.overlapping_entities(-1), PackedInt32Array())
+	_assert_ids(world.overlapping_entities(1), PackedInt32Array())
+	_assert_ids(world.overlapping_entities(99), PackedInt32Array())
+	var first_id: int = world.spawn_capsule(0, 0, 0, 8, _whole(1), _whole(2))
+	_assert_ids(world.overlapping_entities(0), PackedInt32Array())
+	_assert_ids(world.overlapping_entities(-1), PackedInt32Array())
+	_assert_ids(world.overlapping_entities(99), PackedInt32Array())
+	_assert_ids(world.overlapping_entities(first_id), PackedInt32Array())
+	var second_id: int = world.spawn_capsule(_whole(2), 0, 0, 0, _whole(1), 0)
+	var before_hex: String = world.hash_state().hex_encode()
+	_assert_ids(world.overlapping_entities(0), PackedInt32Array())
+	_assert_ids(world.overlapping_entities(-1), PackedInt32Array())
+	_assert_ids(world.overlapping_entities(99), PackedInt32Array())
+	_assert_ids(world.overlapping_entities(first_id), PackedInt32Array([2]))
+	_assert_ids(world.overlapping_entities(second_id), PackedInt32Array([1]))
+	assert_eq(world.tick_index, 0)
+	_assert_pose(world, first_id, 0, 0, 0, 8)
+	assert_eq(world.hash_state().hex_encode(), before_hex)
+
+
+func test_overlapping_entities_includes_overlap_math_overflow() -> void:
+	var world: SimulationWorld = SimulationWorld.new(1)
+	var mover_id: int = world.spawn_capsule(
+		FixedClass.INT64_MAX, 0, 0, 8, _whole(1), _whole(2)
+	)
+	var other_id: int = world.spawn_capsule(
+		FixedClass.INT64_MIN, 0, 0, 0, _whole(1), _whole(2)
+	)
+	assert_true(world.overlaps_entity(mover_id, other_id))
+	_assert_ids(world.overlapping_entities(mover_id), PackedInt32Array([2]))
+	_assert_ids(world.overlapping_entities(other_id), PackedInt32Array([1]))
+	_assert_pose(world, mover_id, FixedClass.INT64_MAX, 0, 0, 8)
+	assert_eq(world.tick_index, 0)
+
+
+func test_overlapping_entities_does_not_change_hash_state() -> void:
+	var world: SimulationWorld = SimulationWorld.new(1)
+	var left_id: int = world.spawn_capsule(0, 0, 0, 8, _whole(1), _whole(2))
+	world.spawn_capsule(_whole(10), 0, 0, 0, _whole(1), _whole(2))
+	world.spawn_capsule(_whole(2), 0, 0, 0, _whole(1), 0)
+	var before_hex: String = world.hash_state().hex_encode()
+	_assert_ids(world.overlapping_entities(left_id), PackedInt32Array([3]))
+	_assert_ids(world.overlapping_entities(0), PackedInt32Array())
+	assert_eq(world.hash_state().hex_encode(), before_hex)
+	_assert_pose(world, left_id, 0, 0, 0, 8)
 	assert_eq(world.tick_index, 0)
 
 
