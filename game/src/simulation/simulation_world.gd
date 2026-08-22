@@ -6,6 +6,8 @@ extends RefCounted
 ## Radius, cylinder_height, and static AABBs are Q48.16 geometry and are not part of hash_state.
 ## set_static_box_solid toggles whether a static AABB blocks occupancy; ids stay
 ## 1-based and non-solid boxes stay in the array. Solidity is not part of hash_state.
+## overlaps_static_box queries the current capsule against one AABB; non-solid boxes
+## stay queryable. Overflowing overlap math counts as intersecting. Queries are not hashed.
 ## try_set_pose occupancy-checks the landing pose then teleports; it is not a sweep
 ## and not phase-through. Occupied or overflow destinations reject. set_pose still
 ## writes without occupancy checks so respawn can teleport into a blocked pose.
@@ -65,6 +67,17 @@ func set_static_box_solid(box_id: int, solid: bool) -> bool:
 		return false
 	_box_solid[box_id - 1] = solid
 	return true
+
+
+func overlaps_static_box(entity_id: int, box_id: int) -> bool:
+	if not _has_entity(entity_id) or not _has_box(box_id):
+		return false
+	var pose_index: int = entity_id - 1
+	var capsule: KinematicCapsule = _capsule_at(
+		pose_index, _x[pose_index], _y[pose_index], _z[pose_index]
+	)
+	var box: StaticAabb = _boxes[box_id - 1]
+	return box.overlaps_capsule(capsule) or not box.overlap_math_ok
 
 
 func set_pose(entity_id: int, x: int, y: int, z: int, yaw: int) -> bool:
