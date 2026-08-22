@@ -1,6 +1,6 @@
 extends GutTest
 
-## SimulationWorld 骨架：Tick 计数、姿态读写、占用检查瞬移、XZ/Y 离散扫掠阻挡、Y/XZ 轴接触推进到最后未阻挡样本、静态盒阻挡开关、静态盒体积查询、相交静态盒枚举、固体占用查询、胶囊占用查询、相交胶囊枚举、候选姿态占用查询、固体支撑探测、掉出范围查询、Canonical 状态哈希、可取出的 SimRng。
+## SimulationWorld 骨架：Tick 计数、姿态读写、占用检查瞬移、XZ/Y 离散扫掠阻挡、Y/XZ 轴接触推进到最后未阻挡样本、静态盒阻挡开关、静态盒体积查询、相交静态盒枚举、固体占用查询、胶囊占用查询、相交胶囊枚举、候选姿态占用查询、无 id 候选体积占用查询、固体支撑探测、掉出范围查询、Canonical 状态哈希、可取出的 SimRng。
 
 const FixedClass := preload("res://src/shared/fixed/fixed.gd")
 const FixedResultClass := preload("res://src/shared/fixed/fixed_result.gd")
@@ -1752,6 +1752,106 @@ func test_is_pose_blocked_matches_solid_box_and_entity_lists() -> void:
 	assert_false(overflow_world.is_pose_blocked(overflow_id, FixedClass.INT64_MAX, 0, 0))
 	_assert_pose(world, entity_id, 0, 0, 0, 8)
 	_assert_pose(world, other_id, far_x, 0, 0, 0)
+	assert_eq(world.tick_index, 0)
+
+
+func test_is_volume_blocked_empty_world_is_open() -> void:
+	var world: SimulationWorld = SimulationWorld.new(1)
+	var before_hex: String = world.hash_state().hex_encode()
+	assert_false(world.is_volume_blocked(0, 0, 0, 0, 0))
+	assert_false(world.is_volume_blocked(_whole(3), _whole(4), _whole(5), _whole(1), _whole(2)))
+	assert_eq(world.tick_index, 0)
+	assert_eq(world.hash_state().hex_encode(), before_hex)
+	assert_eq(world.get_pose(1), {})
+
+
+func test_is_volume_blocked_solid_box_closed_contact_and_interior() -> void:
+	var world: SimulationWorld = SimulationWorld.new(1)
+	var radius: int = _whole(1)
+	var cylinder_height: int = _whole(2)
+	assert_eq(world.spawn_static_box(0, 0, 0, _whole(1), _whole(1), _whole(1)), 1)
+	assert_true(world.is_volume_blocked(0, 0, 0, radius, cylinder_height))
+	assert_true(world.is_volume_blocked(_whole(2), 0, 0, radius, cylinder_height))
+	assert_false(world.is_volume_blocked(_whole(10), 0, 0, radius, cylinder_height))
+	assert_eq(world.tick_index, 0)
+
+
+func test_is_volume_blocked_non_solid_box_does_not_block() -> void:
+	var world: SimulationWorld = SimulationWorld.new(1)
+	var radius: int = _whole(1)
+	var cylinder_height: int = _whole(2)
+	assert_eq(world.spawn_static_box(0, 0, 0, _whole(1), _whole(1), _whole(1)), 1)
+	assert_true(world.is_volume_blocked(0, 0, 0, radius, cylinder_height))
+	assert_true(world.set_static_box_solid(1, false))
+	assert_false(world.is_volume_blocked(0, 0, 0, radius, cylinder_height))
+	assert_false(world.is_volume_blocked(_whole(2), 0, 0, radius, cylinder_height))
+	assert_eq(world.tick_index, 0)
+
+
+func test_is_volume_blocked_existing_capsule_closed_contact_and_gap() -> void:
+	var world: SimulationWorld = SimulationWorld.new(1)
+	var radius: int = _whole(1)
+	var cylinder_height: int = _whole(2)
+	var occupant_id: int = world.spawn_capsule(0, 0, 0, 8, radius, cylinder_height)
+	assert_true(world.is_volume_blocked(0, 0, 0, radius, cylinder_height))
+	assert_true(world.is_volume_blocked(_whole(2), 0, 0, radius, cylinder_height))
+	assert_false(world.is_volume_blocked(_whole(10), 0, 0, radius, cylinder_height))
+	_assert_pose(world, occupant_id, 0, 0, 0, 8)
+	assert_eq(world.tick_index, 0)
+
+
+func test_is_volume_blocked_negative_radius_or_height_is_blocked() -> void:
+	var world: SimulationWorld = SimulationWorld.new(1)
+	assert_true(world.is_volume_blocked(0, 0, 0, -1, 0))
+	assert_true(world.is_volume_blocked(0, 0, 0, 0, -1))
+	assert_true(world.is_volume_blocked(0, 0, 0, -1, -1))
+	assert_false(world.is_volume_blocked(0, 0, 0, 0, 0))
+	assert_eq(world.tick_index, 0)
+
+
+func test_is_volume_blocked_treats_overlap_math_overflow_as_true() -> void:
+	var world: SimulationWorld = SimulationWorld.new(1)
+	world.spawn_capsule(FixedClass.INT64_MIN, 0, 0, 0, _whole(1), _whole(2))
+	assert_true(world.is_volume_blocked(FixedClass.INT64_MAX, 0, 0, _whole(1), _whole(2)))
+	var box_world: SimulationWorld = SimulationWorld.new(1)
+	assert_eq(box_world.spawn_static_box(FixedClass.INT64_MIN, 0, 0, 0, 0, 0), 1)
+	assert_true(box_world.is_volume_blocked(FixedClass.INT64_MAX, 0, 0, _whole(1), _whole(2)))
+	assert_true(box_world.set_static_box_solid(1, false))
+	assert_false(box_world.is_volume_blocked(FixedClass.INT64_MAX, 0, 0, _whole(1), _whole(2)))
+	assert_eq(world.tick_index, 0)
+	assert_eq(box_world.tick_index, 0)
+
+
+func test_is_volume_blocked_does_not_change_hash_pose_or_tick() -> void:
+	var world: SimulationWorld = SimulationWorld.new(1)
+	var radius: int = _whole(1)
+	var cylinder_height: int = _whole(2)
+	var far_x: int = _whole(10)
+	var occupant_id: int = world.spawn_capsule(0, 0, 0, 8, radius, cylinder_height)
+	world.spawn_capsule(far_x, 0, 0, 0, radius, cylinder_height)
+	assert_eq(world.spawn_static_box(0, 0, 0, _whole(1), _whole(1), _whole(1)), 1)
+	var before_hex: String = world.hash_state().hex_encode()
+	assert_true(world.is_volume_blocked(0, 0, 0, radius, cylinder_height))
+	assert_false(world.is_volume_blocked(_whole(4), 0, 0, radius, cylinder_height))
+	assert_true(world.is_volume_blocked(far_x, 0, 0, radius, cylinder_height))
+	assert_true(world.is_volume_blocked(0, 0, 0, -1, cylinder_height))
+	assert_eq(world.hash_state().hex_encode(), before_hex)
+	_assert_pose(world, occupant_id, 0, 0, 0, 8)
+	assert_eq(world.tick_index, 0)
+
+
+func test_spawn_capsule_still_writes_into_occupied_volume() -> void:
+	var world: SimulationWorld = SimulationWorld.new(1)
+	var radius: int = _whole(1)
+	var cylinder_height: int = _whole(2)
+	var occupant_id: int = world.spawn_capsule(0, 0, 0, 8, radius, cylinder_height)
+	assert_eq(world.spawn_static_box(0, 0, 0, _whole(1), _whole(1), _whole(1)), 1)
+	assert_true(world.is_volume_blocked(0, 0, 0, radius, cylinder_height))
+	var spawned_id: int = world.spawn_capsule(0, 0, 0, 16, radius, cylinder_height)
+	assert_eq(spawned_id, 2)
+	_assert_pose(world, occupant_id, 0, 0, 0, 8)
+	_assert_pose(world, spawned_id, 0, 0, 0, 16)
+	assert_true(world.is_pose_blocked(occupant_id, 0, 0, 0))
 	assert_eq(world.tick_index, 0)
 
 
