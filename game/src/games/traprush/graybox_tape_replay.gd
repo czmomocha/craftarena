@@ -3,11 +3,11 @@ extends RefCounted
 
 ## 把 SimReplayBuffer 里的 PLAYER 与 SYSTEM 命令回放到一张刚 assemble 的 GrayboxCourse。
 ## 依据 CD-43：相同种子与输入必须得到相同关键状态哈希。本夹具走 course API，不让 SimulationWorld 解码意图。
-## Move / Jump / ResetToCheckpoint 走 try_step_intent；Interact 走 try_interact；UseItem 走 try_use_item。
+## Move / Jump / ResetToCheckpoint 走 try_step_intent；Interact 走 try_interact；UseItem 走 try_use_item；Shove 走 try_shove。
 ## SYSTEM 的 place_pose / accept_checkpoint / land_portal / cross_finish / reset_if_out_of_range / break_crate / commit_tick / apply_fall 走对应 course API；land_portal 必须落地；复位必须真正 reset；commit 必须推进到 command.target_tick。
-## commit_tick 与 apply_fall 的 fall_dy 从 SYSTEM payload 读取。其余 PLAYER 的 jump_dy / support_dy / 伤害 / reach 仍由调用方脚本传入，不锁定 CD-63 数值。
+## commit_tick 与 apply_fall 的 fall_dy 从 SYSTEM payload 读取。其余 PLAYER 的 jump_dy / support_dy / 伤害 / reach / shove cooldown 与 dx/dz 仍由调用方脚本传入，不锁定 CD-63 数值。
 ## 非 commit 命令若 target_tick 大于当前 tick，用脚本 fall_dy 做 try_commit_tick 追上；结尾再追到 until_tick。commit_tick 本身不先 catch_up，避免重复 tick。
-## Shove 与 BASTION 意图、EDIT / ADMIN、未知 SYSTEM op、已有磁带或非 tick 0 的 course 一律失败。磁带类型本身仍不应用意图。
+## BASTION 意图、EDIT / ADMIN、未知 SYSTEM op、已有磁带或非 tick 0 的 course 一律失败。磁带类型本身仍不应用意图。
 
 const PlayerIntentNames := preload("res://src/shared/commands/player_intent_names.gd")
 const SystemOps := preload("res://src/games/traprush/graybox_system_ops.gd")
@@ -198,6 +198,14 @@ static func _apply_player(
 			_int_at(parsed, "reach_dz")
 		)
 		return _flag(used)
+	if intent_name == PlayerIntentNames.SHOVE:
+		var shoved: Dictionary = course.try_shove(
+			payload,
+			_int_at(parsed, "shove_cooldown_ticks"),
+			_int_at(parsed, "shove_dx"),
+			_int_at(parsed, "shove_dz")
+		)
+		return _flag(shoved)
 	return false
 
 
@@ -232,6 +240,9 @@ static func _parse_script(script: Dictionary) -> Dictionary:
 	var reach_x_read: Dictionary = _require_int(script, "reach_dx")
 	var reach_y_read: Dictionary = _require_int(script, "reach_dy")
 	var reach_z_read: Dictionary = _require_int(script, "reach_dz")
+	var shove_cool_read: Dictionary = _require_int(script, "shove_cooldown_ticks")
+	var shove_dx_read: Dictionary = _require_int(script, "shove_dx")
+	var shove_dz_read: Dictionary = _require_int(script, "shove_dz")
 	var until_read: Dictionary = _require_int(script, "until_tick")
 	if (
 		not _flag(jump_read)
@@ -242,6 +253,9 @@ static func _parse_script(script: Dictionary) -> Dictionary:
 		or not _flag(reach_x_read)
 		or not _flag(reach_y_read)
 		or not _flag(reach_z_read)
+		or not _flag(shove_cool_read)
+		or not _flag(shove_dx_read)
+		or not _flag(shove_dz_read)
 		or not _flag(until_read)
 	):
 		return failed
@@ -255,6 +269,9 @@ static func _parse_script(script: Dictionary) -> Dictionary:
 		"reach_dx": _value(reach_x_read),
 		"reach_dy": _value(reach_y_read),
 		"reach_dz": _value(reach_z_read),
+		"shove_cooldown_ticks": _value(shove_cool_read),
+		"shove_dx": _value(shove_dx_read),
+		"shove_dz": _value(shove_dz_read),
 		"until_tick": _value(until_read),
 	}
 

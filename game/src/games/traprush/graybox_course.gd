@@ -8,15 +8,16 @@ extends RefCounted
 ## finish_tick 是权威 world.tick_index，未冲线哨兵为 -1；不写入 SimulationWorld.hash_state。
 ## 位移、jump_dy、support_dy、fall_dy、范围边界、max_hops、max_health、period、snapshot capacity 均由调用方传入，不锁定 Tick/快照 Hz、重力或掉出次数 N（CD-63）。
 ## 成功 PLAYER 意图写入 SimReplayBuffer（CD-43 命令日志 + 种子）。成功的 place_pose / 检查点 / 落地传送 / 冲线 / 出界复位 / try_break_crate / try_commit_tick / try_apply_fall 写入 SYSTEM 记录（actor_id = 0），不是 FinishIntent。
-## assemble 记录 tick 0 关键快照；try_commit_tick(fall_dy) 先内部下落（不经 try_apply_fall），成功后再推进 tick、按调用方周期切换 hazard 阻挡、再 record，成功入 SYSTEM 带。
-## try_step_intent(payload, jump_dy, support_dy) 把 support_dy 传给 apply；Jump 走直到阻挡；成功 PLAYER 意图入带。
+## assemble 记录 tick 0 关键快照；layout 可选 shove_target 时在盒之后再生成第二胶囊，缺省 shove_target_id = 0。try_commit_tick(fall_dy) 先内部下落（不经 try_apply_fall），成功后再推进 tick、按调用方周期切换 hazard 阻挡、再 record，成功入 SYSTEM 带。
+## try_step_intent(payload, jump_dy, support_dy) 把 support_dy 传给 apply；Jump 走直到阻挡；成功 PLAYER 意图入带。Shove 不经 IntentStepper。
+## try_shove(payload, cooldown_ticks, dx, dz) 委托 ShoveApply；dx/dz/冷却由调用方传入，不从 payload 读 impulse。ok 则 PLAYER 入带；shoved 才更新 last_shove_tick。无目标、解码失败不入带。不 tick。
 ## try_apply_fall(fall_dy) 只调用 world.try_move_y_until_blocked；成功入 SYSTEM 带，不 tick、不 record。
 ## try_reset_if_out_of_range 用已合入的只读范围查询；出界则 set_pose 到最近检查点复活落点（CD-21 §6），成功复位入 SYSTEM 带，不 tick，不计数 N。
-## try_interact / try_use_item 成功入 PLAYER 带；try_place_pose / 成功检查点 / 成功落地传送 / 首次冲线 / 成功出界复位 / 成功 try_break_crate / 成功 try_commit_tick / 成功 try_apply_fall 入 SYSTEM 带。world.set_pose 仍不入带。
+## try_interact / try_use_item / 成功 try_shove 入 PLAYER 带；try_place_pose / 成功检查点 / 成功落地传送 / 首次冲线 / 成功出界复位 / 成功 try_break_crate / 成功 try_commit_tick / 成功 try_apply_fall 入 SYSTEM 带。world.set_pose 仍不入带。
 ## try_interact 仅在 overlapping_static_boxes 含 crate 时按调用方 damage 走 Destructible；摧毁则关闭 crate 盒阻挡。
 ## try_use_item 用当前姿态加调用方 reach 得到候选坐标，overlapping_static_boxes_at 含 crate 时才伤害；伤害与 reach 不从 payload 读取。
 ## try_break_crate 保持测试入口：不要求重叠；成功伤害入 SYSTEM 带。
-## 整段 M1 切片（检查点、传送、周期窗口、爆破开路、冲线）由 TraprushGrayboxAcceptance.try_run 编排；本夹具不发明寻路。
+## 整段 M1 切片（检查点、传送、周期窗口、爆破开路、冲线）由 TraprushGrayboxAcceptance.try_run 编排；本夹具不发明寻路。Acceptance 仍不含推击。
 ## 不从客户端 Dictionary 读最终位置、障碍死亡、道具命中、冲线结果或完成标志；不实现道具栏、2p、名次或 Headless。
 
 const IntentStepper := preload("res://src/games/traprush/intent_stepper.gd")
@@ -30,6 +31,7 @@ const CheckpointSpawn := preload("res://src/games/traprush/checkpoint_spawn.gd")
 const Destructible := preload("res://src/games/traprush/destructible.gd")
 const PadAccept := preload("res://src/games/traprush/pad_accept.gd")
 const FinishAccept := preload("res://src/games/traprush/finish_accept.gd")
+const ShoveApply := preload("res://src/games/traprush/shove_apply.gd")
 const SystemOps := preload("res://src/games/traprush/graybox_system_ops.gd")
 
 var world: SimulationWorld = null
@@ -40,6 +42,7 @@ var crate_box_id: int = 0
 var hazard_box_id: int = 0
 var finish_box_id: int = 0
 var finish_tick: int = -1
+var shove_target_id: int = 0
 var crate: TraprushDestructible = null
 var pad_box_ids: Array[int] = []
 var tape: SimReplayBuffer = null
@@ -53,6 +56,7 @@ var _content_version: String = ""
 var _trace_id: String = ""
 var _next_command_seq: int = 1
 var _hazard_period_ticks: int = 0
+var _last_shove_tick: int = -1
 
 
 static func assemble(layout: Dictionary) -> TraprushGrayboxCourse:
@@ -192,6 +196,22 @@ static func assemble(layout: Dictionary) -> TraprushGrayboxCourse:
 		return null
 	if not sim.set_static_box_solid(finish_id, false):
 		return null
+	var shove_target_id: int = 0
+	if layout.has("shove_target"):
+		var shove_pose_read: Dictionary = _require_named_pose(layout, "shove_target")
+		if not _flag(shove_pose_read):
+			return null
+		var dummy_id: int = sim.spawn_capsule(
+			_int_at(shove_pose_read, "x"),
+			_int_at(shove_pose_read, "y"),
+			_int_at(shove_pose_read, "z"),
+			_int_at(shove_pose_read, "yaw_bam"),
+			_value(radius_read),
+			_value(height_read)
+		)
+		if dummy_id < 1:
+			return null
+		shove_target_id = dummy_id
 	var graph: TraprushPortalGraph = PortalGraph.new()
 	if not graph.add_link(_portal_from(up_read)):
 		return null
@@ -206,6 +226,7 @@ static func assemble(layout: Dictionary) -> TraprushGrayboxCourse:
 	course.hazard_box_id = hazard_id
 	course.finish_box_id = finish_id
 	course.finish_tick = -1
+	course.shove_target_id = shove_target_id
 	course.crate = crate_obj
 	course.pad_box_ids = spawned_pad_ids
 	course._spawn = spawn
@@ -229,6 +250,30 @@ func try_step_intent(payload: Dictionary, jump_dy: int, support_dy: int) -> Dict
 	)
 	if not _flag(result):
 		return result
+	_append_command(payload, SharedCommand.Kind.PLAYER)
+	return result
+
+
+func try_shove(payload: Dictionary, cooldown_ticks: int, dx: int, dz: int) -> Dictionary:
+	var failed: Dictionary = {"ok": false}
+	if world == null or shove_target_id < 1:
+		return failed
+	var result: Dictionary = ShoveApply.apply(
+		world,
+		entity_id,
+		shove_target_id,
+		payload,
+		world.tick_index,
+		_last_shove_tick,
+		cooldown_ticks,
+		dx,
+		dz
+	)
+	if not _flag(result):
+		return result
+	var shoved: bool = result.get("shoved", false)
+	if shoved:
+		_last_shove_tick = world.tick_index
 	_append_command(payload, SharedCommand.Kind.PLAYER)
 	return result
 
