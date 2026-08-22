@@ -2,8 +2,9 @@ class_name SimReplayBuffer
 extends RefCounted
 
 ## Append-only SharedCommand tape plus seed (CD-43 command log).
-## Hash the tape for deterministic replay identity. Do not apply intents
-## to SimulationWorld. Replay inspector is out of scope for this slice.
+## Hash the tape for deterministic replay identity. This type does not apply
+## intents; TraprushGrayboxTapeReplay reads commands and applies them through
+## GrayboxCourse. Replay inspector remains out of scope.
 
 var _seed: int = 1
 var _commands: Array[SharedCommand] = []

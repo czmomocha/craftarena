@@ -3,7 +3,7 @@ extends GutTest
 ## TraprushGrayboxCourse：单人灰盒跑道夹具。几何、位移、jump_dy、support_dy、fall_dy、范围边界、max_hops、max_health、period、capacity、interact/use-item damage 与 reach 只由调用方传入。
 ## CD-21 §4.2 / §5.2 / §8 与 CD-61 M1：有序检查点、占用垫盒、上下/侧向传送、墙阻挡、打掉箱子后开路、周期 hazard stub、爆破道具 stub。
 ## Move / Jump 经 IntentStepper 走直到阻挡：撞墙/箱/天花停在最后未阻挡样本，不是整段拒绝。
-## 成功 PLAYER 意图写入 SimReplayBuffer（CD-43）；磁带不回放进 world。
+## 成功 PLAYER 意图写入 SimReplayBuffer（CD-43）；PLAYER 磁带由 TraprushGrayboxTapeReplay 回放到新 course。
 ## assemble 记录 tick 0 关键快照；try_commit_tick(fall_dy) 先 fall 再 tick，再按调用方周期切换 hazard 阻挡。
 ## try_step_intent(payload, jump_dy, support_dy) 把 support_dy 传给 apply；成功 PLAYER 意图入带。
 ## try_apply_fall(fall_dy) 委托 try_move_y_until_blocked；不 tick、不 record、不入带。
@@ -12,11 +12,14 @@ extends GutTest
 ## try_interact 要求 overlapping_static_boxes 含 crate；测试用 world.set_pose 挪到箱心，course API 不自动传送。
 ## try_use_item 用当前姿态加调用方 reach 做 overlapping_static_boxes_at；测试站在起点，reach 指向 _crate_z，不 set_pose 到箱上。
 ## 终点垫与起点不重合；冲线用 set_pose 到终点盒心。finish_tick 未冲线为 -1，不入 hash_state。
-## TraprushGrayboxAcceptance.try_run 用同一套调用方数值跑完 CD-61 §4.1 M1 切片；磁带不回放进 world。
+## TraprushGrayboxAcceptance.try_run 用同一套调用方数值跑完 CD-61 §4.1 M1 切片；set_pose 不入带。
+## TraprushGrayboxTapeReplay.try_replay 把 PLAYER 磁带经 course API 回放到 tick 0 的新 course。
 ## 不读客户端最终位置、障碍死亡、道具命中、冲线结果或完成标志；不覆盖道具栏、2p。
 
 const GrayboxCourse := preload("res://src/games/traprush/graybox_course.gd")
 const GrayboxAcceptance := preload("res://src/games/traprush/graybox_acceptance.gd")
+const GrayboxTapeReplay := preload("res://src/games/traprush/graybox_tape_replay.gd")
+const SimReplayBuffer := preload("res://src/simulation/replay_buffer.gd")
 const SharedCommand := preload("res://src/shared/commands/shared_command.gd")
 const FixedClass := preload("res://src/shared/fixed/fixed.gd")
 const FixedResultClass := preload("res://src/shared/fixed/fixed_result.gd")
@@ -1339,6 +1342,85 @@ func test_two_courses_same_acceptance_match_tape_state_snapshots_and_finish() ->
 	assert_eq(right.tape.size(), 6)
 
 
+func test_tape_replay_rejects_incomplete_script_dirty_course_and_bad_until() -> void:
+	var source: GrayboxCourse = GrayboxCourse.assemble(_valid_layout())
+	_run_move_and_commit_sequence(source)
+	var dest: GrayboxCourse = GrayboxCourse.assemble(_valid_layout())
+	assert_false(_ok(GrayboxTapeReplay.try_replay(dest, source.tape, {})))
+	assert_eq(dest.world.tick_index, 0)
+	assert_eq(dest.tape.size(), 0)
+	var missing_until: Dictionary = _replay_script(2)
+	missing_until.erase("until_tick")
+	assert_false(_ok(GrayboxTapeReplay.try_replay(dest, source.tape, missing_until)))
+	var negative: Dictionary = _replay_script(-1)
+	assert_false(_ok(GrayboxTapeReplay.try_replay(dest, source.tape, negative)))
+	assert_true(_ok(_step_intent(dest, _move_payload(_whole(1), 0), 0)))
+	assert_false(_ok(GrayboxTapeReplay.try_replay(dest, source.tape, _replay_script(2))))
+
+
+func test_tape_replay_rejects_shove_and_seed_mismatch() -> void:
+	var dest: GrayboxCourse = GrayboxCourse.assemble(_valid_layout())
+	var shove_tape: SimReplayBuffer = SimReplayBuffer.new(dest.tape.get_seed())
+	var shoved: SharedCommand = SharedCommand.create(
+		1,
+		ACTOR_ID,
+		1,
+		0,
+		0,
+		CONTENT_VERSION,
+		{"intent": PlayerIntentNames.SHOVE},
+		TRACE_ID,
+		SharedCommand.Kind.PLAYER
+	)
+	assert_not_null(shoved)
+	assert_true(shove_tape.append(shoved))
+	assert_false(_ok(GrayboxTapeReplay.try_replay(dest, shove_tape, _replay_script(0))))
+	assert_eq(dest.tape.size(), 0)
+	assert_eq(dest.world.tick_index, 0)
+	var source: GrayboxCourse = GrayboxCourse.assemble(_valid_layout())
+	_run_move_and_commit_sequence(source)
+	var other_layout: Dictionary = _valid_layout()
+	other_layout["seed"] = 2
+	var other: GrayboxCourse = GrayboxCourse.assemble(other_layout)
+	assert_false(_ok(GrayboxTapeReplay.try_replay(other, source.tape, _replay_script(2))))
+	assert_eq(other.tape.size(), 0)
+	assert_eq(other.world.tick_index, 0)
+
+
+func test_tape_replay_move_and_commit_matches_source_hashes() -> void:
+	var source: GrayboxCourse = GrayboxCourse.assemble(_valid_layout())
+	_run_move_and_commit_sequence(source)
+	var dest: GrayboxCourse = GrayboxCourse.assemble(_valid_layout())
+	assert_true(_ok(GrayboxTapeReplay.try_replay(dest, source.tape, _replay_script(2))))
+	_assert_replay_matches(source, dest)
+	assert_eq(dest.tape.size(), 2)
+	assert_eq(dest.world.tick_index, 2)
+	assert_eq(dest.snapshots.size(), 3)
+
+
+func test_tape_replay_use_item_destroy_matches_source_hashes() -> void:
+	var source: GrayboxCourse = GrayboxCourse.assemble(_valid_layout())
+	_run_use_item_destroy_from_start(source)
+	var dest: GrayboxCourse = GrayboxCourse.assemble(_valid_layout())
+	assert_true(_ok(GrayboxTapeReplay.try_replay(dest, source.tape, _replay_script(0))))
+	_assert_replay_matches(source, dest)
+	assert_true(dest.crate.is_destroyed())
+	assert_false(dest.world.is_static_box_solid(dest.crate_box_id))
+	assert_eq(dest.world.tick_index, 0)
+	assert_eq(dest.tape.size(), 1)
+
+
+func test_two_replays_of_same_tape_match_each_other() -> void:
+	var source: GrayboxCourse = GrayboxCourse.assemble(_valid_layout())
+	_run_move_and_commit_sequence(source)
+	var left: GrayboxCourse = GrayboxCourse.assemble(_valid_layout())
+	var right: GrayboxCourse = GrayboxCourse.assemble(_valid_layout())
+	assert_true(_ok(GrayboxTapeReplay.try_replay(left, source.tape, _replay_script(2))))
+	assert_true(_ok(GrayboxTapeReplay.try_replay(right, source.tape, _replay_script(2))))
+	_assert_replay_matches(left, right)
+	_assert_replay_matches(source, left)
+
+
 func _run_finish_after_commit(course: GrayboxCourse) -> void:
 	_accept_ordered_checkpoints(course)
 	assert_true(course.try_commit_tick(0))
@@ -1430,6 +1512,34 @@ func _acceptance_script() -> Dictionary:
 			"yaw_bam": START_YAW,
 		},
 	}
+
+
+func _replay_script(until_tick: int) -> Dictionary:
+	return {
+		"jump_dy": 0,
+		"support_dy": 0,
+		"fall_dy": 0,
+		"interact_damage": CRATE_MAX_HEALTH,
+		"use_item_damage": CRATE_MAX_HEALTH,
+		"reach_dx": 0,
+		"reach_dy": 0,
+		"reach_dz": _crate_z(),
+		"until_tick": until_tick,
+	}
+
+
+func _assert_replay_matches(left: GrayboxCourse, right: GrayboxCourse) -> void:
+	assert_eq(left.tape.hash_tape().hex_encode(), right.tape.hash_tape().hex_encode())
+	assert_eq(left.world.hash_state().hex_encode(), right.world.hash_state().hex_encode())
+	assert_eq(left.world.tick_index, right.world.tick_index)
+	assert_eq(left.snapshots.size(), right.snapshots.size())
+	var tick: int = 0
+	while tick <= left.world.tick_index:
+		assert_eq(
+			left.snapshots.hash_at_tick(tick).hex_encode(),
+			right.snapshots.hash_at_tick(tick).hex_encode()
+		)
+		tick += 1
 
 
 func _run_shared_sequence(course: GrayboxCourse) -> void:
