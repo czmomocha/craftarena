@@ -2,7 +2,9 @@ extends GutTest
 
 ## TraprushIntentStepper：把 Move / Jump / ResetToCheckpoint 接到 SimulationWorld。
 ## CD-21 §3 / §8：短跳是按钮意图。位移、jump_dy、support_dy 由调用方传入。
-## 不发明默认速度、跳跃高度、重力或 coyote。Jump 仅在 is_supported_by_solid 时 try_move_y（整段拒绝）。
+## 不发明默认速度、跳跃高度、重力或 coyote。Jump 仅在 is_supported_by_solid 时
+## try_move_y_until_blocked：开阔地终点与成功 try_move_y 相同；路径上有盒则
+## {ok: true} 且停在最后未阻挡样本；对照 try_move_y 仍 false 且不写。
 ## Move 走 try_move_xz_until_blocked：开阔地终点与成功 try_move_xz 相同；路径上有盒/胶囊则
 ## {ok: true} 且停在最后未阻挡样本；对照 try_move_xz 仍 false 且不写。第一步即挡则保持起点。
 ## 可选 yaw 在接触推进之后写入。本刀不调用 world.tick()，不应用 Shove。
@@ -372,15 +374,29 @@ func test_reset_ignores_support_dy() -> void:
 	assert_eq(world.tick_index, 0)
 
 
-func test_grounded_jump_blocked_by_overhead_is_ok_and_keeps_pose() -> void:
-	var world: SimulationWorld = SimulationWorld.new(1)
+func test_grounded_jump_blocked_by_overhead_matches_until_blocked() -> void:
 	var stand_y: int = _whole(4)
 	var support_dy: int = -_whole(1)
 	var jump_dy: int = _whole(1)
-	var entity_id: int = world.spawn_capsule(0, stand_y, 0, 16, _whole(1), _whole(2))
+	var radius: int = _whole(1)
+	var height: int = _whole(2)
+	var yaw: int = 16
+	var world: SimulationWorld = SimulationWorld.new(1)
+	var entity_id: int = world.spawn_capsule(0, stand_y, 0, yaw, radius, height)
 	assert_eq(world.spawn_static_box(0, 0, 0, _whole(1), _whole(1), _whole(1)), 1)
 	assert_eq(world.spawn_static_box(0, _whole(8), 0, _whole(1), _whole(1), _whole(1)), 2)
 	assert_true(world.is_supported_by_solid(entity_id, support_dy))
+	var contrast: SimulationWorld = SimulationWorld.new(1)
+	var contrast_id: int = contrast.spawn_capsule(0, stand_y, 0, yaw, radius, height)
+	assert_eq(contrast.spawn_static_box(0, 0, 0, _whole(1), _whole(1), _whole(1)), 1)
+	assert_eq(contrast.spawn_static_box(0, _whole(8), 0, _whole(1), _whole(1), _whole(1)), 2)
+	assert_false(contrast.try_move_y(contrast_id, jump_dy))
+	_assert_pose(contrast, contrast_id, 0, stand_y, 0, yaw)
+	var oracle: SimulationWorld = SimulationWorld.new(1)
+	var oracle_id: int = oracle.spawn_capsule(0, stand_y, 0, yaw, radius, height)
+	assert_eq(oracle.spawn_static_box(0, 0, 0, _whole(1), _whole(1), _whole(1)), 1)
+	assert_eq(oracle.spawn_static_box(0, _whole(8), 0, _whole(1), _whole(1), _whole(1)), 2)
+	assert_true(oracle.try_move_y_until_blocked(oracle_id, jump_dy))
 	var result: Dictionary = _apply(
 		world,
 		entity_id,
@@ -391,7 +407,47 @@ func test_grounded_jump_blocked_by_overhead_is_ok_and_keeps_pose() -> void:
 		support_dy
 	)
 	assert_true(_ok(result))
-	_assert_pose(world, entity_id, 0, stand_y, 0, 16)
+	_assert_pose_matches(world, entity_id, oracle, oracle_id)
+	assert_eq(world.tick_index, 0)
+
+
+func test_jump_stops_at_last_unblocked_sample_before_ceiling() -> void:
+	var stand_y: int = _whole(4)
+	var support_dy: int = -_whole(1)
+	var jump_dy: int = _whole(10)
+	var radius: int = _whole(1)
+	var height: int = _whole(2)
+	var yaw: int = 16
+	var world: SimulationWorld = SimulationWorld.new(1)
+	var entity_id: int = world.spawn_capsule(0, stand_y, 0, yaw, radius, height)
+	assert_eq(world.spawn_static_box(0, 0, 0, _whole(1), _whole(1), _whole(1)), 1)
+	assert_eq(world.spawn_static_box(0, _whole(10), 0, _whole(1), _whole(1), _whole(1)), 2)
+	assert_true(world.is_supported_by_solid(entity_id, support_dy))
+	var contrast: SimulationWorld = SimulationWorld.new(1)
+	var contrast_id: int = contrast.spawn_capsule(0, stand_y, 0, yaw, radius, height)
+	assert_eq(contrast.spawn_static_box(0, 0, 0, _whole(1), _whole(1), _whole(1)), 1)
+	assert_eq(contrast.spawn_static_box(0, _whole(10), 0, _whole(1), _whole(1), _whole(1)), 2)
+	assert_false(contrast.try_move_y(contrast_id, jump_dy))
+	_assert_pose(contrast, contrast_id, 0, stand_y, 0, yaw)
+	var oracle: SimulationWorld = SimulationWorld.new(1)
+	var oracle_id: int = oracle.spawn_capsule(0, stand_y, 0, yaw, radius, height)
+	assert_eq(oracle.spawn_static_box(0, 0, 0, _whole(1), _whole(1), _whole(1)), 1)
+	assert_eq(oracle.spawn_static_box(0, _whole(10), 0, _whole(1), _whole(1), _whole(1)), 2)
+	assert_true(oracle.try_move_y_until_blocked(oracle_id, jump_dy))
+	var result: Dictionary = _apply(
+		world,
+		entity_id,
+		{"intent": PlayerIntentNames.JUMP},
+		jump_dy,
+		_unused_spawn(),
+		_unused_track(),
+		support_dy
+	)
+	assert_true(_ok(result))
+	_assert_pose_matches(world, entity_id, oracle, oracle_id)
+	var after: Dictionary = world.get_pose(entity_id)
+	var after_y: int = after.get("y", stand_y)
+	assert_ne(after_y, stand_y)
 	assert_eq(world.tick_index, 0)
 
 
