@@ -16,6 +16,7 @@ extends RefCounted
 ## try_interact 仅在 overlapping_static_boxes 含 crate 时按调用方 damage 走 Destructible；摧毁则关闭 crate 盒阻挡。
 ## try_use_item 用当前姿态加调用方 reach 得到候选坐标，overlapping_static_boxes_at 含 crate 时才伤害；伤害与 reach 不从 payload 读取。
 ## try_break_crate 保持测试入口：不要求重叠、不入带。
+## 整段 M1 切片（检查点、传送、周期窗口、爆破开路、冲线）由 TraprushGrayboxAcceptance.try_run 编排；本夹具不发明寻路。
 ## 不从客户端 Dictionary 读最终位置、障碍死亡、道具命中、冲线结果或完成标志；不实现道具栏、2p、名次或 Headless。
 
 const IntentStepper := preload("res://src/games/traprush/intent_stepper.gd")

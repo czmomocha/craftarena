@@ -12,9 +12,11 @@ extends GutTest
 ## try_interact 要求 overlapping_static_boxes 含 crate；测试用 world.set_pose 挪到箱心，course API 不自动传送。
 ## try_use_item 用当前姿态加调用方 reach 做 overlapping_static_boxes_at；测试站在起点，reach 指向 _crate_z，不 set_pose 到箱上。
 ## 终点垫与起点不重合；冲线用 set_pose 到终点盒心。finish_tick 未冲线为 -1，不入 hash_state。
+## TraprushGrayboxAcceptance.try_run 用同一套调用方数值跑完 CD-61 §4.1 M1 切片；磁带不回放进 world。
 ## 不读客户端最终位置、障碍死亡、道具命中、冲线结果或完成标志；不覆盖道具栏、2p。
 
 const GrayboxCourse := preload("res://src/games/traprush/graybox_course.gd")
+const GrayboxAcceptance := preload("res://src/games/traprush/graybox_acceptance.gd")
 const SharedCommand := preload("res://src/shared/commands/shared_command.gd")
 const FixedClass := preload("res://src/shared/fixed/fixed.gd")
 const FixedResultClass := preload("res://src/shared/fixed/fixed_result.gd")
@@ -1264,6 +1266,79 @@ func test_two_courses_same_finish_match_tick_tape_and_state() -> void:
 	assert_eq(right.tape.size(), 0)
 
 
+func test_acceptance_rejects_incomplete_script() -> void:
+	var course: GrayboxCourse = GrayboxCourse.assemble(_valid_layout())
+	assert_false(_ok(GrayboxAcceptance.try_run(course, {})))
+	assert_eq(course.world.tick_index, 0)
+	assert_eq(course.tape.size(), 0)
+	assert_eq(course.finish_tick, -1)
+	var missing_item: Dictionary = _acceptance_script()
+	missing_item.erase("use_item")
+	assert_false(_ok(GrayboxAcceptance.try_run(course, missing_item)))
+	assert_eq(course.finish_tick, -1)
+	assert_false(course.track.is_finished())
+
+
+func test_acceptance_fails_when_blast_does_not_destroy() -> void:
+	var course: GrayboxCourse = GrayboxCourse.assemble(_valid_layout())
+	var script: Dictionary = _acceptance_script()
+	script["blast_damage"] = 0
+	assert_false(_ok(GrayboxAcceptance.try_run(course, script)))
+	assert_eq(course.crate.current_health(), CRATE_MAX_HEALTH)
+	assert_true(course.world.is_static_box_solid(course.crate_box_id))
+	assert_eq(course.finish_tick, -1)
+	assert_false(course.track.is_finished())
+
+
+func test_acceptance_full_run_covers_m1_slice() -> void:
+	var course: GrayboxCourse = GrayboxCourse.assemble(_valid_layout())
+	var result: Dictionary = GrayboxAcceptance.try_run(course, _acceptance_script())
+	assert_true(_ok(result))
+	assert_eq(_finish_tick(result), 1)
+	assert_eq(course.finish_tick, 1)
+	assert_eq(course.finish_tick, course.world.tick_index)
+	assert_true(course.track.is_finished())
+	assert_true(course.crate.is_destroyed())
+	assert_false(course.world.is_static_box_solid(course.crate_box_id))
+	assert_false(course.world.is_static_box_solid(course.hazard_box_id))
+	assert_eq(course.tape.size(), 6)
+	assert_eq(course.snapshots.size(), 2)
+	assert_eq(course.world.tick_index, 1)
+	var wall_cmd: SharedCommand = course.tape.command_at(0)
+	var blast_cmd: SharedCommand = course.tape.command_at(2)
+	assert_not_null(wall_cmd)
+	assert_not_null(blast_cmd)
+	var wall_intent: String = wall_cmd.payload.get("intent", "")
+	var blast_intent: String = blast_cmd.payload.get("intent", "")
+	assert_eq(wall_intent, PlayerIntentNames.MOVE)
+	assert_eq(blast_intent, PlayerIntentNames.USE_ITEM)
+
+
+func test_two_courses_same_acceptance_match_tape_state_snapshots_and_finish() -> void:
+	var layout: Dictionary = _valid_layout()
+	var left: GrayboxCourse = GrayboxCourse.assemble(layout)
+	var right: GrayboxCourse = GrayboxCourse.assemble(layout)
+	var script: Dictionary = _acceptance_script()
+	assert_true(_ok(GrayboxAcceptance.try_run(left, script)))
+	assert_true(_ok(GrayboxAcceptance.try_run(right, script)))
+	assert_eq(left.finish_tick, right.finish_tick)
+	assert_eq(left.finish_tick, 1)
+	assert_eq(left.tape.hash_tape().hex_encode(), right.tape.hash_tape().hex_encode())
+	assert_eq(left.world.hash_state().hex_encode(), right.world.hash_state().hex_encode())
+	assert_eq(left.world.tick_index, right.world.tick_index)
+	assert_eq(left.snapshots.size(), right.snapshots.size())
+	assert_eq(
+		left.snapshots.hash_at_tick(0).hex_encode(),
+		right.snapshots.hash_at_tick(0).hex_encode()
+	)
+	assert_eq(
+		left.snapshots.hash_at_tick(1).hex_encode(),
+		right.snapshots.hash_at_tick(1).hex_encode()
+	)
+	assert_eq(left.tape.size(), 6)
+	assert_eq(right.tape.size(), 6)
+
+
 func _run_finish_after_commit(course: GrayboxCourse) -> void:
 	_accept_ordered_checkpoints(course)
 	assert_true(course.try_commit_tick(0))
@@ -1321,6 +1396,40 @@ func _run_use_item_destroy_from_start(course: GrayboxCourse) -> void:
 	assert_true(_destroyed(broken))
 	assert_eq(course.crate.current_health(), 0)
 	_assert_pose(course, _start_x(), 0, 0, START_YAW)
+
+
+func _acceptance_script() -> Dictionary:
+	return {
+		"jump_dy": 0,
+		"support_dy": 0,
+		"fall_dy": 0,
+		"blast_damage": CRATE_MAX_HEALTH,
+		"reach_dx": 0,
+		"reach_dy": 0,
+		"reach_dz": _crate_z(),
+		"max_hops": MAX_HOPS,
+		"up_portal_id": UP_SOURCE_ID,
+		"side_portal_id": SIDE_SOURCE_ID,
+		"checkpoint_a": CHECKPOINT_A,
+		"checkpoint_b": CHECKPOINT_B,
+		"checkpoint_c": CHECKPOINT_C,
+		"wall_move": _move_payload(_wall_dx(), 0),
+		"crate_move": _move_payload(0, _crate_dz()),
+		"hazard_move": _move_payload(_hazard_dx(), 0),
+		"use_item": _use_item_payload(),
+		"start_pose": {
+			"x": _start_x(),
+			"y": 0,
+			"z": 0,
+			"yaw_bam": START_YAW,
+		},
+		"finish_pose": {
+			"x": _start_x(),
+			"y": 0,
+			"z": _finish_z(),
+			"yaw_bam": START_YAW,
+		},
+	}
 
 
 func _run_shared_sequence(course: GrayboxCourse) -> void:
