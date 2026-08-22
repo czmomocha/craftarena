@@ -6,19 +6,24 @@ extends RefCounted
 ## Radius, cylinder_height, and static AABBs are Q48.16 geometry and are not part of hash_state.
 ## set_static_box_solid toggles whether a static AABB blocks occupancy; ids stay
 ## 1-based and non-solid boxes stay in the array. Solidity is not part of hash_state.
+## is_static_box_solid reports that flag; unknown ids are false. Queries are not hashed.
 ## overlaps_static_box queries the current capsule against one AABB; non-solid boxes
 ## stay queryable. Overflowing overlap math counts as intersecting. Queries are not hashed.
 ## overlapping_static_boxes lists every intersecting AABB id in spawn order, including
 ## non-solid and overflow; unknown entities return empty. Queries are not hashed.
+## overlaps_solid_static_box / overlapping_solid_static_boxes skip non-solid boxes,
+## including overflow against them; unknown ids are false or empty. Queries are not hashed.
 ## overlaps_entity queries two current capsules; unknown or identical ids are false.
 ## Overflowing overlap math counts as intersecting. Queries are not hashed.
 ## overlapping_entities lists every other intersecting capsule id in spawn order,
 ## including overflow and excluding self; unknown entities return empty. Queries are not hashed.
 ## overlaps_static_box_at / overlapping_static_boxes_at / overlaps_entity_at /
-## overlapping_entities_at use the entity's current radius and height at a candidate
-## (x, y, z) without writing pose. Other capsules stay at their current pose.
-## Unknown ids are false or empty; self is false; overflow counts as intersecting.
-## Non-solid boxes stay queryable. Queries are not hashed.
+## overlapping_entities_at / overlaps_solid_static_box_at /
+## overlapping_solid_static_boxes_at use the entity's current radius and height at
+## a candidate (x, y, z) without writing pose. Other capsules stay at their current pose.
+## Unknown ids are false or empty; self is false; overflow counts as intersecting
+## except non-solid boxes, which solid queries skip. Geometry queries still include
+## non-solid boxes. Queries are not hashed.
 ## try_set_pose occupancy-checks the landing pose then teleports; it is not a sweep
 ## and not phase-through. Occupied or overflow destinations reject. set_pose still
 ## writes without occupancy checks so respawn can teleport into a blocked pose.
@@ -80,6 +85,12 @@ func set_static_box_solid(box_id: int, solid: bool) -> bool:
 	return true
 
 
+func is_static_box_solid(box_id: int) -> bool:
+	if not _has_box(box_id):
+		return false
+	return _box_solid[box_id - 1]
+
+
 func overlaps_static_box(entity_id: int, box_id: int) -> bool:
 	if not _has_entity(entity_id):
 		return false
@@ -113,6 +124,40 @@ func overlapping_static_boxes_at(entity_id: int, x: int, y: int, z: int) -> Pack
 		return ids
 	for box_id: int in range(1, _boxes.size() + 1):
 		if overlaps_static_box_at(entity_id, box_id, x, y, z):
+			ids.append(box_id)
+	return ids
+
+
+func overlaps_solid_static_box(entity_id: int, box_id: int) -> bool:
+	if not _has_entity(entity_id):
+		return false
+	var pose_index: int = entity_id - 1
+	return overlaps_solid_static_box_at(
+		entity_id, box_id, _x[pose_index], _y[pose_index], _z[pose_index]
+	)
+
+
+func overlaps_solid_static_box_at(entity_id: int, box_id: int, x: int, y: int, z: int) -> bool:
+	if not is_static_box_solid(box_id):
+		return false
+	return overlaps_static_box_at(entity_id, box_id, x, y, z)
+
+
+func overlapping_solid_static_boxes(entity_id: int) -> PackedInt32Array:
+	if not _has_entity(entity_id):
+		return PackedInt32Array()
+	var pose_index: int = entity_id - 1
+	return overlapping_solid_static_boxes_at(
+		entity_id, _x[pose_index], _y[pose_index], _z[pose_index]
+	)
+
+
+func overlapping_solid_static_boxes_at(entity_id: int, x: int, y: int, z: int) -> PackedInt32Array:
+	var ids: PackedInt32Array = PackedInt32Array()
+	if not _has_entity(entity_id):
+		return ids
+	for box_id: int in range(1, _boxes.size() + 1):
+		if overlaps_solid_static_box_at(entity_id, box_id, x, y, z):
 			ids.append(box_id)
 	return ids
 
@@ -173,8 +218,10 @@ func set_pose(entity_id: int, x: int, y: int, z: int, yaw: int) -> bool:
 func is_pose_blocked(entity_id: int, x: int, y: int, z: int) -> bool:
 	if not _has_entity(entity_id):
 		return true
-	var pose_index: int = entity_id - 1
-	return _destination_blocked(entity_id, pose_index, x, y, z)
+	return (
+		overlapping_solid_static_boxes_at(entity_id, x, y, z).size() > 0
+		or overlapping_entities_at(entity_id, x, y, z).size() > 0
+	)
 
 
 func try_set_pose(entity_id: int, x: int, y: int, z: int, yaw: int) -> bool:
@@ -338,24 +385,10 @@ func _try_abs(value: int) -> FixedResult:
 	return Fixed.try_neg(value)
 
 
-func _destination_blocked(entity_id: int, pose_index: int, dest_x: int, dest_y: int, dest_z: int) -> bool:
-	var mover: KinematicCapsule = _capsule_at(pose_index, dest_x, dest_y, dest_z)
-	for other_id: int in range(1, _x.size() + 1):
-		if other_id == entity_id:
-			continue
-		var other_index: int = other_id - 1
-		var other: KinematicCapsule = _capsule_at(
-			other_index, _x[other_index], _y[other_index], _z[other_index]
-		)
-		if mover.overlaps(other) or not mover.overlap_math_ok:
-			return true
-	for box_index: int in range(_boxes.size()):
-		if not _box_solid[box_index]:
-			continue
-		var box: StaticAabb = _boxes[box_index]
-		if box.overlaps_capsule(mover) or not box.overlap_math_ok:
-			return true
-	return false
+func _destination_blocked(
+	entity_id: int, _pose_index: int, dest_x: int, dest_y: int, dest_z: int
+) -> bool:
+	return is_pose_blocked(entity_id, dest_x, dest_y, dest_z)
 
 
 func _capsule_at(pose_index: int, x: int, y: int, z: int) -> KinematicCapsule:
