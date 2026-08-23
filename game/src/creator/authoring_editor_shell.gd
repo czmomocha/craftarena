@@ -7,7 +7,7 @@ extends Node
 ## Hosts the TRAPRUSH tool strip and read-only validator details.
 ## Emits existing EDIT ops only. Overlay is not a write gate.
 ## Maps AuthoringWorld through AuthoringPreviewMap. Preview does not auto-follow.
-## Never settlement.
+## Optional AuthoringDraftStore restores after crash. Never settlement.
 
 const TITLE: String = "Editor"
 const ACTOR_ID: int = 2
@@ -30,6 +30,7 @@ var map: AuthoringPreviewMap = null
 var preview: AuthoringPreviewShell = null
 var tools: TraprushEditorPanelGd = null
 var validator: AuthoringValidatorPanelGd = null
+var draft_store: AuthoringDraftStore = null
 var _status: Label = null
 var _next_command_id: int = 1
 
@@ -54,6 +55,7 @@ func open() -> bool:
 	_ensure_window()
 	if window == null:
 		return false
+	_restore_draft_if_empty()
 	_rebuild_map()
 	_refresh_status()
 	window.visible = true
@@ -97,6 +99,8 @@ func try_edit(payload: Dictionary) -> bool:
 		_refresh_status()
 		return false
 	var ok: bool = session.try_apply(command)
+	if ok:
+		_persist_draft()
 	_rebuild_map()
 	_refresh_status()
 	return ok
@@ -124,6 +128,8 @@ func undo() -> bool:
 	if session == null:
 		return false
 	var ok: bool = session.undo()
+	if ok:
+		_persist_draft()
 	_rebuild_map()
 	_refresh_status()
 	return ok
@@ -133,6 +139,8 @@ func redo() -> bool:
 	if session == null:
 		return false
 	var ok: bool = session.redo()
+	if ok:
+		_persist_draft()
 	_rebuild_map()
 	_refresh_status()
 	return ok
@@ -159,6 +167,8 @@ func import_document(data: Dictionary) -> bool:
 	if session == null:
 		return false
 	var ok: bool = session.import_document(data)
+	if ok:
+		_persist_draft()
 	_rebuild_map()
 	_refresh_status()
 	return ok
@@ -200,6 +210,23 @@ func status_label_text() -> String:
 
 func refresh_status() -> void:
 	_refresh_status()
+
+
+func _restore_draft_if_empty() -> void:
+	if draft_store == null or session == null or session.world == null:
+		return
+	if session.world.revision != 0 or session.world.entity_count() != 0:
+		return
+	var loaded: AuthoringWorld = draft_store.try_load_latest()
+	if loaded == null:
+		return
+	session.import_document(AuthoringDocument.encode(loaded))
+
+
+func _persist_draft() -> void:
+	if draft_store == null or session == null:
+		return
+	draft_store.record(session.world)
 
 
 func _ensure_window() -> void:

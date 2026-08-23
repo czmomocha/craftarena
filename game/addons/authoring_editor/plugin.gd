@@ -3,15 +3,17 @@ extends EditorPlugin
 
 ## Internal-dev Authoring Editor (CD-32 §1.1).
 ## Project > Tools > Authoring Editor opens AuthoringEditorShell.
-## Not BASTION. Not godot_ai. No _mcp_game_helper. Not a new EDIT op.
+## Enables local draft restore. Not BASTION. Not godot_ai. No _mcp_game_helper.
 
 const HostGd := preload("res://src/creator/authoring_editor_plugin_host.gd")
+const DraftGd := preload("res://src/creator/authoring_draft_store.gd")
 
 var _host: HostGd = null
 
 
 func _enter_tree() -> void:
 	_host = HostGd.new()
+	_host.draft_store = DraftGd.new()
 	add_tool_menu_item(HostGd.MENU_ITEM, _on_open_authoring)
 
 

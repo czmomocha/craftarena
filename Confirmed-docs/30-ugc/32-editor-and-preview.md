@@ -19,7 +19,7 @@
 - 开放完整受限规则图；
 - 供开发、策划、测试和 AI Agent 使用。
 
-当前窗口落点是 `AuthoringEditorShell`：代码创建独立 Godot `Window`（非 exclusive、非 transient），只发已有 EDIT `op`。关闭只隐藏，会话保持。打开 Preview 拷贝当时的 AuthoringWorld，之后的编辑不自动跟。Editor 窗口 `own_world_3d = true`，挂同一套 `AuthoringPreviewMap`，按 **AuthoringWorld** 重建 1 米占位盒与 gizmos。`TraprushEditorPanel` 挂在共用外壳上，提供检查点、传送门、删除最后实体与楼层切换；不新增第四个 EDIT `op`。`AuthoringValidatorPanel` 列出只读 `evaluate_reachability` 问题码；Focus 把 Editor 相机对到有 `transform` 的实体。叠加不是写入门禁。BASTION 面板仍待。`game/addons/authoring_editor/` 注册 EditorPlugin：Project > Tools > Authoring Editor 打开同一套 `AuthoringEditorShell`。关闭只隐藏，会话保持。不改 `main.tscn`，不编 SimulationBundle，不写入 `_mcp_game_helper`，不把 `godot_ai` 写入已提交插件列表。F6 沙箱 `res://src/creator/editor_sandbox.tscn` 只供目视退路，不进 CI。两张官方赛道 JSON 已落入 `game/content/official/traprush/`。批量生成、性能分析面板仍待。落点见 [CD-42 §3.4](../40-technical/42-contracts-and-rulevm.md#34-实现落点)。
+当前窗口落点是 `AuthoringEditorShell`：代码创建独立 Godot `Window`（非 exclusive、非 transient），只发已有 EDIT `op`。关闭只隐藏，会话保持。打开 Preview 拷贝当时的 AuthoringWorld，之后的编辑不自动跟。Editor 窗口 `own_world_3d = true`，挂同一套 `AuthoringPreviewMap`，按 **AuthoringWorld** 重建 1 米占位盒与 gizmos。`TraprushEditorPanel` 挂在共用外壳上，提供检查点、传送门、删除最后实体与楼层切换；不新增第四个 EDIT `op`。`AuthoringValidatorPanel` 列出只读 `evaluate_reachability` 问题码；Focus 把 Editor 相机对到有 `transform` 的实体。叠加不是写入门禁。BASTION 面板仍待。`game/addons/authoring_editor/` 注册 EditorPlugin：Project > Tools > Authoring Editor 打开同一套 `AuthoringEditorShell`。关闭只隐藏，会话保持。不改 `main.tscn`，不编 SimulationBundle，不写入 `_mcp_game_helper`，不把 `godot_ai` 写入已提交插件列表。EditorPlugin 挂 `AuthoringDraftStore`：成功 `try_apply` / Undo / Redo / 导入后把最新 AuthoringDocument 写入 `user://authoring_draft.json`，空会话打开时恢复。F6 沙箱 `res://src/creator/editor_sandbox.tscn` 只供目视退路，不进 CI，不挂草稿。2 秒云端上传、5 分钟定时、多写者租约仍待。批量生成、性能分析面板仍待。落点见 [CD-42 §3.4](../40-technical/42-contracts-and-rulevm.md#34-实现落点)。
 
 ### 1.2 游戏内创作者编辑器
 
@@ -53,6 +53,8 @@ Web 用模板和表单编辑规则；桌面端开放受限规则图。两者生�
 - 同账号多设备通过编辑租约互斥；
 - 编辑器崩溃后自动恢复最近草稿。
 
+当前落点是 `AuthoringDraftStore`：每次成功写入（`try_apply` / Undo / Redo / `import_document`）把最新 AuthoringDocument 记为 `latest`，并按每 50 条（第 1 条也记）追加检查点、最多保留 30 个。文件在 `user://authoring_draft.json`，拒绝写入 `res://`。损坏或多余键整份拒绝，不覆盖内存世界。EditorPlugin 打开空会话时恢复 `latest`；F6 沙箱不启用。不是新 `op`，不结算。2 秒防抖上传、5 分钟定时检查点、云端租约仍待。落点见 [CD-42 §3.4](../40-technical/42-contracts-and-rulevm.md#34-实现落点)。
+
 Guest 草稿的云端保留期见 [CD-14](../10-product/14-data-and-telemetry.md)；禁止 Fork 的范围见 [CD-31 §4](31-ugc-principles.md)。
 
 ## 3. 从编辑到预览
@@ -78,6 +80,7 @@ UI 操作
 - **验证器详情**：`AuthoringValidatorPanel` 只读 `evaluate_reachability`，列出已有问题码。Focus 把 Editor 相机对到有 `transform` 的实体。`missing_mandatory_path` 无实体可标，只进列表。不是写入门禁。Preview 仍不自动跟。不是新 `op`。
 - **第一张官方赛道**：`game/content/official/traprush/course_01.json` 是一份发布检查通过的 AuthoringDocument：同层检查点加跨层 `two_way` 传送对（纯竖直，z=0）。由 `AuthoringDocument.load_from_path` 读入，编辑外壳 `import_document` 后验证器空列表。不是新 `op`，不是写入门禁。F6 沙箱 `res://src/creator/course_sandbox.tscn` 只供目视。`editor_sandbox.tscn` 仍种悬空传送，供验证器目视。
 - **内部开发 EditorPlugin**：`game/addons/authoring_editor/plugin.cfg` 启用后，Project > Tools > Authoring Editor 调用 `AuthoringEditorPluginHost` 打开已有 `AuthoringEditorShell`。只发已有 EDIT `op`。禁用插件时 `_exit_tree` 卸菜单并 `detach`。不是新 `op`，不是写入门禁，不结算。BASTION 面板、批量生成与性能分析仍待。F6 沙箱仍是退路。
+- **本地草稿恢复**：`AuthoringDraftStore` 在成功写入后保存 `latest` 与最多 30 个检查点。空会话 `open` 恢复 `latest`。失败写入不改草稿。损坏文件拒绝。不是新 `op`，不结算，不写 `res://content/`。2 秒上传与 5 分钟定时仍待。
 - **第二张官方赛道**：`game/content/official/traprush/course_02.json` 是一份发布检查通过的 AuthoringDocument：同层检查点加跨层且侧向（+Z）的 `two_way` 传送对。与第一张布局不同。由 `AuthoringDocument.load_from_path` 读入，编辑外壳 `import_document` 后验证器空列表。不是新 `op`，不是写入门禁。第三张赛道仍待。F6 沙箱 `res://src/creator/course_02_sandbox.tscn` 只供目视。
 - **楼层**：楼层索引 = `y / cell`（向零）。`entity_ids_on_floor` 供楼层切换查询；不另锁层高产品数。
 - **传送连线**：从 `portal.target_id` 派生有向边，分类为 `two_way` / `one_way` / `dangling`（配对语义见 [CD-21 §4.2](../20-gameplay/21-traprush.md)）。编辑期允许目标尚未存在；禁止自环，禁止指向已存在但没有 `portal` 的实体。不新增第四个 EDIT `op`。
