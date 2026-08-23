@@ -19,6 +19,8 @@
 - 开放完整受限规则图；
 - 供开发、策划、测试和 AI Agent 使用。
 
+当前窗口落点是 `AuthoringEditorShell`：代码创建独立 Godot `Window`（非 exclusive、非 transient），只发已有 EDIT `op`。关闭只隐藏，会话保持。打开 Preview 拷贝当时的 AuthoringWorld，之后的编辑不自动跟。**不是** EditorPlugin，不改 `main.tscn`，不编 SimulationBundle。F6 沙箱 `res://src/creator/editor_sandbox.tscn` 只供目视，不进 CI。要看窗口必须 **F6 运行当前场景**。批量生成、性能分析面板与插件注册仍待。落点见 [CD-42 §3.4](../40-technical/42-contracts-and-rulevm.md#34-实现落点)。
+
 ### 1.2 游戏内创作者编辑器
 
 - 桌面安装版显示白名单对象、完整受限规则图和高级调试；
@@ -67,9 +69,10 @@ UI 操作
 → 失败：完整回滚并定位错误对象
 ```
 
-当前落点是 `AuthoringSession.try_apply`（`expected_revision` 门禁，失败不写入）以及 `undo` / `redo`（反向 payload）。`AuthoringWorld` 在成功 `put` / `replace` 上执行：
+当前落点是 `AuthoringEditorShell` 把 UI 操作变成 `AuthoringSession.try_apply`（`expected_revision` 门禁，失败不写入）以及 `undo` / `redo`（反向 payload）。`AuthoringWorld` 在成功 `put` / `replace` 上执行：
 
 - **网格吸附**：带 `transform` 的实体袋，XYZ 必须落在吸附格上。默认格边 = `Fixed.SCALE`（1 表现米，[ADR-0005](../../docs/adr/0005-fixed-point-numeric-model.md)）。偏离格子的命令整份拒绝，不静默取整。无 `transform` 的袋不参与格子。
+- **编辑外壳**：`AuthoringEditorShell` 用代码创建独立 `Window`。格子坐标 × `cell` 后走已有 `place` / `remove`。关闭只隐藏。`open_preview` 按当时世界 `connect_from`；之后 `try_apply` 不自动进 Preview。不是 EditorPlugin。F6 沙箱见 [§1.1](#11-内部开发编辑器)。
 - **楼层**：楼层索引 = `y / cell`（向零）。`entity_ids_on_floor` 供楼层切换查询；不另锁层高产品数。
 - **传送连线**：从 `portal.target_id` 派生有向边，分类为 `two_way` / `one_way` / `dangling`（配对语义见 [CD-21 §4.2](../20-gameplay/21-traprush.md)）。编辑期允许目标尚未存在；禁止自环，禁止指向已存在但没有 `portal` 的实体。不新增第四个 EDIT `op`。
 - **发布前可达性**：`AuthoringSession.evaluate_reachability`（`AuthoringReachability.evaluate`）。**不**在 `try_apply` 上跑。编辑期悬空仍合法。发布期拒绝：悬空传送、`one_way` 跟随链回到已访问节点、重复的 `checkpoint.order`、没有任何检查点、以及有序检查点跨楼层且楼层图不可达。同层相邻检查点视为普通通道，不探测走空洞。`two_way` 配对视为落点终止，不是循环。传送链 hop 上限数值仍未锁（[CD-63](../60-plan/63-open-decisions.md)）；本检查用访问集合找环。问题码落点见 [CD-42 §3.4](../40-technical/42-contracts-and-rulevm.md#34-实现落点)。这是 TRAPRUSH 发布前通路/循环；BASTION 封路与 BotRunner 走路可达不是本落点。

@@ -1,0 +1,6 @@
+[gd_scene format=3 uid="uid://cq8n3k0editsbx"]
+
+[ext_resource type="Script" uid="uid://clwuh4hoinffo" path="res://src/creator/editor_sandbox.gd" id="1_editor"]
+
+[node name="EditorSandbox" type="Node" unique_id=184729365]
+script = ExtResource("1_editor")
