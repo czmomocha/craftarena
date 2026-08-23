@@ -153,7 +153,15 @@ trace_id
 
 各玩法允许的具体 Intent 列表见 [CD-21 §8](../20-gameplay/21-traprush.md) 与 [CD-22 §7.3](../20-gameplay/22-bastion.md)。名字的代码落点是 `game/src/shared/commands/player_intent_names.gd`。
 
-EDIT 命令必须带白名单 `op`：`place` / `remove` / `set_component`。这三项覆盖摆放、删除和改组件；不锁网格、楼层、传送连线、可达性或 Undo 反向命令。名字落点是 `game/src/shared/commands/edit_op_names.gd`。
+EDIT 命令必须带白名单 `op`：`place` / `remove` / `set_component`。这三项覆盖摆放、删除和改组件。网格、楼层、传送连线、可达性仍不锁。未知 payload 键拒绝。
+
+| `op` | payload |
+|---|---|
+| `place` | `record`：完整 [§1.2](#12-字段标识符v1) 实体袋。目标 `entity_id` 必须尚未存在。 |
+| `remove` | `entity_id` ≥ 1。目标必须已存在。 |
+| `set_component` | `record`：完整实体袋，整袋替换。目标必须已存在。 |
+
+Undo / Redo 是会话内对成功命令派生的反向 payload（`place`↔`remove`，`set_component` 恢复该实体上一份袋），**不**新增第四个 `op`。失败的 `try_apply` 不写入、不 bump revision。每次成功修改（含撤销重做）生成新 revision，不回退计数。解码与会话落点见 [§3.4](#34-实现落点)。
 
 ### 3.4 实现落点
 
@@ -164,6 +172,9 @@ EDIT 命令必须带白名单 `op`：`place` / `remove` / `set_component`。这�
 | 稳定 ID | `game/src/shared/ids/shared_ids.gd` |
 | 命令信封 | `game/src/shared/commands/shared_command.gd` |
 | EDIT op 名 | `game/src/shared/commands/edit_op_names.gd` |
+| EDIT payload 解码 | `game/src/creator/edit_payload.gd` |
+| AuthoringWorld | `game/src/creator/authoring_world.gd` |
+| AuthoringSession | `game/src/creator/authoring_session.gd` |
 | 领域事件 | `game/src/shared/events/shared_domain_event.gd` |
 | 可哈希 payload 白名单 | `game/src/shared/protocol/canonical_payload.gd` |
 | 关键状态哈希 | `game/src/shared/protocol/state_hasher.gd` |
@@ -183,4 +194,4 @@ JSON Schema 落点：
 | 组件袋 | `backend/contracts/schemas/component_record.schema.json` |
 | 正反例与校验 | `tools/content-validator/`（由根目录 `npm test` 收集） |
 
-`payload` 只允许 nil / bool / int / String / Array / Dictionary（字符串键）；禁止 float、Object、Callable。PLAYER 命令必须带白名单 `intent` 字符串。EDIT 命令必须带白名单 `op` 字符串。SYSTEM 命令允许 `actor_id = 0`。Component Schema v1 字段见 [§1.2](#12-字段标识符v1)。Rule VM 图的 JSON Schema 仍未落地。OpenAPI 仍未落地。
+`payload` 只允许 nil / bool / int / String / Array / Dictionary（字符串键）；禁止 float、Object、Callable。PLAYER 命令必须带白名单 `intent` 字符串。EDIT 命令必须带白名单 `op` 字符串，payload 形状见 [§3.3](#33-服务端处理管线)。SYSTEM 命令允许 `actor_id = 0`。Component Schema v1 字段见 [§1.2](#12-字段标识符v1)。Rule VM 图的 JSON Schema 仍未落地。OpenAPI 仍未落地。

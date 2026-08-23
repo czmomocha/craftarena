@@ -18,8 +18,9 @@
 					"yaw_bam": 16384
 				}
 			}
-		}
+		},
+		"script": "res://cheat.gd"
 	},
-	"trace_id": "trace-edit",
+	"trace_id": "trace-edit-extra",
 	"kind": 2
 }

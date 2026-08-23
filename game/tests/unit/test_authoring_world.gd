@@ -1,7 +1,7 @@
 extends GutTest
 
-## AuthoringWorld skeleton: insert-only put, remove, revision, copy-out get, stable hash.
-## Does not decode or apply EditCommand.
+## AuthoringWorld：insert-only put、已存在 id 的 replace、remove、revision、拷贝取出、稳定哈希。
+## EditCommand 解码与 Undo 在 AuthoringSession，不在本文件。
 
 const AuthoringWorld := preload("res://src/creator/authoring_world.gd")
 const SharedComponentRecord := preload("res://src/shared/schema/component_record.gd")
@@ -101,6 +101,24 @@ func test_failed_mutation_does_not_change_hash() -> void:
 	assert_eq(world.hash_state(), before)
 	assert_true(world.put(_transform_record(2, 0)))
 	assert_ne(world.hash_state(), before)
+
+
+func test_replace_overwrites_existing_and_rejects_unknown() -> void:
+	var world: AuthoringWorld = AuthoringWorld.new()
+	assert_false(world.replace(_transform_record(1, 4)))
+	assert_eq(world.revision, 0)
+	assert_true(world.put(_transform_record(1, 0)))
+	assert_eq(world.revision, 1)
+	assert_true(world.replace(_transform_record(1, 9)))
+	assert_eq(world.revision, 2)
+	var stored: SharedComponentRecord = world.get_record(1)
+	var transform: Dictionary = stored.components.get("transform", {})
+	var stored_y: int = transform.get("y", -1)
+	assert_eq(stored_y, 9)
+	assert_false(world.replace(null))
+	assert_false(world.replace(SharedComponentRecord.new()))
+	assert_eq(world.revision, 2)
+	assert_eq(world.entity_count(), 1)
 
 
 func _transform_record(entity_id: int, y: int) -> SharedComponentRecord:
