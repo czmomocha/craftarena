@@ -129,6 +129,7 @@ AI 生成代码必须比普通手写代码有**更强的自动化证据**，因�
 - 编辑外壳：格子上 place 检查点、Undo/Redo、打开 Preview 不自动跟、关闭只隐藏、未知表面拒绝、不结算；
 - 编辑窗口 3D 映射：place 后出现 1 米占位盒；失败/Undo 不留幽灵；编辑 map 跟随写入，Preview 快照不自动跟；
 - TRAPRUSH 工具面板：检查点与传送门走格子；两次 Place portal 成 `two_way`；Floor 只改下一次 `cell_y`；Remove last 不留幽灵盒；不结算；
+- 验证器详情：空世界列出 `missing_mandatory_path` 且 Focus 失败；悬空传送可定位有 `transform` 的实体；列表跟随编辑、不是写入门禁；已打开的 Preview 不自动跟；不结算；
 - 编辑器异常退出后草稿恢复；
 - 发布中途进程退出；
 - 签名失败；
