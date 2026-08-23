@@ -1,0 +1,76 @@
+{
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"$id": "https://craftarena.local/contracts/simulation_bundle.schema.json",
+	"title": "SimulationBundle",
+	"description": "v1 TRAPRUSH topology compile of AuthoringWorld. Field list owner: CD-42 §3.4. Pads and two_way/one_way portals only. Dangling portals are omitted. Not a signed binary, not a Rule VM graph.",
+	"type": "object",
+	"additionalProperties": false,
+	"required": [
+		"schema_version",
+		"cell",
+		"source_revision",
+		"pads",
+		"portals"
+	],
+	"properties": {
+		"schema_version": { "type": "integer", "const": 1 },
+		"cell": { "type": "integer", "minimum": 1 },
+		"source_revision": { "type": "integer", "minimum": 0 },
+		"pads": {
+			"type": "array",
+			"items": { "$ref": "#/$defs/pad" }
+		},
+		"portals": {
+			"type": "array",
+			"items": { "$ref": "#/$defs/portal" }
+		}
+	},
+	"$defs": {
+		"pad": {
+			"type": "object",
+			"additionalProperties": false,
+			"required": [
+				"entity_id",
+				"x",
+				"y",
+				"z",
+				"order",
+				"respawn_dx",
+				"respawn_dy",
+				"respawn_dz"
+			],
+			"properties": {
+				"entity_id": { "type": "integer", "minimum": 1 },
+				"x": { "type": "integer" },
+				"y": { "type": "integer" },
+				"z": { "type": "integer" },
+				"order": { "type": "integer", "minimum": 0 },
+				"respawn_dx": { "type": "integer" },
+				"respawn_dy": { "type": "integer" },
+				"respawn_dz": { "type": "integer" }
+			}
+		},
+		"portal": {
+			"type": "object",
+			"additionalProperties": false,
+			"required": [
+				"entity_id",
+				"target_id",
+				"kind",
+				"dest_x",
+				"dest_y",
+				"dest_z",
+				"dest_yaw_bam"
+			],
+			"properties": {
+				"entity_id": { "type": "integer", "minimum": 1 },
+				"target_id": { "type": "integer", "minimum": 1 },
+				"kind": { "type": "string", "enum": ["two_way", "one_way"] },
+				"dest_x": { "type": "integer" },
+				"dest_y": { "type": "integer" },
+				"dest_z": { "type": "integer" },
+				"dest_yaw_bam": { "type": "integer" }
+			}
+		}
+	}
+}

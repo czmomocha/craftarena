@@ -135,6 +135,7 @@ AI 生成代码必须比普通手写代码有**更强的自动化证据**，因�
 - 内部开发 EditorPlugin：`plugin.cfg` 入库；`project.godot` 启用 GUT + authoring_editor、不含 `godot_ai` / `_mcp_game_helper`；host 打开已有外壳，关闭只隐藏并保持会话，`detach` 释放，不结算；
 - 本地草稿恢复：成功写入落 `latest` 且文件非空；空会话打开恢复；恢复后工具条下一个 Place 使用新 id；编辑器 `plugin.gd` `@tool` 落盘；`world_committed`；失败写入不改草稿；损坏 / 多余键拒绝；拒绝写入 `res://`；检查点最多 30；不结算；
 - 编辑写入自动进 Preview：place / remove / Undo / Redo 都到达已连接 Preview 且两个世界 revision 同步；`set_component` 等级按 Preview 世界算（按编辑世界算会低报被拒）；失败写入不转发且仍跟随；越界补丁与整份 `import_document` 脱同步且不回滚编辑；无 Preview 时不谎报跟随；窗口隐藏仍跟随；状态栏 `follow` 可见；不结算；
+- TRAPRUSH 拓扑编译：空世界编成空 bundle；两张官方赛道编出检查点垫与 `two_way` 传送且布局不同；`dangling` 省略、`one_way` 保留；检查点缺 `transform` 整份拒绝；多余键拒绝；加载后垫盒非固体且可占用查询；`one_way` 可落地；不 tick 进加载器、不结算；
 - 发布中途进程退出；
 - 签名失败；
 - `latest` 指针原子切换；
@@ -201,7 +202,7 @@ AI 生成代码必须比普通手写代码有**更强的自动化证据**，因�
 | 语法与类型检查 | 已启用 | 逐个 `.gd` 文件跑 `--check-only`（`game/src`、`game/tests`、`game/addons/authoring_editor`；不含 GUT）；`backend/`、`tools/` 跑 `tsc --noEmit` |
 | 核心目录警告视为错误 | 已启用 | GDScript 由 `project.godot` 全局配置（[ADR-0001](../../docs/adr/0001-strict-gdscript-typing-gate.md)）并由 GUT 断言守护；TypeScript 由 `tsconfig.json` 的 strict 系列保证 |
 | 单元测试 | 已启用（全量，非"受影响"） | GUT 跑 `res://tests/unit`；后端跑 `node --test` |
-| Schema 验证 | 已启用（L0 信封 + Component Schema v1 + AuthoringDocument） | `tools/content-validator/` 对 `backend/contracts/schemas/` 做正反例（含 `component_record` 与 `authoring_document`），并由根目录 `npm test` 收集。未覆盖 Rule VM 图。未引入 Ajv（新依赖属宪法第十八条人类门禁）。字段名单见 [CD-42 §1.2](../40-technical/42-contracts-and-rulevm.md#12-字段标识符v1) 与 [CD-32 §1.4](../30-ugc/32-editor-and-preview.md#14-共同数据模型) |
+| Schema 验证 | 已启用（L0 信封 + Component Schema v1 + AuthoringDocument + SimulationBundle） | `tools/content-validator/` 对 `backend/contracts/schemas/` 做正反例（含 `component_record`、`authoring_document` 与 `simulation_bundle`），并由根目录 `npm test` 收集。未覆盖 Rule VM 图。未引入 Ajv（新依赖属宪法第十八条人类门禁）。字段名单见 [CD-42 §1.2](../40-technical/42-contracts-and-rulevm.md#12-字段标识符v1)、[CD-32 §1.4](../30-ugc/32-editor-and-preview.md#14-共同数据模型) 与 [CD-42 §3.4](../40-technical/42-contracts-and-rulevm.md#34-实现落点) |
 | 禁止 API 和依赖检查 | 已启用（宪法红线子集） | `tools/redline-scanner/` + CI step `npm run redline-scan`：`simulation/` 禁 SceneTree/`float`、共享核心禁 `.gdextension`、`game/src` 禁 Godot 3 高信号符号、`game/` 禁 `.cs`/`.csproj`/`.sln`（GUT 仍保留同一条）。Godot 3 黑名单是[官方更名表](https://docs.godotengine.org/en/stable/tutorials/migrating/upgrading_to_godot_4.html)的高信号子集，不是穷尽。第二十三条仍由 ADR-0001 覆盖 |
 | 编辑文件的 linter 诊断 | 未实现 | 依赖开发机 IDE，未进 CI |
 | PR Web 预览 | 未实现 | 等 Web 导出与沙盒环境落地 |

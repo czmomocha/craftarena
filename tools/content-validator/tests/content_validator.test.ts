@@ -3,23 +3,26 @@ import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { describe, it } from "node:test";
 
-import { AUTHORING_SCHEMA_FILES, COMPONENT_SCHEMA_FILES, L0_SCHEMA_FILES } from "../../../backend/contracts/src/schemas.ts";
+import { AUTHORING_SCHEMA_FILES, COMPONENT_SCHEMA_FILES, L0_SCHEMA_FILES, SIMULATION_BUNDLE_SCHEMA_FILES } from "../../../backend/contracts/src/schemas.ts";
 import { collectGdscriptSchemaMismatches } from "../src/gdscript_sync.ts";
 import {
 	loadAuthoringFixtures,
 	loadComponentFixtures,
 	loadEnvelopeFixtures,
 	loadOfficialAuthoringDocuments,
+	loadSimulationBundleFixtures,
 } from "../src/load_fixtures.ts";
 import {
 	AUTHORING_DOCUMENT_SCHEMA_PATH,
 	CANONICAL_SCHEMA_PATH,
 	COMPONENT_SCHEMA_PATH,
 	CONTRACTS_SCHEMA_DIR,
+	SIMULATION_BUNDLE_SCHEMA_PATH,
 } from "../src/paths.ts";
 import { validateAuthoringDocument } from "../src/validate_authoring_document.ts";
 import { validateComponentRecord } from "../src/validate_component.ts";
 import { validateSharedCommand, validateSharedDomainEvent } from "../src/validate_envelope.ts";
+import { validateSimulationBundle } from "../src/validate_simulation_bundle.ts";
 
 describe("L0 schema catalog", () => {
 	it("keeps every registered schema file on disk", () => {
@@ -48,8 +51,17 @@ describe("AuthoringDocument catalog", () => {
 	});
 });
 
+describe("SimulationBundle catalog", () => {
+	it("keeps every registered simulation bundle schema file on disk", () => {
+		for (const file of SIMULATION_BUNDLE_SCHEMA_FILES) {
+			assert.equal(existsSync(join(CONTRACTS_SCHEMA_DIR, file)), true, file);
+		}
+		assert.equal(existsSync(SIMULATION_BUNDLE_SCHEMA_PATH), true);
+	});
+});
+
 describe("GDScript and JSON Schema stay aligned", () => {
-	it("matches intent names, kind numbers, fields, depth, versions, component catalogs, and authoring document fields", () => {
+	it("matches intent names, kind numbers, fields, depth, versions, component catalogs, authoring document fields, and simulation bundle fields", () => {
 		assert.deepEqual(collectGdscriptSchemaMismatches(), []);
 	});
 });
@@ -130,6 +142,26 @@ describe("official authoring documents", () => {
 	for (const document of documents) {
 		it(`official/${document.name} is schema-valid`, () => {
 			assert.deepEqual(validateAuthoringDocument(document.instance), []);
+		});
+	}
+});
+
+describe("simulation bundle fixtures", () => {
+	const fixtures = loadSimulationBundleFixtures();
+
+	it("has both valid and invalid simulation bundle examples", () => {
+		assert.ok(fixtures.some((fixture) => fixture.valid));
+		assert.ok(fixtures.some((fixture) => !fixture.valid));
+	});
+
+	for (const fixture of fixtures) {
+		it(`simulation_bundle/${fixture.valid ? "valid" : "invalid"}/${fixture.name}`, () => {
+			const errors = validateSimulationBundle(fixture.instance);
+			if (fixture.valid) {
+				assert.deepEqual(errors, []);
+			} else {
+				assert.ok(errors.length > 0, "expected schema errors");
+			}
 		});
 	}
 });
