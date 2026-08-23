@@ -1,7 +1,7 @@
 extends GutTest
 
 ## AuthoringPreviewShell：独立 Window；编辑会话保持打开；关闭只隐藏；永不结算。
-## 不编 SimulationBundle，不画 3D。tab 本刀拒绝。
+## 不编 SimulationBundle。无 transform 的袋不画盒。tab 本刀拒绝。
 
 const AuthoringPreviewHostKinds := preload("res://src/creator/authoring_preview_host_kinds.gd")
 const AuthoringPreviewShell := preload("res://src/creator/authoring_preview_shell.gd")
@@ -39,6 +39,8 @@ func test_open_window_keeps_authoring_session() -> void:
 	var preview_revision: int = view.get("preview_revision", -1)
 	assert_eq(entity_count, 1)
 	assert_eq(preview_revision, 0)
+	assert_true(_shell.window.own_world_3d)
+	assert_eq(_shell.map.mapped_count(), 0)
 
 
 func test_patch_updates_status_without_settlement() -> void:

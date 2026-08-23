@@ -1,0 +1,6 @@
+[gd_scene format=3 uid="uid://di6uoa22iqxjt"]
+
+[ext_resource type="Script" uid="uid://be2vlk60ytupc" path="res://src/creator/preview_sandbox.gd" id="1_wbll4"]
+
+[node name="PreviewSandbox" type="Node" unique_id=617618257]
+script = ExtResource("1_wbll4")
