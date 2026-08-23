@@ -3,8 +3,8 @@ extends Node3D
 
 ## Presentation mapping for AuthoringPreview (CD-32 §3). Authority stays on
 ## AuthoringWorld Q48.16; float conversion happens only here. One 1×1×1 m
-## BoxMesh per entity with transform; portal_link gizmos from classified
-## links. Placeholders and gizmos are not hitboxes. Rebuild after every patch.
+## BoxMesh per entity with transform; portal_link and checkpoint-order
+## gizmos. Placeholders and gizmos are not hitboxes. Rebuild after every patch.
 
 const CAMERA_NAME: String = "PreviewCamera"
 const LIGHT_NAME: String = "PreviewLight"
@@ -12,11 +12,15 @@ const PLACEHOLDER_PREFIX: String = "entity_"
 const LINK_PREFIX: String = "portal_link_"
 const DANGLE_PREFIX: String = "portal_dangle_"
 const DIR_PREFIX: String = "portal_dir_"
+const CHECKPOINT_PREFIX: String = "checkpoint_mark_"
+const SEQUENCE_PREFIX: String = "checkpoint_seq_"
 const PLACEHOLDER_SIZE: Vector3 = Vector3(1.0, 1.0, 1.0)
 const LINK_THICKNESS: float = 0.08
 const DANGLE_SIZE: Vector3 = Vector3(0.35, 0.35, 0.35)
 const DIR_SIZE: Vector3 = Vector3(0.2, 0.2, 0.2)
 const DANGLE_LIFT: float = 0.7
+const CHECKPOINT_LIFT: float = 1.15
+const SEQUENCE_LIFT: float = 0.25
 const _MIN_LINK_LEN: float = 0.001
 const _CAMERA_POS: Vector3 = Vector3(6.0, 8.0, 6.0)
 const _LIGHT_ROT_DEG: Vector3 = Vector3(-50.0, -30.0, 0.0)
@@ -24,6 +28,8 @@ const _STUB_ALBEDO: Color = Color(0.85, 0.7, 0.25)
 const _TWO_WAY_ALBEDO: Color = Color(0.2, 0.75, 0.95)
 const _ONE_WAY_ALBEDO: Color = Color(0.95, 0.55, 0.15)
 const _DANGLE_ALBEDO: Color = Color(0.9, 0.25, 0.35)
+const _CHECKPOINT_ALBEDO: Color = Color(0.35, 0.9, 0.4)
+const _CHECKPOINT_DUP_ALBEDO: Color = Color(0.95, 0.3, 0.85)
 
 
 static func meters_from_fixed(value: int) -> float:
@@ -58,6 +64,23 @@ static func pose_from_record(record: SharedComponentRecord) -> Dictionary:
 	return {"x": x, "y": y, "z": z, "yaw_bam": yaw_bam}
 
 
+static func order_from_record(record: SharedComponentRecord) -> int:
+	if record == null:
+		return -1
+	if not record.components.has(SharedComponentNames.CHECKPOINT):
+		return -1
+	var raw: Variant = record.components[SharedComponentNames.CHECKPOINT]
+	if typeof(raw) != TYPE_DICTIONARY:
+		return -1
+	var body: Dictionary = raw
+	if typeof(body.get("order", null)) != TYPE_INT:
+		return -1
+	var order: int = body["order"]
+	if order < 0:
+		return -1
+	return order
+
+
 static func meters_from_pose(pose: Dictionary) -> Vector3:
 	var x: int = pose["x"]
 	var y: int = pose["y"]
@@ -79,6 +102,14 @@ static func dangle_name(source_id: int) -> String:
 
 static func direction_name(source_id: int) -> String:
 	return "%s%d" % [DIR_PREFIX, source_id]
+
+
+static func checkpoint_name(entity_id: int) -> String:
+	return "%s%d" % [CHECKPOINT_PREFIX, entity_id]
+
+
+static func sequence_name(from_id: int, to_id: int) -> String:
+	return "%s%d_%d" % [SEQUENCE_PREFIX, from_id, to_id]
 
 
 func ensure_rig() -> void:
@@ -112,18 +143,31 @@ func rebuild(world: AuthoringWorld) -> void:
 			continue
 		_spawn_placeholder(entity_id, pose)
 	_spawn_portal_gizmos(world)
+	_spawn_checkpoint_gizmos(world)
 
 
 func mapped_count() -> int:
-	return _count_prefix(PLACEHOLDER_PREFIX)
+	return _count_mesh_prefix(PLACEHOLDER_PREFIX)
 
 
 func link_count() -> int:
-	return _count_prefix(LINK_PREFIX)
+	return _count_mesh_prefix(LINK_PREFIX)
 
 
 func dangle_count() -> int:
-	return _count_prefix(DANGLE_PREFIX)
+	return _count_mesh_prefix(DANGLE_PREFIX)
+
+
+func checkpoint_count() -> int:
+	var count: int = 0
+	for child: Node in get_children():
+		if child is Label3D and str(child.name).begins_with(CHECKPOINT_PREFIX):
+			count += 1
+	return count
+
+
+func sequence_count() -> int:
+	return _count_mesh_prefix(SEQUENCE_PREFIX)
 
 
 func placeholder_node(entity_id: int) -> MeshInstance3D:
@@ -142,7 +186,15 @@ func direction_node(source_id: int) -> MeshInstance3D:
 	return get_node_or_null(direction_name(source_id)) as MeshInstance3D
 
 
-func _count_prefix(prefix: String) -> int:
+func checkpoint_node(entity_id: int) -> Label3D:
+	return get_node_or_null(checkpoint_name(entity_id)) as Label3D
+
+
+func sequence_node(from_id: int, to_id: int) -> MeshInstance3D:
+	return get_node_or_null(sequence_name(from_id, to_id)) as MeshInstance3D
+
+
+func _count_mesh_prefix(prefix: String) -> int:
 	var count: int = 0
 	for child: Node in get_children():
 		if child is MeshInstance3D and str(child.name).begins_with(prefix):
@@ -153,7 +205,7 @@ func _count_prefix(prefix: String) -> int:
 func _clear_meshes() -> void:
 	var doomed: Array[Node] = []
 	for child: Node in get_children():
-		if child is MeshInstance3D:
+		if child is MeshInstance3D or child is Label3D:
 			doomed.append(child)
 	for child: Node in doomed:
 		remove_child(child)
@@ -257,6 +309,101 @@ func _spawn_direction(source_id: int, from: Vector3, to: Vector3) -> void:
 	node.mesh = mesh
 	node.position = from.lerp(to, 0.8) + Vector3(0.0, 0.15, 0.0)
 	add_child(node)
+
+
+func _spawn_checkpoint_gizmos(world: AuthoringWorld) -> void:
+	var by_order: Dictionary = {}
+	var poses: Dictionary = {}
+	var ids: Array[int] = world.entity_ids()
+	for entity_id: int in ids:
+		var record: SharedComponentRecord = world.get_record(entity_id)
+		var order: int = order_from_record(record)
+		if order < 0:
+			continue
+		if not by_order.has(order):
+			var grouped: Array[int] = []
+			by_order[order] = grouped
+		var group: Array = by_order[order]
+		group.append(entity_id)
+		var pose: Dictionary = pose_from_record(record)
+		if pose.is_empty():
+			continue
+		poses[entity_id] = meters_from_pose(pose)
+	var order_keys: Array = by_order.keys()
+	order_keys.sort()
+	var unique_orders: Array[int] = []
+	var unique_entity_ids: Array[int] = []
+	for order_value: Variant in order_keys:
+		var order: int = order_value
+		var group: Array = by_order[order]
+		var grouped_ids: Array[int] = []
+		for grouped_id_value: Variant in group:
+			var grouped_id: int = grouped_id_value
+			grouped_ids.append(grouped_id)
+		grouped_ids.sort()
+		var duplicated: bool = grouped_ids.size() != 1
+		for grouped_id: int in grouped_ids:
+			if not poses.has(grouped_id):
+				continue
+			var from_raw: Variant = poses[grouped_id]
+			if typeof(from_raw) != TYPE_VECTOR3:
+				continue
+			var from: Vector3 = from_raw
+			_spawn_checkpoint_mark(grouped_id, order, from, duplicated)
+		if duplicated:
+			continue
+		var only_id: int = grouped_ids[0]
+		if not poses.has(only_id):
+			continue
+		unique_orders.append(order)
+		unique_entity_ids.append(only_id)
+	var index: int = 0
+	while index + 1 < unique_orders.size():
+		var from_id: int = unique_entity_ids[index]
+		var to_id: int = unique_entity_ids[index + 1]
+		var from_raw: Variant = poses[from_id]
+		var to_raw: Variant = poses[to_id]
+		if typeof(from_raw) != TYPE_VECTOR3 or typeof(to_raw) != TYPE_VECTOR3:
+			index += 1
+			continue
+		var from: Vector3 = from_raw
+		var to: Vector3 = to_raw
+		_spawn_checkpoint_seq(from_id, to_id, from, to)
+		index += 1
+
+
+func _spawn_checkpoint_mark(entity_id: int, order: int, from: Vector3, duplicated: bool) -> void:
+	var label: Label3D = Label3D.new()
+	label.name = checkpoint_name(entity_id)
+	label.text = str(order)
+	label.font_size = 64
+	label.pixel_size = 0.02
+	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	label.outline_size = 12
+	if duplicated:
+		label.modulate = _CHECKPOINT_DUP_ALBEDO
+	else:
+		label.modulate = _CHECKPOINT_ALBEDO
+	label.position = from + Vector3(0.0, CHECKPOINT_LIFT, 0.0)
+	add_child(label)
+
+
+func _spawn_checkpoint_seq(from_id: int, to_id: int, from: Vector3, to: Vector3) -> void:
+	var lifted_from: Vector3 = from + Vector3(0.0, SEQUENCE_LIFT, 0.0)
+	var lifted_to: Vector3 = to + Vector3(0.0, SEQUENCE_LIFT, 0.0)
+	var delta: Vector3 = lifted_to - lifted_from
+	var length: float = delta.length()
+	if length < _MIN_LINK_LEN:
+		return
+	var mesh: BoxMesh = BoxMesh.new()
+	mesh.size = Vector3(LINK_THICKNESS, LINK_THICKNESS, length)
+	mesh.material = _unshaded(_CHECKPOINT_ALBEDO)
+	var node: MeshInstance3D = MeshInstance3D.new()
+	node.name = sequence_name(from_id, to_id)
+	node.mesh = mesh
+	node.position = (lifted_from + lifted_to) * 0.5
+	add_child(node)
+	_look_toward(node, lifted_to)
 
 
 func _look_toward(node: Node3D, target: Vector3) -> void:

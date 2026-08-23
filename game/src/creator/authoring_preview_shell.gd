@@ -2,7 +2,8 @@ class_name AuthoringPreviewShell
 extends Node
 
 ## Independent Preview window host (CD-32 §4). AuthoringSession stays open.
-## Creates a Godot Window in code and maps preview transforms to 1 m boxes.
+## Creates a Godot Window in code and maps preview transforms to 1 m boxes,
+## portal gizmos, and checkpoint-order labels.
 ## Does not compile SimulationBundle. Tab host is reserved and refused.
 ## Never settlement.
 
