@@ -20,6 +20,7 @@ func test_starts_empty_at_revision_zero() -> void:
 	assert_false(world.has_entity(1))
 	assert_null(world.get_record(1))
 	assert_eq(world.grid.cell, CELL)
+	assert_eq(world.entity_ids(), [])
 	assert_eq(world.entity_ids_on_floor(0), [])
 	assert_eq(world.portal_links(), [])
 
@@ -33,6 +34,7 @@ func test_put_stores_a_copy_and_bumps_revision() -> void:
 	assert_true(world.put(record))
 	assert_eq(world.revision, 1)
 	assert_eq(world.entity_count(), 1)
+	assert_eq(world.entity_ids(), [4])
 	assert_true(world.has_entity(4))
 	components["transform"]["x"] = 99
 	record.components["transform"]["x"] = 88

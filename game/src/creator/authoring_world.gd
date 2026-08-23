@@ -6,6 +6,7 @@ extends RefCounted
 ## put is insert-only; replace overwrites an existing id; EditCommand lives on AuthoringSession.
 ## Transform XYZ must sit on the authoring lattice. portal.target_id may dangle;
 ## it must not self-loop or point at an existing entity that has no portal.
+## Publish-time path / cycle lives on AuthoringReachability, not on put / replace.
 
 var revision: int = 0
 var grid: AuthoringGrid = AuthoringGrid.with_default_cell()
@@ -80,6 +81,14 @@ func has_entity(entity_id: int) -> bool:
 
 func entity_count() -> int:
 	return _records.size()
+
+
+func entity_ids() -> Array[int]:
+	var ids: Array[int] = []
+	for entity_id: int in _records:
+		ids.append(entity_id)
+	ids.sort()
+	return ids
 
 
 func entity_ids_on_floor(floor_index: int) -> Array[int]:

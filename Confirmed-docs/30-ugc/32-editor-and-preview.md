@@ -68,8 +68,9 @@ UI 操作
 - **网格吸附**：带 `transform` 的实体袋，XYZ 必须落在吸附格上。默认格边 = `Fixed.SCALE`（1 表现米，[ADR-0005](../../docs/adr/0005-fixed-point-numeric-model.md)）。偏离格子的命令整份拒绝，不静默取整。无 `transform` 的袋不参与格子。
 - **楼层**：楼层索引 = `y / cell`（向零）。`entity_ids_on_floor` 供楼层切换查询；不另锁层高产品数。
 - **传送连线**：从 `portal.target_id` 派生有向边，分类为 `two_way` / `one_way` / `dangling`（配对语义见 [CD-21 §4.2](../20-gameplay/21-traprush.md)）。编辑期允许目标尚未存在；禁止自环，禁止指向已存在但没有 `portal` 的实体。不新增第四个 EDIT `op`。
+- **发布前可达性**：`AuthoringSession.evaluate_reachability`（`AuthoringReachability.evaluate`）。**不**在 `try_apply` 上跑。编辑期悬空仍合法。发布期拒绝：悬空传送、`one_way` 跟随链回到已访问节点、重复的 `checkpoint.order`、没有任何检查点、以及有序检查点跨楼层且楼层图不可达。同层相邻检查点视为普通通道，不探测走空洞。`two_way` 配对视为落点终止，不是循环。传送链 hop 上限数值仍未锁（[CD-63](../60-plan/63-open-decisions.md)）；本检查用访问集合找环。问题码落点见 [CD-42 §3.4](../40-technical/42-contracts-and-rulevm.md#34-实现落点)。这是 TRAPRUSH 发布前通路/循环；BASTION 封路与 BotRunner 走路可达不是本落点。
 
-增量 Schema 之后的预算、可达性（发布前通路/循环）与 Preview Patch 仍待。连线可视化、检查点可视化不是本落点。
+预算与 Preview Patch 仍待。连线可视化、检查点可视化不是本落点。
 
 ## 4. Preview 行为
 

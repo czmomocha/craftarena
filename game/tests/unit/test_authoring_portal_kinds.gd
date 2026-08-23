@@ -1,6 +1,6 @@
 extends GutTest
 
-## AuthoringPortalKinds：CD-21 成对 / 单向 / 编辑期悬空。不含发布期循环检测。
+## AuthoringPortalKinds：CD-21 成对 / 单向 / 编辑期悬空。发布期循环在 AuthoringReachability。
 
 const AuthoringPortalKinds := preload("res://src/creator/authoring_portal_kinds.gd")
 

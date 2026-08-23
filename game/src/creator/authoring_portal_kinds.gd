@@ -2,7 +2,8 @@ class_name AuthoringPortalKinds
 extends RefCounted
 
 ## Directed portal_link classification for AuthoringWorld.
-## Pairing rules: CD-21 §4.2. Dangling is legal while authoring; publish reachability is later.
+## Pairing rules: CD-21 §4.2. Dangling is legal while authoring.
+## Publish-time dangling / one_way cycles: AuthoringReachability.
 
 const TWO_WAY: String = "two_way"
 const ONE_WAY: String = "one_way"
