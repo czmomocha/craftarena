@@ -3,6 +3,7 @@ extends RefCounted
 
 ## 所有命令共用的 L0 信封。字段名单的所有者是 CD-42 §3.2。
 ## payload 必须能过 CanonicalPayload；PLAYER 的 intent 名必须在 PlayerIntentNames 内。
+## EDIT 的 op 名必须在 EditOpNames 内。不在本文件应用 AuthoringWorld。
 
 enum Kind {
 	PLAYER = 1,
@@ -53,6 +54,8 @@ static func create(
 		return null
 	if kind == Kind.PLAYER and not _player_intent_is_known(payload):
 		return null
+	if kind == Kind.EDIT and not _edit_op_is_known(payload):
+		return null
 	var command: SharedCommand = SharedCommand.new()
 	command.command_id = command_id
 	command.actor_id = actor_id
@@ -97,3 +100,13 @@ static func _player_intent_is_known(payload: Dictionary) -> bool:
 		return false
 	var intent_name: String = intent_value
 	return PlayerIntentNames.contains(intent_name)
+
+
+static func _edit_op_is_known(payload: Dictionary) -> bool:
+	if not payload.has("op"):
+		return false
+	var op_value: Variant = payload["op"]
+	if typeof(op_value) != TYPE_STRING:
+		return false
+	var op_name: String = op_value
+	return EditOpNames.contains(op_name)

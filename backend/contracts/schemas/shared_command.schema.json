@@ -2,7 +2,7 @@
 	"$schema": "https://json-schema.org/draft/2020-12/schema",
 	"$id": "https://craftarena.local/contracts/shared_command.schema.json",
 	"title": "SharedCommand",
-	"description": "L0 command envelope. Field list owner: CD-42 §3.2. Kind numbers and PLAYER intent names must stay in sync with game/src/shared/.",
+	"description": "L0 command envelope. Field list owner: CD-42 §3.2. Kind numbers, PLAYER intent names, and EDIT op names must stay in sync with game/src/shared/.",
 	"type": "object",
 	"additionalProperties": false,
 	"required": [
@@ -77,6 +77,30 @@
 									"SellTowerIntent",
 									"SetTowerPriorityIntent",
 									"DonateResourceIntent"
+								]
+							}
+						}
+					}
+				}
+			}
+		},
+		{
+			"if": {
+				"properties": { "kind": { "const": 2 } },
+				"required": ["kind"]
+			},
+			"then": {
+				"properties": {
+					"payload": {
+						"type": "object",
+						"required": ["op"],
+						"properties": {
+							"op": {
+								"type": "string",
+								"enum": [
+									"place",
+									"remove",
+									"set_component"
 								]
 							}
 						}

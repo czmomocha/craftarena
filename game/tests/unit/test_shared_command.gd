@@ -74,6 +74,28 @@ func test_feed_hasher_is_stable() -> void:
 	assert_eq(left.digest_hex().length(), 64)
 
 
+func test_valid_edit_place_command_is_accepted() -> void:
+	var command: SharedCommand = SharedCommand.create(
+		3, 2, 1, 0, 0, "content-v1", {"op": "place"}, "trace-edit", SharedCommand.Kind.EDIT
+	)
+	assert_not_null(command)
+	assert_eq(command.kind, SharedCommand.Kind.EDIT)
+	var stored_op: String = command.payload.get("op", "")
+	assert_eq(stored_op, "place")
+
+
+func test_edit_command_requires_known_op() -> void:
+	assert_null(SharedCommand.create(
+		3, 2, 1, 0, 0, "content-v1", {"op": "spawn_script"}, "trace-edit", SharedCommand.Kind.EDIT
+	))
+	assert_null(SharedCommand.create(
+		3, 2, 1, 0, 0, "content-v1", {"intent": "place"}, "trace-edit", SharedCommand.Kind.EDIT
+	))
+	assert_null(SharedCommand.create(
+		3, 2, 1, 0, 0, "content-v1", {}, "trace-edit", SharedCommand.Kind.EDIT
+	))
+
+
 func _player_move(command_id: int, actor_id: int) -> SharedCommand:
 	return _create_player({"intent": "MoveIntent", "dx": 1, "dz": 0}, command_id, actor_id, 1)
 

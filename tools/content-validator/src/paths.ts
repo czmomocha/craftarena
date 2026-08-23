@@ -9,6 +9,7 @@ export const SHARED_SRC_DIR = join(REPO_ROOT, "game/src/shared");
 export const FIXTURES_DIR = join(here, "../fixtures");
 
 export const PLAYER_INTENT_NAMES_PATH = join(SHARED_SRC_DIR, "commands/player_intent_names.gd");
+export const EDIT_OP_NAMES_PATH = join(SHARED_SRC_DIR, "commands/edit_op_names.gd");
 export const SHARED_COMMAND_PATH = join(SHARED_SRC_DIR, "commands/shared_command.gd");
 export const SHARED_DOMAIN_EVENT_PATH = join(SHARED_SRC_DIR, "events/shared_domain_event.gd");
 export const SHARED_IDS_PATH = join(SHARED_SRC_DIR, "ids/shared_ids.gd");

@@ -1,0 +1,13 @@
+{
+	"command_id": 4,
+	"actor_id": 2,
+	"sequence": 2,
+	"target_tick": 0,
+	"expected_revision": 1,
+	"content_version": "content-v1",
+	"payload": {
+		"op": "remove"
+	},
+	"trace_id": "trace-edit-remove",
+	"kind": 2
+}

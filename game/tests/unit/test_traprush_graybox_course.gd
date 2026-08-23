@@ -1575,7 +1575,7 @@ func test_tape_replay_rejects_edit_and_admin() -> void:
 		0,
 		0,
 		CONTENT_VERSION,
-		{"op": SystemOps.PLACE_POSE, "x": 0, "y": 0, "z": 0, "yaw_bam": 0},
+		{"op": "place"},
 		TRACE_ID,
 		SharedCommand.Kind.EDIT
 	)
