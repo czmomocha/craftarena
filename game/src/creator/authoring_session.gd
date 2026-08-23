@@ -3,7 +3,8 @@ extends RefCounted
 
 ## CD-32 链路：EditCommand → AuthoringWorld → Revision 或完整拒绝。
 ## Undo/Redo 对成功命令应用反向 payload，不新增第四个 op。
-## Lattice / floor / portal_link 由 AuthoringWorld 在 put/replace 上拒绝；不上传草稿、不跑 Preview、不做可达性。
+## Lattice / floor / portal_link 由 AuthoringWorld 在 put/replace 上拒绝。
+## 发布前通路 / 循环走 evaluate_reachability；不上传草稿、不跑 Preview。
 
 var world: AuthoringWorld = AuthoringWorld.new()
 var _undo: Array[Dictionary] = []
@@ -66,6 +67,10 @@ func can_undo() -> bool:
 
 func can_redo() -> bool:
 	return not _redo.is_empty()
+
+
+func evaluate_reachability() -> Dictionary:
+	return AuthoringReachability.evaluate(world)
 
 
 func _apply_payload(payload: Variant) -> bool:
