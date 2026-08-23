@@ -1,11 +1,12 @@
 class_name AuthoringPreviewMap
 extends Node3D
 
-## Presentation mapping for AuthoringPreview (CD-32 §3). Authority stays on
-## AuthoringWorld Q48.16; float conversion happens only here. One 1×1×1 m
-## BoxMesh per entity with transform; portal_link, checkpoint-order, and
-## reachability-issue gizmos. Placeholders and gizmos are not hitboxes.
-## Rebuild after every patch. Overlay reads evaluate(); it is not a write gate.
+## Presentation mapping for AuthoringWorld (CD-32 §3). Used by Preview and Editor.
+## Authority stays on AuthoringWorld Q48.16; float conversion happens only here.
+## One 1×1×1 m BoxMesh per entity with transform; portal_link, checkpoint-order,
+## and reachability-issue gizmos. Placeholders and gizmos are not hitboxes.
+## Rebuild after every editor write or preview patch. Overlay reads evaluate();
+## it is not a write gate.
 
 const CAMERA_NAME: String = "PreviewCamera"
 const LIGHT_NAME: String = "PreviewLight"

@@ -3,14 +3,15 @@ extends Node
 
 ## Shared editor host (CD-32 §1). AuthoringSession stays the write path.
 ## Creates a Godot Window in code. Not an EditorPlugin. Not in-game HUD.
-## Emits existing EDIT ops only. Preview does not auto-follow.
-## Never settlement.
+## Emits existing EDIT ops only. Maps AuthoringWorld through AuthoringPreviewMap.
+## Preview does not auto-follow. Never settlement.
 
 const TITLE: String = "Editor"
 const ACTOR_ID: int = 2
 const CONTENT_VERSION: String = "content-v1"
 const TRACE_ID: String = "trace-authoring-editor"
 const _STATUS_NAME: String = "Status"
+const _MAP_NAME: String = "EditorMap"
 const _PLACE_CHECKPOINT_NAME: String = "PlaceCheckpoint"
 const _UNDO_NAME: String = "Undo"
 const _REDO_NAME: String = "Redo"
@@ -19,6 +20,7 @@ const _PREVIEW_NAME: String = "Preview"
 var surface: String = AuthoringSurfaceNames.INTERNAL_DEV
 var session: AuthoringSession = null
 var window: Window = null
+var map: AuthoringPreviewMap = null
 var preview: AuthoringPreviewShell = null
 var _status: Label = null
 var _next_command_id: int = 1
@@ -47,6 +49,7 @@ func open() -> bool:
 	_ensure_window()
 	if window == null:
 		return false
+	_rebuild_map()
 	_refresh_status()
 	window.visible = true
 	return true
@@ -85,9 +88,11 @@ func try_edit(payload: Dictionary) -> bool:
 	)
 	_next_command_id += 1
 	if command == null:
+		_rebuild_map()
 		_refresh_status()
 		return false
 	var ok: bool = session.try_apply(command)
+	_rebuild_map()
 	_refresh_status()
 	return ok
 
@@ -114,6 +119,7 @@ func undo() -> bool:
 	if session == null:
 		return false
 	var ok: bool = session.undo()
+	_rebuild_map()
 	_refresh_status()
 	return ok
 
@@ -122,6 +128,7 @@ func redo() -> bool:
 	if session == null:
 		return false
 	var ok: bool = session.redo()
+	_rebuild_map()
 	_refresh_status()
 	return ok
 
@@ -147,6 +154,7 @@ func import_document(data: Dictionary) -> bool:
 	if session == null:
 		return false
 	var ok: bool = session.import_document(data)
+	_rebuild_map()
 	_refresh_status()
 	return ok
 
@@ -193,11 +201,16 @@ func _ensure_window() -> void:
 		host_viewport.gui_embed_subwindows = true
 	window = Window.new()
 	window.title = TITLE
-	window.size = Vector2i(420, 280)
+	window.size = Vector2i(640, 400)
 	window.exclusive = false
 	window.transient = false
+	window.own_world_3d = true
 	window.close_requested.connect(_on_close_requested)
 	var root: VBoxContainer = VBoxContainer.new()
+	root.set_anchors_preset(Control.PRESET_TOP_WIDE)
+	root.offset_left = 8
+	root.offset_top = 8
+	root.offset_right = -8
 	window.add_child(root)
 	_status = Label.new()
 	_status.name = _STATUS_NAME
@@ -206,7 +219,17 @@ func _ensure_window() -> void:
 	_add_button(root, _UNDO_NAME, "Undo", _on_undo)
 	_add_button(root, _REDO_NAME, "Redo", _on_redo)
 	_add_button(root, _PREVIEW_NAME, "Preview", _on_preview)
+	map = AuthoringPreviewMap.new()
+	map.name = _MAP_NAME
+	window.add_child(map)
 	add_child(window)
+	map.ensure_rig()
+
+
+func _rebuild_map() -> void:
+	if map == null or session == null:
+		return
+	map.rebuild(session.world)
 
 
 func _add_button(root: VBoxContainer, node_name: String, text: String, handler: Callable) -> void:
