@@ -3,8 +3,9 @@ extends Node3D
 
 ## Presentation mapping for AuthoringPreview (CD-32 §3). Authority stays on
 ## AuthoringWorld Q48.16; float conversion happens only here. One 1×1×1 m
-## BoxMesh per entity with transform; portal_link and checkpoint-order
-## gizmos. Placeholders and gizmos are not hitboxes. Rebuild after every patch.
+## BoxMesh per entity with transform; portal_link, checkpoint-order, and
+## reachability-issue gizmos. Placeholders and gizmos are not hitboxes.
+## Rebuild after every patch. Overlay reads evaluate(); it is not a write gate.
 
 const CAMERA_NAME: String = "PreviewCamera"
 const LIGHT_NAME: String = "PreviewLight"
@@ -14,6 +15,8 @@ const DANGLE_PREFIX: String = "portal_dangle_"
 const DIR_PREFIX: String = "portal_dir_"
 const CHECKPOINT_PREFIX: String = "checkpoint_mark_"
 const SEQUENCE_PREFIX: String = "checkpoint_seq_"
+const REACH_MARK_PREFIX: String = "reach_mark_"
+const REACH_SEG_PREFIX: String = "reach_seg_"
 const PLACEHOLDER_SIZE: Vector3 = Vector3(1.0, 1.0, 1.0)
 const LINK_THICKNESS: float = 0.08
 const DANGLE_SIZE: Vector3 = Vector3(0.35, 0.35, 0.35)
@@ -21,6 +24,8 @@ const DIR_SIZE: Vector3 = Vector3(0.2, 0.2, 0.2)
 const DANGLE_LIFT: float = 0.7
 const CHECKPOINT_LIFT: float = 1.15
 const SEQUENCE_LIFT: float = 0.25
+const REACH_LIFT: float = 1.7
+const REACH_SEG_LIFT: float = 0.45
 const _MIN_LINK_LEN: float = 0.001
 const _CAMERA_POS: Vector3 = Vector3(6.0, 8.0, 6.0)
 const _LIGHT_ROT_DEG: Vector3 = Vector3(-50.0, -30.0, 0.0)
@@ -30,6 +35,10 @@ const _ONE_WAY_ALBEDO: Color = Color(0.95, 0.55, 0.15)
 const _DANGLE_ALBEDO: Color = Color(0.9, 0.25, 0.35)
 const _CHECKPOINT_ALBEDO: Color = Color(0.35, 0.9, 0.4)
 const _CHECKPOINT_DUP_ALBEDO: Color = Color(0.95, 0.3, 0.85)
+const _REACH_ALBEDO: Color = Color(1.0, 0.82, 0.2)
+
+var _reach_ok: bool = true
+var _reach_issue_count: int = 0
 
 
 static func meters_from_fixed(value: int) -> float:
@@ -112,6 +121,14 @@ static func sequence_name(from_id: int, to_id: int) -> String:
 	return "%s%d_%d" % [SEQUENCE_PREFIX, from_id, to_id]
 
 
+static func overlay_name(entity_id: int, code: String) -> String:
+	return "%s%d_%s" % [REACH_MARK_PREFIX, entity_id, code]
+
+
+static func unreachable_seg_name(from_id: int, to_id: int) -> String:
+	return "%s%d_%d" % [REACH_SEG_PREFIX, from_id, to_id]
+
+
 func ensure_rig() -> void:
 	var camera: Camera3D = get_node_or_null(CAMERA_NAME) as Camera3D
 	if camera == null:
@@ -133,6 +150,7 @@ func ensure_rig() -> void:
 func rebuild(world: AuthoringWorld) -> void:
 	ensure_rig()
 	_clear_meshes()
+	_reset_reachability()
 	if world == null:
 		return
 	var ids: Array[int] = world.entity_ids()
@@ -144,6 +162,7 @@ func rebuild(world: AuthoringWorld) -> void:
 		_spawn_placeholder(entity_id, pose)
 	_spawn_portal_gizmos(world)
 	_spawn_checkpoint_gizmos(world)
+	_spawn_reachability_overlay(world)
 
 
 func mapped_count() -> int:
@@ -192,6 +211,34 @@ func checkpoint_node(entity_id: int) -> Label3D:
 
 func sequence_node(from_id: int, to_id: int) -> MeshInstance3D:
 	return get_node_or_null(sequence_name(from_id, to_id)) as MeshInstance3D
+
+
+func overlay_count() -> int:
+	var count: int = 0
+	for child: Node in get_children():
+		if child is Label3D and str(child.name).begins_with(REACH_MARK_PREFIX):
+			count += 1
+	return count
+
+
+func unreachable_seg_count() -> int:
+	return _count_mesh_prefix(REACH_SEG_PREFIX)
+
+
+func overlay_node(entity_id: int, code: String) -> Label3D:
+	return get_node_or_null(overlay_name(entity_id, code)) as Label3D
+
+
+func unreachable_seg_node(from_id: int, to_id: int) -> MeshInstance3D:
+	return get_node_or_null(unreachable_seg_name(from_id, to_id)) as MeshInstance3D
+
+
+func reachability_ok() -> bool:
+	return _reach_ok
+
+
+func reachability_issue_count() -> int:
+	return _reach_issue_count
 
 
 func _count_mesh_prefix(prefix: String) -> int:
@@ -400,6 +447,92 @@ func _spawn_checkpoint_seq(from_id: int, to_id: int, from: Vector3, to: Vector3)
 	mesh.material = _unshaded(_CHECKPOINT_ALBEDO)
 	var node: MeshInstance3D = MeshInstance3D.new()
 	node.name = sequence_name(from_id, to_id)
+	node.mesh = mesh
+	node.position = (lifted_from + lifted_to) * 0.5
+	add_child(node)
+	_look_toward(node, lifted_to)
+
+
+func _reset_reachability() -> void:
+	_reach_ok = true
+	_reach_issue_count = 0
+
+
+func _spawn_reachability_overlay(world: AuthoringWorld) -> void:
+	var result: Dictionary = AuthoringReachability.evaluate(world)
+	var ok_raw: Variant = result.get("ok", false)
+	if typeof(ok_raw) == TYPE_BOOL:
+		_reach_ok = ok_raw
+	else:
+		_reach_ok = false
+	var issues_raw: Variant = result.get("issues", [])
+	if typeof(issues_raw) != TYPE_ARRAY:
+		_reach_issue_count = 0
+		return
+	var issues: Array = issues_raw
+	_reach_issue_count = issues.size()
+	for issue_value: Variant in issues:
+		if typeof(issue_value) != TYPE_DICTIONARY:
+			continue
+		var issue: Dictionary = issue_value
+		if typeof(issue.get("code", null)) != TYPE_STRING:
+			continue
+		var code: String = issue["code"]
+		if not AuthoringReachabilityCodes.contains(code):
+			continue
+		var ids_raw: Variant = issue.get("entity_ids", [])
+		if typeof(ids_raw) != TYPE_ARRAY:
+			continue
+		var ids: Array = ids_raw
+		var posed: Array[int] = []
+		for id_value: Variant in ids:
+			if typeof(id_value) != TYPE_INT:
+				continue
+			var entity_id: int = id_value
+			var record: SharedComponentRecord = world.get_record(entity_id)
+			var pose: Dictionary = pose_from_record(record)
+			if pose.is_empty():
+				continue
+			posed.append(entity_id)
+			_spawn_reach_mark(entity_id, code, meters_from_pose(pose))
+		if code != AuthoringReachabilityCodes.UNREACHABLE_CHECKPOINT:
+			continue
+		if posed.size() != 2:
+			continue
+		var from_id: int = posed[0]
+		var to_id: int = posed[1]
+		var from_pose: Dictionary = pose_from_record(world.get_record(from_id))
+		var to_pose: Dictionary = pose_from_record(world.get_record(to_id))
+		if from_pose.is_empty() or to_pose.is_empty():
+			continue
+		_spawn_unreachable_seg(from_id, to_id, meters_from_pose(from_pose), meters_from_pose(to_pose))
+
+
+func _spawn_reach_mark(entity_id: int, code: String, from: Vector3) -> void:
+	var label: Label3D = Label3D.new()
+	label.name = overlay_name(entity_id, code)
+	label.text = code
+	label.font_size = 28
+	label.pixel_size = 0.012
+	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	label.outline_size = 8
+	label.modulate = _REACH_ALBEDO
+	label.position = from + Vector3(0.0, REACH_LIFT, 0.0)
+	add_child(label)
+
+
+func _spawn_unreachable_seg(from_id: int, to_id: int, from: Vector3, to: Vector3) -> void:
+	var lifted_from: Vector3 = from + Vector3(0.0, REACH_SEG_LIFT, 0.0)
+	var lifted_to: Vector3 = to + Vector3(0.0, REACH_SEG_LIFT, 0.0)
+	var delta: Vector3 = lifted_to - lifted_from
+	var length: float = delta.length()
+	if length < _MIN_LINK_LEN:
+		return
+	var mesh: BoxMesh = BoxMesh.new()
+	mesh.size = Vector3(LINK_THICKNESS, LINK_THICKNESS, length)
+	mesh.material = _unshaded(_REACH_ALBEDO)
+	var node: MeshInstance3D = MeshInstance3D.new()
+	node.name = unreachable_seg_name(from_id, to_id)
 	node.mesh = mesh
 	node.position = (lifted_from + lifted_to) * 0.5
 	add_child(node)
