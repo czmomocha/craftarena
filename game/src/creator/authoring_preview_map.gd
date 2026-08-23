@@ -194,6 +194,27 @@ func placeholder_node(entity_id: int) -> MeshInstance3D:
 	return get_node_or_null(placeholder_name(entity_id)) as MeshInstance3D
 
 
+func focus_entity(entity_id: int) -> bool:
+	ensure_rig()
+	var placeholder: MeshInstance3D = placeholder_node(entity_id)
+	if placeholder == null:
+		return false
+	var camera: Camera3D = get_node_or_null(CAMERA_NAME) as Camera3D
+	if camera == null:
+		return false
+	var target: Vector3 = placeholder.position
+	camera.position = target + _CAMERA_POS
+	if camera.is_inside_tree():
+		var up: Vector3 = Vector3.UP
+		var look: Vector3 = target - camera.position
+		if look.length_squared() < 0.0000001:
+			return true
+		if absf(look.normalized().dot(Vector3.UP)) > 0.999:
+			up = Vector3.FORWARD
+		camera.look_at(target, up)
+	return true
+
+
 func link_node(source_id: int) -> MeshInstance3D:
 	return get_node_or_null(link_name(source_id)) as MeshInstance3D
 

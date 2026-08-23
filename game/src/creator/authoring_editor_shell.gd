@@ -3,7 +3,8 @@ extends Node
 
 ## Shared editor host (CD-32 §1). AuthoringSession stays the write path.
 ## Creates a Godot Window in code. Not an EditorPlugin. Not in-game HUD.
-## Hosts the TRAPRUSH tool strip. Emits existing EDIT ops only.
+## Hosts the TRAPRUSH tool strip and read-only validator details.
+## Emits existing EDIT ops only. Overlay is not a write gate.
 ## Maps AuthoringWorld through AuthoringPreviewMap. Preview does not auto-follow.
 ## Never settlement.
 
@@ -14,10 +15,12 @@ const TRACE_ID: String = "trace-authoring-editor"
 const _STATUS_NAME: String = "Status"
 const _MAP_NAME: String = "EditorMap"
 const _TOOLS_NAME: String = "TraprushTools"
+const _VALIDATOR_NAME: String = "ValidatorDetails"
 const _UNDO_NAME: String = "Undo"
 const _REDO_NAME: String = "Redo"
 const _PREVIEW_NAME: String = "Preview"
 const TraprushEditorPanelGd := preload("res://src/creator/traprush_editor_panel.gd")
+const AuthoringValidatorPanelGd := preload("res://src/creator/authoring_validator_panel.gd")
 
 var surface: String = AuthoringSurfaceNames.INTERNAL_DEV
 var session: AuthoringSession = null
@@ -25,6 +28,7 @@ var window: Window = null
 var map: AuthoringPreviewMap = null
 var preview: AuthoringPreviewShell = null
 var tools: TraprushEditorPanelGd = null
+var validator: AuthoringValidatorPanelGd = null
 var _status: Label = null
 var _next_command_id: int = 1
 
@@ -205,7 +209,7 @@ func _ensure_window() -> void:
 		host_viewport.gui_embed_subwindows = true
 	window = Window.new()
 	window.title = TITLE
-	window.size = Vector2i(640, 480)
+	window.size = Vector2i(640, 560)
 	window.exclusive = false
 	window.transient = false
 	window.own_world_3d = true
@@ -223,6 +227,9 @@ func _ensure_window() -> void:
 	tools.name = _TOOLS_NAME
 	root.add_child(tools)
 	tools.mount(self)
+	validator = AuthoringValidatorPanelGd.new()
+	validator.name = _VALIDATOR_NAME
+	root.add_child(validator)
 	var action_row: HBoxContainer = HBoxContainer.new()
 	action_row.name = "SharedActions"
 	root.add_child(action_row)
@@ -234,12 +241,16 @@ func _ensure_window() -> void:
 	window.add_child(map)
 	add_child(window)
 	map.ensure_rig()
+	if validator != null:
+		validator.mount(map)
 
 
 func _rebuild_map() -> void:
 	if map == null or session == null:
 		return
 	map.rebuild(session.world)
+	if validator != null:
+		validator.refresh(session.world)
 
 
 func _add_button(row: BoxContainer, node_name: String, text: String, handler: Callable) -> void:
@@ -273,13 +284,20 @@ func _refresh_status() -> void:
 	var floor_index: int = 0
 	if tools != null:
 		floor_index = tools.floor_index
-	_status.text = "%s revision=%d entities=%d floor=%d undo=%s redo=%s" % [
+	var reach_ok_flag: bool = true
+	var issue_n: int = 0
+	if validator != null:
+		reach_ok_flag = validator.reach_ok()
+		issue_n = validator.issue_count()
+	_status.text = "%s revision=%d entities=%d floor=%d undo=%s redo=%s reach_ok=%s issues=%d" % [
 		surface,
 		session.world.revision,
 		session.world.entity_count(),
 		floor_index,
 		str(session.can_undo()),
 		str(session.can_redo()),
+		str(reach_ok_flag),
+		issue_n,
 	]
 
 
