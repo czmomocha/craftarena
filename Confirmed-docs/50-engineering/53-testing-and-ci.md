@@ -132,6 +132,7 @@ AI 生成代码必须比普通手写代码有**更强的自动化证据**，因�
 - 验证器详情：空世界列出 `missing_mandatory_path` 且 Focus 失败；悬空传送可定位有 `transform` 的实体；列表跟随编辑、不是写入门禁；已打开的 Preview 不自动跟；不结算；
 - 第一张官方赛道：decode 成功且 `reach_ok`；缺通路 / 悬空反例；编辑导入不是写入门禁；不结算；
 - 第二张官方赛道：侧向跨层 `two_way` 与第一张布局不同；decode 成功且 `reach_ok`；缺通路 / 悬空反例；编辑导入不是写入门禁；不结算；
+- 内部开发 EditorPlugin：`plugin.cfg` 入库；`project.godot` 启用 GUT + authoring_editor、不含 `godot_ai` / `_mcp_game_helper`；host 打开已有外壳，关闭只隐藏并保持会话，`detach` 释放，不结算；
 - 编辑器异常退出后草稿恢复；
 - 发布中途进程退出；
 - 签名失败；
@@ -196,7 +197,7 @@ AI 生成代码必须比普通手写代码有**更强的自动化证据**，因�
 
 | 门禁项 | 状态 | 实现方式 |
 |---|---|---|
-| 语法与类型检查 | 已启用 | 逐个 `.gd` 文件跑 `--check-only`；`backend/`、`tools/` 跑 `tsc --noEmit` |
+| 语法与类型检查 | 已启用 | 逐个 `.gd` 文件跑 `--check-only`（`game/src`、`game/tests`、`game/addons/authoring_editor`；不含 GUT）；`backend/`、`tools/` 跑 `tsc --noEmit` |
 | 核心目录警告视为错误 | 已启用 | GDScript 由 `project.godot` 全局配置（[ADR-0001](../../docs/adr/0001-strict-gdscript-typing-gate.md)）并由 GUT 断言守护；TypeScript 由 `tsconfig.json` 的 strict 系列保证 |
 | 单元测试 | 已启用（全量，非"受影响"） | GUT 跑 `res://tests/unit`；后端跑 `node --test` |
 | Schema 验证 | 已启用（L0 信封 + Component Schema v1 + AuthoringDocument） | `tools/content-validator/` 对 `backend/contracts/schemas/` 做正反例（含 `component_record` 与 `authoring_document`），并由根目录 `npm test` 收集。未覆盖 Rule VM 图。未引入 Ajv（新依赖属宪法第十八条人类门禁）。字段名单见 [CD-42 §1.2](../40-technical/42-contracts-and-rulevm.md#12-字段标识符v1) 与 [CD-32 §1.4](../30-ugc/32-editor-and-preview.md#14-共同数据模型) |
