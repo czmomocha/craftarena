@@ -5,7 +5,12 @@ import { describe, it } from "node:test";
 
 import { AUTHORING_SCHEMA_FILES, COMPONENT_SCHEMA_FILES, L0_SCHEMA_FILES } from "../../../backend/contracts/src/schemas.ts";
 import { collectGdscriptSchemaMismatches } from "../src/gdscript_sync.ts";
-import { loadAuthoringFixtures, loadComponentFixtures, loadEnvelopeFixtures } from "../src/load_fixtures.ts";
+import {
+	loadAuthoringFixtures,
+	loadComponentFixtures,
+	loadEnvelopeFixtures,
+	loadOfficialAuthoringDocuments,
+} from "../src/load_fixtures.ts";
 import {
 	AUTHORING_DOCUMENT_SCHEMA_PATH,
 	CANONICAL_SCHEMA_PATH,
@@ -110,6 +115,20 @@ describe("authoring document fixtures", () => {
 			} else {
 				assert.ok(errors.length > 0, "expected schema errors");
 			}
+		});
+	}
+});
+
+describe("official authoring documents", () => {
+	const documents = loadOfficialAuthoringDocuments();
+
+	it("keeps the first TRAPRUSH course", () => {
+		assert.ok(documents.some((document) => document.name === "course_01.json"));
+	});
+
+	for (const document of documents) {
+		it(`official/${document.name} is schema-valid`, () => {
+			assert.deepEqual(validateAuthoringDocument(document.instance), []);
 		});
 	}
 });
