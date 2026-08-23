@@ -79,7 +79,7 @@
 
 ### M2：共享 Edit 框架与 TRAPRUSH 工具
 
-状态：**进行中**。工具链评审已通过（2026-08-23，见 [PR #77](https://github.com/czmomocha/craftarena/pull/77)；[ADR-0004 §8.1](../../docs/adr/0004-multi-agent-adoption-timing-and-architecture.md)）：Godot AI 生产级启用成立；并行保持 2 域，第 3 域仍未开。第一刀 Component Schema v1 已落入 [CD-42 §1.2](../40-technical/42-contracts-and-rulevm.md#12-字段标识符v1) 与 `game/src/shared/schema/`；合入后才按域并行 AuthoringWorld / EditCommand。不得把「用 MCP 搭两张赛道」写成唯一路径。
+状态：**进行中**。工具链评审已通过（2026-08-23，见 [PR #77](https://github.com/czmomocha/craftarena/pull/77)；[ADR-0004 §8.1](../../docs/adr/0004-multi-agent-adoption-timing-and-architecture.md)）：Godot AI 生产级启用成立；并行保持 2 域，第 3 域仍未开。已合入：[PR #78](https://github.com/czmomocha/craftarena/pull/78) Component Schema v1、[PR #79](https://github.com/czmomocha/craftarena/pull/79) EDIT `op` 白名单、[PR #80](https://github.com/czmomocha/craftarena/pull/80) AuthoringWorld 骨架、[PR #81](https://github.com/czmomocha/craftarena/pull/81) EditCommand 应用与 Undo/Redo、[PR #82](https://github.com/czmomocha/craftarena/pull/82) 完整章节提交口径。本刀锁网格吸附、楼层查询与传送连线分类（见 [CD-32 §3](../30-ugc/32-editor-and-preview.md#3-从编辑到预览)）。不得把「用 MCP 搭两张赛道」写成唯一路径。不得把可达性、Preview 与两张赛道塞进同一 PR。
 
 产出：
 

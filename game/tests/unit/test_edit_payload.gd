@@ -7,9 +7,11 @@ const EditPayload := preload("res://src/creator/edit_payload.gd")
 const SharedComponentRecord := preload("res://src/shared/schema/component_record.gd")
 const AuthoringWorld := preload("res://src/creator/authoring_world.gd")
 
+const CELL: int = 65536
+
 
 func test_place_and_set_component_decode_a_v1_record() -> void:
-	var record: Dictionary = _record_dict(4, 65536)
+	var record: Dictionary = _record_dict(4, 1)
 	var placed: EditPayload = EditPayload.decode({"op": "place", "record": record})
 	assert_true(placed.ok)
 	assert_eq(placed.op, EditOpNames.PLACE)
@@ -63,7 +65,7 @@ func test_inverse_place_is_remove_and_remove_restores_record() -> void:
 	assert_eq(bag.entity_id, 2)
 	var transform: Dictionary = bag.components.get("transform", {})
 	var stored_y: int = transform.get("y", -1)
-	assert_eq(stored_y, 3)
+	assert_eq(stored_y, 3 * CELL)
 
 
 func test_inverse_set_component_restores_previous_bag() -> void:
@@ -80,11 +82,11 @@ func test_inverse_set_component_restores_previous_bag() -> void:
 	assert_eq(stored_y, 0)
 
 
-func _record_dict(entity_id: int, y: int) -> Dictionary:
+func _record_dict(entity_id: int, cells_y: int) -> Dictionary:
 	return {
 		"schema_version": 1,
 		"entity_id": entity_id,
 		"components": {
-			"transform": {"x": 0, "y": y, "z": 0, "yaw_bam": 0},
+			"transform": {"x": 0, "y": cells_y * CELL, "z": 0, "yaw_bam": 0},
 		},
 	}
