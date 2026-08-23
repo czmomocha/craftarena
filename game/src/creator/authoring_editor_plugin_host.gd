@@ -17,12 +17,13 @@ func attach_to(parent: Node) -> bool:
 	if parent == null:
 		return false
 	if shell != null and is_instance_valid(shell):
+		shell.draft_store = draft_store
 		return shell.open()
 	var next_shell: AuthoringEditorShell = AuthoringEditorShell.create(AuthoringSurfaceNames.INTERNAL_DEV)
 	if next_shell == null:
 		return false
-	next_shell.draft_store = draft_store
 	parent.add_child(next_shell)
+	next_shell.draft_store = draft_store
 	if not next_shell.open():
 		next_shell.free()
 		return false
