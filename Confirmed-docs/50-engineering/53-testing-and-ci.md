@@ -124,6 +124,7 @@ AI 生成代码必须比普通手写代码有**更强的自动化证据**，因�
 - Preview 窗口打开/关闭不结算且编辑会话保持；
 - Preview 带 `transform` 的实体映射为 1 米占位盒，失败补丁不留幽灵节点；
 - Preview `portal_link` gizmos：`two_way` / `one_way` 连线、`dangling` 只标源点、失败补丁不留幽灵线；
+- Preview 检查点 `order` 标记与唯一顺序连线；重复 order 不进顺序链；失败补丁不留幽灵标记；
 - 编辑器异常退出后草稿恢复；
 - 发布中途进程退出；
 - 签名失败；
