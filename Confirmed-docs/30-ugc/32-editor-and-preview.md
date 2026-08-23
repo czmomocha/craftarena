@@ -69,8 +69,9 @@ UI 操作
 - **楼层**：楼层索引 = `y / cell`（向零）。`entity_ids_on_floor` 供楼层切换查询；不另锁层高产品数。
 - **传送连线**：从 `portal.target_id` 派生有向边，分类为 `two_way` / `one_way` / `dangling`（配对语义见 [CD-21 §4.2](../20-gameplay/21-traprush.md)）。编辑期允许目标尚未存在；禁止自环，禁止指向已存在但没有 `portal` 的实体。不新增第四个 EDIT `op`。
 - **发布前可达性**：`AuthoringSession.evaluate_reachability`（`AuthoringReachability.evaluate`）。**不**在 `try_apply` 上跑。编辑期悬空仍合法。发布期拒绝：悬空传送、`one_way` 跟随链回到已访问节点、重复的 `checkpoint.order`、没有任何检查点、以及有序检查点跨楼层且楼层图不可达。同层相邻检查点视为普通通道，不探测走空洞。`two_way` 配对视为落点终止，不是循环。传送链 hop 上限数值仍未锁（[CD-63](../60-plan/63-open-decisions.md)）；本检查用访问集合找环。问题码落点见 [CD-42 §3.4](../40-technical/42-contracts-and-rulevm.md#34-实现落点)。这是 TRAPRUSH 发布前通路/循环；BASTION 封路与 BotRunner 走路可达不是本落点。
+- **Preview Patch**：独立 `AuthoringPreview` 会话。`connect_from` 拷贝当时的 AuthoringWorld；编辑会话保持打开，继续 `try_apply` 不自动进 Preview。`try_apply_patch(level, EditCommand)` 只在安全点（未进入 Preview tick）应用已有 `place` / `remove` / `set_component`，**不**新增第四个 EDIT `op`。成功则 Preview 世界写入且 `preview_revision` +1；失败恢复该次补丁前的拷贝，AuthoringSession 不动。声明等级必须 ≥ 由袋分类出的最低等级（低报拒绝）。P0–P2 可连续应用且不重启；P3 因 Rule VM 未落地而拒绝且不重启；P4 拒绝并 `needs_restart`，须再次 `connect_from`。Preview **永不**结算、评分或在线战绩写。等级定义见 [CD-33 §1](33-hot-publish.md)；袋到等级的映射见下节。窗口/标签表现、多人试玩、SimulationBundle 编译不是本落点。
 
-预算与 Preview Patch 仍待。连线可视化、检查点可视化不是本落点。
+预算仍待。连线可视化、检查点可视化不是本落点。
 
 ## 4. Preview 行为
 
@@ -80,7 +81,17 @@ UI 操作
 - 每次修改都有 Revision，可撤销和比较；
 - Preview **永不**产生正式结算、评分或在线战绩。
 
-热修改等级 P0–P4 的定义见 [CD-33 §1](33-hot-publish.md)。
+当前数据落点是 `AuthoringPreview`（[CD-42 §3.4](../40-technical/42-contracts-and-rulevm.md#34-实现落点)）：独立会话、安全点增量 Patch、失败整份回滚、无结算写。窗口/标签与多人试玩房仍待。v1 袋到补丁等级：
+
+| 最低等级 | 判定 |
+|---|---|
+| P2 | `place` / `remove`，或 `set_component` 的新旧袋并集含 `transform` / `portal` / `checkpoint` / `zone` / `spawner` / `interactable` / `path_agent` / `build_slot` / `mover` |
+| P1 | 并集只落在 `health` / `hazard` / `destructible` / `velocity` / `tower`（可另含 P0 组件） |
+| P0 | 并集只落在 `replication` / `team` / `score` / `inventory` |
+| P3 | 本刀拒绝（Rule VM 图未落地），不置重启 |
+| P4 | 拒绝并要求重新 `connect_from` |
+
+`mover` 整袋算 P2（含 path，属拓扑），不把 `speed` 拆成字段级 P1。声明等级可高于分类（按更安全的点应用），不得低于分类。热修改等级的产品定义见 [CD-33 §1](33-hot-publish.md)，本表不复述公开对局列。
 
 ## 5. 初始体验指标
 

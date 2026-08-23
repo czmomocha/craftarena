@@ -137,6 +137,22 @@ func hash_state() -> PackedByteArray:
 	return digest_hex.hex_decode()
 
 
+func duplicate() -> AuthoringWorld:
+	var next_grid: AuthoringGrid = AuthoringGrid.create(grid.cell)
+	if next_grid == null:
+		return null
+	var copy: AuthoringWorld = AuthoringWorld.new(next_grid)
+	var ids: Array[int] = entity_ids()
+	for entity_id: int in ids:
+		var stored: SharedComponentRecord = _records[entity_id]
+		var cloned: SharedComponentRecord = SharedComponentRecord.create(stored.entity_id, stored.components)
+		if cloned == null:
+			return null
+		copy._records[entity_id] = cloned
+	copy.revision = revision
+	return copy
+
+
 func _copy_records() -> Dictionary[int, SharedComponentRecord]:
 	var copy: Dictionary[int, SharedComponentRecord] = {}
 	for entity_id: int in _records:
