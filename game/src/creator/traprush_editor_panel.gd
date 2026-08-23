@@ -19,6 +19,50 @@ var _next_cell_x: int = 0
 var _pending_portal_id: int = 0
 
 
+func adopt_world(world: AuthoringWorld) -> void:
+	_pending_portal_id = 0
+	_next_entity_id = 1
+	_next_order = 0
+	_next_cell_x = 0
+	if world == null:
+		return
+	var cell: int = 1
+	if world.grid != null and world.grid.cell > 0:
+		cell = world.grid.cell
+	var max_id: int = 0
+	var max_order: int = -1
+	var max_cell_x: int = -1
+	for entity_id: int in world.entity_ids():
+		if entity_id > max_id:
+			max_id = entity_id
+		var stored: SharedComponentRecord = world.get_record(entity_id)
+		if stored == null:
+			continue
+		if stored.components.has(SharedComponentNames.CHECKPOINT):
+			var bag: Variant = stored.components[SharedComponentNames.CHECKPOINT]
+			if typeof(bag) == TYPE_DICTIONARY:
+				var order_bag: Dictionary = bag
+				if order_bag.has("order") and typeof(order_bag["order"]) == TYPE_INT:
+					var order_val: int = order_bag["order"]
+					if order_val > max_order:
+						max_order = order_val
+		if stored.components.has(SharedComponentNames.TRANSFORM):
+			var pose: Variant = stored.components[SharedComponentNames.TRANSFORM]
+			if typeof(pose) == TYPE_DICTIONARY:
+				var pose_bag: Dictionary = pose
+				if pose_bag.has("x") and typeof(pose_bag["x"]) == TYPE_INT:
+					var x_val: int = pose_bag["x"]
+					var cell_x: int = x_val / cell
+					if cell_x > max_cell_x:
+						max_cell_x = cell_x
+	if max_id > 0:
+		_next_entity_id = max_id + 1
+	if max_order >= 0:
+		_next_order = max_order + 1
+	if max_cell_x >= 0:
+		_next_cell_x = max_cell_x + 1
+
+
 func mount(p_host: AuthoringEditorShell) -> void:
 	host = p_host
 	if get_child_count() > 0:

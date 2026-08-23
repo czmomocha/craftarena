@@ -30,6 +30,9 @@ func test_plugin_cfg_points_at_editor_plugin_script() -> void:
 	assert_eq(FileAccess.file_exists(PLUGIN_SCRIPT), true)
 	var source: String = FileAccess.get_file_as_string(PLUGIN_SCRIPT)
 	assert_eq(source.begins_with("@tool\nextends EditorPlugin"), true)
+	assert_eq(source.contains("AuthoringDraftStore.new()"), true)
+	assert_eq(source.contains("DraftGd.new()"), false)
+	assert_eq(source.contains("_host.shell.draft_store"), true)
 
 
 func test_project_enables_gut_and_authoring_not_godot_ai() -> void:

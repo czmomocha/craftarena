@@ -46,6 +46,21 @@ func test_record_then_load_restores_latest_world() -> void:
 	assert_true(loaded.has_entity(1))
 
 
+func test_record_flushes_nonempty_file_to_globalized_path() -> void:
+	_store = AuthoringDraftStore.new(DRAFT_PATH, 50, 30)
+	var world: AuthoringWorld = AuthoringWorld.new()
+	assert_true(world.put(_xyz(7, 0)))
+	assert_true(_store.record(world))
+	var abs_path: String = ProjectSettings.globalize_path(DRAFT_PATH)
+	assert_true(FileAccess.file_exists(abs_path))
+	var text: String = FileAccess.get_file_as_string(abs_path)
+	assert_gt(text.length(), 0)
+	assert_eq(text.contains("\"schema_version\":"), true)
+	var loaded: AuthoringWorld = AuthoringDraftStore.new(DRAFT_PATH).try_load_latest()
+	assert_not_null(loaded)
+	assert_true(loaded.has_entity(7))
+
+
 func test_failed_world_and_res_path_do_not_write() -> void:
 	_store = AuthoringDraftStore.new(OFFICIAL_PATH, 1, 30)
 	var world: AuthoringWorld = AuthoringWorld.new()
@@ -111,6 +126,8 @@ func test_shell_reopen_restores_and_never_settles() -> void:
 	assert_true(_shell.open())
 	assert_true(_shell.session.world.has_entity(1))
 	assert_eq(_shell.session.world.revision, 1)
+	assert_true(_shell.tools.place_next_checkpoint())
+	assert_true(_shell.session.world.has_entity(2))
 	assert_false(_shell.allows_settlement())
 
 
@@ -135,11 +152,14 @@ func test_host_with_store_restores_after_detach() -> void:
 	_host = AuthoringEditorPluginHost.new()
 	_host.draft_store = _store
 	assert_true(_host.attach_to(self))
+	assert_true(_host.shell.draft_store == _store)
 	assert_true(_host.shell.try_place_checkpoint(4, 0, 1, 0, 0))
 	_host.detach()
 	_host = AuthoringEditorPluginHost.new()
-	_host.draft_store = AuthoringDraftStore.new(DRAFT_PATH)
+	var restored_store: AuthoringDraftStore = AuthoringDraftStore.new(DRAFT_PATH)
+	_host.draft_store = restored_store
 	assert_true(_host.attach_to(self))
+	assert_true(_host.shell.draft_store == restored_store)
 	assert_true(_host.shell.session.world.has_entity(4))
 	assert_false(_host.shell.allows_settlement())
 
@@ -151,8 +171,11 @@ func _xyz(entity_id: int, y: int) -> SharedComponentRecord:
 
 
 func _write_text(path: String, text: String) -> void:
-	var file: FileAccess = FileAccess.open(path, FileAccess.WRITE)
+	var abs_path: String = ProjectSettings.globalize_path(path)
+	var file: FileAccess = FileAccess.open(abs_path, FileAccess.WRITE)
 	file.store_string(text)
+	file.flush()
+	file.close()
 
 
 func _wipe_path(path: String) -> void:
