@@ -19,7 +19,7 @@
 - 开放完整受限规则图；
 - 供开发、策划、测试和 AI Agent 使用。
 
-当前窗口落点是 `AuthoringEditorShell`：代码创建独立 Godot `Window`（非 exclusive、非 transient），只发已有 EDIT `op`。关闭只隐藏，会话保持。打开 Preview 拷贝当时的 AuthoringWorld，之后的编辑不自动跟。Editor 窗口 `own_world_3d = true`，挂同一套 `AuthoringPreviewMap`，按 **AuthoringWorld** 重建 1 米占位盒与 gizmos；编辑写入后立即重建，Preview 仍是快照。**不是** EditorPlugin，不改 `main.tscn`，不编 SimulationBundle。F6 沙箱 `res://src/creator/editor_sandbox.tscn` 只供目视，不进 CI。要看窗口必须 **F6 运行当前场景**。批量生成、性能分析面板与插件注册仍待。落点见 [CD-42 §3.4](../40-technical/42-contracts-and-rulevm.md#34-实现落点)。
+当前窗口落点是 `AuthoringEditorShell`：代码创建独立 Godot `Window`（非 exclusive、非 transient），只发已有 EDIT `op`。关闭只隐藏，会话保持。打开 Preview 拷贝当时的 AuthoringWorld，之后的编辑不自动跟。Editor 窗口 `own_world_3d = true`，挂同一套 `AuthoringPreviewMap`，按 **AuthoringWorld** 重建 1 米占位盒与 gizmos。`TraprushEditorPanel` 挂在共用外壳上，提供检查点、传送门、删除最后实体与楼层切换；不新增第四个 EDIT `op`。BASTION 面板与 EditorPlugin 仍待。**不是** EditorPlugin，不改 `main.tscn`，不编 SimulationBundle。F6 沙箱 `res://src/creator/editor_sandbox.tscn` 只供目视，不进 CI。要看窗口必须 **F6 运行当前场景**。批量生成、性能分析面板与插件注册仍待。落点见 [CD-42 §3.4](../40-technical/42-contracts-and-rulevm.md#34-实现落点)。
 
 ### 1.2 游戏内创作者编辑器
 
@@ -74,6 +74,7 @@ UI 操作
 - **网格吸附**：带 `transform` 的实体袋，XYZ 必须落在吸附格上。默认格边 = `Fixed.SCALE`（1 表现米，[ADR-0005](../../docs/adr/0005-fixed-point-numeric-model.md)）。偏离格子的命令整份拒绝，不静默取整。无 `transform` 的袋不参与格子。
 - **编辑外壳**：`AuthoringEditorShell` 用代码创建独立 `Window`。格子坐标 × `cell` 后走已有 `place` / `remove`。关闭只隐藏。`open_preview` 按当时世界 `connect_from`；之后 `try_apply` 不自动进 Preview。不是 EditorPlugin。F6 沙箱见 [§1.1](#11-内部开发编辑器)。
 - **编辑 3D 表现映射**：同一套 `AuthoringPreviewMap` 挂在 Editor `Window` 上（`own_world_3d = true`）。按 **AuthoringWorld** 重建，不是 Preview 快照。每次 `try_apply` / `undo` / `redo` / `import_document`（成功或失败）都按当前编辑世界重建节点树。失败写入不留幽灵盒。Preview 仍不自动跟。占位盒是表现桩，不是碰撞体。要看盒子必须 **F6 运行当前场景**。
+- **TRAPRUSH 工具面板**：`TraprushEditorPanel` 挂在共用 `AuthoringEditorShell` 上。检查点 / 传送门 / 删除最后实体走已有 `place` / `remove`。连续两次 Place portal 把悬空对成 `two_way`。Floor up/down 只改下一次 place 的 `cell_y`，不写世界。不是 BASTION 面板，不是 EditorPlugin。
 - **楼层**：楼层索引 = `y / cell`（向零）。`entity_ids_on_floor` 供楼层切换查询；不另锁层高产品数。
 - **传送连线**：从 `portal.target_id` 派生有向边，分类为 `two_way` / `one_way` / `dangling`（配对语义见 [CD-21 §4.2](../20-gameplay/21-traprush.md)）。编辑期允许目标尚未存在；禁止自环，禁止指向已存在但没有 `portal` 的实体。不新增第四个 EDIT `op`。
 - **发布前可达性**：`AuthoringSession.evaluate_reachability`（`AuthoringReachability.evaluate`）。**不**在 `try_apply` 上跑。编辑期悬空仍合法。发布期拒绝：悬空传送、`one_way` 跟随链回到已访问节点、重复的 `checkpoint.order`、没有任何检查点、以及有序检查点跨楼层且楼层图不可达。同层相邻检查点视为普通通道，不探测走空洞。`two_way` 配对视为落点终止，不是循环。传送链 hop 上限数值仍未锁（[CD-63](../60-plan/63-open-decisions.md)）；本检查用访问集合找环。问题码落点见 [CD-42 §3.4](../40-technical/42-contracts-and-rulevm.md#34-实现落点)。这是 TRAPRUSH 发布前通路/循环；BASTION 封路与 BotRunner 走路可达不是本落点。
