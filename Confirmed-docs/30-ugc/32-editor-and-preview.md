@@ -40,7 +40,7 @@ Web 用模板和表单编辑规则；桌面端开放受限规则图。两者生�
 
 ### 1.4 共同数据模型
 
-桌面完整编辑与 Web 轻量编辑交换同一份 `AuthoringDocument` JSON：`schema_version`、`cell`、`revision`、`entities`（实体为 [CD-42 §1.2](../40-technical/42-contracts-and-rulevm.md#12-字段标识符v1) 袋）。表面名（`internal_dev` / `desktop_full` / `web_light`）只约束工具能力，**不**写入文档。两端发出同一套 EDIT `op`。自由规则图编辑器只在 `internal_dev` 与 `desktop_full`；Web 只用规则模板/表单。Rule VM 图格式仍未落地，v1 文档不含规则图。导入文档替换 `AuthoringWorld` 并清空 Undo/Redo；失败整份拒绝。格子与传送图合法性与 `put` / `replace` 相同。Godot `JSON.parse_string` 可能把整数读成整值 float，解码时只接受能 round-trip 回 `int` 的值，入库仍是整数。预算、连线可视化、检查点可视化、SimulationBundle 不是本落点。落点见 [CD-42 §3.4](../40-technical/42-contracts-and-rulevm.md#34-实现落点)。
+桌面完整编辑与 Web 轻量编辑交换同一份 `AuthoringDocument` JSON：`schema_version`、`cell`、`revision`、`entities`（实体为 [CD-42 §1.2](../40-technical/42-contracts-and-rulevm.md#12-字段标识符v1) 袋）。表面名（`internal_dev` / `desktop_full` / `web_light`）只约束工具能力，**不**写入文档。两端发出同一套 EDIT `op`。自由规则图编辑器只在 `internal_dev` 与 `desktop_full`；Web 只用规则模板/表单。Rule VM 图格式仍未落地，v1 文档不含规则图。导入文档替换 `AuthoringWorld` 并清空 Undo/Redo；失败整份拒绝。格子与传送图合法性与 `put` / `replace` 相同。Godot `JSON.parse_string` 可能把整数读成整值 float，解码时只接受能 round-trip 回 `int` 的值，入库仍是整数。预算、检查点可视化、SimulationBundle 不是本落点。落点见 [CD-42 §3.4](../40-technical/42-contracts-and-rulevm.md#34-实现落点)。
 
 ## 2. 草稿持久化与协同
 
@@ -76,9 +76,10 @@ UI 操作
 - **共同数据模型**：`AuthoringDocument` 是 AuthoringWorld 的 JSON 快照，桌面与 Web 互换；表面不入库。见 [§1.4](#14-共同数据模型)。
 - **Preview Patch**：独立 `AuthoringPreview` 会话。`connect_from` 拷贝当时的 AuthoringWorld；编辑会话保持打开，继续 `try_apply` 不自动进 Preview。`try_apply_patch(level, EditCommand)` 只在安全点（未进入 Preview tick）应用已有 `place` / `remove` / `set_component`，**不**新增第四个 EDIT `op`。成功则 Preview 世界写入且 `preview_revision` +1；失败恢复该次补丁前的拷贝，AuthoringSession 不动。声明等级必须 ≥ 由袋分类出的最低等级（低报拒绝）。P0–P2 可连续应用且不重启；P3 因 Rule VM 未落地而拒绝且不重启；P4 拒绝并 `needs_restart`，须再次 `connect_from`。Preview **永不**结算、评分或在线战绩写。等级定义见 [CD-33 §1](33-hot-publish.md)；袋到等级的映射见下节。
 - **Preview 窗口**：`AuthoringPreviewShell` 用代码创建独立 Godot `Window`（非 exclusive、非 transient，不挡住编辑会话）。关闭只隐藏，Preview 会话仍连接。状态标签反映 `connected` / `preview_revision` / `entity_count` / `needs_restart`。浏览器 `tab` 名已保留，本刀 `open_from` 拒绝。不编 SimulationBundle、不改 `main.tscn`。多人试玩仍待。落点见 [CD-42 §3.4](../40-technical/42-contracts-and-rulevm.md#34-实现落点)。
-- **Preview 3D 表现映射**：`AuthoringPreviewMap` 挂在 Preview `Window` 上（`own_world_3d = true`）。只把带 `transform` 的实体画成 1×1×1 米 `BoxMesh` 占位；无 `transform` 的袋跳过。位置 = `float(fixed) / float(Fixed.SCALE)` 米，`yaw_bam` / `Fixed.BAM_TURN` → `rotation.y` 弧度（[ADR-0005](../../docs/adr/0005-fixed-point-numeric-model.md)）。权威仍是 Preview 世界的 Q48.16；浮点只出现在 creator 表现边界。每次 `try_apply_patch`（成功或失败回滚）都按当前 Preview 世界重建节点树。占位盒是表现桩，不是碰撞体或玩法尺寸。连线可视化、检查点顺序可视化不是本落点。F6 沙箱 `res://src/creator/preview_sandbox.tscn` 只供目视，不进 CI。
+- **Preview 3D 表现映射**：`AuthoringPreviewMap` 挂在 Preview `Window` 上（`own_world_3d = true`）。只把带 `transform` 的实体画成 1×1×1 米 `BoxMesh` 占位；无 `transform` 的袋跳过。位置 = `float(fixed) / float(Fixed.SCALE)` 米，`yaw_bam` / `Fixed.BAM_TURN` → `rotation.y` 弧度（[ADR-0005](../../docs/adr/0005-fixed-point-numeric-model.md)）。权威仍是 Preview 世界的 Q48.16；浮点只出现在 creator 表现边界。每次 `try_apply_patch`（成功或失败回滚）都按当前 Preview 世界重建节点树。占位盒是表现桩，不是碰撞体或玩法尺寸。F6 沙箱 `res://src/creator/preview_sandbox.tscn` 只供目视，不进 CI。要看盒子必须 **F6 运行当前场景**，不要只在编辑器视口里打开 `.tscn`，也不要用 F5 跑主场景。
+- **Preview 传送连线可视化**：同一套 `AuthoringPreviewMap` 按 `portal_links()` 分类画 gizmo。`two_way` / `one_way` 在源与目标的 `transform` 之间画线段（`one_way` 另有方向标）；`dangling` 只在源点上方打标，**不**把悬空画到原点。无 `transform` 的 portal 不画。线段厚度与颜色是表现桩，不是碰撞体。检查点顺序可视化、可达性叠加不是本落点。
 
-预算仍待。连线可视化、检查点可视化不是本落点。
+预算仍待。检查点可视化不是本落点。
 
 ## 4. Preview 行为
 
@@ -88,7 +89,7 @@ UI 操作
 - 每次修改都有 Revision，可撤销和比较；
 - Preview **永不**产生正式结算、评分或在线战绩。
 
-当前数据落点是 `AuthoringPreview`；窗口落点是 `AuthoringPreviewShell`；3D 表现落点是 `AuthoringPreviewMap`（[CD-42 §3.4](../40-technical/42-contracts-and-rulevm.md#34-实现落点)）。独立会话、安全点增量 Patch、失败整份回滚、无结算写。桌面打开独立 `Window`；关闭只隐藏。窗口内按 Preview 世界重建 1 米占位盒。浏览器标签与多人试玩房仍待。v1 袋到补丁等级：
+当前数据落点是 `AuthoringPreview`；窗口落点是 `AuthoringPreviewShell`；3D 表现与传送连线 gizmos 落点是 `AuthoringPreviewMap`（[CD-42 §3.4](../40-technical/42-contracts-and-rulevm.md#34-实现落点)）。独立会话、安全点增量 Patch、失败整份回滚、无结算写。桌面打开独立 `Window`；关闭只隐藏。窗口内按 Preview 世界重建 1 米占位盒和 `portal_link` gizmos。浏览器标签与多人试玩房仍待。v1 袋到补丁等级：
 
 | 最低等级 | 判定 |
 |---|---|

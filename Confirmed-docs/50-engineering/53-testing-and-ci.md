@@ -123,6 +123,7 @@ AI 生成代码必须比普通手写代码有**更强的自动化证据**，因�
 - AuthoringDocument 桌面/Web 往返与非法快照拒绝；
 - Preview 窗口打开/关闭不结算且编辑会话保持；
 - Preview 带 `transform` 的实体映射为 1 米占位盒，失败补丁不留幽灵节点；
+- Preview `portal_link` gizmos：`two_way` / `one_way` 连线、`dangling` 只标源点、失败补丁不留幽灵线；
 - 编辑器异常退出后草稿恢复；
 - 发布中途进程退出；
 - 签名失败；
