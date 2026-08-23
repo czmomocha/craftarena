@@ -2,15 +2,18 @@ class_name AuthoringPreviewShell
 extends Node
 
 ## Independent Preview window host (CD-32 §4). AuthoringSession stays open.
-## Creates a Godot Window in code; does not compile SimulationBundle or
-## map 3D presentation. Tab host is reserved and refused. Never settlement.
+## Creates a Godot Window in code and maps preview transforms to 1 m boxes.
+## Does not compile SimulationBundle. Tab host is reserved and refused.
+## Never settlement.
 
 const TITLE: String = "Preview"
 const _STATUS_NAME: String = "Status"
+const _MAP_NAME: String = "PreviewMap"
 
 var kind: String = AuthoringPreviewHostKinds.WINDOW
 var preview: AuthoringPreview = null
 var window: Window = null
+var map: AuthoringPreviewMap = null
 var _status: Label = null
 
 
@@ -34,6 +37,7 @@ func open_from(session: AuthoringSession) -> bool:
 	_ensure_window()
 	if window == null:
 		return false
+	_rebuild_map()
 	_refresh_status()
 	window.visible = true
 	return true
@@ -62,6 +66,7 @@ func try_apply_patch(level: String, command: SharedCommand) -> bool:
 	if preview == null:
 		return false
 	var ok: bool = preview.try_apply_patch(level, command)
+	_rebuild_map()
 	_refresh_status()
 	return ok
 
@@ -111,15 +116,26 @@ func _ensure_window() -> void:
 	window.size = Vector2i(640, 360)
 	window.exclusive = false
 	window.transient = false
+	window.own_world_3d = true
 	window.close_requested.connect(_on_close_requested)
 	_status = Label.new()
 	_status.name = _STATUS_NAME
 	window.add_child(_status)
+	map = AuthoringPreviewMap.new()
+	map.name = _MAP_NAME
+	window.add_child(map)
 	add_child(window)
+	map.ensure_rig()
 
 
 func _on_close_requested() -> void:
 	hide_window()
+
+
+func _rebuild_map() -> void:
+	if map == null or preview == null:
+		return
+	map.rebuild(preview.world)
 
 
 func _refresh_status() -> void:
