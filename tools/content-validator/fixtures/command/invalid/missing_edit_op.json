@@ -1,0 +1,11 @@
+{
+	"command_id": 3,
+	"actor_id": 2,
+	"sequence": 1,
+	"target_tick": 0,
+	"expected_revision": 0,
+	"content_version": "content-v1",
+	"payload": {},
+	"trace_id": "trace-edit",
+	"kind": 2
+}

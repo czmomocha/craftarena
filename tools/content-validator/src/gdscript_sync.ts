@@ -10,6 +10,7 @@ import {
 	COMPONENT_NAMES_PATH,
 	COMPONENT_RECORD_PATH,
 	COMPONENT_SCHEMA_PATH,
+	EDIT_OP_NAMES_PATH,
 	EVENT_SCHEMA_PATH,
 	PLAYER_INTENT_NAMES_PATH,
 	SHARED_COMMAND_PATH,
@@ -32,6 +33,10 @@ export function collectGdscriptSchemaMismatches(): SyncMismatch[] {
 	const intentNames = parseStringConstants(readFileSync(PLAYER_INTENT_NAMES_PATH, "utf8"));
 	const schemaIntents = commandPlayerIntentEnum(commandSchema);
 	pushListMismatch(mismatches, "player_intent_names", intentNames, schemaIntents);
+
+	const editOps = parseStringConstants(readFileSync(EDIT_OP_NAMES_PATH, "utf8"));
+	const schemaEditOps = commandEditOpEnum(commandSchema);
+	pushListMismatch(mismatches, "edit_op_names", editOps, schemaEditOps);
 
 	const kindValues = parseEnumNumbers(readFileSync(SHARED_COMMAND_PATH, "utf8"), "Kind");
 	const schemaKinds = commandKindEnum(commandSchema);
@@ -140,11 +145,23 @@ export function parseIntConstant(source: string, name: string): number | undefin
 }
 
 function commandPlayerIntentEnum(schema: unknown): string[] {
+	return commandPayloadStringEnum(schema, 1, "intent");
+}
+
+function commandEditOpEnum(schema: unknown): string[] {
+	return commandPayloadStringEnum(schema, 2, "op");
+}
+
+function commandPayloadStringEnum(schema: unknown, kind: number, field: string): string[] {
 	const allOf = asArray(property(schema, "allOf"));
 	for (const entry of allOf) {
+		const kindConst = property(property(property(property(entry, "if"), "properties"), "kind"), "const");
+		if (kindConst !== kind) {
+			continue;
+		}
 		const thenPayload = property(property(property(entry, "then"), "properties"), "payload");
-		const intent = property(property(thenPayload, "properties"), "intent");
-		const values = asArray(property(intent, "enum"));
+		const named = property(property(thenPayload, "properties"), field);
+		const values = asArray(property(named, "enum"));
 		if (values.length > 0 && values.every((value) => typeof value === "string")) {
 			return values as string[];
 		}
