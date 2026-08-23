@@ -56,6 +56,7 @@ func open() -> bool:
 	if window == null:
 		return false
 	_restore_draft_if_empty()
+	_sync_tools_from_world()
 	_rebuild_map()
 	_refresh_status()
 	window.visible = true
@@ -220,13 +221,22 @@ func _restore_draft_if_empty() -> void:
 	var loaded: AuthoringWorld = draft_store.try_load_latest()
 	if loaded == null:
 		return
-	session.import_document(AuthoringDocument.encode(loaded))
+	var encoded: Dictionary = AuthoringDocument.encode(loaded)
+	if encoded.is_empty():
+		return
+	session.import_document(encoded)
 
 
 func _persist_draft() -> void:
 	if draft_store == null or session == null:
 		return
 	draft_store.record(session.world)
+
+
+func _sync_tools_from_world() -> void:
+	if tools == null or session == null:
+		return
+	tools.adopt_world(session.world)
 
 
 func _ensure_window() -> void:

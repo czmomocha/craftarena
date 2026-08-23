@@ -46,13 +46,21 @@ func record(world: AuthoringWorld) -> bool:
 	var encoded: Dictionary = AuthoringDocument.encode(world)
 	if encoded.is_empty():
 		return false
+	var previous_count: int = command_count
+	var previous_latest: Dictionary = latest.duplicate(true)
+	var previous_points: Array[Dictionary] = _copy_checkpoints()
 	command_count += 1
 	latest = encoded
 	if command_count == 1 or command_count % checkpoint_interval == 0:
 		checkpoints.append(encoded.duplicate(true))
 		while checkpoints.size() > max_checkpoints:
 			checkpoints.remove_at(0)
-	return _flush()
+	if not _flush():
+		command_count = previous_count
+		latest = previous_latest
+		checkpoints = previous_points
+		return false
+	return true
 
 
 func try_load_latest() -> AuthoringWorld:
@@ -65,13 +73,19 @@ func wipe() -> void:
 	command_count = 0
 	latest = {}
 	checkpoints.clear()
-	if path.is_empty() or not FileAccess.file_exists(path):
+	var abs_path: String = _resolved_path()
+	if abs_path.is_empty() or not FileAccess.file_exists(abs_path):
 		return
-	DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
+	DirAccess.remove_absolute(abs_path)
 
 
 func _flush() -> bool:
 	if path.is_empty() or _is_project_content_path(path):
+		return false
+	var abs_path: String = _resolved_path()
+	if abs_path.is_empty() or abs_path.begins_with("res://"):
+		return false
+	if not _ensure_parent_dir(abs_path):
 		return false
 	var points: Array = []
 	for item: Dictionary in checkpoints:
@@ -85,20 +99,27 @@ func _flush() -> bool:
 	var text: String = JSON.stringify(body)
 	if text.is_empty():
 		return false
-	var file: FileAccess = FileAccess.open(path, FileAccess.WRITE)
+	var file: FileAccess = FileAccess.open(abs_path, FileAccess.WRITE)
 	if file == null:
 		return false
 	file.store_string(text)
-	return true
+	file.flush()
+	file.close()
+	if not FileAccess.file_exists(abs_path):
+		return false
+	var written: String = FileAccess.get_file_as_string(abs_path)
+	return written == text
 
 
 func _read_file() -> bool:
-	if path.is_empty() or not FileAccess.file_exists(path):
+	var abs_path: String = _resolved_path()
+	if abs_path.is_empty() or not FileAccess.file_exists(abs_path):
 		return false
-	var file: FileAccess = FileAccess.open(path, FileAccess.READ)
+	var file: FileAccess = FileAccess.open(abs_path, FileAccess.READ)
 	if file == null:
 		return false
 	var parsed: Variant = JSON.parse_string(file.get_as_text())
+	file.close()
 	if typeof(parsed) != TYPE_DICTIONARY:
 		return false
 	var body: Dictionary = parsed
@@ -138,6 +159,29 @@ func _read_file() -> bool:
 
 func _is_project_content_path(target: String) -> bool:
 	return target.begins_with("res://")
+
+
+func _resolved_path() -> String:
+	if path.is_empty():
+		return ""
+	return ProjectSettings.globalize_path(path)
+
+
+func _ensure_parent_dir(abs_path: String) -> bool:
+	var parent: String = abs_path.get_base_dir()
+	if parent.is_empty():
+		return false
+	if DirAccess.dir_exists_absolute(parent):
+		return true
+	DirAccess.make_dir_recursive_absolute(parent)
+	return DirAccess.dir_exists_absolute(parent)
+
+
+func _copy_checkpoints() -> Array[Dictionary]:
+	var copy: Array[Dictionary] = []
+	for item: Dictionary in checkpoints:
+		copy.append(item.duplicate(true))
+	return copy
 
 
 func _as_int(value: Variant) -> int:
