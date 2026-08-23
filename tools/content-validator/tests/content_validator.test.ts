@@ -122,8 +122,9 @@ describe("authoring document fixtures", () => {
 describe("official authoring documents", () => {
 	const documents = loadOfficialAuthoringDocuments();
 
-	it("keeps the first TRAPRUSH course", () => {
+	it("keeps both TRAPRUSH courses", () => {
 		assert.ok(documents.some((document) => document.name === "course_01.json"));
+		assert.ok(documents.some((document) => document.name === "course_02.json"));
 	});
 
 	for (const document of documents) {

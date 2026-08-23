@@ -1,0 +1,95 @@
+{
+	"schema_version": 1,
+	"cell": 65536,
+	"revision": 5,
+	"entities": [
+		{
+			"schema_version": 1,
+			"entity_id": 1,
+			"components": {
+				"transform": {
+					"x": 0,
+					"y": 0,
+					"z": 0,
+					"yaw_bam": 0
+				},
+				"checkpoint": {
+					"order": 0,
+					"respawn_dx": 0,
+					"respawn_dy": 0,
+					"respawn_dz": 0
+				}
+			}
+		},
+		{
+			"schema_version": 1,
+			"entity_id": 2,
+			"components": {
+				"transform": {
+					"x": 131072,
+					"y": 0,
+					"z": 0,
+					"yaw_bam": 0
+				},
+				"checkpoint": {
+					"order": 1,
+					"respawn_dx": 0,
+					"respawn_dy": 0,
+					"respawn_dz": 0
+				}
+			}
+		},
+		{
+			"schema_version": 1,
+			"entity_id": 3,
+			"components": {
+				"transform": {
+					"x": 65536,
+					"y": 65536,
+					"z": 131072,
+					"yaw_bam": 0
+				},
+				"checkpoint": {
+					"order": 2,
+					"respawn_dx": 0,
+					"respawn_dy": 0,
+					"respawn_dz": 0
+				}
+			}
+		},
+		{
+			"schema_version": 1,
+			"entity_id": 20,
+			"components": {
+				"transform": {
+					"x": 196608,
+					"y": 0,
+					"z": 0,
+					"yaw_bam": 0
+				},
+				"portal": {
+					"target_id": 21,
+					"yaw_bam": 0,
+					"cooldown_ticks": 0
+				}
+			}
+		},
+		{
+			"schema_version": 1,
+			"entity_id": 21,
+			"components": {
+				"transform": {
+					"x": 0,
+					"y": 65536,
+					"z": 131072,
+					"yaw_bam": 0
+				},
+				"portal": {
+					"target_id": 20,
+					"yaw_bam": 0,
+					"cooldown_ticks": 0
+				}
+			}
+		}
+	]
+}
