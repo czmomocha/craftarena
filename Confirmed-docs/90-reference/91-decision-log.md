@@ -58,6 +58,7 @@
 - `rule_vm_compatibility = versioned_semantics`。
 - `creator_rule_access = templates_web_graph_desktop`。
 - `dual_editor_architecture = shared_framework_mode_tools`。
+- `authoring_lattice = scale_cell_xyz`（2026-08-23）：编辑吸附格默认边长 = `Fixed.SCALE`（1 表现米，[ADR-0005](../../docs/adr/0005-fixed-point-numeric-model.md)），楼层索引 = `y / cell` 向零。传送连线从 `portal.target_id` 派生，分类 `two_way` / `one_way` / `dangling`。编辑期允许悬空；禁止自环与指向无 `portal` 的已存在实体。不新增第四个 EDIT `op`。可达性、连线可视化与 Preview 仍待。口径见 [CD-32 §3](../30-ugc/32-editor-and-preview.md#3-从编辑到预览)。
 
 ## D.3 TRAPRUSH
 

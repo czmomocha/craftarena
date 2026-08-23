@@ -153,7 +153,7 @@ trace_id
 
 各玩法允许的具体 Intent 列表见 [CD-21 §8](../20-gameplay/21-traprush.md) 与 [CD-22 §7.3](../20-gameplay/22-bastion.md)。名字的代码落点是 `game/src/shared/commands/player_intent_names.gd`。
 
-EDIT 命令必须带白名单 `op`：`place` / `remove` / `set_component`。这三项覆盖摆放、删除和改组件。网格、楼层、传送连线、可达性仍不锁。未知 payload 键拒绝。
+EDIT 命令必须带白名单 `op`：`place` / `remove` / `set_component`。这三项覆盖摆放、删除和改组件。未知 payload 键拒绝。网格、楼层与传送连线**不是**新 `op`：带 `transform` 的袋必须落在 [CD-32 §3](../30-ugc/32-editor-and-preview.md#3-从编辑到预览) 的吸附格上；`portal.target_id` 在 AuthoringWorld 上分类为连线。可达性（发布前通路与循环）仍不锁。
 
 | `op` | payload |
 |---|---|
@@ -174,6 +174,8 @@ Undo / Redo 是会话内对成功命令派生的反向 payload（`place`↔`remo
 | EDIT op 名 | `game/src/shared/commands/edit_op_names.gd` |
 | EDIT payload 解码 | `game/src/creator/edit_payload.gd` |
 | AuthoringWorld | `game/src/creator/authoring_world.gd` |
+| AuthoringGrid | `game/src/creator/authoring_grid.gd` |
+| 传送连线分类名 | `game/src/creator/authoring_portal_kinds.gd` |
 | AuthoringSession | `game/src/creator/authoring_session.gd` |
 | 领域事件 | `game/src/shared/events/shared_domain_event.gd` |
 | 可哈希 payload 白名单 | `game/src/shared/protocol/canonical_payload.gd` |
