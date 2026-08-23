@@ -1,7 +1,7 @@
 extends GutTest
 
 ## AuthoringEditorShell：代码创建编辑窗口；只发已有 EDIT op。
-## 编辑会话保持打开；Preview 不自动跟。未知表面拒绝。永不结算。
+## 编辑会话保持打开；已连接的 Preview 跟随成功写入。未知表面拒绝。永不结算。
 
 const AuthoringEditorShell := preload("res://src/creator/authoring_editor_shell.gd")
 const AuthoringPreviewHostKinds := preload("res://src/creator/authoring_preview_host_kinds.gd")
@@ -64,7 +64,7 @@ func test_undo_redo_through_shell() -> void:
 	assert_eq(x, CELL)
 
 
-func test_preview_snapshots_and_does_not_follow_later_edits() -> void:
+func test_connected_preview_follows_later_edits() -> void:
 	_shell = AuthoringEditorShell.create(AuthoringSurfaceNames.INTERNAL_DEV)
 	add_child(_shell)
 	assert_true(_shell.open())
@@ -75,9 +75,8 @@ func test_preview_snapshots_and_does_not_follow_later_edits() -> void:
 	assert_true(_shell.preview.preview.world.has_entity(1))
 	assert_true(_shell.try_place_checkpoint(2, 1, 1, 0, 0))
 	assert_true(_shell.session.world.has_entity(2))
-	assert_false(_shell.preview.preview.world.has_entity(2))
-	assert_true(_shell.open_preview())
 	assert_true(_shell.preview.preview.world.has_entity(2))
+	assert_true(_shell.preview_follows)
 	assert_false(_shell.allows_settlement())
 
 

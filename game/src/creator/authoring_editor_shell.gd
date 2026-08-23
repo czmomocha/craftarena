@@ -6,7 +6,10 @@ extends Node
 ## this class is not itself an EditorPlugin. Not in-game HUD.
 ## Hosts the TRAPRUSH tool strip and read-only validator details.
 ## Emits existing EDIT ops only. Overlay is not a write gate.
-## Maps AuthoringWorld through AuthoringPreviewMap. Preview does not auto-follow.
+## Maps AuthoringWorld through AuthoringPreviewMap.
+## A connected Preview follows committed writes: the same EDIT command is
+## forwarded as a safe-point patch at its classified level. A refused forward
+## drops the follow link instead of rolling back the authoring write.
 ## Optional AuthoringDraftStore restores after crash. Never settlement.
 ## In the Godot editor, FileAccess runs in the @tool plugin, not here.
 
@@ -35,6 +38,7 @@ var tools: TraprushEditorPanelGd = null
 var validator: AuthoringValidatorPanelGd = null
 var draft_store: AuthoringDraftStore = null
 var last_draft_ok: bool = false
+var preview_follows: bool = false
 var _status: Label = null
 var _next_command_id: int = 1
 
@@ -106,6 +110,7 @@ func try_edit(payload: Dictionary) -> bool:
 	var ok: bool = session.try_apply(command)
 	if ok:
 		_persist_draft()
+		_forward_command(command)
 	_rebuild_map()
 	_refresh_status()
 	return ok
@@ -132,9 +137,12 @@ func try_remove(entity_id: int) -> bool:
 func undo() -> bool:
 	if session == null:
 		return false
+	var payload: Dictionary = session.peek_undo_payload()
+	var revision_before: int = session.world.revision
 	var ok: bool = session.undo()
 	if ok:
 		_persist_draft()
+		_forward_payload(payload, revision_before)
 	_rebuild_map()
 	_refresh_status()
 	return ok
@@ -143,9 +151,12 @@ func undo() -> bool:
 func redo() -> bool:
 	if session == null:
 		return false
+	var payload: Dictionary = session.peek_redo_payload()
+	var revision_before: int = session.world.revision
 	var ok: bool = session.redo()
 	if ok:
 		_persist_draft()
+		_forward_payload(payload, revision_before)
 	_rebuild_map()
 	_refresh_status()
 	return ok
@@ -159,7 +170,9 @@ func open_preview() -> bool:
 		if preview == null:
 			return false
 		add_child(preview)
-	return preview.open_from(session)
+	preview_follows = preview.open_from(session)
+	_refresh_status()
+	return preview_follows
 
 
 func export_document() -> Dictionary:
@@ -174,6 +187,7 @@ func import_document(data: Dictionary) -> bool:
 	var ok: bool = session.import_document(data)
 	if ok:
 		_persist_draft()
+		preview_follows = false
 	_rebuild_map()
 	_refresh_status()
 	return ok
@@ -204,6 +218,7 @@ func status_view() -> Dictionary:
 		"can_undo": can_undo,
 		"can_redo": can_redo,
 		"window_visible": is_window_visible(),
+		"preview_follows": preview_follows,
 	}
 
 
@@ -222,6 +237,7 @@ func restore_document(data: Dictionary) -> bool:
 		return false
 	if not session.import_document(data):
 		return false
+	preview_follows = false
 	_sync_tools_from_world()
 	_rebuild_map()
 	_refresh_status()
@@ -231,6 +247,44 @@ func restore_document(data: Dictionary) -> bool:
 func note_draft_write(ok: bool) -> void:
 	last_draft_ok = ok
 	_refresh_status()
+
+
+func _forward_payload(payload: Dictionary, expected_revision: int) -> void:
+	if not preview_follows:
+		return
+	if payload.is_empty():
+		preview_follows = false
+		return
+	var command: SharedCommand = SharedCommand.create(
+		_next_command_id,
+		ACTOR_ID,
+		_next_command_id,
+		0,
+		expected_revision,
+		CONTENT_VERSION,
+		payload,
+		TRACE_ID,
+		SharedCommand.Kind.EDIT
+	)
+	_next_command_id += 1
+	if command == null:
+		preview_follows = false
+		return
+	_forward_command(command)
+
+
+func _forward_command(command: SharedCommand) -> void:
+	if not preview_follows:
+		return
+	if preview == null or preview.preview == null or preview.preview.world == null:
+		preview_follows = false
+		return
+	var level: String = PreviewPatchLevels.classify(command, preview.preview.world)
+	if level.is_empty():
+		preview_follows = false
+		return
+	if not preview.try_apply_patch(level, command):
+		preview_follows = false
 
 
 func _restore_draft_if_empty() -> void:
@@ -354,7 +408,7 @@ func _refresh_status() -> void:
 	if validator != null:
 		reach_ok_flag = validator.reach_ok()
 		issue_n = validator.issue_count()
-	_status.text = "%s revision=%d entities=%d floor=%d undo=%s redo=%s reach_ok=%s issues=%d draft=%s disk=%s" % [
+	_status.text = "%s revision=%d entities=%d floor=%d undo=%s redo=%s reach_ok=%s issues=%d draft=%s disk=%s follow=%s" % [
 		surface,
 		session.world.revision,
 		session.world.entity_count(),
@@ -365,6 +419,7 @@ func _refresh_status() -> void:
 		issue_n,
 		str(draft_store != null),
 		str(last_draft_ok),
+		str(preview_follows),
 	]
 
 

@@ -126,14 +126,15 @@ AI 生成代码必须比普通手写代码有**更强的自动化证据**，因�
 - Preview `portal_link` gizmos：`two_way` / `one_way` 连线、`dangling` 只标源点、失败补丁不留幽灵线；
 - Preview 检查点 `order` 标记与唯一顺序连线；重复 order 不进顺序链；失败补丁不留幽灵标记；
 - Preview 可达性叠加：问题码标到有 `transform` 的实体；跨楼层不可达画断段；无实体问题只进状态；失败补丁不留幽灵且不作为写入门禁；
-- 编辑外壳：格子上 place 检查点、Undo/Redo、打开 Preview 不自动跟、关闭只隐藏、未知表面拒绝、不结算；
-- 编辑窗口 3D 映射：place 后出现 1 米占位盒；失败/Undo 不留幽灵；编辑 map 跟随写入，Preview 快照不自动跟；
+- 编辑外壳：格子上 place 检查点、Undo/Redo、已连接 Preview 跟随写入、关闭只隐藏、未知表面拒绝、不结算；
+- 编辑窗口 3D 映射：place 后出现 1 米占位盒；失败/Undo 不留幽灵；编辑 map 与已连接的 Preview map 都跟随写入；
 - TRAPRUSH 工具面板：检查点与传送门走格子；两次 Place portal 成 `two_way`；Floor 只改下一次 `cell_y`；Remove last 不留幽灵盒；不结算；
-- 验证器详情：空世界列出 `missing_mandatory_path` 且 Focus 失败；悬空传送可定位有 `transform` 的实体；列表跟随编辑、不是写入门禁；已打开的 Preview 不自动跟；不结算；
+- 验证器详情：空世界列出 `missing_mandatory_path` 且 Focus 失败；悬空传送可定位有 `transform` 的实体；列表跟随编辑、不是写入门禁；已打开的 Preview 叠加同步跟随；不结算；
 - 第一张官方赛道：decode 成功且 `reach_ok`；缺通路 / 悬空反例；编辑导入不是写入门禁；不结算；
 - 第二张官方赛道：侧向跨层 `two_way` 与第一张布局不同；decode 成功且 `reach_ok`；缺通路 / 悬空反例；编辑导入不是写入门禁；不结算；
 - 内部开发 EditorPlugin：`plugin.cfg` 入库；`project.godot` 启用 GUT + authoring_editor、不含 `godot_ai` / `_mcp_game_helper`；host 打开已有外壳，关闭只隐藏并保持会话，`detach` 释放，不结算；
 - 本地草稿恢复：成功写入落 `latest` 且文件非空；空会话打开恢复；恢复后工具条下一个 Place 使用新 id；编辑器 `plugin.gd` `@tool` 落盘；`world_committed`；失败写入不改草稿；损坏 / 多余键拒绝；拒绝写入 `res://`；检查点最多 30；不结算；
+- 编辑写入自动进 Preview：place / remove / Undo / Redo 都到达已连接 Preview 且两个世界 revision 同步；`set_component` 等级按 Preview 世界算（按编辑世界算会低报被拒）；失败写入不转发且仍跟随；越界补丁与整份 `import_document` 脱同步且不回滚编辑；无 Preview 时不谎报跟随；窗口隐藏仍跟随；状态栏 `follow` 可见；不结算；
 - 发布中途进程退出；
 - 签名失败；
 - `latest` 指针原子切换；
