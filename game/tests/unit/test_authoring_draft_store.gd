@@ -18,12 +18,14 @@ const OFFICIAL_PATH: String = "res://content/official/traprush/course_01.json"
 var _store: AuthoringDraftStore = null
 var _shell: AuthoringEditorShell = null
 var _host: AuthoringEditorPluginHost = null
+var _committed_hits: int = 0
 
 
 func after_each() -> void:
 	if _host != null:
 		_host.detach()
 	_host = null
+	_committed_hits = 0
 	if _shell != null and is_instance_valid(_shell):
 		_shell.free()
 	_shell = null
@@ -51,7 +53,7 @@ func test_record_flushes_nonempty_file_to_globalized_path() -> void:
 	var world: AuthoringWorld = AuthoringWorld.new()
 	assert_true(world.put(_xyz(7, 0)))
 	assert_true(_store.record(world))
-	var abs_path: String = ProjectSettings.globalize_path(DRAFT_PATH)
+	var abs_path: String = _store.resolved_path()
 	assert_true(FileAccess.file_exists(abs_path))
 	var text: String = FileAccess.get_file_as_string(abs_path)
 	assert_gt(text.length(), 0)
@@ -59,6 +61,20 @@ func test_record_flushes_nonempty_file_to_globalized_path() -> void:
 	var loaded: AuthoringWorld = AuthoringDraftStore.new(DRAFT_PATH).try_load_latest()
 	assert_not_null(loaded)
 	assert_true(loaded.has_entity(7))
+
+
+func test_capture_text_roundtrip_without_store_flush() -> void:
+	_store = AuthoringDraftStore.new(DRAFT_PATH)
+	var world: AuthoringWorld = AuthoringWorld.new()
+	assert_true(world.put(_xyz(9, 0)))
+	assert_true(_store.capture(world))
+	var text: String = _store.body_text()
+	assert_gt(text.length(), 0)
+	var other: AuthoringDraftStore = AuthoringDraftStore.new(DRAFT_PATH)
+	assert_true(other.load_text(text))
+	var loaded: AuthoringWorld = AuthoringDocument.decode(other.latest)
+	assert_not_null(loaded)
+	assert_true(loaded.has_entity(9))
 
 
 func test_failed_world_and_res_path_do_not_write() -> void:
@@ -116,6 +132,9 @@ func test_shell_reopen_restores_and_never_settles() -> void:
 	assert_true(_shell.open())
 	assert_true(_shell.try_place_checkpoint(1, 0, 0, 0, 0))
 	assert_true(_shell.session.world.has_entity(1))
+	assert_true(_shell.last_draft_ok)
+	assert_eq(_shell.status_label_text().contains("draft=true"), true)
+	assert_eq(_shell.status_label_text().contains("disk=true"), true)
 	assert_false(_shell.allows_settlement())
 	assert_false(_shell.allows_online_writes())
 	_shell.free()
@@ -162,6 +181,22 @@ func test_host_with_store_restores_after_detach() -> void:
 	assert_true(_host.shell.draft_store == restored_store)
 	assert_true(_host.shell.session.world.has_entity(4))
 	assert_false(_host.shell.allows_settlement())
+
+
+func test_place_emits_world_committed() -> void:
+	_store = AuthoringDraftStore.new(DRAFT_PATH)
+	_shell = AuthoringEditorShell.create(AuthoringSurfaceNames.INTERNAL_DEV)
+	_shell.draft_store = _store
+	add_child(_shell)
+	assert_true(_shell.open())
+	_committed_hits = 0
+	_shell.world_committed.connect(_on_world_committed)
+	assert_true(_shell.try_place_checkpoint(1, 0, 0, 0, 0))
+	assert_eq(_committed_hits, 1)
+
+
+func _on_world_committed() -> void:
+	_committed_hits += 1
 
 
 func _xyz(entity_id: int, y: int) -> SharedComponentRecord:

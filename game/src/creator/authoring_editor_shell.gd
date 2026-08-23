@@ -8,6 +8,9 @@ extends Node
 ## Emits existing EDIT ops only. Overlay is not a write gate.
 ## Maps AuthoringWorld through AuthoringPreviewMap. Preview does not auto-follow.
 ## Optional AuthoringDraftStore restores after crash. Never settlement.
+## In the Godot editor, FileAccess runs in the @tool plugin, not here.
+
+signal world_committed
 
 const TITLE: String = "Editor"
 const ACTOR_ID: int = 2
@@ -31,6 +34,7 @@ var preview: AuthoringPreviewShell = null
 var tools: TraprushEditorPanelGd = null
 var validator: AuthoringValidatorPanelGd = null
 var draft_store: AuthoringDraftStore = null
+var last_draft_ok: bool = false
 var _status: Label = null
 var _next_command_id: int = 1
 
@@ -213,7 +217,25 @@ func refresh_status() -> void:
 	_refresh_status()
 
 
+func restore_document(data: Dictionary) -> bool:
+	if session == null:
+		return false
+	if not session.import_document(data):
+		return false
+	_sync_tools_from_world()
+	_rebuild_map()
+	_refresh_status()
+	return true
+
+
+func note_draft_write(ok: bool) -> void:
+	last_draft_ok = ok
+	_refresh_status()
+
+
 func _restore_draft_if_empty() -> void:
+	if Engine.is_editor_hint():
+		return
 	if draft_store == null or session == null or session.world == null:
 		return
 	if session.world.revision != 0 or session.world.entity_count() != 0:
@@ -228,9 +250,13 @@ func _restore_draft_if_empty() -> void:
 
 
 func _persist_draft() -> void:
-	if draft_store == null or session == null:
+	world_committed.emit()
+	if Engine.is_editor_hint():
 		return
-	draft_store.record(session.world)
+	if draft_store == null or session == null:
+		last_draft_ok = false
+		return
+	last_draft_ok = draft_store.record(session.world)
 
 
 func _sync_tools_from_world() -> void:
@@ -328,7 +354,7 @@ func _refresh_status() -> void:
 	if validator != null:
 		reach_ok_flag = validator.reach_ok()
 		issue_n = validator.issue_count()
-	_status.text = "%s revision=%d entities=%d floor=%d undo=%s redo=%s reach_ok=%s issues=%d" % [
+	_status.text = "%s revision=%d entities=%d floor=%d undo=%s redo=%s reach_ok=%s issues=%d draft=%s disk=%s" % [
 		surface,
 		session.world.revision,
 		session.world.entity_count(),
@@ -337,6 +363,8 @@ func _refresh_status() -> void:
 		str(session.can_redo()),
 		str(reach_ok_flag),
 		issue_n,
+		str(draft_store != null),
+		str(last_draft_ok),
 	]
 
 
