@@ -1,0 +1,287 @@
+{
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"$id": "https://craftarena.local/contracts/component_record.schema.json",
+	"title": "SharedComponentRecord",
+	"description": "Component Schema v1 entity bag. Field list owner: CD-42 §1.2. Component names must stay in sync with game/src/shared/schema/.",
+	"type": "object",
+	"additionalProperties": false,
+	"required": [
+		"schema_version",
+		"entity_id",
+		"components"
+	],
+	"properties": {
+		"schema_version": { "type": "integer", "const": 1 },
+		"entity_id": { "type": "integer", "minimum": 1 },
+		"components": {
+			"type": "object",
+			"additionalProperties": false,
+			"properties": {
+				"transform": { "$ref": "#/$defs/transform" },
+				"velocity": { "$ref": "#/$defs/velocity" },
+				"health": { "$ref": "#/$defs/health" },
+				"team": { "$ref": "#/$defs/team" },
+				"score": { "$ref": "#/$defs/score" },
+				"zone": { "$ref": "#/$defs/zone" },
+				"spawner": { "$ref": "#/$defs/spawner" },
+				"hazard": { "$ref": "#/$defs/hazard" },
+				"mover": { "$ref": "#/$defs/mover" },
+				"interactable": { "$ref": "#/$defs/interactable" },
+				"checkpoint": { "$ref": "#/$defs/checkpoint" },
+				"portal": { "$ref": "#/$defs/portal" },
+				"destructible": { "$ref": "#/$defs/destructible" },
+				"inventory": { "$ref": "#/$defs/inventory" },
+				"path_agent": { "$ref": "#/$defs/path_agent" },
+				"build_slot": { "$ref": "#/$defs/build_slot" },
+				"tower": { "$ref": "#/$defs/tower" },
+				"replication": { "$ref": "#/$defs/replication" }
+			}
+		}
+	},
+	"$defs": {
+		"xyz_fixed": {
+			"type": "object",
+			"additionalProperties": false,
+			"required": ["x", "y", "z"],
+			"properties": {
+				"x": { "type": "integer" },
+				"y": { "type": "integer" },
+				"z": { "type": "integer" }
+			}
+		},
+		"collision_shape": {
+			"oneOf": [
+				{
+					"type": "object",
+					"additionalProperties": false,
+					"required": ["kind", "hx", "hy", "hz"],
+					"properties": {
+						"kind": { "const": "box" },
+						"hx": { "type": "integer" },
+						"hy": { "type": "integer" },
+						"hz": { "type": "integer" }
+					}
+				},
+				{
+					"type": "object",
+					"additionalProperties": false,
+					"required": ["kind", "radius"],
+					"properties": {
+						"kind": { "const": "sphere" },
+						"radius": { "type": "integer" }
+					}
+				},
+				{
+					"type": "object",
+					"additionalProperties": false,
+					"required": ["kind", "radius", "cylinder_height"],
+					"properties": {
+						"kind": { "const": "capsule" },
+						"radius": { "type": "integer" },
+						"cylinder_height": { "type": "integer" }
+					}
+				},
+				{
+					"type": "object",
+					"additionalProperties": false,
+					"required": ["kind", "prefab_id"],
+					"properties": {
+						"kind": { "const": "platform_prefab" },
+						"prefab_id": { "type": "integer", "minimum": 1 }
+					}
+				}
+			]
+		},
+		"transform": {
+			"type": "object",
+			"additionalProperties": false,
+			"required": ["x", "y", "z", "yaw_bam"],
+			"properties": {
+				"x": { "type": "integer" },
+				"y": { "type": "integer" },
+				"z": { "type": "integer" },
+				"yaw_bam": { "type": "integer" }
+			}
+		},
+		"velocity": {
+			"type": "object",
+			"additionalProperties": false,
+			"required": ["vx", "vy", "vz"],
+			"properties": {
+				"vx": { "type": "integer" },
+				"vy": { "type": "integer" },
+				"vz": { "type": "integer" }
+			}
+		},
+		"health": {
+			"type": "object",
+			"additionalProperties": false,
+			"required": ["current", "maximum", "invuln_ticks"],
+			"properties": {
+				"current": { "type": "integer", "minimum": 0 },
+				"maximum": { "type": "integer", "minimum": 1 },
+				"invuln_ticks": { "type": "integer", "minimum": 0 }
+			}
+		},
+		"team": {
+			"type": "object",
+			"additionalProperties": false,
+			"required": ["team_id"],
+			"properties": {
+				"team_id": { "type": "integer", "minimum": 0 }
+			}
+		},
+		"score": {
+			"type": "object",
+			"additionalProperties": false,
+			"required": ["tallies"],
+			"properties": {
+				"tallies": {
+					"type": "object",
+					"additionalProperties": { "type": "integer" }
+				}
+			}
+		},
+		"zone": {
+			"type": "object",
+			"additionalProperties": false,
+			"required": ["shape", "tags"],
+			"properties": {
+				"shape": { "$ref": "#/$defs/collision_shape" },
+				"tags": {
+					"type": "array",
+					"items": { "type": "string", "minLength": 1 }
+				}
+			}
+		},
+		"spawner": {
+			"type": "object",
+			"additionalProperties": false,
+			"required": ["prototype_id", "interval_ticks", "max_alive"],
+			"properties": {
+				"prototype_id": { "type": "integer", "minimum": 1 },
+				"interval_ticks": { "type": "integer", "minimum": 0 },
+				"max_alive": { "type": "integer", "minimum": 0 }
+			}
+		},
+		"hazard": {
+			"type": "object",
+			"additionalProperties": false,
+			"required": ["damage", "knockback", "cooldown_ticks"],
+			"properties": {
+				"damage": { "type": "integer", "minimum": 0 },
+				"knockback": { "type": "integer" },
+				"cooldown_ticks": { "type": "integer", "minimum": 0 }
+			}
+		},
+		"mover": {
+			"type": "object",
+			"additionalProperties": false,
+			"required": ["path", "speed", "loop"],
+			"properties": {
+				"path": {
+					"type": "array",
+					"items": { "$ref": "#/$defs/xyz_fixed" }
+				},
+				"speed": { "type": "integer" },
+				"loop": { "type": "boolean" }
+			}
+		},
+		"interactable": {
+			"type": "object",
+			"additionalProperties": false,
+			"required": ["state", "link_group"],
+			"properties": {
+				"state": { "type": "integer", "minimum": 0 },
+				"link_group": { "type": "integer", "minimum": 0 }
+			}
+		},
+		"checkpoint": {
+			"type": "object",
+			"additionalProperties": false,
+			"required": ["order", "respawn_dx", "respawn_dy", "respawn_dz"],
+			"properties": {
+				"order": { "type": "integer", "minimum": 0 },
+				"respawn_dx": { "type": "integer" },
+				"respawn_dy": { "type": "integer" },
+				"respawn_dz": { "type": "integer" }
+			}
+		},
+		"portal": {
+			"type": "object",
+			"additionalProperties": false,
+			"required": ["target_id", "yaw_bam", "cooldown_ticks"],
+			"properties": {
+				"target_id": { "type": "integer", "minimum": 1 },
+				"yaw_bam": { "type": "integer" },
+				"cooldown_ticks": { "type": "integer", "minimum": 0 }
+			}
+		},
+		"destructible": {
+			"type": "object",
+			"additionalProperties": false,
+			"required": ["durability", "regen_policy_id"],
+			"properties": {
+				"durability": { "type": "integer", "minimum": 0 },
+				"regen_policy_id": { "type": "integer", "minimum": 0 }
+			}
+		},
+		"inventory": {
+			"type": "object",
+			"additionalProperties": false,
+			"required": ["item_state"],
+			"properties": {
+				"item_state": {
+					"$ref": "canonical_payload.schema.json#/$defs/value"
+				}
+			}
+		},
+		"path_agent": {
+			"type": "object",
+			"additionalProperties": false,
+			"required": ["waypoints", "speed", "bounty"],
+			"properties": {
+				"waypoints": {
+					"type": "array",
+					"items": { "$ref": "#/$defs/xyz_fixed" }
+				},
+				"speed": { "type": "integer" },
+				"bounty": { "type": "integer", "minimum": 0 }
+			}
+		},
+		"build_slot": {
+			"type": "object",
+			"additionalProperties": false,
+			"required": ["whitelist", "occupant_id"],
+			"properties": {
+				"whitelist": {
+					"type": "array",
+					"items": { "type": "integer", "minimum": 1 }
+				},
+				"occupant_id": { "type": "integer", "minimum": 0 }
+			}
+		},
+		"tower": {
+			"type": "object",
+			"additionalProperties": false,
+			"required": ["level", "attack_range", "cooldown_ticks", "target_priority"],
+			"properties": {
+				"level": { "type": "integer", "minimum": 1 },
+				"attack_range": { "type": "integer" },
+				"cooldown_ticks": { "type": "integer", "minimum": 0 },
+				"target_priority": {
+					"type": "string",
+					"enum": ["front", "nearest", "strongest", "weakest"]
+				}
+			}
+		},
+		"replication": {
+			"type": "object",
+			"additionalProperties": false,
+			"required": ["policy_id"],
+			"properties": {
+				"policy_id": { "type": "integer", "minimum": 0 }
+			}
+		}
+	}
+}

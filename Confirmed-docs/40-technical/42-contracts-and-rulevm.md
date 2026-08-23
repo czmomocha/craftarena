@@ -32,6 +32,8 @@
 | `tower` | 等级、射程、冷却、目标策略 | BASTION |
 | `replication` | 复制策略 | 两玩法 |
 
+字段的英文标识符、JSON 形状与校验落点见 [§1.2](#12-字段标识符v1)。槽位语义、具体数值和复制策略表仍见 [CD-63](../60-plan/63-open-decisions.md)，不得从本表自行补全。
+
 ### 1.1 数值与碰撞约束
 
 - 核心位置、速度、计时、经济和伤害统一使用**有明确尺度与溢出规则的 64 位定点整数**；表现层在边界转换为 Godot 浮点；
@@ -52,6 +54,41 @@
 | 三角函数 | 4096 项整数 LUT + BAM 索引 + 整数线性插值；禁止引擎 `sin`/`cos` |
 
 实现：`game/src/shared/fixed/`。`float` 换算只允许出现在 `game/src/client/` 与后续 creator 表现映射，不得进入 `shared/` / `simulation/`。
+
+### 1.2 字段标识符（v1）
+
+本节冻结 **Component Schema v1** 的英文字段名与 JSON 形状。尺度与形状约束仍以 [§1.1](#11-数值与碰撞约束) 为准，不在此复述定点合同。实体袋的 wire 形状是：
+
+```text
+schema_version = 1
+entity_id      正整数稳定 ID
+components     以组件名为键的对象；未知键拒绝；允许空袋
+```
+
+每个组件 `additionalProperties = false`。权威碰撞 `kind` 只能是 `box` / `sphere` / `capsule` / `platform_prefab`。位置、速度、偏移、路径点、`attack_range`、`knockback`、`speed` 为 §1.1 的空间定点整数；`current` / `maximum` / `durability` / `damage` / `bounty` 为尺度 1 整数；时间字段为 Tick 计数；`yaw_bam` 为 BAM。禁止 `float`、`NodePath`、`Callable`、`Object`、`Script`。
+
+| 组件 | 字段 |
+|---|---|
+| `transform` | `x`, `y`, `z`, `yaw_bam` |
+| `velocity` | `vx`, `vy`, `vz` |
+| `health` | `current` ≥ 0，`maximum` ≥ 1，`invuln_ticks` ≥ 0 |
+| `team` | `team_id` ≥ 0（0 为空） |
+| `score` | `tallies`：字符串键 → 整数。不锁具体统计项 |
+| `zone` | `shape`（见上 `kind`），`tags`（非空字符串数组） |
+| `spawner` | `prototype_id` ≥ 1，`interval_ticks` ≥ 0，`max_alive` ≥ 0 |
+| `hazard` | `damage` ≥ 0，`knockback`，`cooldown_ticks` ≥ 0 |
+| `mover` | `path`（`{x,y,z}` 数组），`speed`，`loop`（bool） |
+| `interactable` | `state` ≥ 0，`link_group` ≥ 0（0 为未分组） |
+| `checkpoint` | `order` ≥ 0，`respawn_dx`, `respawn_dy`, `respawn_dz` |
+| `portal` | `target_id` ≥ 1，`yaw_bam`（方向落为水平朝向，与 CD-21 出口朝向一致），`cooldown_ticks` ≥ 0 |
+| `destructible` | `durability` ≥ 0，`regen_policy_id` ≥ 0（0 为空；策略表未锁） |
+| `inventory` | 仅 `item_state`（CanonicalPayload）。**不**含槽位数/替换/放弃/叠加；见 [CD-63](../60-plan/63-open-decisions.md) §1.1 |
+| `path_agent` | `waypoints`（`{x,y,z}` 数组），`speed`，`bounty` ≥ 0 |
+| `build_slot` | `whitelist`（原型 ID 数组），`occupant_id` ≥ 0（0 为空） |
+| `tower` | `level` ≥ 1，`attack_range`，`cooldown_ticks` ≥ 0，`target_priority` ∈ `front` / `nearest` / `strongest` / `weakest`（[CD-22 §5.1](../20-gameplay/22-bastion.md)） |
+| `replication` | `policy_id` ≥ 0（0 为空；策略表未锁，[CD-43](43-networking-and-replay.md) 未命名模式） |
+
+`box` 另需 `hx`/`hy`/`hz`；`sphere` 需 `radius`；`capsule` 需 `radius` 与 `cylinder_height`（与 `KinematicCapsule` 同名）；`platform_prefab` 需 `prefab_id` ≥ 1。
 
 ## 2. Rule VM v1
 
@@ -116,9 +153,9 @@ trace_id
 
 各玩法允许的具体 Intent 列表见 [CD-21 §8](../20-gameplay/21-traprush.md) 与 [CD-22 §7.3](../20-gameplay/22-bastion.md)。名字的代码落点是 `game/src/shared/commands/player_intent_names.gd`。
 
-### 3.4 实现落点（M1 阶段 A）
+### 3.4 实现落点
 
-不复述字段。GDScript 信封在：
+不复述字段。GDScript 信封与组件袋在：
 
 | 内容 | 路径 |
 |---|---|
@@ -128,6 +165,10 @@ trace_id
 | 可哈希 payload 白名单 | `game/src/shared/protocol/canonical_payload.gd` |
 | 关键状态哈希 | `game/src/shared/protocol/state_hasher.gd` |
 | 定点与 BAM | `game/src/shared/fixed/` |
+| 组件名 | `game/src/shared/schema/component_names.gd` |
+| 碰撞 kind | `game/src/shared/schema/collision_shape_kinds.gd` |
+| 炮塔目标优先级 | `game/src/shared/schema/tower_target_priorities.gd` |
+| 实体袋校验 | `game/src/shared/schema/component_record.gd` |
 
 JSON Schema 落点：
 
@@ -136,6 +177,7 @@ JSON Schema 落点：
 | 可哈希 payload | `backend/contracts/schemas/canonical_payload.schema.json` |
 | 命令信封 | `backend/contracts/schemas/shared_command.schema.json` |
 | 领域事件 | `backend/contracts/schemas/shared_domain_event.schema.json` |
+| 组件袋 | `backend/contracts/schemas/component_record.schema.json` |
 | 正反例与校验 | `tools/content-validator/`（由根目录 `npm test` 收集） |
 
-`payload` 只允许 nil / bool / int / String / Array / Dictionary（字符串键）；禁止 float、Object、Callable。PLAYER 命令必须带白名单 `intent` 字符串。SYSTEM 命令允许 `actor_id = 0`。Component Schema v1 与 Rule VM 图的 JSON Schema 仍未落地。
+`payload` 只允许 nil / bool / int / String / Array / Dictionary（字符串键）；禁止 float、Object、Callable。PLAYER 命令必须带白名单 `intent` 字符串。SYSTEM 命令允许 `actor_id = 0`。Component Schema v1 字段见 [§1.2](#12-字段标识符v1)。Rule VM 图的 JSON Schema 仍未落地。OpenAPI 仍未落地。

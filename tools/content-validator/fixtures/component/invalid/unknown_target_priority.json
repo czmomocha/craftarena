@@ -1,0 +1,12 @@
+{
+	"schema_version": 1,
+	"entity_id": 11,
+	"components": {
+		"tower": {
+			"level": 1,
+			"attack_range": 65536,
+			"cooldown_ticks": 12,
+			"target_priority": "closest"
+		}
+	}
+}

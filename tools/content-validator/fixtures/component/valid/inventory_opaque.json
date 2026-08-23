@@ -1,0 +1,11 @@
+{
+	"schema_version": 1,
+	"entity_id": 3,
+	"components": {
+		"inventory": {
+			"item_state": {
+				"held": [2, 2]
+			}
+		}
+	}
+}
