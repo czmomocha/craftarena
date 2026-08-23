@@ -5,7 +5,8 @@ extends RefCounted
 ## Undo/Redo 对成功命令应用反向 payload，不新增第四个 op。
 ## Lattice / floor / portal_link 由 AuthoringWorld 在 put/replace 上拒绝。
 ## 发布前通路 / 循环走 evaluate_reachability。
-## Preview 是独立 AuthoringPreview 会话，不在 try_apply 上推 Patch。
+## Preview 是独立 AuthoringPreview 会话；转发补丁由 AuthoringEditorShell 发起。
+## peek_undo_payload / peek_redo_payload 只读，供外壳在写入前取到要转发的 payload。
 ## AuthoringDocument 是桌面/Web 共同快照；surface 只约束工具，不写入文档。
 
 var world: AuthoringWorld = AuthoringWorld.new()
@@ -94,8 +95,28 @@ func can_redo() -> bool:
 	return not _redo.is_empty()
 
 
+func peek_undo_payload() -> Dictionary:
+	if _undo.is_empty():
+		return {}
+	return _payload_copy(_undo[_undo.size() - 1], "inverse")
+
+
+func peek_redo_payload() -> Dictionary:
+	if _redo.is_empty():
+		return {}
+	return _payload_copy(_redo[_redo.size() - 1], "forward")
+
+
 func evaluate_reachability() -> Dictionary:
 	return AuthoringReachability.evaluate(world)
+
+
+func _payload_copy(entry: Dictionary, key: String) -> Dictionary:
+	var payload: Variant = entry.get(key, null)
+	if typeof(payload) != TYPE_DICTIONARY:
+		return {}
+	var body: Dictionary = payload
+	return body.duplicate(true)
 
 
 func _apply_payload(payload: Variant) -> bool:

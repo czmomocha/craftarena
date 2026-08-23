@@ -80,7 +80,7 @@ func test_remove_last_refreshes_details() -> void:
 	assert_eq(_shell.validator.reach_ok(), true)
 
 
-func test_editor_list_follows_edits_preview_does_not() -> void:
+func test_editor_list_and_connected_preview_overlay_both_follow_edits() -> void:
 	_shell = AuthoringEditorShell.create(AuthoringSurfaceNames.INTERNAL_DEV)
 	add_child(_shell)
 	assert_true(_shell.open())
@@ -90,7 +90,7 @@ func test_editor_list_follows_edits_preview_does_not() -> void:
 	assert_eq(_shell.preview.map.dangle_count(), 1)
 	assert_true(_shell.tools.remove_last())
 	assert_eq(_shell.validator.has_code(AuthoringReachabilityCodes.DANGLING_PORTAL), false)
-	assert_eq(_shell.preview.map.dangle_count(), 1)
+	assert_eq(_shell.preview.map.dangle_count(), 0)
 
 
 func test_panel_widgets_exist_on_shared_shell() -> void:

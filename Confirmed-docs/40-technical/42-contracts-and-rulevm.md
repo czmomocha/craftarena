@@ -153,7 +153,7 @@ trace_id
 
 各玩法允许的具体 Intent 列表见 [CD-21 §8](../20-gameplay/21-traprush.md) 与 [CD-22 §7.3](../20-gameplay/22-bastion.md)。名字的代码落点是 `game/src/shared/commands/player_intent_names.gd`。
 
-EDIT 命令必须带白名单 `op`：`place` / `remove` / `set_component`。这三项覆盖摆放、删除和改组件。未知 payload 键拒绝。网格、楼层、传送连线、发布前可达性、AuthoringDocument、Preview Patch、Preview 窗口、3D 占位映射、传送连线 gizmos、检查点顺序 gizmos、可达性叠加、编辑外壳、编辑窗口 3D 映射与 TRAPRUSH 工具面板 **不是**新 `op`：带 `transform` 的袋必须落在 [CD-32 §3](../30-ugc/32-editor-and-preview.md#3-从编辑到预览) 的吸附格上；`portal.target_id` 在 AuthoringWorld 上分类为连线；通路/循环在 `evaluate_reachability` 上检查；桌面与 Web 交换同一份 AuthoringDocument 快照；Preview 用同一套 `op` 在安全点应用到独立会话；桌面 Preview 窗口由 `AuthoringPreviewShell` 托管；窗口内 `AuthoringPreviewMap` 把带 `transform` 的实体画成 1 米占位盒，并把 `portal_links()`、检查点 `order` 与发布前问题码画成表现 gizmos；`AuthoringEditorShell` 把 UI 按钮变成同一套 `op`，并挂同一套 map 按 AuthoringWorld 重建；打开 Preview 不自动跟后续编辑；`TraprushEditorPanel` 把检查点、传送门、删除与楼层按钮变成同一套 `op`（楼层只改下一次 `cell_y`）；`AuthoringValidatorPanel` 只读 `evaluate_reachability` 列出问题码，Focus 对焦有 `transform` 的实体，不是新 `op`，不是写入门禁。两张官方赛道 JSON 也不是新 `op`。内部开发 EditorPlugin 也不是新 `op`。本地草稿恢复也不是新 `op`。
+EDIT 命令必须带白名单 `op`：`place` / `remove` / `set_component`。这三项覆盖摆放、删除和改组件。未知 payload 键拒绝。网格、楼层、传送连线、发布前可达性、AuthoringDocument、Preview Patch、Preview 窗口、3D 占位映射、传送连线 gizmos、检查点顺序 gizmos、可达性叠加、编辑外壳、编辑窗口 3D 映射与 TRAPRUSH 工具面板 **不是**新 `op`：带 `transform` 的袋必须落在 [CD-32 §3](../30-ugc/32-editor-and-preview.md#3-从编辑到预览) 的吸附格上；`portal.target_id` 在 AuthoringWorld 上分类为连线；通路/循环在 `evaluate_reachability` 上检查；桌面与 Web 交换同一份 AuthoringDocument 快照；Preview 用同一套 `op` 在安全点应用到独立会话；桌面 Preview 窗口由 `AuthoringPreviewShell` 托管；窗口内 `AuthoringPreviewMap` 把带 `transform` 的实体画成 1 米占位盒，并把 `portal_links()`、检查点 `order` 与发布前问题码画成表现 gizmos；`AuthoringEditorShell` 把 UI 按钮变成同一套 `op`，并挂同一套 map 按 AuthoringWorld 重建；成功写入（含 Undo / Redo）把同一条 `op` 按 Preview 世界算出的等级转发给已连接的 Preview，转发被拒只脱同步、不回滚编辑；`TraprushEditorPanel` 把检查点、传送门、删除与楼层按钮变成同一套 `op`（楼层只改下一次 `cell_y`）；`AuthoringValidatorPanel` 只读 `evaluate_reachability` 列出问题码，Focus 对焦有 `transform` 的实体，不是新 `op`，不是写入门禁。两张官方赛道 JSON 也不是新 `op`。内部开发 EditorPlugin 也不是新 `op`。本地草稿恢复也不是新 `op`。编辑写入自动进 Preview 也不是新 `op`。
 
 | `op` | payload |
 |---|---|
@@ -161,7 +161,7 @@ EDIT 命令必须带白名单 `op`：`place` / `remove` / `set_component`。这�
 | `remove` | `entity_id` ≥ 1。目标必须已存在。 |
 | `set_component` | `record`：完整实体袋，整袋替换。目标必须已存在。 |
 
-Undo / Redo 是会话内对成功命令派生的反向 payload（`place`↔`remove`，`set_component` 恢复该实体上一份袋），**不**新增第四个 `op`。失败的 `try_apply` 不写入、不 bump revision。每次成功修改（含撤销重做）生成新 revision，不回退计数。解码与会话落点见 [§3.4](#34-实现落点)。
+Undo / Redo 是会话内对成功命令派生的反向 payload（`place`↔`remove`，`set_component` 恢复该实体上一份袋），**不**新增第四个 `op`。转发给 Preview 时复用同一份派生 payload，由 `peek_undo_payload` / `peek_redo_payload` 只读取出。失败的 `try_apply` 不写入、不 bump revision。每次成功修改（含撤销重做）生成新 revision，不回退计数。解码与会话落点见 [§3.4](#34-实现落点)。
 
 ### 3.4 实现落点
 

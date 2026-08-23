@@ -91,7 +91,7 @@ AI 不得用"代码看起来正确"代替运行证据。
 
 一章 = 同一条产品或技术链路的一次闭合：需要锁的契约 + 实现 + 正反例测试 + 所有者文档落点。人类一次审查应能回答「这章是否成立」，而不是「另一半合入后才有意义」。
 
-- 允许：Component Schema v1 整袋冻结；EditCommand 应用到 AuthoringWorld 并带 Undo/Redo；网格吸附、楼层查询与传送连线分类；发布前通路与传送循环；独立持续 Preview 会话与安全点 Patch；桌面完整与 Web 轻量的共同 AuthoringDocument；独立 Preview 窗口宿主；Preview 3D 表现映射；Preview 传送连线可视化；Preview 检查点顺序可视化；Preview 可达性叠加；内部开发编辑外壳；编辑窗口 3D 表现映射；TRAPRUSH 工具面板；验证器详情；第一张官方 TRAPRUSH 赛道 AuthoringDocument；第二张官方 TRAPRUSH 赛道 AuthoringDocument；内部开发 EditorPlugin；本地草稿恢复。
+- 允许：Component Schema v1 整袋冻结；EditCommand 应用到 AuthoringWorld 并带 Undo/Redo；网格吸附、楼层查询与传送连线分类；发布前通路与传送循环；独立持续 Preview 会话与安全点 Patch；桌面完整与 Web 轻量的共同 AuthoringDocument；独立 Preview 窗口宿主；Preview 3D 表现映射；Preview 传送连线可视化；Preview 检查点顺序可视化；Preview 可达性叠加；内部开发编辑外壳；编辑窗口 3D 表现映射；TRAPRUSH 工具面板；验证器详情；第一张官方 TRAPRUSH 赛道 AuthoringDocument；第二张官方 TRAPRUSH 赛道 AuthoringDocument；内部开发 EditorPlugin；本地草稿恢复；编辑写入自动进已连接 Preview。
 - 禁止：只锁 EDIT `op` 名、AuthoringWorld 只有 put/remove、把 apply 留到下一份 PR；禁止为了「两域都有 diff」而各交半章。
 - 仍禁止：把 BASTION 面板、第三张赛道、预算数字、2 秒云端上传塞进同一个 PR。
 

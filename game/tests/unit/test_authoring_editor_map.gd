@@ -69,7 +69,7 @@ func test_undo_redo_rebuilds_editor_map() -> void:
 	assert_almost_eq(_shell.map.placeholder_node(1).position.x, 1.0, EPS)
 
 
-func test_editor_map_follows_edits_preview_does_not() -> void:
+func test_editor_map_and_connected_preview_map_both_follow_edits() -> void:
 	_shell = AuthoringEditorShell.create(AuthoringSurfaceNames.INTERNAL_DEV)
 	add_child(_shell)
 	assert_true(_shell.open())
@@ -80,10 +80,8 @@ func test_editor_map_follows_edits_preview_does_not() -> void:
 	assert_true(_shell.try_place_checkpoint(2, 1, 1, 0, 0))
 	assert_eq(_shell.map.mapped_count(), 2)
 	assert_not_null(_shell.map.placeholder_node(2))
-	assert_eq(_shell.preview.map.mapped_count(), 1)
-	assert_null(_shell.preview.map.placeholder_node(2))
-	assert_true(_shell.open_preview())
 	assert_eq(_shell.preview.map.mapped_count(), 2)
+	assert_not_null(_shell.preview.map.placeholder_node(2))
 
 
 func test_portal_pair_draws_links_on_editor_map() -> void:
