@@ -244,6 +244,25 @@ func test_cannot_strip_portal_from_an_existing_dest() -> void:
 	assert_eq(world.portal_links(), [])
 
 
+func test_duplicate_copies_records_and_revision_without_aliasing() -> void:
+	var world: AuthoringWorld = AuthoringWorld.new()
+	assert_true(world.put(_transform_record(4, 2)))
+	var copy: AuthoringWorld = world.duplicate()
+	assert_not_null(copy)
+	assert_eq(copy.revision, 1)
+	assert_eq(copy.entity_ids(), [4])
+	assert_eq(copy.hash_state(), world.hash_state())
+	assert_true(copy.put(_transform_record(5, 0)))
+	assert_false(world.has_entity(5))
+	assert_eq(world.revision, 1)
+	var fetched: SharedComponentRecord = copy.get_record(4)
+	fetched.components["transform"]["y"] = 0
+	var original: SharedComponentRecord = world.get_record(4)
+	var transform: Dictionary = original.components.get("transform", {})
+	var stored_y: int = transform.get("y", -1)
+	assert_eq(stored_y, 2 * CELL)
+
+
 func _transform_record(entity_id: int, cells_y: int) -> SharedComponentRecord:
 	return _xyz_record(entity_id, 0, cells_y * CELL, 0)
 

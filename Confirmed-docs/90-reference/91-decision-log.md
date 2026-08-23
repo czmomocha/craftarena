@@ -118,7 +118,7 @@
 - `live_p1_safe_point = phase_boundary_notify`。
 - `live_patch_rollout = all_immediately`。
 - `live_patch_rollback = technical_auto_rollback`。
-- `edit_play_workflow = separate_preview_window`。
+- `edit_play_workflow = separate_preview_window`。该句被 `authoring_preview = persistent_safe_tick_patch`（2026-08-23）**收窄解释、并未推翻**：产品仍是独立窗口/标签，本刀先锁独立 `AuthoringPreview` 会话。P0–P2 在安全点增量应用已有 EDIT `op`，失败整份回滚；P3 待 Rule VM；P4 须重新连接。Preview 永不结算或在线写。窗口、多人试玩与 SimulationBundle 仍待。覆盖 `authoring_lattice` / `authoring_reachability` 中「Preview 仍待」。口径见 [CD-32 §4](../30-ugc/32-editor-and-preview.md#4-preview-行为)。
 - `preview_patch_mode = persistent_incremental`。
 - `multiplayer_preview_editing = author_live_patch`。
 
