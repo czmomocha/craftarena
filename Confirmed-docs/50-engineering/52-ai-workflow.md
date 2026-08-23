@@ -83,7 +83,19 @@ AI 不得用"代码看起来正确"代替运行证据。
 
 `隔离方式` 必填。阶段 A（§5.1 的四条退出条件未全绿）只允许 `无`，即单 Agent 串行、共享当前 checkout。阶段 B 起必须填 `worktree` 或 `cloud`：**Cursor 的 subagent 默认共享父 Agent 的 checkout，不显式要求隔离会静默互相覆盖。** 不得留空。
 
-功能任务应控制在**半天到两天**可验证的粒度。禁止用"实现完整 UGC 平台"这类无法审查的任务驱动 Agent。任务结束时由人类审查后立刻开 PR，不要让未提交产出跨夜留在 worktree 里（Cursor 托管 worktree 会自动清理，见 [CD-62](../60-plan/62-risk-register.md)）。
+功能任务应控制在**半天到两天**可验证的粒度。禁止用"实现完整 UGC 平台"这类无法审查的任务驱动 Agent。任务结束时由人类审查后立刻开 PR，不要让未提交产出跨夜留在 worktree 里（Cursor 托管 worktree 会自动清理，见 [CD-62](../60-plan/62-risk-register.md)）。提交粒度见 [§3.1](#31-提交粒度完整章节)。
+
+### 3.1 提交粒度：完整章节
+
+人类拍板（2026-08-23）：**能做成完整一章，就按完整一章提交审查。** [CD-91 D.6](../90-reference/91-decision-log.md) 的 `git_workflow = trunk_short_pr` 仍然禁止「整个里程碑一个 PR」，但禁止把同一条链路拆成多份不能独立验收的半成品。
+
+一章 = 同一条产品或技术链路的一次闭合：需要锁的契约 + 实现 + 正反例测试 + 所有者文档落点。人类一次审查应能回答「这章是否成立」，而不是「另一半合入后才有意义」。
+
+- 允许：Component Schema v1 整袋冻结；EditCommand 应用到 AuthoringWorld 并带 Undo/Redo。
+- 禁止：只锁 EDIT `op` 名、AuthoringWorld 只有 put/remove、把 apply 留到下一份 PR；禁止为了「两域都有 diff」而各交半章。
+- 仍禁止：把网格、Undo、Preview、两张赛道塞进同一个 PR。
+
+并行 2 域时，每个域交出的也必须是完整一章。决策来源见 [CD-91 D.6](../90-reference/91-decision-log.md) `pr_scope = complete_chapter`。
 
 ## 4. AI 使用规则
 
