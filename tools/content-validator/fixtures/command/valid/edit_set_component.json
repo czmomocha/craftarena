@@ -6,7 +6,18 @@
 	"expected_revision": 1,
 	"content_version": "content-v1",
 	"payload": {
-		"op": "set_component"
+		"op": "set_component",
+		"record": {
+			"schema_version": 1,
+			"entity_id": 1,
+			"components": {
+				"health": {
+					"current": 3,
+					"maximum": 5,
+					"invuln_ticks": 0
+				}
+			}
+		}
 	},
 	"trace_id": "trace-edit-set",
 	"kind": 2

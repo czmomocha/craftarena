@@ -107,6 +107,84 @@
 					}
 				}
 			}
+		},
+		{
+			"if": {
+				"properties": {
+					"kind": { "const": 2 },
+					"payload": {
+						"type": "object",
+						"required": ["op"],
+						"properties": { "op": { "const": "place" } }
+					}
+				},
+				"required": ["kind", "payload"]
+			},
+			"then": {
+				"properties": {
+					"payload": {
+						"type": "object",
+						"additionalProperties": false,
+						"required": ["op", "record"],
+						"properties": {
+							"op": { "const": "place" },
+							"record": { "$ref": "component_record.schema.json" }
+						}
+					}
+				}
+			}
+		},
+		{
+			"if": {
+				"properties": {
+					"kind": { "const": 2 },
+					"payload": {
+						"type": "object",
+						"required": ["op"],
+						"properties": { "op": { "const": "remove" } }
+					}
+				},
+				"required": ["kind", "payload"]
+			},
+			"then": {
+				"properties": {
+					"payload": {
+						"type": "object",
+						"additionalProperties": false,
+						"required": ["op", "entity_id"],
+						"properties": {
+							"op": { "const": "remove" },
+							"entity_id": { "type": "integer", "minimum": 1 }
+						}
+					}
+				}
+			}
+		},
+		{
+			"if": {
+				"properties": {
+					"kind": { "const": 2 },
+					"payload": {
+						"type": "object",
+						"required": ["op"],
+						"properties": { "op": { "const": "set_component" } }
+					}
+				},
+				"required": ["kind", "payload"]
+			},
+			"then": {
+				"properties": {
+					"payload": {
+						"type": "object",
+						"additionalProperties": false,
+						"required": ["op", "record"],
+						"properties": {
+							"op": { "const": "set_component" },
+							"record": { "$ref": "component_record.schema.json" }
+						}
+					}
+				}
+			}
 		}
 	]
 }

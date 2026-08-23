@@ -63,6 +63,8 @@ UI 操作
 → 失败：完整回滚并定位错误对象
 ```
 
+当前落点是 `AuthoringSession.try_apply`（`expected_revision` 门禁，失败不写入）以及 `undo` / `redo`（反向 payload）。增量 Schema 之后的语义、预算、可达性与 Preview Patch 仍待。网格吸附与楼层切换不在本落点。
+
 ## 4. Preview 行为
 
 - 编辑器保持打开，Preview 在独立窗口或标签运行；

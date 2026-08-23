@@ -6,9 +6,8 @@
 	"expected_revision": 1,
 	"content_version": "content-v1",
 	"payload": {
-		"op": "remove",
-		"entity_id": 1
+		"op": "remove"
 	},
-	"trace_id": "trace-edit-remove",
+	"trace_id": "trace-edit-missing-id",
 	"kind": 2
 }
