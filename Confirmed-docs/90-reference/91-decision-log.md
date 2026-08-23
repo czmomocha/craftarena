@@ -57,7 +57,7 @@
 - `schema_compatibility = current_plus_two`。
 - `rule_vm_compatibility = versioned_semantics`。
 - `creator_rule_access = templates_web_graph_desktop`。
-- `dual_editor_architecture = shared_framework_mode_tools`。该句被 `authoring_document = shared_json_snapshot`（2026-08-23）收窄：桌面完整与 Web 轻量交换同一份 AuthoringDocument（`schema_version` / `cell` / `revision` / `entities`）。表面名不入库。v1 不含 Rule VM 图。覆盖 `ugc_data_format` 的 JSON 源这一侧；binary bundle 仍待。口径见 [CD-32 §1.4](../30-ugc/32-editor-and-preview.md#14-共同数据模型)。
+- `dual_editor_architecture = shared_framework_mode_tools`。该句被 `authoring_document = shared_json_snapshot`（2026-08-23）收窄：桌面完整与 Web 轻量交换同一份 AuthoringDocument（`schema_version` / `cell` / `revision` / `entities`）。表面名不入库。v1 不含 Rule VM 图。覆盖 `ugc_data_format` 的 JSON 源这一侧；binary bundle 仍待。口径见 [CD-32 §1.4](../30-ugc/32-editor-and-preview.md#14-共同数据模型)。该句再被 `authoring_editor_shell = code_created_window`（2026-08-23）覆盖：内部开发编辑器当前落点是 `AuthoringEditorShell` 代码创建独立 `Window`，只发已有 EDIT `op`。关闭只隐藏。打开 Preview 是当时世界的快照，后续编辑不自动跟。不是 EditorPlugin，不改 `main.tscn`。口径见 [CD-32 §1.1](../30-ugc/32-editor-and-preview.md#11-内部开发编辑器)。
 - `authoring_lattice = scale_cell_xyz`（2026-08-23）：编辑吸附格默认边长 = `Fixed.SCALE`（1 表现米，[ADR-0005](../../docs/adr/0005-fixed-point-numeric-model.md)），楼层索引 = `y / cell` 向零。传送连线从 `portal.target_id` 派生，分类 `two_way` / `one_way` / `dangling`。编辑期允许悬空；禁止自环与指向无 `portal` 的已存在实体。不新增第四个 EDIT `op`。可达性、连线可视化与 Preview 仍待。口径见 [CD-32 §3](../30-ugc/32-editor-and-preview.md#3-从编辑到预览)。该句中「可达性仍待」被 `authoring_reachability = publish_path_and_cycle`（2026-08-23）覆盖：发布前检查悬空传送、`one_way` 跟随链循环、检查点 `order` 唯一、以及按楼层+传送的必经通路。`two_way` 配对视为落点终止，不是循环。不在 `try_apply` 上跑。不锁 hop 上限、预算、Preview、连线可视化或走路可达。口径见 [CD-32 §3](../30-ugc/32-editor-and-preview.md#3-从编辑到预览)。
 
 ## D.3 TRAPRUSH
