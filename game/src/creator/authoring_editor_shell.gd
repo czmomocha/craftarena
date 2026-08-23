@@ -3,8 +3,9 @@ extends Node
 
 ## Shared editor host (CD-32 §1). AuthoringSession stays the write path.
 ## Creates a Godot Window in code. Not an EditorPlugin. Not in-game HUD.
-## Emits existing EDIT ops only. Maps AuthoringWorld through AuthoringPreviewMap.
-## Preview does not auto-follow. Never settlement.
+## Hosts the TRAPRUSH tool strip. Emits existing EDIT ops only.
+## Maps AuthoringWorld through AuthoringPreviewMap. Preview does not auto-follow.
+## Never settlement.
 
 const TITLE: String = "Editor"
 const ACTOR_ID: int = 2
@@ -12,21 +13,20 @@ const CONTENT_VERSION: String = "content-v1"
 const TRACE_ID: String = "trace-authoring-editor"
 const _STATUS_NAME: String = "Status"
 const _MAP_NAME: String = "EditorMap"
-const _PLACE_CHECKPOINT_NAME: String = "PlaceCheckpoint"
+const _TOOLS_NAME: String = "TraprushTools"
 const _UNDO_NAME: String = "Undo"
 const _REDO_NAME: String = "Redo"
 const _PREVIEW_NAME: String = "Preview"
+const TraprushEditorPanelGd := preload("res://src/creator/traprush_editor_panel.gd")
 
 var surface: String = AuthoringSurfaceNames.INTERNAL_DEV
 var session: AuthoringSession = null
 var window: Window = null
 var map: AuthoringPreviewMap = null
 var preview: AuthoringPreviewShell = null
+var tools: TraprushEditorPanelGd = null
 var _status: Label = null
 var _next_command_id: int = 1
-var _next_entity_id: int = 1
-var _next_order: int = 0
-var _next_cell_x: int = 0
 
 
 static func create(p_surface: String) -> AuthoringEditorShell:
@@ -193,6 +193,10 @@ func status_label_text() -> String:
 	return _status.text
 
 
+func refresh_status() -> void:
+	_refresh_status()
+
+
 func _ensure_window() -> void:
 	if window != null:
 		return
@@ -201,7 +205,7 @@ func _ensure_window() -> void:
 		host_viewport.gui_embed_subwindows = true
 	window = Window.new()
 	window.title = TITLE
-	window.size = Vector2i(640, 400)
+	window.size = Vector2i(640, 480)
 	window.exclusive = false
 	window.transient = false
 	window.own_world_3d = true
@@ -215,10 +219,16 @@ func _ensure_window() -> void:
 	_status = Label.new()
 	_status.name = _STATUS_NAME
 	root.add_child(_status)
-	_add_button(root, _PLACE_CHECKPOINT_NAME, "Place checkpoint", _on_place_checkpoint)
-	_add_button(root, _UNDO_NAME, "Undo", _on_undo)
-	_add_button(root, _REDO_NAME, "Redo", _on_redo)
-	_add_button(root, _PREVIEW_NAME, "Preview", _on_preview)
+	tools = TraprushEditorPanelGd.new()
+	tools.name = _TOOLS_NAME
+	root.add_child(tools)
+	tools.mount(self)
+	var action_row: HBoxContainer = HBoxContainer.new()
+	action_row.name = "SharedActions"
+	root.add_child(action_row)
+	_add_button(action_row, _UNDO_NAME, "Undo", _on_undo)
+	_add_button(action_row, _REDO_NAME, "Redo", _on_redo)
+	_add_button(action_row, _PREVIEW_NAME, "Preview", _on_preview)
 	map = AuthoringPreviewMap.new()
 	map.name = _MAP_NAME
 	window.add_child(map)
@@ -232,26 +242,17 @@ func _rebuild_map() -> void:
 	map.rebuild(session.world)
 
 
-func _add_button(root: VBoxContainer, node_name: String, text: String, handler: Callable) -> void:
+func _add_button(row: BoxContainer, node_name: String, text: String, handler: Callable) -> void:
 	var button: Button = Button.new()
 	button.name = node_name
 	button.text = text
+	button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	button.pressed.connect(handler)
-	root.add_child(button)
+	row.add_child(button)
 
 
 func _on_close_requested() -> void:
 	hide_window()
-
-
-func _on_place_checkpoint() -> void:
-	var entity_id: int = _next_entity_id
-	var order: int = _next_order
-	var cell_x: int = _next_cell_x
-	if try_place_checkpoint(entity_id, order, cell_x, 0, 0):
-		_next_entity_id += 1
-		_next_order += 1
-		_next_cell_x += 1
 
 
 func _on_undo() -> void:
@@ -269,10 +270,14 @@ func _on_preview() -> void:
 func _refresh_status() -> void:
 	if _status == null or session == null or session.world == null:
 		return
-	_status.text = "%s revision=%d entities=%d undo=%s redo=%s" % [
+	var floor_index: int = 0
+	if tools != null:
+		floor_index = tools.floor_index
+	_status.text = "%s revision=%d entities=%d floor=%d undo=%s redo=%s" % [
 		surface,
 		session.world.revision,
 		session.world.entity_count(),
+		floor_index,
 		str(session.can_undo()),
 		str(session.can_redo()),
 	]
