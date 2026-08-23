@@ -4,7 +4,7 @@ extends RefCounted
 ## Independent Preview session (CD-32 §4). AuthoringSession stays open.
 ## Applies P0–P2 EditCommand patches at a safe point; failure restores the
 ## pre-patch world. P3 waits for Rule VM. P4 sets needs_restart.
-## Never settlement or online writes. No Godot Window in this slice.
+## Never settlement or online writes. Window host is AuthoringPreviewShell.
 
 var world: AuthoringWorld = null
 var preview_revision: int = 0
