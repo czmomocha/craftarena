@@ -1,0 +1,23 @@
+{
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"$id": "https://craftarena.local/contracts/authoring_document.schema.json",
+	"title": "AuthoringDocument",
+	"description": "Shared AuthoringWorld JSON snapshot for desktop_full and web_light. Field list owner: CD-32 §1.4. Surface names are not stored. v1 has no Rule VM graph.",
+	"type": "object",
+	"additionalProperties": false,
+	"required": [
+		"schema_version",
+		"cell",
+		"revision",
+		"entities"
+	],
+	"properties": {
+		"schema_version": { "type": "integer", "const": 1 },
+		"cell": { "type": "integer", "minimum": 1 },
+		"revision": { "type": "integer", "minimum": 0 },
+		"entities": {
+			"type": "array",
+			"items": { "$ref": "component_record.schema.json" }
+		}
+	}
+}

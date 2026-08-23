@@ -3,10 +3,16 @@ import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { describe, it } from "node:test";
 
-import { COMPONENT_SCHEMA_FILES, L0_SCHEMA_FILES } from "../../../backend/contracts/src/schemas.ts";
+import { AUTHORING_SCHEMA_FILES, COMPONENT_SCHEMA_FILES, L0_SCHEMA_FILES } from "../../../backend/contracts/src/schemas.ts";
 import { collectGdscriptSchemaMismatches } from "../src/gdscript_sync.ts";
-import { loadComponentFixtures, loadEnvelopeFixtures } from "../src/load_fixtures.ts";
-import { CANONICAL_SCHEMA_PATH, COMPONENT_SCHEMA_PATH, CONTRACTS_SCHEMA_DIR } from "../src/paths.ts";
+import { loadAuthoringFixtures, loadComponentFixtures, loadEnvelopeFixtures } from "../src/load_fixtures.ts";
+import {
+	AUTHORING_DOCUMENT_SCHEMA_PATH,
+	CANONICAL_SCHEMA_PATH,
+	COMPONENT_SCHEMA_PATH,
+	CONTRACTS_SCHEMA_DIR,
+} from "../src/paths.ts";
+import { validateAuthoringDocument } from "../src/validate_authoring_document.ts";
 import { validateComponentRecord } from "../src/validate_component.ts";
 import { validateSharedCommand, validateSharedDomainEvent } from "../src/validate_envelope.ts";
 
@@ -28,8 +34,17 @@ describe("Component Schema catalog", () => {
 	});
 });
 
+describe("AuthoringDocument catalog", () => {
+	it("keeps every registered authoring schema file on disk", () => {
+		for (const file of AUTHORING_SCHEMA_FILES) {
+			assert.equal(existsSync(join(CONTRACTS_SCHEMA_DIR, file)), true, file);
+		}
+		assert.equal(existsSync(AUTHORING_DOCUMENT_SCHEMA_PATH), true);
+	});
+});
+
 describe("GDScript and JSON Schema stay aligned", () => {
-	it("matches intent names, kind numbers, fields, depth, versions, and component catalogs", () => {
+	it("matches intent names, kind numbers, fields, depth, versions, component catalogs, and authoring document fields", () => {
 		assert.deepEqual(collectGdscriptSchemaMismatches(), []);
 	});
 });
@@ -70,6 +85,26 @@ describe("component fixtures", () => {
 	for (const fixture of fixtures) {
 		it(`component/${fixture.valid ? "valid" : "invalid"}/${fixture.name}`, () => {
 			const errors = validateComponentRecord(fixture.instance);
+			if (fixture.valid) {
+				assert.deepEqual(errors, []);
+			} else {
+				assert.ok(errors.length > 0, "expected schema errors");
+			}
+		});
+	}
+});
+
+describe("authoring document fixtures", () => {
+	const fixtures = loadAuthoringFixtures();
+
+	it("has both valid and invalid authoring examples", () => {
+		assert.ok(fixtures.some((fixture) => fixture.valid));
+		assert.ok(fixtures.some((fixture) => !fixture.valid));
+	});
+
+	for (const fixture of fixtures) {
+		it(`authoring/${fixture.valid ? "valid" : "invalid"}/${fixture.name}`, () => {
+			const errors = validateAuthoringDocument(fixture.instance);
 			if (fixture.valid) {
 				assert.deepEqual(errors, []);
 			} else {

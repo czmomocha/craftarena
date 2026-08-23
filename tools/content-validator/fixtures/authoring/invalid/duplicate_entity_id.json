@@ -1,0 +1,30 @@
+{
+	"schema_version": 1,
+	"cell": 65536,
+	"revision": 2,
+	"entities": [
+		{
+			"schema_version": 1,
+			"entity_id": 1,
+			"components": {
+				"transform": {
+					"x": 0,
+					"y": 65536,
+					"z": 0,
+					"yaw_bam": 0
+				}
+			}
+		},
+		{
+			"schema_version": 1,
+			"entity_id": 1,
+			"components": {
+				"health": {
+					"current": 1,
+					"maximum": 1,
+					"invuln_ticks": 0
+				}
+			}
+		}
+	]
+}
