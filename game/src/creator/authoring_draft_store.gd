@@ -39,6 +39,20 @@ func _init(
 
 
 func record(world: AuthoringWorld) -> bool:
+	var previous_count: int = command_count
+	var previous_latest: Dictionary = latest.duplicate(true)
+	var previous_points: Array[Dictionary] = _copy_checkpoints()
+	if not capture(world):
+		return false
+	if not _flush():
+		command_count = previous_count
+		latest = previous_latest
+		checkpoints = previous_points
+		return false
+	return true
+
+
+func capture(world: AuthoringWorld) -> bool:
 	if world == null:
 		return false
 	if _is_project_content_path(path):
@@ -46,21 +60,40 @@ func record(world: AuthoringWorld) -> bool:
 	var encoded: Dictionary = AuthoringDocument.encode(world)
 	if encoded.is_empty():
 		return false
-	var previous_count: int = command_count
-	var previous_latest: Dictionary = latest.duplicate(true)
-	var previous_points: Array[Dictionary] = _copy_checkpoints()
 	command_count += 1
 	latest = encoded
 	if command_count == 1 or command_count % checkpoint_interval == 0:
 		checkpoints.append(encoded.duplicate(true))
 		while checkpoints.size() > max_checkpoints:
 			checkpoints.remove_at(0)
-	if not _flush():
-		command_count = previous_count
-		latest = previous_latest
-		checkpoints = previous_points
-		return false
 	return true
+
+
+func body_text() -> String:
+	var points: Array = []
+	for item: Dictionary in checkpoints:
+		points.append(item)
+	var body: Dictionary = {
+		FIELD_SCHEMA_VERSION: SCHEMA_VERSION,
+		FIELD_COMMAND_COUNT: command_count,
+		FIELD_LATEST: latest,
+		FIELD_CHECKPOINTS: points,
+	}
+	return JSON.stringify(body)
+
+
+func load_text(text: String) -> bool:
+	if text.is_empty():
+		return false
+	var parsed: Variant = JSON.parse_string(text)
+	if typeof(parsed) != TYPE_DICTIONARY:
+		return false
+	var body: Dictionary = parsed
+	return _apply_body(body)
+
+
+func resolved_path() -> String:
+	return _resolved_path()
 
 
 func try_load_latest() -> AuthoringWorld:
@@ -87,16 +120,7 @@ func _flush() -> bool:
 		return false
 	if not _ensure_parent_dir(abs_path):
 		return false
-	var points: Array = []
-	for item: Dictionary in checkpoints:
-		points.append(item)
-	var body: Dictionary = {
-		FIELD_SCHEMA_VERSION: SCHEMA_VERSION,
-		FIELD_COMMAND_COUNT: command_count,
-		FIELD_LATEST: latest,
-		FIELD_CHECKPOINTS: points,
-	}
-	var text: String = JSON.stringify(body)
+	var text: String = body_text()
 	if text.is_empty():
 		return false
 	var file: FileAccess = FileAccess.open(abs_path, FileAccess.WRITE)
@@ -118,11 +142,12 @@ func _read_file() -> bool:
 	var file: FileAccess = FileAccess.open(abs_path, FileAccess.READ)
 	if file == null:
 		return false
-	var parsed: Variant = JSON.parse_string(file.get_as_text())
+	var text: String = file.get_as_text()
 	file.close()
-	if typeof(parsed) != TYPE_DICTIONARY:
-		return false
-	var body: Dictionary = parsed
+	return load_text(text)
+
+
+func _apply_body(body: Dictionary) -> bool:
 	if body.size() != 4:
 		return false
 	if not body.has(FIELD_SCHEMA_VERSION):
@@ -164,6 +189,9 @@ func _is_project_content_path(target: String) -> bool:
 func _resolved_path() -> String:
 	if path.is_empty():
 		return ""
+	if path.begins_with("user://"):
+		var relative: String = path.substr(7)
+		return OS.get_user_data_dir().path_join(relative)
 	return ProjectSettings.globalize_path(path)
 
 
