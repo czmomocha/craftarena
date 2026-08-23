@@ -1,0 +1,13 @@
+{
+	"schema_version": 1,
+	"entity_id": 1,
+	"components": {
+		"transform": {
+			"x": 0,
+			"y": 0,
+			"z": 0,
+			"yaw_bam": 0,
+			"pitch": 1
+		}
+	}
+}

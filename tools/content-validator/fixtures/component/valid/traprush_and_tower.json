@@ -1,0 +1,30 @@
+{
+	"schema_version": 1,
+	"entity_id": 11,
+	"components": {
+		"checkpoint": {
+			"order": 2,
+			"respawn_dx": 0,
+			"respawn_dy": 65536,
+			"respawn_dz": 0
+		},
+		"portal": {
+			"target_id": 9,
+			"yaw_bam": 0,
+			"cooldown_ticks": 0
+		},
+		"destructible": {
+			"durability": 3,
+			"regen_policy_id": 0
+		},
+		"tower": {
+			"level": 1,
+			"attack_range": 65536,
+			"cooldown_ticks": 12,
+			"target_priority": "nearest"
+		},
+		"replication": {
+			"policy_id": 0
+		}
+	}
+}

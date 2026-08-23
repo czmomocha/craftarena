@@ -1,16 +1,21 @@
 import { readFileSync } from "node:fs";
 
-import { L0_CONTRACT_VERSION } from "../../../backend/contracts/src/schemas.ts";
+import { COMPONENT_SCHEMA_VERSION, L0_CONTRACT_VERSION } from "../../../backend/contracts/src/schemas.ts";
 import { CANONICAL_MAX_DEPTH } from "./canonical_depth.ts";
 import { loadJsonFile } from "./json_schema.ts";
 import {
 	CANONICAL_PAYLOAD_PATH,
+	COLLISION_SHAPE_KINDS_PATH,
 	COMMAND_SCHEMA_PATH,
+	COMPONENT_NAMES_PATH,
+	COMPONENT_RECORD_PATH,
+	COMPONENT_SCHEMA_PATH,
 	EVENT_SCHEMA_PATH,
 	PLAYER_INTENT_NAMES_PATH,
 	SHARED_COMMAND_PATH,
 	SHARED_DOMAIN_EVENT_PATH,
 	SHARED_IDS_PATH,
+	TOWER_TARGET_PRIORITIES_PATH,
 } from "./paths.ts";
 
 export type SyncMismatch = {
@@ -55,6 +60,32 @@ export function collectGdscriptSchemaMismatches(): SyncMismatch[] {
 			name: "contract_version",
 			expected: String(L0_CONTRACT_VERSION),
 			actual: String(contractVersion),
+		});
+	}
+
+	const componentSchema = loadJsonFile(COMPONENT_SCHEMA_PATH);
+	const componentNames = parseStringConstants(readFileSync(COMPONENT_NAMES_PATH, "utf8"));
+	const schemaComponentNames = componentPropertyNames(componentSchema);
+	pushListMismatch(mismatches, "component_names", componentNames, schemaComponentNames);
+
+	const shapeKinds = parseStringConstants(readFileSync(COLLISION_SHAPE_KINDS_PATH, "utf8"));
+	const schemaShapeKinds = collisionShapeKindConsts(componentSchema);
+	pushListMismatch(mismatches, "collision_shape_kinds", shapeKinds, schemaShapeKinds);
+
+	const towerPriorities = parseStringConstants(readFileSync(TOWER_TARGET_PRIORITIES_PATH, "utf8"));
+	const schemaTowerPriorities = towerTargetPriorityEnum(componentSchema);
+	pushListMismatch(mismatches, "tower_target_priorities", towerPriorities, schemaTowerPriorities);
+
+	const componentFields = parseVarNames(readFileSync(COMPONENT_RECORD_PATH, "utf8"));
+	const schemaComponentFields = schemaRequired(componentSchema);
+	pushListMismatch(mismatches, "component_record_fields", componentFields, schemaComponentFields);
+
+	const componentSchemaVersion = parseIntConstant(readFileSync(COMPONENT_RECORD_PATH, "utf8"), "SCHEMA_VERSION");
+	if (componentSchemaVersion !== COMPONENT_SCHEMA_VERSION) {
+		mismatches.push({
+			name: "component_schema_version",
+			expected: String(COMPONENT_SCHEMA_VERSION),
+			actual: String(componentSchemaVersion),
 		});
 	}
 
@@ -129,6 +160,35 @@ function commandKindEnum(schema: unknown): number[] {
 
 function schemaRequired(schema: unknown): string[] {
 	const values = asArray(property(schema, "required"));
+	return values.filter((value): value is string => typeof value === "string");
+}
+
+function componentPropertyNames(schema: unknown): string[] {
+	const components = property(property(schema, "properties"), "components");
+	const properties = property(components, "properties");
+	if (typeof properties !== "object" || properties === null || Array.isArray(properties)) {
+		return [];
+	}
+	return Object.keys(properties);
+}
+
+function collisionShapeKindConsts(schema: unknown): string[] {
+	const shape = property(property(schema, "$defs"), "collision_shape");
+	const branches = asArray(property(shape, "oneOf"));
+	const kinds: string[] = [];
+	for (const branch of branches) {
+		const kind = property(property(property(branch, "properties"), "kind"), "const");
+		if (typeof kind === "string") {
+			kinds.push(kind);
+		}
+	}
+	return kinds;
+}
+
+function towerTargetPriorityEnum(schema: unknown): string[] {
+	const tower = property(property(schema, "$defs"), "tower");
+	const priority = property(property(tower, "properties"), "target_priority");
+	const values = asArray(property(priority, "enum"));
 	return values.filter((value): value is string => typeof value === "string");
 }
 

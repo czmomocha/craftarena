@@ -1,0 +1,14 @@
+{
+	"schema_version": 1,
+	"entity_id": 4,
+	"components": {
+		"zone": {
+			"shape": {
+				"kind": "capsule",
+				"radius": 32768,
+				"cylinder_height": 65536
+			},
+			"tags": ["hazard"]
+		}
+	}
+}

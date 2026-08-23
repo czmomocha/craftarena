@@ -1,0 +1,15 @@
+{
+	"schema_version": 1,
+	"entity_id": 4,
+	"components": {
+		"zone": {
+			"shape": {
+				"kind": "mesh",
+				"hx": 1,
+				"hy": 1,
+				"hz": 1
+			},
+			"tags": ["hazard"]
+		}
+	}
+}

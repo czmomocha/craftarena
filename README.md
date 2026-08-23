@@ -4,7 +4,7 @@ Godot 4 + UGC 双玩法（TRAPRUSH / BASTION）项目 Monorepo。代码与仓库
 
 - 工程规则入口：[AGENTS.md](AGENTS.md)
 - 规范唯一事实源：[Confirmed-docs](Confirmed-docs/README.md)
-- 当前阶段：M1 已退出（2026-08-23）。M2 可启动、尚未开工；工具链评审已通过（MCP 生产级启用，保持 2 域）。进度见 [CD-61](Confirmed-docs/60-plan/61-milestones.md)。
+- 当前阶段：M1 已退出（2026-08-23）。M2 第一刀（Component Schema v1）进行中；工具链评审已通过（MCP 生产级启用，保持 2 域）。进度见 [CD-61](Confirmed-docs/60-plan/61-milestones.md)。
 
 ## 目录
 
@@ -115,7 +115,7 @@ CI 当前实际启用了哪些门禁、哪些还没实现，以 [CD-53 §4.1](Co
 
 ## 并行工作区
 
-[CD-52 §5.1](Confirmed-docs/50-engineering/52-ai-workflow.md) 的 A1–A4 已成立，`.cursor/agents/` 与 `.cursor/BUGBOT.md` 已入库。GitHub PR 侧 Bugbot 已跳过，合入靠 CI + 人类批准。M1 已退出（2026-08-23）。工具链评审已通过：MCP 生产级启用；并行保持 2 域，第 3 域未开。M2 功能任务尚未开工。继续按 [CD-52 §5](Confirmed-docs/50-engineering/52-ai-workflow.md) 使用隔离 worktree。下面只服务「一个 Agent 在隔离 worktree 里干活」。禁止 symlink `node_modules`，禁止把 Cursor Automations 配进项目。
+[CD-52 §5.1](Confirmed-docs/50-engineering/52-ai-workflow.md) 的 A1–A4 已成立，`.cursor/agents/` 与 `.cursor/BUGBOT.md` 已入库。GitHub PR 侧 Bugbot 已跳过，合入靠 CI + 人类批准。M1 已退出（2026-08-23）。工具链评审已通过：MCP 生产级启用；并行保持 2 域，第 3 域未开。M2 第一刀（Component Schema v1）串行进行中；合入后再按域并行。继续按 [CD-52 §5](Confirmed-docs/50-engineering/52-ai-workflow.md) 使用隔离 worktree。下面只服务「一个 Agent 在隔离 worktree 里干活」。禁止 symlink `node_modules`，禁止把 Cursor Automations 配进项目。
 
 Cursor 创建 worktree 时会跑 `.cursor/worktrees.json`：`npm install`、按需从 `$ROOT_WORKTREE_PATH` 拷 `.env` 与 `data/*.sqlite`、按 worktree 目录名写入端口偏移、用 `GODOT4`（Windows 优先 `GODOT4_CONSOLE`）对 `game/` 做 `--import`。主 checkout（与 `$ROOT_WORKTREE_PATH` 相同）不写 `.env`。
 
