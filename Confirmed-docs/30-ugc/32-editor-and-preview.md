@@ -19,7 +19,7 @@
 - 开放完整受限规则图；
 - 供开发、策划、测试和 AI Agent 使用。
 
-当前窗口落点是 `AuthoringEditorShell`：代码创建独立 Godot `Window`（非 exclusive、非 transient），只发已有 EDIT `op`。关闭只隐藏，会话保持。打开 Preview 拷贝当时的 AuthoringWorld，之后的编辑不自动跟。Editor 窗口 `own_world_3d = true`，挂同一套 `AuthoringPreviewMap`，按 **AuthoringWorld** 重建 1 米占位盒与 gizmos。`TraprushEditorPanel` 挂在共用外壳上，提供检查点、传送门、删除最后实体与楼层切换；不新增第四个 EDIT `op`。`AuthoringValidatorPanel` 列出只读 `evaluate_reachability` 问题码；Focus 把 Editor 相机对到有 `transform` 的实体。叠加不是写入门禁。BASTION 面板与 EditorPlugin 仍待。**不是** EditorPlugin，不改 `main.tscn`，不编 SimulationBundle。F6 沙箱 `res://src/creator/editor_sandbox.tscn` 只供目视，不进 CI。要看窗口必须 **F6 运行当前场景**。两张官方赛道 JSON 已落入 `game/content/official/traprush/`。批量生成、性能分析面板与插件注册仍待。落点见 [CD-42 §3.4](../40-technical/42-contracts-and-rulevm.md#34-实现落点)。
+当前窗口落点是 `AuthoringEditorShell`：代码创建独立 Godot `Window`（非 exclusive、非 transient），只发已有 EDIT `op`。关闭只隐藏，会话保持。打开 Preview 拷贝当时的 AuthoringWorld，之后的编辑不自动跟。Editor 窗口 `own_world_3d = true`，挂同一套 `AuthoringPreviewMap`，按 **AuthoringWorld** 重建 1 米占位盒与 gizmos。`TraprushEditorPanel` 挂在共用外壳上，提供检查点、传送门、删除最后实体与楼层切换；不新增第四个 EDIT `op`。`AuthoringValidatorPanel` 列出只读 `evaluate_reachability` 问题码；Focus 把 Editor 相机对到有 `transform` 的实体。叠加不是写入门禁。BASTION 面板仍待。`game/addons/authoring_editor/` 注册 EditorPlugin：Project > Tools > Authoring Editor 打开同一套 `AuthoringEditorShell`。关闭只隐藏，会话保持。不改 `main.tscn`，不编 SimulationBundle，不写入 `_mcp_game_helper`，不把 `godot_ai` 写入已提交插件列表。F6 沙箱 `res://src/creator/editor_sandbox.tscn` 只供目视退路，不进 CI。两张官方赛道 JSON 已落入 `game/content/official/traprush/`。批量生成、性能分析面板仍待。落点见 [CD-42 §3.4](../40-technical/42-contracts-and-rulevm.md#34-实现落点)。
 
 ### 1.2 游戏内创作者编辑器
 
@@ -42,7 +42,7 @@ Web 用模板和表单编辑规则；桌面端开放受限规则图。两者生�
 
 ### 1.4 共同数据模型
 
-桌面完整编辑与 Web 轻量编辑交换同一份 `AuthoringDocument` JSON：`schema_version`、`cell`、`revision`、`entities`（实体为 [CD-42 §1.2](../40-technical/42-contracts-and-rulevm.md#12-字段标识符v1) 袋）。表面名（`internal_dev` / `desktop_full` / `web_light`）只约束工具能力，**不**写入文档。两端发出同一套 EDIT `op`。自由规则图编辑器只在 `internal_dev` 与 `desktop_full`；Web 只用规则模板/表单。Rule VM 图格式仍未落地，v1 文档不含规则图。导入文档替换 `AuthoringWorld` 并清空 Undo/Redo；失败整份拒绝。格子与传送图合法性与 `put` / `replace` 相同。Godot `JSON.parse_string` 可能把整数读成整值 float，解码时只接受能 round-trip 回 `int` 的值，入库仍是整数。官方赛道以同一份 AuthoringDocument 落在 `game/content/official/`；本刀锁第二张 TRAPRUSH 赛道。第三张仍待。`AuthoringDocument.load_from_path` 读盘。预算、走路可达、SimulationBundle 不是本落点。落点见 [CD-42 §3.4](../40-technical/42-contracts-and-rulevm.md#34-实现落点)。
+桌面完整编辑与 Web 轻量编辑交换同一份 `AuthoringDocument` JSON：`schema_version`、`cell`、`revision`、`entities`（实体为 [CD-42 §1.2](../40-technical/42-contracts-and-rulevm.md#12-字段标识符v1) 袋）。表面名（`internal_dev` / `desktop_full` / `web_light`）只约束工具能力，**不**写入文档。两端发出同一套 EDIT `op`。自由规则图编辑器只在 `internal_dev` 与 `desktop_full`；Web 只用规则模板/表单。Rule VM 图格式仍未落地，v1 文档不含规则图。导入文档替换 `AuthoringWorld` 并清空 Undo/Redo；失败整份拒绝。格子与传送图合法性与 `put` / `replace` 相同。Godot `JSON.parse_string` 可能把整数读成整值 float，解码时只接受能 round-trip 回 `int` 的值，入库仍是整数。官方赛道以同一份 AuthoringDocument 落在 `game/content/official/`；两张 TRAPRUSH 赛道已入库。第三张仍待。`AuthoringDocument.load_from_path` 读盘。预算、走路可达、SimulationBundle 不是本落点。落点见 [CD-42 §3.4](../40-technical/42-contracts-and-rulevm.md#34-实现落点)。
 
 ## 2. 草稿持久化与协同
 
@@ -72,11 +72,12 @@ UI 操作
 当前落点是 `AuthoringEditorShell` 把 UI 操作变成 `AuthoringSession.try_apply`（`expected_revision` 门禁，失败不写入）以及 `undo` / `redo`（反向 payload）。`AuthoringWorld` 在成功 `put` / `replace` 上执行：
 
 - **网格吸附**：带 `transform` 的实体袋，XYZ 必须落在吸附格上。默认格边 = `Fixed.SCALE`（1 表现米，[ADR-0005](../../docs/adr/0005-fixed-point-numeric-model.md)）。偏离格子的命令整份拒绝，不静默取整。无 `transform` 的袋不参与格子。
-- **编辑外壳**：`AuthoringEditorShell` 用代码创建独立 `Window`。格子坐标 × `cell` 后走已有 `place` / `remove`。关闭只隐藏。`open_preview` 按当时世界 `connect_from`；之后 `try_apply` 不自动进 Preview。不是 EditorPlugin。F6 沙箱见 [§1.1](#11-内部开发编辑器)。
+- **编辑外壳**：`AuthoringEditorShell` 用代码创建独立 `Window`。格子坐标 × `cell` 后走已有 `place` / `remove`。关闭只隐藏。`open_preview` 按当时世界 `connect_from`；之后 `try_apply` 不自动进 Preview。EditorPlugin 从 Project > Tools 打开同一套外壳。F6 沙箱见 [§1.1](#11-内部开发编辑器)。
 - **编辑 3D 表现映射**：同一套 `AuthoringPreviewMap` 挂在 Editor `Window` 上（`own_world_3d = true`）。按 **AuthoringWorld** 重建，不是 Preview 快照。每次 `try_apply` / `undo` / `redo` / `import_document`（成功或失败）都按当前编辑世界重建节点树。失败写入不留幽灵盒。Preview 仍不自动跟。占位盒是表现桩，不是碰撞体。要看盒子必须 **F6 运行当前场景**。
-- **TRAPRUSH 工具面板**：`TraprushEditorPanel` 挂在共用 `AuthoringEditorShell` 上。检查点 / 传送门 / 删除最后实体走已有 `place` / `remove`。连续两次 Place portal 把悬空对成 `two_way`。Floor up/down 只改下一次 place 的 `cell_y`，不写世界。不是 BASTION 面板，不是 EditorPlugin。
+- **TRAPRUSH 工具面板**：`TraprushEditorPanel` 挂在共用 `AuthoringEditorShell` 上。检查点 / 传送门 / 删除最后实体走已有 `place` / `remove`。连续两次 Place portal 把悬空对成 `two_way`。Floor up/down 只改下一次 place 的 `cell_y`，不写世界。不是 BASTION 面板。插件只打开外壳，不新增 `op`。
 - **验证器详情**：`AuthoringValidatorPanel` 只读 `evaluate_reachability`，列出已有问题码。Focus 把 Editor 相机对到有 `transform` 的实体。`missing_mandatory_path` 无实体可标，只进列表。不是写入门禁。Preview 仍不自动跟。不是新 `op`。
 - **第一张官方赛道**：`game/content/official/traprush/course_01.json` 是一份发布检查通过的 AuthoringDocument：同层检查点加跨层 `two_way` 传送对（纯竖直，z=0）。由 `AuthoringDocument.load_from_path` 读入，编辑外壳 `import_document` 后验证器空列表。不是新 `op`，不是写入门禁。F6 沙箱 `res://src/creator/course_sandbox.tscn` 只供目视。`editor_sandbox.tscn` 仍种悬空传送，供验证器目视。
+- **内部开发 EditorPlugin**：`game/addons/authoring_editor/plugin.cfg` 启用后，Project > Tools > Authoring Editor 调用 `AuthoringEditorPluginHost` 打开已有 `AuthoringEditorShell`。只发已有 EDIT `op`。禁用插件时 `_exit_tree` 卸菜单并 `detach`。不是新 `op`，不是写入门禁，不结算。BASTION 面板、批量生成与性能分析仍待。F6 沙箱仍是退路。
 - **第二张官方赛道**：`game/content/official/traprush/course_02.json` 是一份发布检查通过的 AuthoringDocument：同层检查点加跨层且侧向（+Z）的 `two_way` 传送对。与第一张布局不同。由 `AuthoringDocument.load_from_path` 读入，编辑外壳 `import_document` 后验证器空列表。不是新 `op`，不是写入门禁。第三张赛道仍待。F6 沙箱 `res://src/creator/course_02_sandbox.tscn` 只供目视。
 - **楼层**：楼层索引 = `y / cell`（向零）。`entity_ids_on_floor` 供楼层切换查询；不另锁层高产品数。
 - **传送连线**：从 `portal.target_id` 派生有向边，分类为 `two_way` / `one_way` / `dangling`（配对语义见 [CD-21 §4.2](../20-gameplay/21-traprush.md)）。编辑期允许目标尚未存在；禁止自环，禁止指向已存在但没有 `portal` 的实体。不新增第四个 EDIT `op`。

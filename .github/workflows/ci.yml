@@ -93,7 +93,7 @@ jobs:
               cat /tmp/check.log
               failed=1
             fi
-          done < <(find game/src game/tests -name '*.gd' | sort)
+          done < <(find game/src game/tests game/addons/authoring_editor -name '*.gd' | sort)
           exit "$failed"
 
       - name: Headless boot smoke test

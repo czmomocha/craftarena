@@ -2,7 +2,8 @@ class_name AuthoringEditorShell
 extends Node
 
 ## Shared editor host (CD-32 §1). AuthoringSession stays the write path.
-## Creates a Godot Window in code. Not an EditorPlugin. Not in-game HUD.
+## Creates a Godot Window in code. The EditorPlugin opens this shell;
+## this class is not itself an EditorPlugin. Not in-game HUD.
 ## Hosts the TRAPRUSH tool strip and read-only validator details.
 ## Emits existing EDIT ops only. Overlay is not a write gate.
 ## Maps AuthoringWorld through AuthoringPreviewMap. Preview does not auto-follow.
@@ -204,9 +205,10 @@ func refresh_status() -> void:
 func _ensure_window() -> void:
 	if window != null:
 		return
-	var host_viewport: Viewport = get_viewport()
-	if host_viewport != null:
-		host_viewport.gui_embed_subwindows = true
+	if not Engine.is_editor_hint():
+		var host_viewport: Viewport = get_viewport()
+		if host_viewport != null:
+			host_viewport.gui_embed_subwindows = true
 	window = Window.new()
 	window.title = TITLE
 	window.size = Vector2i(640, 560)
