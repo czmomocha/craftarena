@@ -38,6 +38,10 @@ Web 用模板和表单编辑规则；桌面端开放受限规则图。两者生�
 - 受时间、预算、区域和可达性限制；
 - 不进入内容发布系统。
 
+### 1.4 共同数据模型
+
+桌面完整编辑与 Web 轻量编辑交换同一份 `AuthoringDocument` JSON：`schema_version`、`cell`、`revision`、`entities`（实体为 [CD-42 §1.2](../40-technical/42-contracts-and-rulevm.md#12-字段标识符v1) 袋）。表面名（`internal_dev` / `desktop_full` / `web_light`）只约束工具能力，**不**写入文档。两端发出同一套 EDIT `op`。自由规则图编辑器只在 `internal_dev` 与 `desktop_full`；Web 只用规则模板/表单。Rule VM 图格式仍未落地，v1 文档不含规则图。导入文档替换 `AuthoringWorld` 并清空 Undo/Redo；失败整份拒绝。格子与传送图合法性与 `put` / `replace` 相同。Godot `JSON.parse_string` 可能把整数读成整值 float，解码时只接受能 round-trip 回 `int` 的值，入库仍是整数。发布前可达性、预算、Preview 窗口、SimulationBundle 不是本落点。落点见 [CD-42 §3.4](../40-technical/42-contracts-and-rulevm.md#34-实现落点)。
+
 ## 2. 草稿持久化与协同
 
 - 每条 EditCommand 立即写本地日志，2 秒防抖上传；
@@ -69,9 +73,10 @@ UI 操作
 - **楼层**：楼层索引 = `y / cell`（向零）。`entity_ids_on_floor` 供楼层切换查询；不另锁层高产品数。
 - **传送连线**：从 `portal.target_id` 派生有向边，分类为 `two_way` / `one_way` / `dangling`（配对语义见 [CD-21 §4.2](../20-gameplay/21-traprush.md)）。编辑期允许目标尚未存在；禁止自环，禁止指向已存在但没有 `portal` 的实体。不新增第四个 EDIT `op`。
 - **发布前可达性**：`AuthoringSession.evaluate_reachability`（`AuthoringReachability.evaluate`）。**不**在 `try_apply` 上跑。编辑期悬空仍合法。发布期拒绝：悬空传送、`one_way` 跟随链回到已访问节点、重复的 `checkpoint.order`、没有任何检查点、以及有序检查点跨楼层且楼层图不可达。同层相邻检查点视为普通通道，不探测走空洞。`two_way` 配对视为落点终止，不是循环。传送链 hop 上限数值仍未锁（[CD-63](../60-plan/63-open-decisions.md)）；本检查用访问集合找环。问题码落点见 [CD-42 §3.4](../40-technical/42-contracts-and-rulevm.md#34-实现落点)。这是 TRAPRUSH 发布前通路/循环；BASTION 封路与 BotRunner 走路可达不是本落点。
+- **共同数据模型**：`AuthoringDocument` 是 AuthoringWorld 的 JSON 快照，桌面与 Web 互换；表面不入库。见 [§1.4](#14-共同数据模型)。
 - **Preview Patch**：独立 `AuthoringPreview` 会话。`connect_from` 拷贝当时的 AuthoringWorld；编辑会话保持打开，继续 `try_apply` 不自动进 Preview。`try_apply_patch(level, EditCommand)` 只在安全点（未进入 Preview tick）应用已有 `place` / `remove` / `set_component`，**不**新增第四个 EDIT `op`。成功则 Preview 世界写入且 `preview_revision` +1；失败恢复该次补丁前的拷贝，AuthoringSession 不动。声明等级必须 ≥ 由袋分类出的最低等级（低报拒绝）。P0–P2 可连续应用且不重启；P3 因 Rule VM 未落地而拒绝且不重启；P4 拒绝并 `needs_restart`，须再次 `connect_from`。Preview **永不**结算、评分或在线战绩写。等级定义见 [CD-33 §1](33-hot-publish.md)；袋到等级的映射见下节。窗口/标签表现、多人试玩、SimulationBundle 编译不是本落点。
 
-预算仍待。连线可视化、检查点可视化不是本落点。
+预算仍待。连线可视化、检查点可视化、Preview 窗口不是本落点。
 
 ## 4. Preview 行为
 

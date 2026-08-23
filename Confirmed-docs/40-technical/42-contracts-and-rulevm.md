@@ -153,7 +153,7 @@ trace_id
 
 各玩法允许的具体 Intent 列表见 [CD-21 §8](../20-gameplay/21-traprush.md) 与 [CD-22 §7.3](../20-gameplay/22-bastion.md)。名字的代码落点是 `game/src/shared/commands/player_intent_names.gd`。
 
-EDIT 命令必须带白名单 `op`：`place` / `remove` / `set_component`。这三项覆盖摆放、删除和改组件。未知 payload 键拒绝。网格、楼层、传送连线、发布前可达性与 Preview Patch **不是**新 `op`：带 `transform` 的袋必须落在 [CD-32 §3](../30-ugc/32-editor-and-preview.md#3-从编辑到预览) 的吸附格上；`portal.target_id` 在 AuthoringWorld 上分类为连线；通路/循环在 `evaluate_reachability` 上检查；Preview 用同一套 `op` 在安全点应用到独立会话。
+EDIT 命令必须带白名单 `op`：`place` / `remove` / `set_component`。这三项覆盖摆放、删除和改组件。未知 payload 键拒绝。网格、楼层、传送连线、发布前可达性、AuthoringDocument 与 Preview Patch **不是**新 `op`：带 `transform` 的袋必须落在 [CD-32 §3](../30-ugc/32-editor-and-preview.md#3-从编辑到预览) 的吸附格上；`portal.target_id` 在 AuthoringWorld 上分类为连线；通路/循环在 `evaluate_reachability` 上检查；桌面与 Web 交换同一份 AuthoringDocument 快照；Preview 用同一套 `op` 在安全点应用到独立会话。
 
 | `op` | payload |
 |---|---|
@@ -181,6 +181,8 @@ Undo / Redo 是会话内对成功命令派生的反向 payload（`place`↔`remo
 | AuthoringSession | `game/src/creator/authoring_session.gd` |
 | AuthoringPreview | `game/src/creator/authoring_preview.gd` |
 | Preview 补丁等级名 | `game/src/creator/preview_patch_levels.gd` |
+| AuthoringDocument | `game/src/creator/authoring_document.gd` |
+| 编辑表面名 | `game/src/creator/authoring_surface_names.gd` |
 | 领域事件 | `game/src/shared/events/shared_domain_event.gd` |
 | 可哈希 payload 白名单 | `game/src/shared/protocol/canonical_payload.gd` |
 | 关键状态哈希 | `game/src/shared/protocol/state_hasher.gd` |
@@ -198,6 +200,7 @@ JSON Schema 落点：
 | 命令信封 | `backend/contracts/schemas/shared_command.schema.json` |
 | 领域事件 | `backend/contracts/schemas/shared_domain_event.schema.json` |
 | 组件袋 | `backend/contracts/schemas/component_record.schema.json` |
+| AuthoringDocument | `backend/contracts/schemas/authoring_document.schema.json` |
 | 正反例与校验 | `tools/content-validator/`（由根目录 `npm test` 收集） |
 
-`payload` 只允许 nil / bool / int / String / Array / Dictionary（字符串键）；禁止 float、Object、Callable。PLAYER 命令必须带白名单 `intent` 字符串。EDIT 命令必须带白名单 `op` 字符串，payload 形状见 [§3.3](#33-服务端处理管线)。SYSTEM 命令允许 `actor_id = 0`。Component Schema v1 字段见 [§1.2](#12-字段标识符v1)。Rule VM 图的 JSON Schema 仍未落地。OpenAPI 仍未落地。
+`payload` 只允许 nil / bool / int / String / Array / Dictionary（字符串键）；禁止 float、Object、Callable。PLAYER 命令必须带白名单 `intent` 字符串。EDIT 命令必须带白名单 `op` 字符串，payload 形状见 [§3.3](#33-服务端处理管线)。SYSTEM 命令允许 `actor_id = 0`。Component Schema v1 字段见 [§1.2](#12-字段标识符v1)。AuthoringDocument 字段见 [CD-32 §1.4](../30-ugc/32-editor-and-preview.md#14-共同数据模型)。Rule VM 图的 JSON Schema 仍未落地。OpenAPI 仍未落地。

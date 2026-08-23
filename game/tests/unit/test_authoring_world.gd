@@ -263,6 +263,29 @@ func test_duplicate_copies_records_and_revision_without_aliasing() -> void:
 	assert_eq(stored_y, 2 * CELL)
 
 
+func test_try_restore_sets_revision_and_failed_restore_leaves_world() -> void:
+	var world: AuthoringWorld = AuthoringWorld.new()
+	assert_true(world.put(_transform_record(4, 2)))
+	var records: Array[SharedComponentRecord] = [_transform_record(7, 0), _transform_record(8, 1)]
+	assert_true(world.try_restore(records, 9, CELL))
+	assert_eq(world.revision, 9)
+	assert_eq(world.entity_ids(), [7, 8])
+	assert_false(world.has_entity(4))
+	var kept: PackedByteArray = world.hash_state()
+	var off_lattice: Array[SharedComponentRecord] = [_xyz_record(1, 0, CELL, -2)]
+	assert_false(world.try_restore(off_lattice, 1, CELL))
+	assert_eq(world.hash_state(), kept)
+	var duplicate_ids: Array[SharedComponentRecord] = [_transform_record(2, 0), _transform_record(2, 1)]
+	assert_false(world.try_restore(duplicate_ids, 3, CELL))
+	assert_eq(world.hash_state(), kept)
+	assert_false(world.try_restore(records, -1, CELL))
+	assert_eq(world.hash_state(), kept)
+	var empty: Array[SharedComponentRecord] = []
+	assert_true(world.try_restore(empty, 0, CELL))
+	assert_eq(world.revision, 0)
+	assert_eq(world.entity_count(), 0)
+
+
 func _transform_record(entity_id: int, cells_y: int) -> SharedComponentRecord:
 	return _xyz_record(entity_id, 0, cells_y * CELL, 0)
 

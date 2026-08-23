@@ -7,6 +7,7 @@ extends RefCounted
 ## Transform XYZ must sit on the authoring lattice. portal.target_id may dangle;
 ## it must not self-loop or point at an existing entity that has no portal.
 ## Publish-time path / cycle lives on AuthoringReachability, not on put / replace.
+## try_restore loads an AuthoringDocument snapshot without bumping revision per entity.
 
 var revision: int = 0
 var grid: AuthoringGrid = AuthoringGrid.with_default_cell()
@@ -137,6 +138,34 @@ func hash_state() -> PackedByteArray:
 	return digest_hex.hex_decode()
 
 
+func try_restore(records: Array[SharedComponentRecord], p_revision: int, p_cell: int) -> bool:
+	if p_revision < 0:
+		return false
+	var next_grid: AuthoringGrid = AuthoringGrid.create(p_cell)
+	if next_grid == null:
+		return false
+	var next_records: Dictionary[int, SharedComponentRecord] = {}
+	for record: SharedComponentRecord in records:
+		if record == null:
+			return false
+		if not SharedIds.is_valid(record.entity_id):
+			return false
+		if next_records.has(record.entity_id):
+			return false
+		var stored: SharedComponentRecord = SharedComponentRecord.create(record.entity_id, record.components)
+		if stored == null:
+			return false
+		if not _transform_on_grid(stored, next_grid):
+			return false
+		next_records[stored.entity_id] = stored
+	if not _portal_graph_is_legal(next_records):
+		return false
+	grid = next_grid
+	_records = next_records
+	revision = p_revision
+	return true
+
+
 func duplicate() -> AuthoringWorld:
 	var next_grid: AuthoringGrid = AuthoringGrid.create(grid.cell)
 	if next_grid == null:
@@ -160,14 +189,17 @@ func _copy_records() -> Dictionary[int, SharedComponentRecord]:
 	return copy
 
 
-func _transform_on_grid(record: SharedComponentRecord) -> bool:
+func _transform_on_grid(record: SharedComponentRecord, p_grid: AuthoringGrid = null) -> bool:
+	var lattice: AuthoringGrid = grid
+	if p_grid != null:
+		lattice = p_grid
 	var pose: Dictionary = _transform_xyz(record)
 	if pose.is_empty():
 		return true
 	var x: int = pose["x"]
 	var y: int = pose["y"]
 	var z: int = pose["z"]
-	return grid.accepts_xyz(x, y, z)
+	return lattice.accepts_xyz(x, y, z)
 
 
 func _transform_xyz(record: SharedComponentRecord) -> Dictionary:

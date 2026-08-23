@@ -120,6 +120,7 @@ AI 生成代码必须比普通手写代码有**更强的自动化证据**，因�
 - 连续 Undo/Redo 100 次；
 - BatchCommand 原子性；
 - Preview Patch 成功与失败回滚；
+- AuthoringDocument 桌面/Web 往返与非法快照拒绝；
 - 编辑器异常退出后草稿恢复；
 - 发布中途进程退出；
 - 签名失败；
@@ -187,7 +188,7 @@ AI 生成代码必须比普通手写代码有**更强的自动化证据**，因�
 | 语法与类型检查 | 已启用 | 逐个 `.gd` 文件跑 `--check-only`；`backend/`、`tools/` 跑 `tsc --noEmit` |
 | 核心目录警告视为错误 | 已启用 | GDScript 由 `project.godot` 全局配置（[ADR-0001](../../docs/adr/0001-strict-gdscript-typing-gate.md)）并由 GUT 断言守护；TypeScript 由 `tsconfig.json` 的 strict 系列保证 |
 | 单元测试 | 已启用（全量，非"受影响"） | GUT 跑 `res://tests/unit`；后端跑 `node --test` |
-| Schema 验证 | 已启用（L0 信封 + Component Schema v1） | `tools/content-validator/` 对 `backend/contracts/schemas/` 做正反例（含 `component_record`），并由根目录 `npm test` 收集。未覆盖 Rule VM 图。未引入 Ajv（新依赖属宪法第十八条人类门禁）。字段名单见 [CD-42 §1.2](../40-technical/42-contracts-and-rulevm.md#12-字段标识符v1) |
+| Schema 验证 | 已启用（L0 信封 + Component Schema v1 + AuthoringDocument） | `tools/content-validator/` 对 `backend/contracts/schemas/` 做正反例（含 `component_record` 与 `authoring_document`），并由根目录 `npm test` 收集。未覆盖 Rule VM 图。未引入 Ajv（新依赖属宪法第十八条人类门禁）。字段名单见 [CD-42 §1.2](../40-technical/42-contracts-and-rulevm.md#12-字段标识符v1) 与 [CD-32 §1.4](../30-ugc/32-editor-and-preview.md#14-共同数据模型) |
 | 禁止 API 和依赖检查 | 已启用（宪法红线子集） | `tools/redline-scanner/` + CI step `npm run redline-scan`：`simulation/` 禁 SceneTree/`float`、共享核心禁 `.gdextension`、`game/src` 禁 Godot 3 高信号符号、`game/` 禁 `.cs`/`.csproj`/`.sln`（GUT 仍保留同一条）。Godot 3 黑名单是[官方更名表](https://docs.godotengine.org/en/stable/tutorials/migrating/upgrading_to_godot_4.html)的高信号子集，不是穷尽。第二十三条仍由 ADR-0001 覆盖 |
 | 编辑文件的 linter 诊断 | 未实现 | 依赖开发机 IDE，未进 CI |
 | PR Web 预览 | 未实现 | 等 Web 导出与沙盒环境落地 |

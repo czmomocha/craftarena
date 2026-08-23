@@ -1,0 +1,19 @@
+{
+	"schema_version": 1,
+	"cell": 65536,
+	"revision": 1,
+	"entities": [
+		{
+			"schema_version": 1,
+			"entity_id": 1,
+			"components": {
+				"transform": {
+					"x": 0,
+					"y": 65536,
+					"z": -2,
+					"yaw_bam": 0
+				}
+			}
+		}
+	]
+}

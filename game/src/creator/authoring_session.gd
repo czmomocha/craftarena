@@ -6,10 +6,34 @@ extends RefCounted
 ## Lattice / floor / portal_link 由 AuthoringWorld 在 put/replace 上拒绝。
 ## 发布前通路 / 循环走 evaluate_reachability。
 ## Preview 是独立 AuthoringPreview 会话，不在 try_apply 上推 Patch。
+## AuthoringDocument 是桌面/Web 共同快照；surface 只约束工具，不写入文档。
 
 var world: AuthoringWorld = AuthoringWorld.new()
+var surface: String = AuthoringSurfaceNames.DESKTOP_FULL
 var _undo: Array[Dictionary] = []
 var _redo: Array[Dictionary] = []
+
+
+static func create(p_surface: String) -> AuthoringSession:
+	if not AuthoringSurfaceNames.contains(p_surface):
+		return null
+	var session: AuthoringSession = AuthoringSession.new()
+	session.surface = p_surface
+	return session
+
+
+func export_document() -> Dictionary:
+	return AuthoringDocument.encode(world)
+
+
+func import_document(data: Dictionary) -> bool:
+	var loaded: AuthoringWorld = AuthoringDocument.decode(data)
+	if loaded == null:
+		return false
+	world = loaded
+	_undo.clear()
+	_redo.clear()
+	return true
 
 
 func try_apply(command: SharedCommand) -> bool:

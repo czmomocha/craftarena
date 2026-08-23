@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { FIXTURES_DIR } from "./paths.ts";
 
 export type EnvelopeKind = "command" | "event";
-export type FixtureKind = EnvelopeKind | "component";
+export type FixtureKind = EnvelopeKind | "component" | "authoring";
 
 export type FixtureFile = {
 	readonly kind: FixtureKind;
@@ -20,6 +20,10 @@ export function loadEnvelopeFixtures(): FixtureFile[] {
 
 export function loadComponentFixtures(): FixtureFile[] {
 	return loadKindFixtures("component");
+}
+
+export function loadAuthoringFixtures(): FixtureFile[] {
+	return loadKindFixtures("authoring");
 }
 
 function loadKindFixtures(kind: FixtureKind): FixtureFile[] {

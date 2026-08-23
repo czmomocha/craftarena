@@ -1,9 +1,15 @@
 import { readFileSync } from "node:fs";
 
-import { COMPONENT_SCHEMA_VERSION, L0_CONTRACT_VERSION } from "../../../backend/contracts/src/schemas.ts";
+import {
+	AUTHORING_DOCUMENT_SCHEMA_VERSION,
+	COMPONENT_SCHEMA_VERSION,
+	L0_CONTRACT_VERSION,
+} from "../../../backend/contracts/src/schemas.ts";
 import { CANONICAL_MAX_DEPTH } from "./canonical_depth.ts";
 import { loadJsonFile } from "./json_schema.ts";
 import {
+	AUTHORING_DOCUMENT_PATH,
+	AUTHORING_DOCUMENT_SCHEMA_PATH,
 	CANONICAL_PAYLOAD_PATH,
 	COLLISION_SHAPE_KINDS_PATH,
 	COMMAND_SCHEMA_PATH,
@@ -91,6 +97,20 @@ export function collectGdscriptSchemaMismatches(): SyncMismatch[] {
 			name: "component_schema_version",
 			expected: String(COMPONENT_SCHEMA_VERSION),
 			actual: String(componentSchemaVersion),
+		});
+	}
+
+	const authoringSchema = loadJsonFile(AUTHORING_DOCUMENT_SCHEMA_PATH);
+	const authoringFields = parseStringConstants(readFileSync(AUTHORING_DOCUMENT_PATH, "utf8"));
+	const schemaAuthoringFields = schemaRequired(authoringSchema);
+	pushListMismatch(mismatches, "authoring_document_fields", authoringFields, schemaAuthoringFields);
+
+	const authoringSchemaVersion = parseIntConstant(readFileSync(AUTHORING_DOCUMENT_PATH, "utf8"), "SCHEMA_VERSION");
+	if (authoringSchemaVersion !== AUTHORING_DOCUMENT_SCHEMA_VERSION) {
+		mismatches.push({
+			name: "authoring_document_schema_version",
+			expected: String(AUTHORING_DOCUMENT_SCHEMA_VERSION),
+			actual: String(authoringSchemaVersion),
 		});
 	}
 
