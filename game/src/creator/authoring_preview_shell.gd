@@ -3,7 +3,7 @@ extends Node
 
 ## Independent Preview window host (CD-32 §4). AuthoringSession stays open.
 ## Creates a Godot Window in code and maps preview transforms to 1 m boxes,
-## portal gizmos, and checkpoint-order labels.
+## portal gizmos, checkpoint-order labels, and reachability-issue overlay.
 ## Does not compile SimulationBundle. Tab host is reserved and refused.
 ## Never settlement.
 
@@ -85,18 +85,25 @@ func status_view() -> Dictionary:
 	var connected: bool = false
 	var preview_revision: int = 0
 	var needs_restart: bool = false
+	var reach_ok: bool = true
+	var reach_issue_count: int = 0
 	if preview != null:
 		connected = preview.connected
 		preview_revision = preview.preview_revision
 		needs_restart = preview.needs_restart
 		if preview.world != null:
 			entity_count = preview.world.entity_count()
+	if map != null:
+		reach_ok = map.reachability_ok()
+		reach_issue_count = map.reachability_issue_count()
 	return {
 		"connected": connected,
 		"preview_revision": preview_revision,
 		"entity_count": entity_count,
 		"needs_restart": needs_restart,
 		"window_visible": is_window_visible(),
+		"reach_ok": reach_ok,
+		"reach_issue_count": reach_issue_count,
 	}
 
 
@@ -145,9 +152,16 @@ func _refresh_status() -> void:
 	var entity_count: int = 0
 	if preview.world != null:
 		entity_count = preview.world.entity_count()
-	_status.text = "connected=%s revision=%d entities=%d restart=%s" % [
+	var reach_ok: bool = true
+	var reach_issue_count: int = 0
+	if map != null:
+		reach_ok = map.reachability_ok()
+		reach_issue_count = map.reachability_issue_count()
+	_status.text = "connected=%s revision=%d entities=%d restart=%s reach_ok=%s issues=%d" % [
 		str(preview.connected),
 		preview.preview_revision,
 		entity_count,
 		str(preview.needs_restart),
+		str(reach_ok),
+		reach_issue_count,
 	]
