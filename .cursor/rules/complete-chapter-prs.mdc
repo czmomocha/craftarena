@@ -1,0 +1,16 @@
+---
+description: Submit complete chapters for human review, not half-finished PRs
+alwaysApply: true
+---
+
+# 完整章节再提交
+
+所有者：[CD-52 §3.1](Confirmed-docs/50-engineering/52-ai-workflow.md)。决策：`pr_scope = complete_chapter`。
+
+能做成完整一章，就按完整一章开 PR，再请人类审查。短 PR 仍然要短，但必须能独立验收。
+
+一章 = 同一条链路的一次闭合：要锁的契约 + 实现 + 正反例测试 + 所有者文档落点。
+
+- 做：EditCommand 应用到 AuthoringWorld 并带 Undo/Redo，作为一章。
+- 不做：只锁 `op` 名、世界只有 put/remove、apply 另开 PR；不为了两域并行而各交半章。
+- 仍不做：把网格、Preview、两张赛道和整个 M2 塞进一个 PR。
