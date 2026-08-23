@@ -8,6 +8,7 @@ export const CONTRACTS_SCHEMA_DIR = join(REPO_ROOT, "backend/contracts/schemas")
 export const SHARED_SRC_DIR = join(REPO_ROOT, "game/src/shared");
 export const CREATOR_SRC_DIR = join(REPO_ROOT, "game/src/creator");
 export const FIXTURES_DIR = join(here, "../fixtures");
+export const OFFICIAL_CONTENT_DIR = join(REPO_ROOT, "game/content/official");
 
 export const PLAYER_INTENT_NAMES_PATH = join(SHARED_SRC_DIR, "commands/player_intent_names.gd");
 export const EDIT_OP_NAMES_PATH = join(SHARED_SRC_DIR, "commands/edit_op_names.gd");

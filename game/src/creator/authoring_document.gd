@@ -67,6 +67,25 @@ static func decode(data: Dictionary) -> AuthoringWorld:
 	return world
 
 
+static func load_json(path: String) -> Dictionary:
+	if path.is_empty():
+		return {}
+	if not FileAccess.file_exists(path):
+		return {}
+	var file: FileAccess = FileAccess.open(path, FileAccess.READ)
+	if file == null:
+		return {}
+	var parsed: Variant = JSON.parse_string(file.get_as_text())
+	if typeof(parsed) != TYPE_DICTIONARY:
+		return {}
+	var body: Dictionary = parsed
+	return body
+
+
+static func load_from_path(path: String) -> AuthoringWorld:
+	return decode(load_json(path))
+
+
 static func _coerce_json_ints(value: Variant) -> Variant:
 	match typeof(value):
 		TYPE_INT:
