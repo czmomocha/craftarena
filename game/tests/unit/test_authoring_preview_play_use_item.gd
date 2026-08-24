@@ -3,7 +3,7 @@ extends GutTest
 ## Preview play UseItemIntent: while playing, apply the existing use-item
 ## name through TraprushDestructibleBreak. Reach pose must overlap a
 ## compiled solid destructible. Damage and reach are caller stubs, not a
-## product blast table. Destroyed boxes become non-solid. Interact / Jump
+## product blast table. Destroyed boxes become non-solid. Interact / Shove
 ## stay refused. No gravity, inventory, regen, or settlement.
 
 const AuthoringDocument := preload("res://src/creator/authoring_document.gd")
@@ -120,7 +120,7 @@ func test_use_item_refused_unless_playing() -> void:
 	assert_true(preview.is_safe_point())
 
 
-func test_interact_and_jump_still_refused() -> void:
+func test_interact_and_shove_still_refused() -> void:
 	var preview: AuthoringPreview = _connected_course(COURSE_01_PATH)
 	assert_true(preview.try_start_play(1, PLAY_RADIUS, PLAY_RADIUS))
 	var start: Dictionary = preview.play_world.get_pose(preview.player_id)
@@ -128,7 +128,7 @@ func test_interact_and_jump_still_refused() -> void:
 		"intent": PlayerIntentNames.INTERACT,
 	}))
 	assert_false(preview.try_apply_play_intent({
-		"intent": PlayerIntentNames.JUMP,
+		"intent": PlayerIntentNames.SHOVE,
 	}))
 	var pose: Dictionary = preview.play_world.get_pose(preview.player_id)
 	var start_x: int = start.get("x", -2)

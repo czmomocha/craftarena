@@ -2,9 +2,9 @@ extends GutTest
 
 ## Preview play MoveIntent: while playing, apply existing MoveIntent through
 ## TraprushIntentStepper. WASD maps to world XZ. Caller supplies dx/dz; the
-## shell step is a presentation stub, not a product speed. Jump/Shove stay
-## refused. Occupancy is in test_authoring_preview_play_pads. No gravity,
-## no tick Hz, no settlement.
+## shell step is a presentation stub, not a product speed. Shove/Interact
+## stay refused. Occupancy is in test_authoring_preview_play_pads. No
+## gravity, no tick Hz, no settlement.
 
 const AuthoringDocument := preload("res://src/creator/authoring_document.gd")
 const AuthoringPreview := preload("res://src/creator/authoring_preview.gd")
@@ -95,12 +95,12 @@ func test_move_refused_unless_playing() -> void:
 	assert_false(preview.is_playing())
 
 
-func test_jump_and_empty_payload_are_refused() -> void:
+func test_shove_and_empty_payload_are_refused() -> void:
 	var preview: AuthoringPreview = _connected_course()
 	assert_true(preview.try_start_play(1, PLAY_RADIUS, PLAY_RADIUS))
 	var start: Dictionary = preview.play_world.get_pose(preview.player_id)
 	assert_false(preview.try_apply_play_intent({
-		"intent": PlayerIntentNames.JUMP,
+		"intent": PlayerIntentNames.SHOVE,
 	}))
 	assert_false(preview.try_apply_play_intent({}))
 	assert_false(preview.try_apply_play_intent({"intent": PlayerIntentNames.MOVE, "dx": CELL}))

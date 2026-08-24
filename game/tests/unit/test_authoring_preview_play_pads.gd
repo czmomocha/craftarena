@@ -5,7 +5,7 @@ extends GutTest
 ## observed by Preview, not a client completion assertion. Spawn on the first
 ## pad accepts it; walking onto the next same-floor pad accepts the next id.
 ## Skip, no overlap, and not-playing stay refused. No gravity, portals, finish,
-## Jump/Shove, tick Hz, or settlement.
+## Shove, tick Hz, or settlement.
 
 const AuthoringDocument := preload("res://src/creator/authoring_document.gd")
 const AuthoringPreview := preload("res://src/creator/authoring_preview.gd")

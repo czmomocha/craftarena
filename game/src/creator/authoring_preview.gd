@@ -9,8 +9,10 @@ extends RefCounted
 ## Play enters tick so patches are refused until try_stop_play.
 ## try_apply_play_intent accepts MoveIntent (caller dx/dz),
 ## ResetToCheckpointIntent (compiled pad respawn table, no client
-## coordinates), and UseItemIntent (compiled destructible occupancy at
-## caller reach). Jump/Shove/Interact stay refused. Does not tick.
+## coordinates), UseItemIntent (compiled destructible occupancy at
+## caller reach), and JumpIntent (grounded caller play_jump_dy hop via
+## IntentStepper; airborne keeps the pose and still reports ok).
+## Shove/Interact stay refused. Does not tick. No gravity or fall.
 ## Occupancy uses existing TraprushPadAccept: overlapping a checkpoint pad
 ## advances ordered progress. Occupancy uses existing TraprushPortalLanding
 ## try_land_exit: overlapping a portal source box lands one hop. two_way dest
@@ -22,7 +24,9 @@ extends RefCounted
 ## plus IntentStepper and does not rewind progress. UseItem uses existing
 ## TraprushDestructibleBreak: caller reach pose must overlap a compiled
 ## solid crate; damage and reach are caller stubs. Destroyed boxes become
-## non-solid. Never settlement or online writes.
+## non-solid. Jump uses existing TraprushJumpIntent plus the IntentStepper
+## grounded check; play_jump_dy / play_support_dy are caller stubs, not a
+## locked jump height or gravity. Never settlement or online writes.
 ## Capsule radius/height are caller-provided, not a locked product size.
 ## Window host is AuthoringPreviewShell.
 
@@ -45,6 +49,8 @@ var play_use_item_damage: int = 0
 var play_use_item_reach_dx: int = 0
 var play_use_item_reach_dy: int = 0
 var play_use_item_reach_dz: int = 0
+var play_jump_dy: int = 0
+var play_support_dy: int = 0
 var _in_tick: bool = false
 var _playing: bool = false
 var _portal_latch: Dictionary = {}
@@ -196,8 +202,10 @@ func try_apply_play_intent(payload: Dictionary) -> bool:
 		return _try_use_item_play(payload)
 	var move_decoded: Dictionary = TraprushMoveIntent.decode(payload)
 	var move_ok: bool = move_decoded.get("ok", false)
+	var jump_decoded: Dictionary = TraprushJumpIntent.decode(payload)
+	var jump_ok: bool = jump_decoded.get("ok", false)
 	var reset_ok: bool = TraprushCheckpointSpawn.is_reset_intent(payload)
-	if not move_ok and not reset_ok:
+	if not move_ok and not reset_ok and not jump_ok:
 		return false
 	if move_ok and _resolve_play_portals():
 		return true
@@ -207,10 +215,10 @@ func try_apply_play_intent(payload: Dictionary) -> bool:
 		play_world,
 		player_id,
 		payload,
-		0,
+		play_jump_dy,
 		play_spawn,
 		play_track,
-		0
+		play_support_dy
 	)
 	var stepped_ok: bool = stepped.get("ok", false)
 	if not stepped_ok:
