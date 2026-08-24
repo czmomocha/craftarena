@@ -5,8 +5,10 @@ extends Node
 ## Creates a Godot Window in code and maps preview transforms to 1 m boxes,
 ## portal gizmos, checkpoint-order labels, and reachability-issue overlay.
 ## Play compiles the connected Preview world into a SimulationBundle, loads
-## it, and draws the player pose as a presentation stub. Tab host is reserved
-## and refused. Never settlement.
+## it, and draws the player pose as a presentation stub. While playing and
+## visible, WASD maps to world-space MoveIntent; play_move_step is a
+## presentation stub, not a product speed. Tab host is reserved and refused.
+## Never settlement.
 
 const TITLE: String = "Preview"
 const PLAY_NAME: String = "Play"
@@ -14,11 +16,16 @@ const STOP_NAME: String = "Stop"
 const _STATUS_NAME: String = "Status"
 const _MAP_NAME: String = "PreviewMap"
 const _OVERLAY_NAME: String = "Overlay"
+const _MOVE_FORWARD: String = "move_forward"
+const _MOVE_BACK: String = "move_back"
+const _MOVE_LEFT: String = "move_left"
+const _MOVE_RIGHT: String = "move_right"
 
 var kind: String = AuthoringPreviewHostKinds.WINDOW
 var preview: AuthoringPreview = null
 var window: Window = null
 var map: AuthoringPreviewMap = null
+var play_move_step: int = Fixed.SCALE / 16
 var _status: Label = null
 
 
@@ -101,6 +108,54 @@ func try_advance_play() -> bool:
 	_rebuild_map()
 	_refresh_status()
 	return ok
+
+
+static func move_payload_from_axes(
+	forward: bool,
+	back: bool,
+	left: bool,
+	right: bool,
+	step: int
+) -> Dictionary:
+	if step < 1:
+		return {}
+	var dx: int = 0
+	var dz: int = 0
+	if right:
+		dx += step
+	if left:
+		dx -= step
+	if back:
+		dz += step
+	if forward:
+		dz -= step
+	if dx == 0 and dz == 0:
+		return {}
+	return {
+		"intent": PlayerIntentNames.MOVE,
+		"dx": dx,
+		"dz": dz,
+	}
+
+
+func try_apply_play_intent(payload: Dictionary) -> bool:
+	if preview == null:
+		return false
+	var ok: bool = preview.try_apply_play_intent(payload)
+	_rebuild_map()
+	_refresh_status()
+	return ok
+
+
+func try_sample_play_move(forward: bool, back: bool, left: bool, right: bool) -> bool:
+	if preview == null or not preview.is_playing():
+		return false
+	if window == null or not window.visible:
+		return false
+	var payload: Dictionary = move_payload_from_axes(forward, back, left, right, play_move_step)
+	if payload.is_empty():
+		return false
+	return try_apply_play_intent(payload)
 
 
 func allows_settlement() -> bool:
@@ -192,6 +247,19 @@ func _on_play() -> void:
 
 func _on_stop() -> void:
 	try_stop_play()
+
+
+func _process(_delta: float) -> void:
+	if preview == null or not preview.is_playing():
+		return
+	if window == null or not window.visible:
+		return
+	try_sample_play_move(
+		Input.is_action_pressed(_MOVE_FORWARD),
+		Input.is_action_pressed(_MOVE_BACK),
+		Input.is_action_pressed(_MOVE_LEFT),
+		Input.is_action_pressed(_MOVE_RIGHT)
+	)
 
 
 func _add_button(row: BoxContainer, node_name: String, text: String, handler: Callable) -> void:
