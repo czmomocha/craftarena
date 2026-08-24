@@ -4,7 +4,7 @@ Godot 4 + UGC 双玩法（TRAPRUSH / BASTION）项目 Monorepo。代码与仓库
 
 - 工程规则入口：[AGENTS.md](AGENTS.md)
 - 规范唯一事实源：[Confirmed-docs](Confirmed-docs/README.md)
-- 当前阶段：M3 进行中（2026-08-24 启动）。本刀为对局进程多人仿真循环（无网络）：`TraprushMatchSession` 共享权威世界 + 1~8 名玩家独立进度。进度见 [CD-61](Confirmed-docs/60-plan/61-milestones.md)。
+- 当前阶段：M3 进行中（2026-08-24 启动）。已落地对局多人仿真循环；本刀为对局二进制协议 v1（命令/快照版本化编解码）。进度见 [CD-61](Confirmed-docs/60-plan/61-milestones.md)。
 
 ## 目录
 
