@@ -5,7 +5,7 @@ import { join } from "node:path";
 import { describe, it } from "node:test";
 
 import { applyDotEnv, mergeDotEnv, parseDotEnv } from "../src/dotenv_file.ts";
-import { setupWorktree } from "../src/setup_worktree.ts";
+import { runCommand, setupWorktree, spawnNeedsShell } from "../src/setup_worktree.ts";
 import { BASE_PORTS, hashSlot, portsForSlot, worktreeSlot } from "../src/worktree_ports.ts";
 
 describe("worktree port slots", () => {
@@ -48,6 +48,23 @@ describe("dotenv helpers", () => {
 		assert.equal(parsed["KEEP"], "yes");
 		assert.equal(parsed["CONTROL_PLANE_PORT"], "8180");
 		assert.equal(parsed["GATEWAY_PORT"], "8190");
+	});
+});
+
+describe("spawn shell wrapping", () => {
+	it("wraps only .cmd/.bat and only on win32", () => {
+		assert.equal(spawnNeedsShell("win32", "npm.cmd"), true);
+		assert.equal(spawnNeedsShell("win32", "setup.BAT"), true);
+		assert.equal(spawnNeedsShell("win32", "npm"), false);
+		assert.equal(spawnNeedsShell("win32", "C:\\Tools\\Godot_console.exe"), false);
+		assert.equal(spawnNeedsShell("linux", "npm"), false);
+		assert.equal(spawnNeedsShell("darwin", "npm"), false);
+	});
+
+	it("spawns the platform npm through runCommand without EINVAL", async () => {
+		const command = process.platform === "win32" ? "npm.cmd" : "npm";
+		const result = await runCommand(command, ["--version"], process.cwd());
+		assert.equal(result.code, 0);
 	});
 });
 

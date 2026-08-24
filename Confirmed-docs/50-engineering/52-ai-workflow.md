@@ -146,7 +146,7 @@ AI 不得用"代码看起来正确"代替运行证据。
 | 角色定义 | 项目级 `.cursor/agents/*.md` | frontmatter 只有 `name`、`description`、`model`、`readonly`、`is_background`。**没有 `tools` 白名单**；不得声称 `readonly: true` 是已证实的硬边界 |
 | 提交拦截 | `.cursor/hooks.json` 的 `beforeShellExecution` | 见 §1.1；必须 `failClosed: true` |
 | 代码审查 | 合入靠 CI + 人类批准。本地 `/review-bugbot` 可选；GitHub PR 侧 Bugbot **已跳过** | 配置在 `.cursor/BUGBOT.md`（若日后 PR 侧恢复则加载它）。本地 `/review-bugbot` **会**注入根目录 `AGENTS.md`。GitHub PR 侧因 Cursor SCM 安装对不上而跳过，不要再把它写成流程前置。findings 默认 `neutral`，**不是 CI 门禁**（[CD-53 §4.1](53-testing-and-ci.md)）。实测见 [CD-91 D.6](../90-reference/91-decision-log.md) `bugbot_pr_side` |
-| worktree 基建 | `.cursor/worktrees.json` 的 `setup-worktree-windows` / `setup-worktree-unix` | `npm install`、按需拷本地文件、Godot `--import`、写端口偏移。**禁止 symlink `node_modules`** |
+| worktree 基建 | `.cursor/worktrees.json` 的 `setup-worktree-windows` / `setup-worktree-unix` | `npm install`、按需拷本地文件、Godot `--import`、写端口偏移。**禁止 symlink `node_modules`**。Windows 上 `npm.cmd` 由 `runCommand` 包 shell spawn（Node ≥ 24 无 shell 直产 `.cmd` 抛 EINVAL）；`.exe` 与类 Unix 不包 |
 
 一期**不引入** Multica 类平台，**不用** Cursor Automations（配置无法入库）。重估触发点见 ADR-0004 §6.4。
 
