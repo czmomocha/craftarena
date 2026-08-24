@@ -111,9 +111,18 @@ function resolveGodot(env: NodeJS.ProcessEnv, platform: NodeJS.Platform): string
 	return godot;
 }
 
+export function spawnNeedsShell(platform: NodeJS.Platform, command: string): boolean {
+	return platform === "win32" && /\.(cmd|bat)$/i.test(command);
+}
+
 export function runCommand(command: string, args: readonly string[], cwd: string): Promise<CommandResult> {
 	return new Promise((resolveCommand, reject) => {
-		const child = spawn(command, [...args], { cwd, stdio: "inherit", shell: false });
+		// Node blocks spawning .cmd/.bat without a shell on Windows (EINVAL).
+		const child = spawn(command, [...args], {
+			cwd,
+			stdio: "inherit",
+			shell: spawnNeedsShell(process.platform, command),
+		});
 		child.on("error", reject);
 		child.on("close", (code) => {
 			resolveCommand({ code: code ?? 1 });
