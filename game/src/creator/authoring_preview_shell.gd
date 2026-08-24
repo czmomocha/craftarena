@@ -8,8 +8,9 @@ extends Node
 ## it, and draws the player pose as a presentation stub. While playing and
 ## visible, WASD maps to world-space MoveIntent; play_move_step is a
 ## presentation stub, not a product speed. Occupancy accepts overlapping
-## checkpoint pads through PadAccept; status shows pads=n/m. Tab host is
-## reserved and refused.
+## checkpoint pads through PadAccept and portal boxes through
+## PortalLanding.try_land_exit; status shows pads=n/m and floor=n. Tab host
+## is reserved and refused.
 ## Never settlement.
 
 const TITLE: String = "Preview"
@@ -176,6 +177,7 @@ func status_view() -> Dictionary:
 	var playing: bool = false
 	var accepted_count: int = 0
 	var checkpoint_count: int = 0
+	var floor_index: int = 0
 	var reach_ok: bool = true
 	var reach_issue_count: int = 0
 	if preview != null:
@@ -185,6 +187,7 @@ func status_view() -> Dictionary:
 		playing = preview.is_playing()
 		accepted_count = preview.play_accepted_count()
 		checkpoint_count = preview.play_checkpoint_count()
+		floor_index = preview.play_floor_index()
 		if preview.world != null:
 			entity_count = preview.world.entity_count()
 	if map != null:
@@ -198,6 +201,7 @@ func status_view() -> Dictionary:
 		"playing": playing,
 		"accepted_count": accepted_count,
 		"checkpoint_count": checkpoint_count,
+		"floor_index": floor_index,
 		"window_visible": is_window_visible(),
 		"reach_ok": reach_ok,
 		"reach_issue_count": reach_issue_count,
@@ -301,7 +305,7 @@ func _refresh_status() -> void:
 	if map != null:
 		reach_ok = map.reachability_ok()
 		reach_issue_count = map.reachability_issue_count()
-	_status.text = "connected=%s revision=%d entities=%d restart=%s playing=%s pads=%d/%d reach_ok=%s issues=%d" % [
+	_status.text = "connected=%s revision=%d entities=%d restart=%s playing=%s pads=%d/%d floor=%d reach_ok=%s issues=%d" % [
 		str(preview.connected),
 		preview.preview_revision,
 		entity_count,
@@ -309,6 +313,7 @@ func _refresh_status() -> void:
 		str(preview.is_playing()),
 		preview.play_accepted_count(),
 		preview.play_checkpoint_count(),
+		preview.play_floor_index(),
 		str(reach_ok),
 		reach_issue_count,
 	]

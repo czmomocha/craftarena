@@ -4,7 +4,9 @@ extends RefCounted
 ## Compiles an AuthoringWorld into a v1 TRAPRUSH SimulationBundle.
 ## Whole-world topology, not an incremental subgraph. Dangling portals are
 ## omitted. A checkpoint or a classified two_way / one_way portal without
-## transform fails the whole compile. Not a new EDIT op. Never settlement.
+## source or dest transform fails the whole compile. Portal bags include the
+## source occupancy pose (x/y/z) and dest landing pose. Not a new EDIT op.
+## Never settlement.
 
 static func compile(world: AuthoringWorld) -> SimulationBundle:
 	if world == null or world.grid == null:
@@ -51,14 +53,26 @@ static func compile(world: AuthoringWorld) -> SimulationBundle:
 		var source_id: int = link.get("source_id", 0)
 		if source_id < 1:
 			return null
+		var source: SharedComponentRecord = world.get_record(source_id)
+		if source == null:
+			return null
+		var source_pose: Dictionary = _transform_xyz(source)
+		if source_pose.is_empty():
+			return null
 		var dest_yaw_bam: int = link.get("dest_yaw_bam", 0)
 		var dest_x: int = dest_pose["x"]
 		var dest_y: int = dest_pose["y"]
 		var dest_z: int = dest_pose["z"]
+		var source_x: int = source_pose["x"]
+		var source_y: int = source_pose["y"]
+		var source_z: int = source_pose["z"]
 		portals.append({
 			"entity_id": source_id,
 			"target_id": dest_id,
 			"kind": kind,
+			"x": source_x,
+			"y": source_y,
+			"z": source_z,
 			"dest_x": dest_x,
 			"dest_y": dest_y,
 			"dest_z": dest_z,

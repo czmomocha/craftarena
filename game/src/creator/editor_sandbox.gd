@@ -7,7 +7,8 @@ extends Node
 ## connected Preview follows committed writes, and the status bar shows follow.
 ## Preview Play compiles the current Preview world; WASD moves the capsule
 ## while the Preview window is visible. Overlapping checkpoint pads accept
-## ordered progress. Stop leaves the sim.
+## ordered progress. Overlapping portal boxes land through try_land_exit.
+## Stop leaves the sim.
 
 const AuthoringEditorShell := preload("res://src/creator/authoring_editor_shell.gd")
 const AuthoringSurfaceNames := preload("res://src/creator/authoring_surface_names.gd")

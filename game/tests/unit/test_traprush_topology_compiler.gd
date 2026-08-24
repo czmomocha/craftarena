@@ -46,6 +46,9 @@ func test_official_courses_compile_distinct_topology() -> void:
 	var first_pad_z: int = _pad(first, 1).get("z", -1)
 	var second_pad_z: int = _pad(second, 3).get("z", -1)
 	var first_kind: String = str(_portal(first, 10).get("kind", ""))
+	var first_source_x: int = _portal(first, 10).get("x", -1)
+	var first_source_y: int = _portal(first, 10).get("y", -1)
+	var first_source_z: int = _portal(first, 10).get("z", -1)
 	var first_dest_x: int = _portal(first, 10).get("dest_x", -1)
 	var first_dest_y: int = _portal(first, 10).get("dest_y", -1)
 	var first_dest_z: int = _portal(first, 10).get("dest_z", -1)
@@ -55,6 +58,9 @@ func test_official_courses_compile_distinct_topology() -> void:
 	assert_eq(first_pad_z, 0)
 	assert_eq(second_pad_z, 2 * CELL)
 	assert_eq(first_kind, AuthoringPortalKinds.TWO_WAY)
+	assert_eq(first_source_x, 3 * CELL)
+	assert_eq(first_source_y, 0)
+	assert_eq(first_source_z, 0)
 	assert_eq(first_dest_x, 0)
 	assert_eq(first_dest_y, CELL)
 	assert_eq(first_dest_z, 0)
@@ -77,13 +83,47 @@ func test_dangling_portal_is_omitted_and_one_way_is_kept() -> void:
 	var portal_id: int = portal.get("entity_id", 0)
 	var target_id: int = portal.get("target_id", 0)
 	var kind: String = str(portal.get("kind", ""))
+	var source_x: int = portal.get("x", -1)
 	var dest_x: int = portal.get("dest_x", -1)
 	var dest_yaw_bam: int = portal.get("dest_yaw_bam", -1)
 	assert_eq(portal_id, 1)
 	assert_eq(target_id, 2)
 	assert_eq(kind, AuthoringPortalKinds.ONE_WAY)
+	assert_eq(source_x, 0)
 	assert_eq(dest_x, CELL)
 	assert_eq(dest_yaw_bam, 16384)
+
+
+func test_portal_source_without_transform_fails_compile() -> void:
+	var world: AuthoringWorld = AuthoringWorld.new()
+	var source: SharedComponentRecord = SharedComponentRecord.create(1, {
+		"portal": {"target_id": 2, "yaw_bam": 0, "cooldown_ticks": 0},
+	})
+	assert_not_null(source)
+	assert_true(world.put(source))
+	assert_true(world.put(_portal_record(2, 99, CELL, 0)))
+	assert_null(TraprushTopologyCompiler.compile(world))
+
+
+func test_portal_bag_without_source_pose_is_rejected() -> void:
+	var data: Dictionary = {
+		"schema_version": 1,
+		"cell": CELL,
+		"source_revision": 0,
+		"pads": [],
+		"portals": [
+			{
+				"entity_id": 1,
+				"target_id": 2,
+				"kind": AuthoringPortalKinds.ONE_WAY,
+				"dest_x": 0,
+				"dest_y": 0,
+				"dest_z": 0,
+				"dest_yaw_bam": 0,
+			},
+		],
+	}
+	assert_null(SimulationBundle.from_dictionary(data))
 
 
 func test_checkpoint_without_transform_fails_compile() -> void:
@@ -121,6 +161,9 @@ func test_dangling_kind_in_bundle_is_rejected() -> void:
 				"entity_id": 1,
 				"target_id": 2,
 				"kind": AuthoringPortalKinds.DANGLING,
+				"x": 0,
+				"y": 0,
+				"z": 0,
 				"dest_x": 0,
 				"dest_y": 0,
 				"dest_z": 0,
@@ -138,12 +181,20 @@ func test_loaded_pads_are_non_solid_occupancy_and_world_ticks() -> void:
 	assert_true(_flag(loaded))
 	var world: SimulationWorld = loaded["world"]
 	var pad_ids: Dictionary = loaded["pad_ids"]
+	var portal_ids: Dictionary = loaded["portal_ids"]
 	assert_eq(pad_ids.size(), 3)
+	assert_eq(portal_ids.size(), 2)
 	var box_id: int = pad_ids[1]
 	assert_false(world.is_static_box_solid(box_id))
+	var portal_box_id: int = portal_ids[10]
+	assert_false(world.is_static_box_solid(portal_box_id))
 	var capsule_id: int = world.spawn_capsule(0, 0, 0, 0, 1, 1)
 	var overlapping: PackedInt32Array = world.overlapping_static_boxes(capsule_id)
 	assert_true(_has_id(overlapping, box_id))
+	assert_false(_has_id(overlapping, portal_box_id))
+	var at_portal: int = world.spawn_capsule(3 * CELL, 0, 0, 0, 1, 1)
+	var portal_overlap: PackedInt32Array = world.overlapping_static_boxes(at_portal)
+	assert_true(_has_id(portal_overlap, portal_box_id))
 	assert_eq(world.tick_index, 0)
 	world.tick()
 	assert_eq(world.tick_index, 1)

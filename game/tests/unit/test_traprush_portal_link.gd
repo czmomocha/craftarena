@@ -31,6 +31,24 @@ func test_link_stores_fixed_point_landing_not_float_meters() -> void:
 	assert_eq(yaw, QUARTER_TURN_BAM)
 
 
+func test_exit_lands_two_way_pair_that_follow_rejects() -> void:
+	var graph: PortalGraph = PortalGraph.new()
+	graph.add_link(PortalLink.new(1, 2, ONE_METER_Q48_16, 131072, 0, 0))
+	graph.add_link(PortalLink.new(2, 1, 0, 0, 0, QUARTER_TURN_BAM))
+	var followed: Dictionary = graph.follow(1, 1)
+	assert_false(_ok(followed))
+	var exited: Dictionary = graph.try_exit(1)
+	assert_true(_ok(exited))
+	assert_eq(_int_field(exited, "dest_id"), 2)
+	assert_eq(_int_field(exited, "x"), ONE_METER_Q48_16)
+	assert_eq(_int_field(exited, "y"), 131072)
+	assert_eq(_int_field(exited, "z"), 0)
+	var reverse: Dictionary = graph.try_exit(2)
+	assert_true(_ok(reverse))
+	assert_eq(_int_field(reverse, "dest_id"), 1)
+	assert_false(_ok(graph.try_exit(9)))
+
+
 func test_follow_one_hop_lands_on_dest() -> void:
 	var graph: PortalGraph = PortalGraph.new()
 	graph.add_link(PortalLink.new(1, 2, ONE_METER_Q48_16, 131072, 0, 0))

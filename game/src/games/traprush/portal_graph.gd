@@ -16,6 +16,13 @@ func add_link(link: TraprushPortalLink) -> bool:
 	return true
 
 
+func try_exit(start_id: int) -> Dictionary:
+	var failed: Dictionary = {"ok": false}
+	if not _by_source.has(start_id):
+		return failed
+	return _success(_by_source[start_id])
+
+
 func follow(start_id: int, max_hops: int) -> Dictionary:
 	var failed: Dictionary = {"ok": false}
 	if max_hops < 1:

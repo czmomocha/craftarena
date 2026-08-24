@@ -14,6 +14,28 @@ const SimulationWorld := preload("res://src/simulation/simulation_world.gd")
 const QUARTER_TURN_BAM: int = 16384
 
 
+func test_exit_lands_two_way_pair_that_follow_rejects() -> void:
+	var world: SimulationWorld = SimulationWorld.new(1)
+	var dest_x: int = _whole(3)
+	var dest_y: int = _whole(4)
+	var dest_z: int = _whole(5)
+	var entity_id: int = world.spawn_capsule(0, 0, 0, 8, _whole(1), _whole(2))
+	var graph: PortalGraph = PortalGraph.new()
+	graph.add_link(PortalLink.new(1, 2, dest_x, dest_y, dest_z, QUARTER_TURN_BAM))
+	graph.add_link(PortalLink.new(2, 1, 0, 0, 0, 0))
+	var followed: Dictionary = PortalLanding.try_land(world, entity_id, graph, 1, 1)
+	assert_false(_ok(followed))
+	_assert_pose(world, entity_id, 0, 0, 0, 8)
+	var exited: Dictionary = PortalLanding.try_land_exit(world, entity_id, graph, 1)
+	assert_true(_ok(exited))
+	assert_true(_landed(exited))
+	var dest_raw: Variant = exited.get("dest_id", -1)
+	var dest_id: int = dest_raw
+	assert_eq(dest_id, 2)
+	_assert_pose(world, entity_id, dest_x, dest_y, dest_z, QUARTER_TURN_BAM)
+	assert_eq(world.tick_index, 0)
+
+
 func test_one_hop_lands_and_sets_dest_yaw() -> void:
 	var world: SimulationWorld = SimulationWorld.new(1)
 	var start_yaw: int = 8
