@@ -1,7 +1,7 @@
 extends GutTest
 
 ## AuthoringPreview：编辑会话保持打开；安全点应用 P0–P2；失败整份回滚；永不结算。
-## P3 等 Rule VM；P4 只置 needs_restart。不建窗口，不编 SimulationBundle。
+## P3 等 Rule VM；P4 只置 needs_restart。不建窗口。试玩见 test_authoring_preview_play。
 
 const AuthoringPreview := preload("res://src/creator/authoring_preview.gd")
 const AuthoringSession := preload("res://src/creator/authoring_session.gd")

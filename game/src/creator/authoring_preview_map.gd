@@ -4,12 +4,14 @@ extends Node3D
 ## Presentation mapping for AuthoringWorld (CD-32 §3). Used by Preview and Editor.
 ## Authority stays on AuthoringWorld Q48.16; float conversion happens only here.
 ## One 1×1×1 m BoxMesh per entity with transform; portal_link, checkpoint-order,
-## and reachability-issue gizmos. Placeholders and gizmos are not hitboxes.
+## and reachability-issue gizmos. Preview play draws the sim player pose as a
+## presentation stub. Placeholders and gizmos are not hitboxes.
 ## Rebuild after every editor write or preview patch. Overlay reads evaluate();
 ## it is not a write gate.
 
 const CAMERA_NAME: String = "PreviewCamera"
 const LIGHT_NAME: String = "PreviewLight"
+const PLAYER_NAME: String = "player_marker"
 const PLACEHOLDER_PREFIX: String = "entity_"
 const LINK_PREFIX: String = "portal_link_"
 const DANGLE_PREFIX: String = "portal_dangle_"
@@ -31,6 +33,7 @@ const _MIN_LINK_LEN: float = 0.001
 const _CAMERA_POS: Vector3 = Vector3(6.0, 8.0, 6.0)
 const _LIGHT_ROT_DEG: Vector3 = Vector3(-50.0, -30.0, 0.0)
 const _STUB_ALBEDO: Color = Color(0.85, 0.7, 0.25)
+const _PLAYER_ALBEDO: Color = Color(0.2, 0.45, 0.95)
 const _TWO_WAY_ALBEDO: Color = Color(0.2, 0.75, 0.95)
 const _ONE_WAY_ALBEDO: Color = Color(0.95, 0.55, 0.15)
 const _DANGLE_ALBEDO: Color = Color(0.9, 0.25, 0.35)
@@ -164,6 +167,43 @@ func rebuild(world: AuthoringWorld) -> void:
 	_spawn_portal_gizmos(world)
 	_spawn_checkpoint_gizmos(world)
 	_spawn_reachability_overlay(world)
+
+
+func show_player_pose(pose: Dictionary) -> void:
+	clear_player_pose()
+	if typeof(pose.get("x", null)) != TYPE_INT:
+		return
+	if typeof(pose.get("y", null)) != TYPE_INT:
+		return
+	if typeof(pose.get("z", null)) != TYPE_INT:
+		return
+	var x: int = pose["x"]
+	var y: int = pose["y"]
+	var z: int = pose["z"]
+	var yaw_bam: int = 0
+	if typeof(pose.get("yaw", null)) == TYPE_INT:
+		yaw_bam = pose["yaw"]
+	var mesh: BoxMesh = BoxMesh.new()
+	mesh.size = PLACEHOLDER_SIZE
+	mesh.material = _unshaded(_PLAYER_ALBEDO)
+	var node: MeshInstance3D = MeshInstance3D.new()
+	node.name = PLAYER_NAME
+	node.mesh = mesh
+	node.position = Vector3(meters_from_fixed(x), meters_from_fixed(y), meters_from_fixed(z))
+	node.rotation.y = yaw_radians_from_bam(yaw_bam)
+	add_child(node)
+
+
+func clear_player_pose() -> void:
+	var node: Node = get_node_or_null(PLAYER_NAME)
+	if node == null:
+		return
+	remove_child(node)
+	node.free()
+
+
+func player_node() -> MeshInstance3D:
+	return get_node_or_null(PLAYER_NAME) as MeshInstance3D
 
 
 func mapped_count() -> int:

@@ -4,13 +4,22 @@ extends RefCounted
 ## Independent Preview session (CD-32 §4). AuthoringSession stays open.
 ## Applies P0–P2 EditCommand patches at a safe point; failure restores the
 ## pre-patch world. P3 waits for Rule VM. P4 sets needs_restart.
+## try_start_play compiles the Preview world into a v1 TRAPRUSH topology
+## bundle, loads SimulationWorld, and spawns on the lowest-order pad.
+## Play enters tick so patches are refused until try_stop_play.
+## Capsule radius/height are caller-provided, not a locked product size.
 ## Never settlement or online writes. Window host is AuthoringPreviewShell.
 
 var world: AuthoringWorld = null
 var preview_revision: int = 0
 var connected: bool = false
 var needs_restart: bool = false
+var play_world: SimulationWorld = null
+var play_graph: TraprushPortalGraph = null
+var play_pad_ids: Dictionary = {}
+var player_id: int = 0
 var _in_tick: bool = false
+var _playing: bool = false
 
 
 func connect_from(session: AuthoringSession) -> bool:
@@ -19,6 +28,7 @@ func connect_from(session: AuthoringSession) -> bool:
 	var cloned: AuthoringWorld = session.world.duplicate()
 	if cloned == null:
 		return false
+	_clear_play()
 	world = cloned
 	preview_revision = 0
 	connected = true
@@ -48,6 +58,70 @@ func allows_settlement() -> bool:
 
 func allows_online_writes() -> bool:
 	return false
+
+
+func is_playing() -> bool:
+	return _playing and play_world != null
+
+
+func try_start_play(seed: int, radius: int = 0, cylinder_height: int = 0) -> bool:
+	if not is_safe_point():
+		return false
+	if radius < 0 or cylinder_height < 0:
+		return false
+	var bundle: SimulationBundle = TraprushTopologyCompiler.compile(world)
+	if bundle == null:
+		return false
+	if bundle.pads.is_empty():
+		return false
+	var start: Dictionary = _start_pose(bundle)
+	if start.is_empty():
+		return false
+	var loaded: Dictionary = TraprushTopologyLoader.try_load(bundle, seed)
+	var loaded_ok: bool = loaded.get("ok", false)
+	if not loaded_ok:
+		return false
+	var world_raw: Variant = loaded.get("world", null)
+	var graph_raw: Variant = loaded.get("graph", null)
+	var pads_raw: Variant = loaded.get("pad_ids", {})
+	if not (world_raw is SimulationWorld):
+		return false
+	if not (graph_raw is TraprushPortalGraph):
+		return false
+	if typeof(pads_raw) != TYPE_DICTIONARY:
+		return false
+	var sim: SimulationWorld = world_raw
+	var graph: TraprushPortalGraph = graph_raw
+	var pad_ids: Dictionary = pads_raw
+	var start_x: int = start["x"]
+	var start_y: int = start["y"]
+	var start_z: int = start["z"]
+	var spawned_id: int = sim.spawn_capsule(start_x, start_y, start_z, 0, radius, cylinder_height)
+	if spawned_id < 1:
+		return false
+	if not enter_tick():
+		return false
+	play_world = sim
+	play_graph = graph
+	play_pad_ids = pad_ids
+	player_id = spawned_id
+	_playing = true
+	return true
+
+
+func try_stop_play() -> bool:
+	if not _playing:
+		return false
+	leave_tick()
+	_clear_play()
+	return true
+
+
+func try_advance_play() -> bool:
+	if not is_playing():
+		return false
+	play_world.tick()
+	return true
 
 
 func try_apply_patch(level: String, command: SharedCommand) -> bool:
@@ -114,3 +188,62 @@ func _apply_decoded(decoded: EditPayload) -> bool:
 			return world.replace(decoded.record)
 		_:
 			return false
+
+
+func _clear_play() -> void:
+	_playing = false
+	play_world = null
+	play_graph = null
+	play_pad_ids = {}
+	player_id = 0
+
+
+func _start_pose(bundle: SimulationBundle) -> Dictionary:
+	if bundle == null:
+		return {}
+	if bundle.pads.is_empty():
+		return {}
+	var found: bool = false
+	var best_order: int = 0
+	var best_id: int = 0
+	var best_x: int = 0
+	var best_y: int = 0
+	var best_z: int = 0
+	var best_dx: int = 0
+	var best_dy: int = 0
+	var best_dz: int = 0
+	for pad: Dictionary in bundle.pads:
+		var order: int = pad["order"]
+		var entity_id: int = pad["entity_id"]
+		var pad_x: int = pad["x"]
+		var pad_y: int = pad["y"]
+		var pad_z: int = pad["z"]
+		var dx: int = pad["respawn_dx"]
+		var dy: int = pad["respawn_dy"]
+		var dz: int = pad["respawn_dz"]
+		if (
+			not found
+			or order < best_order
+			or (order == best_order and entity_id < best_id)
+		):
+			found = true
+			best_order = order
+			best_id = entity_id
+			best_x = pad_x
+			best_y = pad_y
+			best_z = pad_z
+			best_dx = dx
+			best_dy = dy
+			best_dz = dz
+	if not found:
+		return {}
+	var x_add: FixedResult = Fixed.try_add(best_x, best_dx)
+	var y_add: FixedResult = Fixed.try_add(best_y, best_dy)
+	var z_add: FixedResult = Fixed.try_add(best_z, best_dz)
+	if not x_add.ok or not y_add.ok or not z_add.ok:
+		return {}
+	return {
+		"x": x_add.value,
+		"y": y_add.value,
+		"z": z_add.value,
+	}

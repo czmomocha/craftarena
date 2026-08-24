@@ -4,12 +4,16 @@ extends Node
 ## Independent Preview window host (CD-32 §4). AuthoringSession stays open.
 ## Creates a Godot Window in code and maps preview transforms to 1 m boxes,
 ## portal gizmos, checkpoint-order labels, and reachability-issue overlay.
-## Does not compile SimulationBundle. Tab host is reserved and refused.
-## Never settlement.
+## Play compiles the connected Preview world into a SimulationBundle, loads
+## it, and draws the player pose as a presentation stub. Tab host is reserved
+## and refused. Never settlement.
 
 const TITLE: String = "Preview"
+const PLAY_NAME: String = "Play"
+const STOP_NAME: String = "Stop"
 const _STATUS_NAME: String = "Status"
 const _MAP_NAME: String = "PreviewMap"
+const _OVERLAY_NAME: String = "Overlay"
 
 var kind: String = AuthoringPreviewHostKinds.WINDOW
 var preview: AuthoringPreview = null
@@ -72,6 +76,33 @@ func try_apply_patch(level: String, command: SharedCommand) -> bool:
 	return ok
 
 
+func try_start_play(seed: int = 1, radius: int = 0, cylinder_height: int = 0) -> bool:
+	if preview == null:
+		return false
+	var ok: bool = preview.try_start_play(seed, radius, cylinder_height)
+	_rebuild_map()
+	_refresh_status()
+	return ok
+
+
+func try_stop_play() -> bool:
+	if preview == null:
+		return false
+	var ok: bool = preview.try_stop_play()
+	_rebuild_map()
+	_refresh_status()
+	return ok
+
+
+func try_advance_play() -> bool:
+	if preview == null:
+		return false
+	var ok: bool = preview.try_advance_play()
+	_rebuild_map()
+	_refresh_status()
+	return ok
+
+
 func allows_settlement() -> bool:
 	return false
 
@@ -85,12 +116,14 @@ func status_view() -> Dictionary:
 	var connected: bool = false
 	var preview_revision: int = 0
 	var needs_restart: bool = false
+	var playing: bool = false
 	var reach_ok: bool = true
 	var reach_issue_count: int = 0
 	if preview != null:
 		connected = preview.connected
 		preview_revision = preview.preview_revision
 		needs_restart = preview.needs_restart
+		playing = preview.is_playing()
 		if preview.world != null:
 			entity_count = preview.world.entity_count()
 	if map != null:
@@ -101,6 +134,7 @@ func status_view() -> Dictionary:
 		"preview_revision": preview_revision,
 		"entity_count": entity_count,
 		"needs_restart": needs_restart,
+		"playing": playing,
 		"window_visible": is_window_visible(),
 		"reach_ok": reach_ok,
 		"reach_issue_count": reach_issue_count,
@@ -126,9 +160,21 @@ func _ensure_window() -> void:
 	window.transient = false
 	window.own_world_3d = true
 	window.close_requested.connect(_on_close_requested)
+	var overlay: VBoxContainer = VBoxContainer.new()
+	overlay.name = _OVERLAY_NAME
+	overlay.set_anchors_preset(Control.PRESET_TOP_WIDE)
+	overlay.offset_left = 8
+	overlay.offset_top = 8
+	overlay.offset_right = -8
+	window.add_child(overlay)
 	_status = Label.new()
 	_status.name = _STATUS_NAME
-	window.add_child(_status)
+	overlay.add_child(_status)
+	var action_row: HBoxContainer = HBoxContainer.new()
+	action_row.name = "PlayActions"
+	overlay.add_child(action_row)
+	_add_button(action_row, PLAY_NAME, "Play", _on_play)
+	_add_button(action_row, STOP_NAME, "Stop", _on_stop)
 	map = AuthoringPreviewMap.new()
 	map.name = _MAP_NAME
 	window.add_child(map)
@@ -140,10 +186,31 @@ func _on_close_requested() -> void:
 	hide_window()
 
 
+func _on_play() -> void:
+	try_start_play()
+
+
+func _on_stop() -> void:
+	try_stop_play()
+
+
+func _add_button(row: BoxContainer, node_name: String, text: String, handler: Callable) -> void:
+	var button: Button = Button.new()
+	button.name = node_name
+	button.text = text
+	button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	button.pressed.connect(handler)
+	row.add_child(button)
+
+
 func _rebuild_map() -> void:
 	if map == null or preview == null:
 		return
 	map.rebuild(preview.world)
+	if preview.is_playing() and preview.play_world != null:
+		map.show_player_pose(preview.play_world.get_pose(preview.player_id))
+	else:
+		map.clear_player_pose()
 
 
 func _refresh_status() -> void:
@@ -157,11 +224,12 @@ func _refresh_status() -> void:
 	if map != null:
 		reach_ok = map.reachability_ok()
 		reach_issue_count = map.reachability_issue_count()
-	_status.text = "connected=%s revision=%d entities=%d restart=%s reach_ok=%s issues=%d" % [
+	_status.text = "connected=%s revision=%d entities=%d restart=%s playing=%s reach_ok=%s issues=%d" % [
 		str(preview.connected),
 		preview.preview_revision,
 		entity_count,
 		str(preview.needs_restart),
+		str(preview.is_playing()),
 		str(reach_ok),
 		reach_issue_count,
 	]
