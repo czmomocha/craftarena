@@ -137,6 +137,7 @@ AI 生成代码必须比普通手写代码有**更强的自动化证据**，因�
 - 对局二进制协议 v1：四种意图命令帧与快照帧编解码回环（含 s64 极值）；未接线意图（Shove/Interact）拒绝编码；保留字段非零、版本不符、未知类型、截断、尾随字节均拒绝解码；同帧编码字节恒等；
 - 对局进程仿真入口：参数只认 `--key=value`；坏配置（缺课程/人数越界/负 max-ticks）拒绝启动；课程编成 bundle 启动 1~8 人会话；心跳 JSON 含 tick/人数/状态哈希；同参数两次启动同哈希；MatchHost 启动参数含 `--course`/`--players`（纯函数断言，不 spawn 进程）；
 - 对局进程实时回路：槽位按需占用/满员拒绝/断开释放复用；坏帧（不可解码/版本错/槽位未占用）拒绝；命令 FIFO 排队、commit_tick 边界才应用、服务端 tick 权威（命令 tick 不信任）；快照帧编解码回环（含箱耐久）；UseItem 经线上帧破箱；全程线上命令走完 course_01 冲线 tick 正确；同命令流两核心同快照字节序列；socket 层为薄层，网络正确性保持手动测试（CD-91 D.8）；
+- 实时网关代理：票据缺失/空白/被拒 401；裁决无上游或上游不可达 502；二进制帧双向逐字节转发、文本帧保文本；客户端关闭即关上游；假上游零接触（无票据不建联）；端到端手动冒烟（真客户端→网关→真对局进程，Move 命令位移出现在快照）；
 - 内部开发 EditorPlugin：`plugin.cfg` 入库；`project.godot` 启用 GUT + authoring_editor、不含 `godot_ai` / `_mcp_game_helper`；host 打开已有外壳，关闭只隐藏并保持会话，`detach` 释放，不结算；
 - 本地草稿恢复：成功写入落 `latest` 且文件非空；空会话打开恢复；恢复后工具条下一个 Place 使用新 id；编辑器 `plugin.gd` `@tool` 落盘；`world_committed`；失败写入不改草稿；损坏 / 多余键拒绝；拒绝写入 `res://`；检查点最多 30；不结算；
 - 编辑写入自动进 Preview：place / remove / Undo / Redo 都到达已连接 Preview 且两个世界 revision 同步；`set_component` 等级按 Preview 世界算（按编辑世界算会低报被拒）；失败写入不转发且仍跟随；越界补丁与整份 `import_document` 脱同步且不回滚编辑；无 Preview 时不谎报跟随；窗口隐藏仍跟随；状态栏 `follow` 可见；不结算；

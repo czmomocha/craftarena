@@ -5,7 +5,7 @@ import { DevTicketVerifier } from "./ticket.ts";
 const config = loadConfig();
 
 const gateway = buildGateway({
-	ticketVerifier: new DevTicketVerifier(),
+	ticketVerifier: new DevTicketVerifier(config.devUpstreamUrl),
 	controlPlaneProbe: new HttpControlPlaneProbe(config.controlPlaneUrl),
 	version: config.version,
 	logger: { level: config.logLevel },
