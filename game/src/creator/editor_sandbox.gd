@@ -8,6 +8,7 @@ extends Node
 ## Preview Play compiles the current Preview world; WASD moves the capsule
 ## while the Preview window is visible. Overlapping checkpoint pads accept
 ## ordered progress. Overlapping portal boxes land through try_land_exit.
+## Overlapping the finish box after every pad records finish_tick.
 ## Stop leaves the sim.
 
 const AuthoringEditorShell := preload("res://src/creator/authoring_editor_shell.gd")

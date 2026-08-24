@@ -7,7 +7,8 @@ extends Node
 ## Open Preview, then Play: the player marker sits on the first checkpoint pad.
 ## WASD moves the marker in world XZ while the Preview window is visible.
 ## Occupancy accepts checkpoint pads; walking into a portal marker lands upstairs.
-## Status shows pads=n/m and floor=n.
+## After the last pad, walking onto the finish marker records finish=n.
+## Status shows pads=n/m, floor=n, and finish=n.
 
 const AuthoringDocument := preload("res://src/creator/authoring_document.gd")
 const AuthoringEditorShell := preload("res://src/creator/authoring_editor_shell.gd")

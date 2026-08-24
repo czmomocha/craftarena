@@ -9,7 +9,8 @@ extends Node
 ## visible, WASD maps to world-space MoveIntent; play_move_step is a
 ## presentation stub, not a product speed. Occupancy accepts overlapping
 ## checkpoint pads through PadAccept and portal boxes through
-## PortalLanding.try_land_exit; status shows pads=n/m and floor=n. Tab host
+## PortalLanding.try_land_exit; status shows pads=n/m, floor=n, and finish=n.
+## Tab host
 ## is reserved and refused.
 ## Never settlement.
 
@@ -178,6 +179,7 @@ func status_view() -> Dictionary:
 	var accepted_count: int = 0
 	var checkpoint_count: int = 0
 	var floor_index: int = 0
+	var finish_tick: int = -1
 	var reach_ok: bool = true
 	var reach_issue_count: int = 0
 	if preview != null:
@@ -188,6 +190,7 @@ func status_view() -> Dictionary:
 		accepted_count = preview.play_accepted_count()
 		checkpoint_count = preview.play_checkpoint_count()
 		floor_index = preview.play_floor_index()
+		finish_tick = preview.play_finish_tick()
 		if preview.world != null:
 			entity_count = preview.world.entity_count()
 	if map != null:
@@ -202,6 +205,7 @@ func status_view() -> Dictionary:
 		"accepted_count": accepted_count,
 		"checkpoint_count": checkpoint_count,
 		"floor_index": floor_index,
+		"finish_tick": finish_tick,
 		"window_visible": is_window_visible(),
 		"reach_ok": reach_ok,
 		"reach_issue_count": reach_issue_count,
@@ -305,7 +309,7 @@ func _refresh_status() -> void:
 	if map != null:
 		reach_ok = map.reachability_ok()
 		reach_issue_count = map.reachability_issue_count()
-	_status.text = "connected=%s revision=%d entities=%d restart=%s playing=%s pads=%d/%d floor=%d reach_ok=%s issues=%d" % [
+	_status.text = "connected=%s revision=%d entities=%d restart=%s playing=%s pads=%d/%d floor=%d finish=%d reach_ok=%s issues=%d" % [
 		str(preview.connected),
 		preview.preview_revision,
 		entity_count,
@@ -314,6 +318,7 @@ func _refresh_status() -> void:
 		preview.play_accepted_count(),
 		preview.play_checkpoint_count(),
 		preview.play_floor_index(),
+		preview.play_finish_tick(),
 		str(reach_ok),
 		reach_issue_count,
 	]

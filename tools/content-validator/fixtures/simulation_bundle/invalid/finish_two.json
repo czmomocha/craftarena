@@ -1,0 +1,21 @@
+{
+	"schema_version": 1,
+	"cell": 65536,
+	"source_revision": 0,
+	"pads": [],
+	"portals": [],
+	"finish": [
+		{
+			"entity_id": 30,
+			"x": 0,
+			"y": 0,
+			"z": 0
+		},
+		{
+			"entity_id": 31,
+			"x": 65536,
+			"y": 0,
+			"z": 0
+		}
+	]
+}

@@ -24,5 +24,6 @@
 			"respawn_dz": 0
 		}
 	],
-	"portals": []
+	"portals": [],
+	"finish": []
 }

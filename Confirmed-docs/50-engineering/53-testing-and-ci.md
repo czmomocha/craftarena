@@ -135,8 +135,8 @@ AI 生成代码必须比普通手写代码有**更强的自动化证据**，因�
 - 内部开发 EditorPlugin：`plugin.cfg` 入库；`project.godot` 启用 GUT + authoring_editor、不含 `godot_ai` / `_mcp_game_helper`；host 打开已有外壳，关闭只隐藏并保持会话，`detach` 释放，不结算；
 - 本地草稿恢复：成功写入落 `latest` 且文件非空；空会话打开恢复；恢复后工具条下一个 Place 使用新 id；编辑器 `plugin.gd` `@tool` 落盘；`world_committed`；失败写入不改草稿；损坏 / 多余键拒绝；拒绝写入 `res://`；检查点最多 30；不结算；
 - 编辑写入自动进 Preview：place / remove / Undo / Redo 都到达已连接 Preview 且两个世界 revision 同步；`set_component` 等级按 Preview 世界算（按编辑世界算会低报被拒）；失败写入不转发且仍跟随；越界补丁与整份 `import_document` 脱同步且不回滚编辑；无 Preview 时不谎报跟随；窗口隐藏仍跟随；状态栏 `follow` 可见；不结算；
-- TRAPRUSH 拓扑编译：空世界编成空 bundle；两张官方赛道编出检查点垫与 `two_way` 传送且布局不同；传送袋含源点 `x/y/z`；`dangling` 省略、`one_way` 保留；检查点或缺源点 `transform` 整份拒绝；多余键拒绝；加载后垫盒与传送源点盒非固体且可占用查询；`one_way` 可落地；`two_way` 走 `try_land_exit` 而非 `follow`；不 tick 进加载器、不结算；
-- Preview 试玩：两张官方赛道能开玩且玩家占用最小 `order` 垫；空垫 / 缺 `transform` 拒绝；开玩进入 tick 后补丁拒绝，Stop 后可再补丁；`try_advance_play` 推进 tick 且不结算；Play 画出玩家表现桩，Stop 清掉；开玩期间编辑写入脱同步且不回滚编辑；开玩后 `MoveIntent` 改 XZ 且不推进 tick；WASD 按世界方向编码；未开玩 / Jump / 缺字段拒绝；窗口隐藏不采样键盘但仍接受直接意图；开玩占用第一垫即验收；走到同层次一垫验收下一 id；跳点 / 未重叠 / 未开玩拒绝；状态 `pads=n/m`；走进传送源点盒经 `try_land_exit` 单跳落地；`two_way` 落点门闩不往返弹跳；出口占用则等待且本帧不位移；传送不代验收检查点；状态 `floor=n`；官方赛道能走到上层检查点；不接重力、冲线、不结算；
+- TRAPRUSH 拓扑编译：空世界编成空 bundle；两张官方赛道编出检查点垫、`two_way` 传送与一份终点占用且布局不同；传送袋含源点 `x/y/z`；`finish` 为 0 或 1 个袋；`dangling` 省略、`one_way` 保留；检查点或缺源点/`finish` `transform` 整份拒绝；两份终点拒绝；多余键拒绝；加载后垫盒、传送源点盒与终点盒非固体且可占用查询；`one_way` 可落地；`two_way` 走 `try_land_exit` 而非 `follow`；不 tick 进加载器、不结算；
+- Preview 试玩：两张官方赛道能开玩且玩家占用最小 `order` 垫；空垫 / 缺 `transform` 拒绝；开玩进入 tick 后补丁拒绝，Stop 后可再补丁；`try_advance_play` 推进 tick 且不结算；Play 画出玩家表现桩，Stop 清掉；开玩期间编辑写入脱同步且不回滚编辑；开玩后 `MoveIntent` 改 XZ 且不推进 tick；WASD 按世界方向编码；未开玩 / Jump / 缺字段拒绝；窗口隐藏不采样键盘但仍接受直接意图；开玩占用第一垫即验收；走到同层次一垫验收下一 id；跳点 / 未重叠 / 未开玩拒绝；状态 `pads=n/m`；走进传送源点盒经 `try_land_exit` 单跳落地；`two_way` 落点门闩不往返弹跳；出口占用则等待且本帧不位移；传送不代验收检查点；状态 `floor=n`；官方赛道能走到上层检查点；全部垫完成后走进终点盒经 `try_cross` 记 `finish_tick`；缺垫或缺重叠拒绝；传送不代冲线；状态 `finish=n`（未冲线为 -1）；不接重力、不结算；
 - 发布中途进程退出；
 - 签名失败；
 - `latest` 指针原子切换；

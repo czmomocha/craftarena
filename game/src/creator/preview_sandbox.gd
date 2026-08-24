@@ -5,7 +5,8 @@ extends Node
 ## Preview Play compiles this seeded world and draws the player marker.
 ## WASD moves the marker in world XZ while the Preview window is visible.
 ## Occupancy accepts checkpoint pads; walking into a portal marker lands
-## through try_land_exit. Status shows pads=n/m and floor=n.
+## through try_land_exit. Overlapping the finish box after every pad records
+## finish=n. Status shows pads=n/m, floor=n, and finish=n.
 
 const CELL: int = 65536
 

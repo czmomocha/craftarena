@@ -13,10 +13,12 @@ extends RefCounted
 ## advances ordered progress. Occupancy uses existing TraprushPortalLanding
 ## try_land_exit: overlapping a portal source box lands one hop. two_way dest
 ## volume is latched until the capsule leaves. Occupied dest waits and holds
-## the MoveIntent without walking through. Observed by Preview, not a client
-## assertion.
+## the MoveIntent without walking through. Occupancy uses existing
+## TraprushFinishAccept.try_cross: all mandatory pads then overlapping the
+## compiled finish box records finish_tick. Observed by Preview, not a client
+## assertion. No FinishIntent. Never settlement or online writes.
 ## Capsule radius/height are caller-provided, not a locked product size.
-## Never settlement or online writes. Window host is AuthoringPreviewShell.
+## Window host is AuthoringPreviewShell.
 
 var world: AuthoringWorld = null
 var preview_revision: int = 0
@@ -26,12 +28,14 @@ var play_world: SimulationWorld = null
 var play_graph: TraprushPortalGraph = null
 var play_pad_ids: Dictionary = {}
 var play_portal_ids: Dictionary = {}
+var play_finish_ids: Dictionary = {}
 var play_track: TraprushCheckpointTrack = null
 var play_cell: int = 0
 var player_id: int = 0
 var _in_tick: bool = false
 var _playing: bool = false
 var _portal_latch: Dictionary = {}
+var _play_finish_tick: int = -1
 
 
 func connect_from(session: AuthoringSession) -> bool:
@@ -97,6 +101,7 @@ func try_start_play(seed: int, radius: int = 0, cylinder_height: int = 0) -> boo
 	var graph_raw: Variant = loaded.get("graph", null)
 	var pads_raw: Variant = loaded.get("pad_ids", {})
 	var portals_raw: Variant = loaded.get("portal_ids", {})
+	var finish_raw: Variant = loaded.get("finish_ids", {})
 	if not (world_raw is SimulationWorld):
 		return false
 	if not (graph_raw is TraprushPortalGraph):
@@ -105,10 +110,13 @@ func try_start_play(seed: int, radius: int = 0, cylinder_height: int = 0) -> boo
 		return false
 	if typeof(portals_raw) != TYPE_DICTIONARY:
 		return false
+	if typeof(finish_raw) != TYPE_DICTIONARY:
+		return false
 	var sim: SimulationWorld = world_raw
 	var graph: TraprushPortalGraph = graph_raw
 	var pad_ids: Dictionary = pads_raw
 	var portal_ids: Dictionary = portals_raw
+	var finish_ids: Dictionary = finish_raw
 	var start_x: int = start["x"]
 	var start_y: int = start["y"]
 	var start_z: int = start["z"]
@@ -121,13 +129,16 @@ func try_start_play(seed: int, radius: int = 0, cylinder_height: int = 0) -> boo
 	play_graph = graph
 	play_pad_ids = pad_ids
 	play_portal_ids = portal_ids
+	play_finish_ids = finish_ids
 	play_track = TraprushCheckpointTrack.new(_ordered_checkpoint_ids(bundle))
 	play_cell = bundle.cell
 	player_id = spawned_id
 	_playing = true
 	_portal_latch = {}
+	_play_finish_tick = -1
 	_accept_overlapping_play_pads()
 	_resolve_play_portals()
+	_accept_overlapping_play_finish()
 	return true
 
 
@@ -146,6 +157,7 @@ func try_advance_play() -> bool:
 	_accept_overlapping_play_pads()
 	_resolve_play_portals()
 	_accept_overlapping_play_pads()
+	_accept_overlapping_play_finish()
 	return true
 
 
@@ -175,6 +187,7 @@ func try_apply_play_intent(payload: Dictionary) -> bool:
 	_accept_overlapping_play_pads()
 	_resolve_play_portals()
 	_accept_overlapping_play_pads()
+	_accept_overlapping_play_finish()
 	return true
 
 
@@ -187,13 +200,16 @@ func try_accept_play_checkpoint(checkpoint_id: int) -> bool:
 	if typeof(box_raw) != TYPE_INT:
 		return false
 	var box_id: int = box_raw
-	return TraprushPadAccept.try_accept_on_pad(
+	var ok: bool = TraprushPadAccept.try_accept_on_pad(
 		play_world,
 		player_id,
 		play_track,
 		checkpoint_id,
 		box_id
 	)
+	if ok:
+		_accept_overlapping_play_finish()
+	return ok
 
 
 func play_accepted_count() -> int:
@@ -228,6 +244,40 @@ func play_floor_index() -> int:
 		return 0
 	var pose_y: int = pose.get("y", 0)
 	return pose_y / play_cell
+
+
+func play_finish_tick() -> int:
+	if not is_playing():
+		return -1
+	return _play_finish_tick
+
+
+func try_cross_play_finish() -> bool:
+	if not is_playing() or play_track == null:
+		return false
+	if _play_finish_tick != -1:
+		return true
+	if play_finish_ids.is_empty():
+		return false
+	for key: Variant in play_finish_ids.keys():
+		if typeof(key) != TYPE_INT:
+			continue
+		var box_raw: Variant = play_finish_ids[key]
+		if typeof(box_raw) != TYPE_INT:
+			continue
+		var box_id: int = box_raw
+		var crossed: Dictionary = TraprushFinishAccept.try_cross(
+			play_world,
+			player_id,
+			play_track,
+			box_id
+		)
+		var crossed_ok: bool = crossed.get("ok", false)
+		if not crossed_ok:
+			continue
+		_play_finish_tick = play_world.tick_index
+		return true
+	return false
 
 
 func try_apply_patch(level: String, command: SharedCommand) -> bool:
@@ -302,10 +352,12 @@ func _clear_play() -> void:
 	play_graph = null
 	play_pad_ids = {}
 	play_portal_ids = {}
+	play_finish_ids = {}
 	play_track = null
 	play_cell = 0
 	player_id = 0
 	_portal_latch = {}
+	_play_finish_tick = -1
 
 
 func _accept_overlapping_play_pads() -> void:
@@ -358,8 +410,13 @@ func _resolve_play_portals() -> bool:
 			if dest_id >= 1:
 				_portal_latch[dest_id] = true
 		_accept_overlapping_play_pads()
+		_accept_overlapping_play_finish()
 		return false
 	return false
+
+
+func _accept_overlapping_play_finish() -> void:
+	try_cross_play_finish()
 
 
 func _ordered_checkpoint_ids(bundle: SimulationBundle) -> PackedInt32Array:

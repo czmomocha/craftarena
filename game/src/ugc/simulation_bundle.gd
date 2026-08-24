@@ -2,8 +2,9 @@ class_name SimulationBundle
 extends RefCounted
 
 ## v1 TRAPRUSH topology compile of AuthoringWorld. Field list owner: CD-42 §3.4.
-## Pads and two_way / one_way portals only. Dangling portals are omitted.
-## Portal bags include source occupancy x/y/z and dest landing pose.
+## Pads, two_way / one_way portals, and at most one finish occupancy bag.
+## Dangling portals are omitted. Portal bags include source occupancy x/y/z
+## and dest landing pose. Finish bags are entity_id plus occupancy x/y/z.
 ## Godot JSON.parse_string may yield whole-number floats; decode coerces those
 ## that round-trip through int. Not a signed binary. Not a Rule VM graph.
 
@@ -13,11 +14,13 @@ const FIELD_CELL: String = "cell"
 const FIELD_SOURCE_REVISION: String = "source_revision"
 const FIELD_PADS: String = "pads"
 const FIELD_PORTALS: String = "portals"
+const FIELD_FINISH: String = "finish"
 
 var cell: int = 0
 var source_revision: int = 0
 var pads: Array[Dictionary] = []
 var portals: Array[Dictionary] = []
+var finish: Array[Dictionary] = []
 
 
 static func from_dictionary(data: Dictionary) -> SimulationBundle:
@@ -25,7 +28,7 @@ static func from_dictionary(data: Dictionary) -> SimulationBundle:
 	if typeof(coerced) != TYPE_DICTIONARY:
 		return null
 	var body: Dictionary = coerced
-	if body.size() != 5:
+	if body.size() != 6:
 		return null
 	if not body.has(FIELD_SCHEMA_VERSION) or typeof(body[FIELD_SCHEMA_VERSION]) != TYPE_INT:
 		return null
@@ -76,11 +79,29 @@ static func from_dictionary(data: Dictionary) -> SimulationBundle:
 			return null
 		portal_ids[portal_id] = true
 		portals.append(portal)
+	if not body.has(FIELD_FINISH) or typeof(body[FIELD_FINISH]) != TYPE_ARRAY:
+		return null
+	var finish_list: Array[Dictionary] = []
+	var raw_finish: Array = body[FIELD_FINISH]
+	if raw_finish.size() > 1:
+		return null
+	for item: Variant in raw_finish:
+		if typeof(item) != TYPE_DICTIONARY:
+			return null
+		var finish_bag: Dictionary = item
+		var parsed_finish: Dictionary = _parse_finish(finish_bag)
+		if parsed_finish.is_empty():
+			return null
+		var finish_id: int = parsed_finish["entity_id"]
+		if pad_ids.has(finish_id) or portal_ids.has(finish_id):
+			return null
+		finish_list.append(parsed_finish)
 	var bundle: SimulationBundle = SimulationBundle.new()
 	bundle.cell = cell
 	bundle.source_revision = source_revision
 	bundle.pads = pads
 	bundle.portals = portals
+	bundle.finish = finish_list
 	return bundle
 
 
@@ -91,12 +112,16 @@ func to_dictionary() -> Dictionary:
 	var portal_list: Array = []
 	for portal: Dictionary in portals:
 		portal_list.append(portal.duplicate(true))
+	var finish_list: Array = []
+	for item: Dictionary in finish:
+		finish_list.append(item.duplicate(true))
 	return {
 		FIELD_SCHEMA_VERSION: SCHEMA_VERSION,
 		FIELD_CELL: cell,
 		FIELD_SOURCE_REVISION: source_revision,
 		FIELD_PADS: pad_list,
 		FIELD_PORTALS: portal_list,
+		FIELD_FINISH: finish_list,
 	}
 
 
@@ -168,6 +193,25 @@ static func _parse_portal(body: Dictionary) -> Dictionary:
 		"dest_y": body["dest_y"],
 		"dest_z": body["dest_z"],
 		"dest_yaw_bam": body["dest_yaw_bam"],
+	}
+
+
+static func _parse_finish(body: Dictionary) -> Dictionary:
+	if body.size() != 4:
+		return {}
+	if not _int_at_least(body, "entity_id", 1):
+		return {}
+	if not _is_int_field(body, "x"):
+		return {}
+	if not _is_int_field(body, "y"):
+		return {}
+	if not _is_int_field(body, "z"):
+		return {}
+	return {
+		"entity_id": body["entity_id"],
+		"x": body["x"],
+		"y": body["y"],
+		"z": body["z"],
 	}
 
 

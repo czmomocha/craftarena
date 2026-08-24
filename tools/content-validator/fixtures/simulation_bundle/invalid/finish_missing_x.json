@@ -4,5 +4,11 @@
 	"source_revision": 0,
 	"pads": [],
 	"portals": [],
-	"finish": []
+	"finish": [
+		{
+			"entity_id": 30,
+			"y": 0,
+			"z": 0
+		}
+	]
 }
