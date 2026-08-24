@@ -175,6 +175,25 @@ func destructible_alive_count() -> int:
 	return alive
 
 
+## 快照用：全部可破坏箱的当前耐久（含已毁的 0），按 entity_id 升序。
+func destructible_states() -> Array[Dictionary]:
+	var ids: Array[int] = []
+	for key: Variant in _crate_health.keys():
+		if typeof(key) != TYPE_INT:
+			continue
+		var crate_id: int = key
+		ids.append(crate_id)
+	ids.sort()
+	var states: Array[Dictionary] = []
+	for crate_id: int in ids:
+		var crate_raw: Variant = _crate_health[crate_id]
+		if not (crate_raw is TraprushDestructible):
+			continue
+		var crate: TraprushDestructible = crate_raw
+		states.append({"entity_id": crate_id, "durability": crate.current_health()})
+	return states
+
+
 func apply_player_intent(slot: int, payload: Dictionary) -> bool:
 	var player: Dictionary = _player_at(slot)
 	if player.is_empty():

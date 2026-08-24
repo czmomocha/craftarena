@@ -205,6 +205,7 @@
 - `bot_fill = no_bot_fill`。
 - `match_sim_loop = shared_world_multi_track`（2026-08-24）：M3 首章落地。对局会话把一份编译拓扑装进共享权威 SimulationWorld，1~8 名玩家各自独立 CheckpointTrack / finish_tick / 传送门闩；可破坏箱全员共享。出生偏移与跳跃/支撑/道具数值由调用方传入，不锁产品数值。占用扫描顺序与 Preview 试玩逐字对齐（垫→门→垫→终点）。无网络、无结算、不在线写。名次排序、MatchHost 拉起、快照广播与预测校正仍待。
 - `match_server_process = headless_course_session_entry`（2026-08-24）：对局进程入口从 M0 占位升级为真仿真：`--course` 编成 bundle 启动 `TraprushMatchSession`，随引擎 physics tick 推进（非产品 Tick Hz 锁定），心跳 JSON 含状态哈希且不续租，`--max-ticks` 自退、坏配置 exit 1。MatchHost 以 `--course`/`--players` 传参（开发期占位，真源是控制面对局配置）。出生偏移/胶囊尺寸/心跳节奏为进程内占位桩。进程内 socket 监听仍待。
+- `match_realtime_loop = ws_listen_slot_queue_snapshot`（2026-08-24）：对局进程实时回路落地。`match_server.gd` 在本场端口监听 WebSocket（`--bind` 占位 0.0.0.0，公网暴露由部署层与网关拓扑阻止）；`MatchRealtime` 把连接映射到槽位（按需占用最小空槽、断开释放、满员拒绝），二进制命令帧解码后 FIFO 排队、在 commit_tick 边界按到达顺序应用——命令帧 tick 只解码不信任，服务端 tick 权威（CD-43 §3）。每 2 个引擎 tick 广播一帧二进制快照（占位节奏，非产品快照频率）。快照含全部已配置槽位（含未占用）与可破坏箱耐久。运行入口是 `--scene res://src/server/match_server.tscn`：`-s` 直跑 extends Node 的脚本在 4.7 不会实例化场景（表现为主循环不启动）。防伪造门禁、网关代理与票据对接仍待。
 
 ## D.9 明确延期或跳过
 
