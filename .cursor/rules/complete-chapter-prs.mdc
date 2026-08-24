@@ -11,6 +11,6 @@ alwaysApply: true
 
 一章 = 同一条链路的一次闭合：要锁的契约 + 实现 + 正反例测试 + 所有者文档落点。
 
-- 做：Preview 安全点试玩（编译当前 Preview 世界、加载进 SimulationWorld、在最小 order 垫生成胶囊、Play/Stop 与玩家表现桩），作为一章。
-- 不做：2 秒云端上传、5 分钟定时、BASTION 面板、批量生成、性能分析、第三张赛道、时延自动门禁、键盘/MoveIntent、重力、检查点占用验收、二进制签名；不为了两域并行而各交半章。
+- 做：Preview 试玩 MoveIntent（开玩后把 WASD 编成已有 MoveIntent，经 IntentStepper 改胶囊 XZ、表现桩跟随），作为一章。
+- 不做：2 秒云端上传、5 分钟定时、BASTION 面板、批量生成、性能分析、第三张赛道、时延自动门禁、Jump/Shove、重力、检查点占用验收、二进制签名、Tick Hz、产品速度；不为了两域并行而各交半章。
 - 仍不做：把预算数字、走路可达、多人试玩房、Rule VM 真应用和整个 M2 塞进一个 PR。

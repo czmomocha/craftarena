@@ -7,6 +7,8 @@ extends RefCounted
 ## try_start_play compiles the Preview world into a v1 TRAPRUSH topology
 ## bundle, loads SimulationWorld, and spawns on the lowest-order pad.
 ## Play enters tick so patches are refused until try_stop_play.
+## try_apply_play_intent accepts only MoveIntent and steps XZ through
+## TraprushIntentStepper; dx/dz are caller-provided. Does not tick.
 ## Capsule radius/height are caller-provided, not a locked product size.
 ## Never settlement or online writes. Window host is AuthoringPreviewShell.
 
@@ -122,6 +124,28 @@ func try_advance_play() -> bool:
 		return false
 	play_world.tick()
 	return true
+
+
+func try_apply_play_intent(payload: Dictionary) -> bool:
+	if not is_playing():
+		return false
+	var decoded: Dictionary = TraprushMoveIntent.decode(payload)
+	var decoded_ok: bool = decoded.get("ok", false)
+	if not decoded_ok:
+		return false
+	var unused_spawn: TraprushCheckpointSpawn = TraprushCheckpointSpawn.new()
+	var unused_track: TraprushCheckpointTrack = TraprushCheckpointTrack.new()
+	var stepped: Dictionary = TraprushIntentStepper.apply(
+		play_world,
+		player_id,
+		payload,
+		0,
+		unused_spawn,
+		unused_track,
+		0
+	)
+	var stepped_ok: bool = stepped.get("ok", false)
+	return stepped_ok
 
 
 func try_apply_patch(level: String, command: SharedCommand) -> bool:

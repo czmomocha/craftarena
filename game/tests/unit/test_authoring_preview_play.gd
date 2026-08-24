@@ -3,7 +3,8 @@ extends GutTest
 ## Preview play: compile the connected Preview world, load topology, spawn on
 ## the lowest-order pad plus respawn offset, enter tick, and advance the sim.
 ## Empty pads / compile failure refuse. Patches stay refused until stop.
-## Never settlement. Not a new EDIT op. Keyboard intents and Rule VM wait.
+## MoveIntent while playing is in test_authoring_preview_play_move.
+## Never settlement. Not a new EDIT op. Jump, gravity, and Rule VM wait.
 
 const AuthoringDocument := preload("res://src/creator/authoring_document.gd")
 const AuthoringEditorShell := preload("res://src/creator/authoring_editor_shell.gd")
