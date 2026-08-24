@@ -9,6 +9,8 @@ extends RefCounted
 ## Play enters tick so patches are refused until try_stop_play.
 ## try_apply_play_intent accepts only MoveIntent and steps XZ through
 ## TraprushIntentStepper; dx/dz are caller-provided. Does not tick.
+## Occupancy uses existing TraprushPadAccept: overlapping a checkpoint pad
+## advances ordered progress. Observed by Preview, not a client assertion.
 ## Capsule radius/height are caller-provided, not a locked product size.
 ## Never settlement or online writes. Window host is AuthoringPreviewShell.
 
@@ -19,6 +21,7 @@ var needs_restart: bool = false
 var play_world: SimulationWorld = null
 var play_graph: TraprushPortalGraph = null
 var play_pad_ids: Dictionary = {}
+var play_track: TraprushCheckpointTrack = null
 var player_id: int = 0
 var _in_tick: bool = false
 var _playing: bool = false
@@ -106,8 +109,10 @@ func try_start_play(seed: int, radius: int = 0, cylinder_height: int = 0) -> boo
 	play_world = sim
 	play_graph = graph
 	play_pad_ids = pad_ids
+	play_track = TraprushCheckpointTrack.new(_ordered_checkpoint_ids(bundle))
 	player_id = spawned_id
 	_playing = true
+	_accept_overlapping_play_pads()
 	return true
 
 
@@ -145,7 +150,52 @@ func try_apply_play_intent(payload: Dictionary) -> bool:
 		0
 	)
 	var stepped_ok: bool = stepped.get("ok", false)
-	return stepped_ok
+	if not stepped_ok:
+		return false
+	_accept_overlapping_play_pads()
+	return true
+
+
+func try_accept_play_checkpoint(checkpoint_id: int) -> bool:
+	if not is_playing() or play_track == null:
+		return false
+	if not play_pad_ids.has(checkpoint_id):
+		return false
+	var box_raw: Variant = play_pad_ids[checkpoint_id]
+	if typeof(box_raw) != TYPE_INT:
+		return false
+	var box_id: int = box_raw
+	return TraprushPadAccept.try_accept_on_pad(
+		play_world,
+		player_id,
+		play_track,
+		checkpoint_id,
+		box_id
+	)
+
+
+func play_accepted_count() -> int:
+	if play_track == null:
+		return 0
+	return play_track.completed_count()
+
+
+func play_checkpoint_count() -> int:
+	if play_track == null:
+		return 0
+	return play_track.ordered_ids().size()
+
+
+func play_last_accepted_id() -> int:
+	if play_track == null:
+		return -1
+	return play_track.last_accepted_id()
+
+
+func play_accepted_ids() -> PackedInt32Array:
+	if play_track == null:
+		return PackedInt32Array()
+	return play_track.accepted_ids()
 
 
 func try_apply_patch(level: String, command: SharedCommand) -> bool:
@@ -219,7 +269,40 @@ func _clear_play() -> void:
 	play_world = null
 	play_graph = null
 	play_pad_ids = {}
+	play_track = null
 	player_id = 0
+
+
+func _accept_overlapping_play_pads() -> void:
+	if play_track == null:
+		return
+	var ids: PackedInt32Array = play_track.ordered_ids()
+	for index: int in range(ids.size()):
+		try_accept_play_checkpoint(ids[index])
+
+
+func _ordered_checkpoint_ids(bundle: SimulationBundle) -> PackedInt32Array:
+	var pads: Array[Dictionary] = []
+	for pad: Dictionary in bundle.pads:
+		pads.append(pad)
+	pads.sort_custom(_pad_order_less)
+	var ids: PackedInt32Array = PackedInt32Array()
+	ids.resize(pads.size())
+	for index: int in range(pads.size()):
+		var pad: Dictionary = pads[index]
+		var entity_id: int = pad["entity_id"]
+		ids[index] = entity_id
+	return ids
+
+
+static func _pad_order_less(left: Dictionary, right: Dictionary) -> bool:
+	var left_order: int = left["order"]
+	var right_order: int = right["order"]
+	if left_order != right_order:
+		return left_order < right_order
+	var left_id: int = left["entity_id"]
+	var right_id: int = right["entity_id"]
+	return left_id < right_id
 
 
 func _start_pose(bundle: SimulationBundle) -> Dictionary:

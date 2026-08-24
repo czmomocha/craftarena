@@ -6,7 +6,8 @@ extends Node
 ## TRAPRUSH tools can pair the portal. Press Preview, then keep editing: a
 ## connected Preview follows committed writes, and the status bar shows follow.
 ## Preview Play compiles the current Preview world; WASD moves the capsule
-## while the Preview window is visible. Stop leaves the sim.
+## while the Preview window is visible. Overlapping checkpoint pads accept
+## ordered progress. Stop leaves the sim.
 
 const AuthoringEditorShell := preload("res://src/creator/authoring_editor_shell.gd")
 const AuthoringSurfaceNames := preload("res://src/creator/authoring_surface_names.gd")

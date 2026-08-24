@@ -32,6 +32,18 @@ func last_accepted_id() -> int:
 	return _ordered_ids[_completed_count - 1]
 
 
+func ordered_ids() -> PackedInt32Array:
+	return _ordered_ids.duplicate()
+
+
+func accepted_ids() -> PackedInt32Array:
+	var ids: PackedInt32Array = PackedInt32Array()
+	ids.resize(_completed_count)
+	for index: int in range(_completed_count):
+		ids[index] = _ordered_ids[index]
+	return ids
+
+
 func try_accept(checkpoint_id: int) -> bool:
 	if _completed_count > 0 and _ordered_ids[_completed_count - 1] == checkpoint_id:
 		return true
