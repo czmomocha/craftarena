@@ -5,6 +5,12 @@
 	"pads": [],
 	"portals": [],
 	"finish": [],
-	"destructibles": [],
-	"signed": false
+	"destructibles": [
+		{
+			"entity_id": 40,
+			"x": 0,
+			"y": 0,
+			"z": 65536
+		}
+	]
 }

@@ -13,6 +13,7 @@ export function validateSimulationBundle(instance: unknown): JsonSchemaError[] {
 	pushDuplicateIds(errors, instance.pads, "$.pads");
 	pushDuplicateIds(errors, instance.portals, "$.portals");
 	pushDuplicateIds(errors, instance.finish, "$.finish");
+	pushDuplicateIds(errors, instance.destructibles, "$.destructibles");
 	return errors;
 }
 
