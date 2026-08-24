@@ -1,0 +1,132 @@
+extends GutTest
+
+## Match server process entry: MatchHost spawns one headless Godot process per
+## match (CD-44 §3). The entry parses --match-id/--port/--course/--players/
+## --max-ticks, boots a TraprushMatchSession from the course, ticks with the
+## engine physics loop (not a locked product tick rate), prints structured
+## heartbeat JSON and exits 0 at --max-ticks or 1 on bad config.
+## No sockets yet: the port is reserved by MatchHost bookkeeping; the WebSocket
+## listener is a later chapter.
+
+const AuthoringDocument := preload("res://src/creator/authoring_document.gd")
+const AuthoringWorld := preload("res://src/creator/authoring_world.gd")
+const MatchServer := preload("res://src/server/match_server.gd")
+const SimulationBundle := preload("res://src/ugc/simulation_bundle.gd")
+const TraprushMatchSession := preload("res://src/games/traprush/match_session.gd")
+const TraprushTopologyCompiler := preload("res://src/ugc/traprush_topology_compiler.gd")
+
+const COURSE_01_PATH: String = "res://content/official/traprush/course_01.json"
+const CELL: int = 65536
+
+
+func test_parse_user_args_accepts_key_value_only() -> void:
+	var options: Dictionary = MatchServer._parse_user_args([
+		"--match-id=m1",
+		"--port=42000",
+		"--course=res://x.json",
+		"--players=2",
+		"--max-ticks=30",
+		"--bare",
+		"positional",
+		"--=empty",
+	])
+	assert_eq(options.size(), 5)
+	var match_id: String = options.get("match-id", "")
+	var players: String = options.get("players", "")
+	assert_eq(match_id, "m1")
+	assert_eq(players, "2")
+
+
+func test_boot_config_requires_valid_fields() -> void:
+	var ok: Dictionary = MatchServer._boot_config({
+		"match-id": "m1",
+		"port": "42000",
+		"course": COURSE_01_PATH,
+		"players": "2",
+		"max-ticks": "30",
+	})
+	var config_ok: bool = ok.get("ok", false)
+	assert_true(config_ok)
+	var empty_ok: bool = MatchServer._boot_config({}).get("ok", true)
+	assert_false(empty_ok)
+	var zero_ok: bool = MatchServer._boot_config({
+		"match-id": "m1", "port": "42000", "course": COURSE_01_PATH, "players": "0",
+	}).get("ok", true)
+	assert_false(zero_ok)
+	var nine_ok: bool = MatchServer._boot_config({
+		"match-id": "m1", "port": "42000", "course": COURSE_01_PATH, "players": "9",
+	}).get("ok", true)
+	assert_false(nine_ok)
+	var negative_ticks_ok: bool = MatchServer._boot_config({
+		"match-id": "m1", "port": "42000", "course": COURSE_01_PATH, "players": "2",
+		"max-ticks": "-1",
+	}).get("ok", true)
+	assert_false(negative_ticks_ok)
+	var missing_course_ok: bool = MatchServer._boot_config({
+		"match-id": "m1", "port": "42000", "course": "res://nope.json", "players": "2",
+	}).get("ok", true)
+	assert_false(missing_course_ok)
+	var no_ticks: Dictionary = MatchServer._boot_config({
+		"match-id": "m1", "port": "42000", "course": COURSE_01_PATH, "players": "2",
+	})
+	var no_ticks_ok: bool = no_ticks.get("ok", false)
+	assert_true(no_ticks_ok)
+	var max_ticks: int = no_ticks.get("max_ticks", -1)
+	assert_eq(max_ticks, 0)
+
+
+func test_boot_session_from_config() -> void:
+	var config: Dictionary = MatchServer._boot_config({
+		"match-id": "m1", "port": "42000", "course": COURSE_01_PATH, "players": "2",
+	})
+	var session: TraprushMatchSession = MatchServer.boot_session(config)
+	assert_not_null(session)
+	assert_eq(session.player_count(), 2)
+	assert_eq(session.player_accepted_count(0), 1)
+	assert_eq(session.player_accepted_count(1), 1)
+	var pose0: Dictionary = session.player_pose(0)
+	var pose1: Dictionary = session.player_pose(1)
+	var x0: int = pose0.get("x", 0)
+	var z0: int = pose0.get("z", 0)
+	var x1: int = pose1.get("x", 0)
+	var z1: int = pose1.get("z", 0)
+	assert_ne(Vector3i(x0, 0, z0), Vector3i(x1, 0, z1))
+
+
+func test_boot_session_rejects_bad_config() -> void:
+	assert_null(MatchServer.boot_session({}))
+	assert_null(MatchServer.boot_session({"ok": false}))
+
+
+func test_heartbeat_line_is_structured_json() -> void:
+	var config: Dictionary = MatchServer._boot_config({
+		"match-id": "m1", "port": "42000", "course": COURSE_01_PATH, "players": "2",
+	})
+	var session: TraprushMatchSession = MatchServer.boot_session(config)
+	session.commit_tick()
+	var line: String = MatchServer._heartbeat_line("m1", session)
+	var parsed: Variant = JSON.parse_string(line)
+	assert_eq(typeof(parsed), TYPE_DICTIONARY)
+	var event: Dictionary = parsed
+	var event_name: String = event.get("event", "")
+	var event_match_id: String = event.get("match_id", "")
+	assert_eq(event_name, "match_tick")
+	assert_eq(event_match_id, "m1")
+	var tick: int = event.get("tick", -1)
+	assert_eq(tick, 1)
+	var players: int = event.get("players", -1)
+	assert_eq(players, 2)
+	var state_hash: String = event.get("hash", "")
+	assert_eq(state_hash, session.hash_state())
+
+
+func test_same_boot_same_hash_after_ticks() -> void:
+	var config: Dictionary = MatchServer._boot_config({
+		"match-id": "m1", "port": "42000", "course": COURSE_01_PATH, "players": "2",
+	})
+	var first: TraprushMatchSession = MatchServer.boot_session(config)
+	var second: TraprushMatchSession = MatchServer.boot_session(config)
+	for index: int in range(10):
+		first.commit_tick()
+		second.commit_tick()
+	assert_eq(first.hash_state(), second.hash_state())

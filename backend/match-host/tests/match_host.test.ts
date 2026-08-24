@@ -4,6 +4,7 @@ import { describe, test } from "node:test";
 import { loadConfig } from "../src/config.ts";
 import { createLease, evaluateLease, renewLease } from "../src/lease.ts";
 import type { LaunchedProcess, MatchExit, MatchLaunchSpec, ProcessLauncher } from "../src/launcher.ts";
+import { GodotProcessLauncher } from "../src/launcher.ts";
 import { PortAllocator } from "../src/ports.ts";
 import { MatchCapacityError, MatchRegistry } from "../src/registry.ts";
 import { buildMatchHost } from "../src/server.ts";
@@ -26,6 +27,47 @@ describe("match host config", () => {
 			loadConfig({ GODOT4: "C:\\Tools\\Godot.exe", GODOT4_CONSOLE: "  " }, "win32").godotExecutable,
 			"C:\\Tools\\Godot.exe",
 		);
+	});
+
+	test("match course and players default to the dev placeholder and are overridable", () => {
+		const defaults = loadConfig({}, "linux");
+		assert.equal(defaults.matchCourse, "res://content/official/traprush/course_01.json");
+		assert.equal(defaults.matchPlayers, 2);
+
+		const overridden = loadConfig(
+			{ MATCH_HOST_COURSE: "res://content/official/traprush/course_03.json", MATCH_HOST_PLAYERS: "8" },
+			"linux",
+		);
+		assert.equal(overridden.matchCourse, "res://content/official/traprush/course_03.json");
+		assert.equal(overridden.matchPlayers, 8);
+	});
+
+	test("match players outside the TRAPRUSH room size are rejected", () => {
+		assert.throws(() => loadConfig({ MATCH_HOST_PLAYERS: "0" }, "linux"), /MATCH_HOST_PLAYERS/);
+		assert.throws(() => loadConfig({ MATCH_HOST_PLAYERS: "9" }, "linux"), /MATCH_HOST_PLAYERS/);
+	});
+});
+
+describe("godot process launcher args", () => {
+	test("passes course and players through to the match process", () => {
+		const launcher = new GodotProcessLauncher({
+			executable: "godot",
+			projectPath: "/repo/game",
+			scene: "res://src/server/match_server.tscn",
+			course: "res://content/official/traprush/course_02.json",
+			players: 4,
+		});
+
+		const args = launcher.buildArgs({ matchId: "m-1", port: 42000 });
+
+		assert.ok(args.includes("--match-id=m-1"));
+		assert.ok(args.includes("--port=42000"));
+		assert.ok(args.includes("--course=res://content/official/traprush/course_02.json"));
+		assert.ok(args.includes("--players=4"));
+		// `--` 之后才是场景脚本参数，引擎不解释。
+		const separator = args.indexOf("--");
+		assert.ok(separator >= 0);
+		assert.ok(args.indexOf("--match-id=m-1") > separator);
 	});
 });
 

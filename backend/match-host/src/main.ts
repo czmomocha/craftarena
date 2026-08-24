@@ -16,6 +16,8 @@ const registry = new MatchRegistry({
 		executable: config.godotExecutable,
 		projectPath: config.godotProjectPath,
 		scene: config.matchScene,
+		course: config.matchCourse,
+		players: config.matchPlayers,
 	}),
 	portRangeMin: config.portRangeMin,
 	portRangeMax: config.portRangeMax,

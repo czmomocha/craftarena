@@ -12,6 +12,8 @@ export interface MatchHostConfig {
 	readonly idleTimeoutMs: number;
 	readonly reclaimIntervalMs: number;
 	readonly maxConcurrentMatches: number;
+	readonly matchCourse: string;
+	readonly matchPlayers: number;
 	readonly version: string;
 	readonly logLevel: string;
 }
@@ -32,6 +34,14 @@ const DEFAULT_PORT_RANGE_MIN = 42000;
 const DEFAULT_PORT_RANGE_MAX = 42099;
 
 const DEFAULT_RECLAIM_INTERVAL_MS = 15 * 1000;
+
+/**
+ * 开发期占位对局内容：控制面按场下发课程与人数是后续章节，本机先全场共用一份。
+ * 人数上限 8 与 CD-21 §3 的 TRAPRUSH 房间规模一致。
+ */
+const DEFAULT_MATCH_COURSE = "res://content/official/traprush/course_01.json";
+const DEFAULT_MATCH_PLAYERS = 2;
+const MAX_MATCH_PLAYERS = 8;
 
 export function loadConfig(
 	env: NodeJS.ProcessEnv = process.env,
@@ -55,6 +65,8 @@ export function loadConfig(
 		idleTimeoutMs: parseInteger(env["MATCH_HOST_IDLE_MS"], DEFAULT_IDLE_TIMEOUT_MS, "MATCH_HOST_IDLE_MS"),
 		reclaimIntervalMs: parseInteger(env["MATCH_HOST_RECLAIM_MS"], DEFAULT_RECLAIM_INTERVAL_MS, "MATCH_HOST_RECLAIM_MS"),
 		maxConcurrentMatches: parseInteger(env["MATCH_HOST_MAX_MATCHES"], portCapacity, "MATCH_HOST_MAX_MATCHES"),
+		matchCourse: env["MATCH_HOST_COURSE"] ?? DEFAULT_MATCH_COURSE,
+		matchPlayers: parsePlayers(env["MATCH_HOST_PLAYERS"]),
 		version: env["CRAFTARENA_VERSION"] ?? "0.0.0-dev",
 		logLevel: env["MATCH_HOST_LOG_LEVEL"] ?? "info",
 	};
@@ -81,6 +93,14 @@ function resolveGodotExecutable(env: NodeJS.ProcessEnv, platform: NodeJS.Platfor
 	}
 
 	return env["GODOT4"] ?? "godot";
+}
+
+function parsePlayers(raw: string | undefined): number {
+	const players = parseInteger(raw, DEFAULT_MATCH_PLAYERS, "MATCH_HOST_PLAYERS");
+	if (players < 1 || players > MAX_MATCH_PLAYERS) {
+		throw new Error(`MATCH_HOST_PLAYERS must be within [1, ${MAX_MATCH_PLAYERS}], received: ${players}`);
+	}
+	return players;
 }
 
 function parseInteger(raw: string | undefined, fallback: number, name: string): number {
