@@ -18,6 +18,7 @@ const SharedComponentRecord := preload("res://src/shared/schema/component_record
 const COURSE_01_PATH: String = "res://content/official/traprush/course_01.json"
 const COURSE_02_PATH: String = "res://content/official/traprush/course_02.json"
 const CELL: int = 65536
+const PLAY_RADIUS: int = CELL / 8
 const FIRST_PAD: int = 1
 const SECOND_PAD: int = 2
 const THIRD_PAD: int = 3
@@ -35,8 +36,8 @@ func after_each() -> void:
 func test_start_play_accepts_first_pad_on_official_courses() -> void:
 	var first: AuthoringPreview = _connected_course(COURSE_01_PATH)
 	var second: AuthoringPreview = _connected_course(COURSE_02_PATH)
-	assert_true(first.try_start_play(1, 1, 1))
-	assert_true(second.try_start_play(1, 1, 1))
+	assert_true(first.try_start_play(1, PLAY_RADIUS, PLAY_RADIUS))
+	assert_true(second.try_start_play(1, PLAY_RADIUS, PLAY_RADIUS))
 	assert_eq(first.play_accepted_count(), 1)
 	assert_eq(first.play_checkpoint_count(), 3)
 	assert_eq(first.play_last_accepted_id(), FIRST_PAD)
@@ -51,7 +52,7 @@ func test_start_play_accepts_first_pad_on_official_courses() -> void:
 
 func test_move_onto_next_same_floor_pad_accepts_next_checkpoint() -> void:
 	var preview: AuthoringPreview = _connected_course(COURSE_01_PATH)
-	assert_true(preview.try_start_play(1, 1, 1))
+	assert_true(preview.try_start_play(1, PLAY_RADIUS, PLAY_RADIUS))
 	assert_eq(preview.play_accepted_count(), 1)
 	assert_true(preview.try_apply_play_intent(_move(CELL, 0)))
 	assert_eq(preview.play_accepted_count(), 1)
@@ -67,7 +68,7 @@ func test_move_onto_next_same_floor_pad_accepts_next_checkpoint() -> void:
 
 func test_skip_and_unknown_ids_are_refused() -> void:
 	var preview: AuthoringPreview = _connected_course(COURSE_01_PATH)
-	assert_true(preview.try_start_play(1, 1, 1))
+	assert_true(preview.try_start_play(1, PLAY_RADIUS, PLAY_RADIUS))
 	assert_false(preview.try_accept_play_checkpoint(SECOND_PAD))
 	assert_false(preview.try_accept_play_checkpoint(THIRD_PAD))
 	assert_false(preview.try_accept_play_checkpoint(99))
@@ -81,7 +82,7 @@ func test_offset_spawn_off_pad_does_not_accept() -> void:
 	assert_true(session.world.put(_checkpoint(2, 0, CELL, 0, 0, CELL)))
 	var preview: AuthoringPreview = AuthoringPreview.new()
 	assert_true(preview.connect_from(session))
-	assert_true(preview.try_start_play(1, 1, 1))
+	assert_true(preview.try_start_play(1, PLAY_RADIUS, PLAY_RADIUS))
 	assert_eq(preview.play_checkpoint_count(), 2)
 	assert_eq(preview.play_accepted_count(), 0)
 	assert_eq(preview.play_last_accepted_id(), -1)
@@ -94,7 +95,7 @@ func test_accept_refused_unless_playing() -> void:
 	assert_false(preview.try_accept_play_checkpoint(FIRST_PAD))
 	assert_eq(preview.play_accepted_count(), 0)
 	assert_eq(preview.play_checkpoint_count(), 0)
-	assert_true(preview.try_start_play(1, 1, 1))
+	assert_true(preview.try_start_play(1, PLAY_RADIUS, PLAY_RADIUS))
 	assert_eq(preview.play_accepted_count(), 1)
 	assert_true(preview.try_stop_play())
 	assert_false(preview.try_accept_play_checkpoint(FIRST_PAD))
@@ -115,7 +116,7 @@ func test_shell_status_and_checkpoint_mark_follow_accepts() -> void:
 	var idle_total: int = idle.get("checkpoint_count", -1)
 	assert_eq(idle_accepted, 0)
 	assert_eq(idle_total, 0)
-	assert_true(_preview_shell.try_start_play(1, 1, 1))
+	assert_true(_preview_shell.try_start_play(1, PLAY_RADIUS, PLAY_RADIUS))
 	var playing: Dictionary = _preview_shell.status_view()
 	var accepted: int = playing.get("accepted_count", -1)
 	var total: int = playing.get("checkpoint_count", -1)

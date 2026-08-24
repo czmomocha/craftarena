@@ -2,9 +2,10 @@ class_name SimulationBundle
 extends RefCounted
 
 ## v1 TRAPRUSH topology compile of AuthoringWorld. Field list owner: CD-42 §3.4.
-## Pads, two_way / one_way portals, and at most one finish occupancy bag.
-## Dangling portals are omitted. Portal bags include source occupancy x/y/z
-## and dest landing pose. Finish bags are entity_id plus occupancy x/y/z.
+## Pads, two_way / one_way portals, at most one finish occupancy bag, and
+## destructible occupancy bags. Dangling portals are omitted. Portal bags
+## include source occupancy x/y/z and dest landing pose. Finish bags are
+## entity_id plus occupancy x/y/z. Destructible bags add durability.
 ## Godot JSON.parse_string may yield whole-number floats; decode coerces those
 ## that round-trip through int. Not a signed binary. Not a Rule VM graph.
 
@@ -15,12 +16,14 @@ const FIELD_SOURCE_REVISION: String = "source_revision"
 const FIELD_PADS: String = "pads"
 const FIELD_PORTALS: String = "portals"
 const FIELD_FINISH: String = "finish"
+const FIELD_DESTRUCTIBLES: String = "destructibles"
 
 var cell: int = 0
 var source_revision: int = 0
 var pads: Array[Dictionary] = []
 var portals: Array[Dictionary] = []
 var finish: Array[Dictionary] = []
+var destructibles: Array[Dictionary] = []
 
 
 static func from_dictionary(data: Dictionary) -> SimulationBundle:
@@ -28,7 +31,7 @@ static func from_dictionary(data: Dictionary) -> SimulationBundle:
 	if typeof(coerced) != TYPE_DICTIONARY:
 		return null
 	var body: Dictionary = coerced
-	if body.size() != 6:
+	if body.size() != 7:
 		return null
 	if not body.has(FIELD_SCHEMA_VERSION) or typeof(body[FIELD_SCHEMA_VERSION]) != TYPE_INT:
 		return null
@@ -96,12 +99,38 @@ static func from_dictionary(data: Dictionary) -> SimulationBundle:
 		if pad_ids.has(finish_id) or portal_ids.has(finish_id):
 			return null
 		finish_list.append(parsed_finish)
+	if not body.has(FIELD_DESTRUCTIBLES) or typeof(body[FIELD_DESTRUCTIBLES]) != TYPE_ARRAY:
+		return null
+	var destructible_list: Array[Dictionary] = []
+	var destructible_ids: Dictionary[int, bool] = {}
+	var raw_destructibles: Array = body[FIELD_DESTRUCTIBLES]
+	for item: Variant in raw_destructibles:
+		if typeof(item) != TYPE_DICTIONARY:
+			return null
+		var crate_bag: Dictionary = item
+		var parsed_crate: Dictionary = _parse_destructible(crate_bag)
+		if parsed_crate.is_empty():
+			return null
+		var crate_id: int = parsed_crate["entity_id"]
+		if (
+			destructible_ids.has(crate_id)
+			or pad_ids.has(crate_id)
+			or portal_ids.has(crate_id)
+		):
+			return null
+		for finish_item: Dictionary in finish_list:
+			var finish_entity: int = finish_item["entity_id"]
+			if finish_entity == crate_id:
+				return null
+		destructible_ids[crate_id] = true
+		destructible_list.append(parsed_crate)
 	var bundle: SimulationBundle = SimulationBundle.new()
 	bundle.cell = cell
 	bundle.source_revision = source_revision
 	bundle.pads = pads
 	bundle.portals = portals
 	bundle.finish = finish_list
+	bundle.destructibles = destructible_list
 	return bundle
 
 
@@ -115,6 +144,9 @@ func to_dictionary() -> Dictionary:
 	var finish_list: Array = []
 	for item: Dictionary in finish:
 		finish_list.append(item.duplicate(true))
+	var destructible_list: Array = []
+	for item: Dictionary in destructibles:
+		destructible_list.append(item.duplicate(true))
 	return {
 		FIELD_SCHEMA_VERSION: SCHEMA_VERSION,
 		FIELD_CELL: cell,
@@ -122,6 +154,7 @@ func to_dictionary() -> Dictionary:
 		FIELD_PADS: pad_list,
 		FIELD_PORTALS: portal_list,
 		FIELD_FINISH: finish_list,
+		FIELD_DESTRUCTIBLES: destructible_list,
 	}
 
 
@@ -212,6 +245,28 @@ static func _parse_finish(body: Dictionary) -> Dictionary:
 		"x": body["x"],
 		"y": body["y"],
 		"z": body["z"],
+	}
+
+
+static func _parse_destructible(body: Dictionary) -> Dictionary:
+	if body.size() != 5:
+		return {}
+	if not _int_at_least(body, "entity_id", 1):
+		return {}
+	if not _is_int_field(body, "x"):
+		return {}
+	if not _is_int_field(body, "y"):
+		return {}
+	if not _is_int_field(body, "z"):
+		return {}
+	if not _int_at_least(body, "durability", 0):
+		return {}
+	return {
+		"entity_id": body["entity_id"],
+		"x": body["x"],
+		"y": body["y"],
+		"z": body["z"],
+		"durability": body["durability"],
 	}
 
 

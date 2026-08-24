@@ -8,7 +8,9 @@ extends RefCounted
 ## source occupancy pose (x/y/z) and dest landing pose. Finish occupancy is
 ## a zone whose tags include "finish"; missing transform or two finish
 ## zones fail the whole compile. Checkpoint or portal on the same entity
-## as a finish zone also fails. Not a new EDIT op. Never settlement.
+## as a finish zone also fails. Destructible bags need transform and
+## durability; sharing an entity with checkpoint, portal, or finish fails.
+## Not a new EDIT op. Never settlement.
 
 const FINISH_ZONE_TAG: String = "finish"
 
@@ -18,6 +20,7 @@ static func compile(world: AuthoringWorld) -> SimulationBundle:
 		return null
 	var pads: Array[Dictionary] = []
 	var finish_list: Array[Dictionary] = []
+	var destructible_list: Array[Dictionary] = []
 	var ids: Array[int] = world.entity_ids()
 	for entity_id: int in ids:
 		var record: SharedComponentRecord = world.get_record(entity_id)
@@ -28,6 +31,8 @@ static func compile(world: AuthoringWorld) -> SimulationBundle:
 				return null
 			if record.components.has(SharedComponentNames.PORTAL):
 				return null
+			if record.components.has(SharedComponentNames.DESTRUCTIBLE):
+				return null
 			var finish_pose: Dictionary = _transform_xyz(record)
 			if finish_pose.is_empty():
 				return null
@@ -36,6 +41,25 @@ static func compile(world: AuthoringWorld) -> SimulationBundle:
 				"x": finish_pose["x"],
 				"y": finish_pose["y"],
 				"z": finish_pose["z"],
+			})
+			continue
+		if record.components.has(SharedComponentNames.DESTRUCTIBLE):
+			if record.components.has(SharedComponentNames.CHECKPOINT):
+				return null
+			if record.components.has(SharedComponentNames.PORTAL):
+				return null
+			var crate_pose: Dictionary = _transform_xyz(record)
+			if crate_pose.is_empty():
+				return null
+			var crate_body: Dictionary = _destructible_body(record)
+			if crate_body.is_empty():
+				return null
+			destructible_list.append({
+				"entity_id": entity_id,
+				"x": crate_pose["x"],
+				"y": crate_pose["y"],
+				"z": crate_pose["z"],
+				"durability": crate_body["durability"],
 			})
 			continue
 		if not record.components.has(SharedComponentNames.CHECKPOINT):
@@ -108,6 +132,7 @@ static func compile(world: AuthoringWorld) -> SimulationBundle:
 		SimulationBundle.FIELD_PADS: pads,
 		SimulationBundle.FIELD_PORTALS: portals,
 		SimulationBundle.FIELD_FINISH: finish_list,
+		SimulationBundle.FIELD_DESTRUCTIBLES: destructible_list,
 	}
 	return SimulationBundle.from_dictionary(body)
 
@@ -150,6 +175,19 @@ static func _checkpoint_body(record: SharedComponentRecord) -> Dictionary:
 		"respawn_dy": body["respawn_dy"],
 		"respawn_dz": body["respawn_dz"],
 	}
+
+
+static func _destructible_body(record: SharedComponentRecord) -> Dictionary:
+	var raw: Variant = record.components[SharedComponentNames.DESTRUCTIBLE]
+	if typeof(raw) != TYPE_DICTIONARY:
+		return {}
+	var body: Dictionary = raw
+	if typeof(body.get("durability", null)) != TYPE_INT:
+		return {}
+	var durability: int = body["durability"]
+	if durability < 0:
+		return {}
+	return {"durability": durability}
 
 
 static func _has_finish_tag(record: SharedComponentRecord) -> bool:

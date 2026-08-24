@@ -15,6 +15,7 @@ const PlayerIntentNames := preload("res://src/shared/commands/player_intent_name
 
 const COURSE_01_PATH: String = "res://content/official/traprush/course_01.json"
 const CELL: int = 65536
+const PLAY_RADIUS: int = CELL / 8
 const EPS: float = 0.0001
 
 var _preview_shell: AuthoringPreviewShell = null
@@ -62,7 +63,7 @@ func test_wasd_axes_map_to_world_xz() -> void:
 
 func test_play_move_changes_xz_without_tick_or_settlement() -> void:
 	var preview: AuthoringPreview = _connected_course()
-	assert_true(preview.try_start_play(1, 1, 1))
+	assert_true(preview.try_start_play(1, PLAY_RADIUS, PLAY_RADIUS))
 	assert_true(preview.try_apply_play_intent(_move(CELL, 0)))
 	var pose: Dictionary = preview.play_world.get_pose(preview.player_id)
 	var pose_x: int = pose.get("x", -1)
@@ -86,7 +87,7 @@ func test_play_move_changes_xz_without_tick_or_settlement() -> void:
 func test_move_refused_unless_playing() -> void:
 	var preview: AuthoringPreview = _connected_course()
 	assert_false(preview.try_apply_play_intent(_move(CELL, 0)))
-	assert_true(preview.try_start_play(1, 1, 1))
+	assert_true(preview.try_start_play(1, PLAY_RADIUS, PLAY_RADIUS))
 	assert_true(preview.try_apply_play_intent(_move(CELL, 0)))
 	assert_true(preview.try_stop_play())
 	assert_false(preview.try_apply_play_intent(_move(CELL, 0)))
@@ -96,7 +97,7 @@ func test_move_refused_unless_playing() -> void:
 
 func test_jump_and_empty_payload_are_refused() -> void:
 	var preview: AuthoringPreview = _connected_course()
-	assert_true(preview.try_start_play(1, 1, 1))
+	assert_true(preview.try_start_play(1, PLAY_RADIUS, PLAY_RADIUS))
 	var start: Dictionary = preview.play_world.get_pose(preview.player_id)
 	assert_false(preview.try_apply_play_intent({
 		"intent": PlayerIntentNames.JUMP,
@@ -122,7 +123,7 @@ func test_shell_sample_moves_marker() -> void:
 	_preview_shell = AuthoringPreviewShell.create(AuthoringPreviewHostKinds.WINDOW)
 	add_child(_preview_shell)
 	assert_true(_preview_shell.open_from(session))
-	assert_true(_preview_shell.try_start_play(1, 1, 1))
+	assert_true(_preview_shell.try_start_play(1, PLAY_RADIUS, PLAY_RADIUS))
 	_preview_shell.play_move_step = CELL
 	assert_true(_preview_shell.try_sample_play_move(false, false, false, true))
 	var marker: MeshInstance3D = _preview_shell.map.player_node()

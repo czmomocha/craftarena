@@ -1,8 +1,8 @@
 extends GutTest
 
 ## Second official TRAPRUSH course: lateral + upper two_way AuthoringDocument.
-## Distinct from course_01 (vertical-only, z=0). Publish reachability is ok.
-## Tampering is not a write gate. Never settlement.
+## Distinct from course_01 (pads/portals/finish stay z=0; both have a +Z crate).
+## Publish reachability is ok. Tampering is not a write gate. Never settlement.
 
 const AuthoringDocument := preload("res://src/creator/authoring_document.gd")
 const AuthoringEditorShell := preload("res://src/creator/authoring_editor_shell.gd")
@@ -29,8 +29,8 @@ func test_official_course_02_loads_and_is_publish_ready() -> void:
 	var world: AuthoringWorld = AuthoringDocument.load_from_path(COURSE_02_PATH)
 	assert_not_null(world)
 	assert_eq(world.grid.cell, CELL)
-	assert_eq(world.revision, 6)
-	assert_eq(world.entity_ids(), [1, 2, 3, 20, 21, 30])
+	assert_eq(world.revision, 7)
+	assert_eq(world.entity_ids(), [1, 2, 3, 20, 21, 30, 40])
 	var result: Dictionary = AuthoringReachability.evaluate(world)
 	assert_true(_ok(result))
 	var issues: Array = result.get("issues", [1])
@@ -45,6 +45,9 @@ func test_course_02_is_lateral_two_way_not_course_01() -> void:
 	assert_ne(first.hash_state().hex_encode(), second.hash_state().hex_encode())
 	var first_ids: Array[int] = first.entity_ids()
 	for entity_id: int in first_ids:
+		if entity_id == 40:
+			assert_eq(_entity_z(first, entity_id), CELL)
+			continue
 		assert_eq(_entity_z(first, entity_id), 0)
 	var links: Array[Dictionary] = second.portal_links()
 	assert_eq(links.size(), 2)
@@ -95,8 +98,8 @@ func test_retarget_portal_is_dangling_and_not_a_write_gate() -> void:
 	assert_true(_shell.open())
 	assert_true(_shell.import_document(AuthoringDocument.encode(loaded)))
 	assert_eq(_shell.validator.reach_ok(), true)
-	assert_true(_shell.try_place_portal(40, 99, 5, 0, 2))
-	assert_true(_shell.session.world.has_entity(40))
+	assert_true(_shell.try_place_portal(50, 99, 5, 0, 2))
+	assert_true(_shell.session.world.has_entity(50))
 	assert_eq(_shell.validator.has_code(AuthoringReachabilityCodes.DANGLING_PORTAL), true)
 	assert_false(_shell.allows_settlement())
 

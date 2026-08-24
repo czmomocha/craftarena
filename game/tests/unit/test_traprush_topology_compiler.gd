@@ -29,6 +29,7 @@ func test_empty_world_compiles_to_empty_bundle() -> void:
 	assert_eq(bundle.pads.size(), 0)
 	assert_eq(bundle.portals.size(), 0)
 	assert_eq(bundle.finish.size(), 0)
+	assert_eq(bundle.destructibles.size(), 0)
 	var encoded: Dictionary = bundle.to_dictionary()
 	var decoded: SimulationBundle = SimulationBundle.from_dictionary(encoded)
 	assert_not_null(decoded)
@@ -46,6 +47,16 @@ func test_official_courses_compile_distinct_topology() -> void:
 	assert_eq(second.portals.size(), 2)
 	assert_eq(first.finish.size(), 1)
 	assert_eq(second.finish.size(), 1)
+	assert_eq(first.destructibles.size(), 1)
+	assert_eq(second.destructibles.size(), 1)
+	var first_crate: Dictionary = _destructible(first, 40)
+	var second_crate: Dictionary = _destructible(second, 40)
+	var first_crate_z: int = first_crate.get("z", -1)
+	var first_crate_durability: int = first_crate.get("durability", -1)
+	var second_crate_z: int = second_crate.get("z", -1)
+	assert_eq(first_crate_z, CELL)
+	assert_eq(first_crate_durability, 1)
+	assert_eq(second_crate_z, CELL)
 	var first_finish: Dictionary = _finish(first, 30)
 	var second_finish: Dictionary = _finish(second, 30)
 	var first_finish_x: int = first_finish.get("x", -1)
@@ -137,6 +148,7 @@ func test_portal_bag_without_source_pose_is_rejected() -> void:
 			},
 		],
 		"finish": [],
+		"destructibles": [],
 	}
 	assert_null(SimulationBundle.from_dictionary(data))
 
@@ -186,6 +198,7 @@ func test_dangling_kind_in_bundle_is_rejected() -> void:
 			},
 		],
 		"finish": [],
+		"destructibles": [],
 	}
 	assert_null(SimulationBundle.from_dictionary(data))
 
@@ -199,15 +212,19 @@ func test_loaded_pads_are_non_solid_occupancy_and_world_ticks() -> void:
 	var pad_ids: Dictionary = loaded["pad_ids"]
 	var portal_ids: Dictionary = loaded["portal_ids"]
 	var finish_ids: Dictionary = loaded["finish_ids"]
+	var destructible_ids: Dictionary = loaded["destructible_ids"]
 	assert_eq(pad_ids.size(), 3)
 	assert_eq(portal_ids.size(), 2)
 	assert_eq(finish_ids.size(), 1)
+	assert_eq(destructible_ids.size(), 1)
 	var box_id: int = pad_ids[1]
 	assert_false(world.is_static_box_solid(box_id))
 	var portal_box_id: int = portal_ids[10]
 	assert_false(world.is_static_box_solid(portal_box_id))
 	var finish_box_id: int = finish_ids[30]
 	assert_false(world.is_static_box_solid(finish_box_id))
+	var crate_box_id: int = destructible_ids[40]
+	assert_true(world.is_static_box_solid(crate_box_id))
 	var capsule_id: int = world.spawn_capsule(0, 0, 0, 0, 1, 1)
 	var overlapping: PackedInt32Array = world.overlapping_static_boxes(capsule_id)
 	assert_true(_has_id(overlapping, box_id))
@@ -317,7 +334,44 @@ func test_two_finish_bags_are_rejected() -> void:
 			{"entity_id": 30, "x": 0, "y": 0, "z": 0},
 			{"entity_id": 31, "x": CELL, "y": 0, "z": 0},
 		],
+		"destructibles": [],
 	}
+	assert_null(SimulationBundle.from_dictionary(data))
+
+
+func test_destructible_without_transform_fails_compile() -> void:
+	var world: AuthoringWorld = AuthoringWorld.new()
+	var record: SharedComponentRecord = SharedComponentRecord.create(40, {
+		"destructible": {"durability": 1, "regen_policy_id": 0},
+	})
+	assert_not_null(record)
+	assert_true(world.put(record))
+	assert_null(TraprushTopologyCompiler.compile(world))
+
+
+func test_destructible_on_checkpoint_fails_compile() -> void:
+	var world: AuthoringWorld = AuthoringWorld.new()
+	var record: SharedComponentRecord = SharedComponentRecord.create(1, {
+		"transform": {"x": 0, "y": 0, "z": 0, "yaw_bam": 0},
+		"checkpoint": {
+			"order": 0,
+			"respawn_dx": 0,
+			"respawn_dy": 0,
+			"respawn_dz": 0,
+		},
+		"destructible": {"durability": 1, "regen_policy_id": 0},
+	})
+	assert_not_null(record)
+	assert_true(world.put(record))
+	assert_null(TraprushTopologyCompiler.compile(world))
+
+
+func test_bundle_without_destructibles_key_is_rejected() -> void:
+	var world: AuthoringWorld = AuthoringWorld.new()
+	var bundle: SimulationBundle = TraprushTopologyCompiler.compile(world)
+	assert_not_null(bundle)
+	var data: Dictionary = bundle.to_dictionary()
+	data.erase(SimulationBundle.FIELD_DESTRUCTIBLES)
 	assert_null(SimulationBundle.from_dictionary(data))
 
 
@@ -344,6 +398,13 @@ func _portal(bundle: SimulationBundle, entity_id: int) -> Dictionary:
 
 func _finish(bundle: SimulationBundle, entity_id: int) -> Dictionary:
 	for item: Dictionary in bundle.finish:
+		if item.get("entity_id", 0) == entity_id:
+			return item
+	return {}
+
+
+func _destructible(bundle: SimulationBundle, entity_id: int) -> Dictionary:
+	for item: Dictionary in bundle.destructibles:
 		if item.get("entity_id", 0) == entity_id:
 			return item
 	return {}

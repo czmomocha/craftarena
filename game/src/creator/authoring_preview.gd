@@ -7,9 +7,10 @@ extends RefCounted
 ## try_start_play compiles the Preview world into a v1 TRAPRUSH topology
 ## bundle, loads SimulationWorld, and spawns on the lowest-order pad.
 ## Play enters tick so patches are refused until try_stop_play.
-## try_apply_play_intent accepts MoveIntent (caller dx/dz) and
+## try_apply_play_intent accepts MoveIntent (caller dx/dz),
 ## ResetToCheckpointIntent (compiled pad respawn table, no client
-## coordinates). Jump/Shove stay refused. Does not tick.
+## coordinates), and UseItemIntent (compiled destructible occupancy at
+## caller reach). Jump/Shove/Interact stay refused. Does not tick.
 ## Occupancy uses existing TraprushPadAccept: overlapping a checkpoint pad
 ## advances ordered progress. Occupancy uses existing TraprushPortalLanding
 ## try_land_exit: overlapping a portal source box lands one hop. two_way dest
@@ -18,8 +19,10 @@ extends RefCounted
 ## TraprushFinishAccept.try_cross: all mandatory pads then overlapping the
 ## compiled finish box records finish_tick. Observed by Preview, not a client
 ## assertion. No FinishIntent. Reset uses existing TraprushCheckpointSpawn
-## plus IntentStepper and does not rewind progress. Never settlement or
-## online writes.
+## plus IntentStepper and does not rewind progress. UseItem uses existing
+## TraprushDestructibleBreak: caller reach pose must overlap a compiled
+## solid crate; damage and reach are caller stubs. Destroyed boxes become
+## non-solid. Never settlement or online writes.
 ## Capsule radius/height are caller-provided, not a locked product size.
 ## Window host is AuthoringPreviewShell.
 
@@ -32,10 +35,16 @@ var play_graph: TraprushPortalGraph = null
 var play_pad_ids: Dictionary = {}
 var play_portal_ids: Dictionary = {}
 var play_finish_ids: Dictionary = {}
+var play_destructible_ids: Dictionary = {}
+var play_destructible_health: Dictionary = {}
 var play_track: TraprushCheckpointTrack = null
 var play_spawn: TraprushCheckpointSpawn = null
 var play_cell: int = 0
 var player_id: int = 0
+var play_use_item_damage: int = 0
+var play_use_item_reach_dx: int = 0
+var play_use_item_reach_dy: int = 0
+var play_use_item_reach_dz: int = 0
 var _in_tick: bool = false
 var _playing: bool = false
 var _portal_latch: Dictionary = {}
@@ -109,6 +118,7 @@ func try_start_play(seed: int, radius: int = 0, cylinder_height: int = 0) -> boo
 	var pads_raw: Variant = loaded.get("pad_ids", {})
 	var portals_raw: Variant = loaded.get("portal_ids", {})
 	var finish_raw: Variant = loaded.get("finish_ids", {})
+	var crates_raw: Variant = loaded.get("destructible_ids", {})
 	if not (world_raw is SimulationWorld):
 		return false
 	if not (graph_raw is TraprushPortalGraph):
@@ -119,11 +129,17 @@ func try_start_play(seed: int, radius: int = 0, cylinder_height: int = 0) -> boo
 		return false
 	if typeof(finish_raw) != TYPE_DICTIONARY:
 		return false
+	if typeof(crates_raw) != TYPE_DICTIONARY:
+		return false
 	var sim: SimulationWorld = world_raw
 	var graph: TraprushPortalGraph = graph_raw
 	var pad_ids: Dictionary = pads_raw
 	var portal_ids: Dictionary = portals_raw
 	var finish_ids: Dictionary = finish_raw
+	var crate_ids: Dictionary = crates_raw
+	var crate_health: Dictionary = _destructible_ledgers(bundle, crate_ids)
+	if crate_health.size() != _durable_crate_count(bundle):
+		return false
 	var start_x: int = start["x"]
 	var start_y: int = start["y"]
 	var start_z: int = start["z"]
@@ -137,6 +153,8 @@ func try_start_play(seed: int, radius: int = 0, cylinder_height: int = 0) -> boo
 	play_pad_ids = pad_ids
 	play_portal_ids = portal_ids
 	play_finish_ids = finish_ids
+	play_destructible_ids = crate_ids
+	play_destructible_health = crate_health
 	play_track = TraprushCheckpointTrack.new(_ordered_checkpoint_ids(bundle))
 	play_spawn = spawn
 	play_cell = bundle.cell
@@ -172,6 +190,10 @@ func try_advance_play() -> bool:
 func try_apply_play_intent(payload: Dictionary) -> bool:
 	if not is_playing():
 		return false
+	var use_decoded: Dictionary = TraprushUseItemIntent.decode(payload)
+	var use_ok: bool = use_decoded.get("ok", false)
+	if use_ok:
+		return _try_use_item_play(payload)
 	var move_decoded: Dictionary = TraprushMoveIntent.decode(payload)
 	var move_ok: bool = move_decoded.get("ok", false)
 	var reset_ok: bool = TraprushCheckpointSpawn.is_reset_intent(payload)
@@ -261,6 +283,26 @@ func play_finish_tick() -> int:
 	if not is_playing():
 		return -1
 	return _play_finish_tick
+
+
+func play_destructible_count() -> int:
+	if not is_playing():
+		return 0
+	return play_destructible_ids.size()
+
+
+func play_destructible_alive_count() -> int:
+	if not is_playing():
+		return 0
+	var alive: int = 0
+	for key: Variant in play_destructible_health.keys():
+		var crate_raw: Variant = play_destructible_health[key]
+		if not (crate_raw is TraprushDestructible):
+			continue
+		var crate: TraprushDestructible = crate_raw
+		if not crate.is_destroyed():
+			alive += 1
+	return alive
 
 
 func try_cross_play_finish() -> bool:
@@ -364,6 +406,8 @@ func _clear_play() -> void:
 	play_pad_ids = {}
 	play_portal_ids = {}
 	play_finish_ids = {}
+	play_destructible_ids = {}
+	play_destructible_health = {}
 	play_track = null
 	play_spawn = null
 	play_cell = 0
@@ -429,6 +473,73 @@ func _resolve_play_portals() -> bool:
 
 func _accept_overlapping_play_finish() -> void:
 	try_cross_play_finish()
+
+
+func _try_use_item_play(payload: Dictionary) -> bool:
+	if not is_playing():
+		return false
+	var ids: Array[int] = []
+	for key: Variant in play_destructible_ids.keys():
+		if typeof(key) != TYPE_INT:
+			continue
+		var crate_id: int = key
+		ids.append(crate_id)
+	ids.sort()
+	for crate_id: int in ids:
+		if not play_destructible_health.has(crate_id):
+			continue
+		var box_raw: Variant = play_destructible_ids[crate_id]
+		var crate_raw: Variant = play_destructible_health[crate_id]
+		if typeof(box_raw) != TYPE_INT:
+			continue
+		if not (crate_raw is TraprushDestructible):
+			continue
+		var box_id: int = box_raw
+		var crate: TraprushDestructible = crate_raw
+		var broken: Dictionary = TraprushDestructibleBreak.try_use_item(
+			play_world,
+			player_id,
+			payload,
+			crate,
+			box_id,
+			play_use_item_damage,
+			play_use_item_reach_dx,
+			play_use_item_reach_dy,
+			play_use_item_reach_dz
+		)
+		var broken_ok: bool = broken.get("ok", false)
+		if broken_ok:
+			return true
+	return false
+
+
+func _destructible_ledgers(bundle: SimulationBundle, crate_ids: Dictionary) -> Dictionary:
+	var ledgers: Dictionary = {}
+	if bundle == null:
+		return ledgers
+	for item: Dictionary in bundle.destructibles:
+		var crate_id: int = item["entity_id"]
+		var durability: int = item["durability"]
+		if durability < 1:
+			continue
+		if not crate_ids.has(crate_id):
+			return {}
+		var crate: TraprushDestructible = TraprushDestructible.create(durability)
+		if crate == null:
+			return {}
+		ledgers[crate_id] = crate
+	return ledgers
+
+
+func _durable_crate_count(bundle: SimulationBundle) -> int:
+	if bundle == null:
+		return 0
+	var count: int = 0
+	for item: Dictionary in bundle.destructibles:
+		var durability: int = item["durability"]
+		if durability >= 1:
+			count += 1
+	return count
 
 
 func _ordered_checkpoint_ids(bundle: SimulationBundle) -> PackedInt32Array:

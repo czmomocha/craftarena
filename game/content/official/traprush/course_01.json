@@ -1,7 +1,7 @@
 {
 	"schema_version": 1,
 	"cell": 65536,
-	"revision": 6,
+	"revision": 7,
 	"entities": [
 		{
 			"schema_version": 1,
@@ -111,6 +111,22 @@
 					"tags": [
 						"finish"
 					]
+				}
+			}
+		},
+		{
+			"schema_version": 1,
+			"entity_id": 40,
+			"components": {
+				"transform": {
+					"x": 0,
+					"y": 0,
+					"z": 65536,
+					"yaw_bam": 0
+				},
+				"destructible": {
+					"durability": 1,
+					"regen_policy_id": 0
 				}
 			}
 		}
