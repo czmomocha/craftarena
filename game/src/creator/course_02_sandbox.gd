@@ -3,7 +3,7 @@ extends Node
 ## F6 visual sandbox for the second official TRAPRUSH course.
 ## Not the main scene. Not CI. Play current scene (F6), not the project (F5).
 ## Imports the published AuthoringDocument. Validator should be empty.
-## course_sandbox.tscn still loads course_01.json.
+## Open Preview, then Play: the player marker sits on the first checkpoint pad.
 
 const AuthoringDocument := preload("res://src/creator/authoring_document.gd")
 const AuthoringEditorShell := preload("res://src/creator/authoring_editor_shell.gd")

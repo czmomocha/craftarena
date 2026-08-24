@@ -1,7 +1,8 @@
 extends Node
 
-## F6 visual sandbox for Preview 3D, gizmos, and reachability overlay.
+## F6 visual sandbox for Preview 3D, gizmos, reachability overlay, and Play.
 ## Not the main scene. Not CI. Play current scene (F6), not the project (F5).
+## Preview Play compiles this seeded world and draws the player marker.
 
 const CELL: int = 65536
 

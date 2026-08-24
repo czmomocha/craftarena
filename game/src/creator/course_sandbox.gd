@@ -4,6 +4,7 @@ extends Node
 ## Not the main scene. Not CI. Play current scene (F6), not the project (F5).
 ## Imports the published AuthoringDocument. Validator should be empty.
 ## editor_sandbox.tscn still seeds a dangling portal for validator visuals.
+## Open Preview, then Play: the player marker sits on the first checkpoint pad.
 
 const AuthoringDocument := preload("res://src/creator/authoring_document.gd")
 const AuthoringEditorShell := preload("res://src/creator/authoring_editor_shell.gd")
