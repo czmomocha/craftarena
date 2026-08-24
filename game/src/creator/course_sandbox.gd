@@ -6,6 +6,7 @@ extends Node
 ## editor_sandbox.tscn still seeds a dangling portal for validator visuals.
 ## Open Preview, then Play: the player marker sits on the first checkpoint pad.
 ## WASD moves the marker in world XZ while the Preview window is visible.
+## Occupancy accepts checkpoint pads; status shows pads=n/m.
 
 const AuthoringDocument := preload("res://src/creator/authoring_document.gd")
 const AuthoringEditorShell := preload("res://src/creator/authoring_editor_shell.gd")

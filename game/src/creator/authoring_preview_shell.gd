@@ -7,7 +7,9 @@ extends Node
 ## Play compiles the connected Preview world into a SimulationBundle, loads
 ## it, and draws the player pose as a presentation stub. While playing and
 ## visible, WASD maps to world-space MoveIntent; play_move_step is a
-## presentation stub, not a product speed. Tab host is reserved and refused.
+## presentation stub, not a product speed. Occupancy accepts overlapping
+## checkpoint pads through PadAccept; status shows pads=n/m. Tab host is
+## reserved and refused.
 ## Never settlement.
 
 const TITLE: String = "Preview"
@@ -172,6 +174,8 @@ func status_view() -> Dictionary:
 	var preview_revision: int = 0
 	var needs_restart: bool = false
 	var playing: bool = false
+	var accepted_count: int = 0
+	var checkpoint_count: int = 0
 	var reach_ok: bool = true
 	var reach_issue_count: int = 0
 	if preview != null:
@@ -179,6 +183,8 @@ func status_view() -> Dictionary:
 		preview_revision = preview.preview_revision
 		needs_restart = preview.needs_restart
 		playing = preview.is_playing()
+		accepted_count = preview.play_accepted_count()
+		checkpoint_count = preview.play_checkpoint_count()
 		if preview.world != null:
 			entity_count = preview.world.entity_count()
 	if map != null:
@@ -190,6 +196,8 @@ func status_view() -> Dictionary:
 		"entity_count": entity_count,
 		"needs_restart": needs_restart,
 		"playing": playing,
+		"accepted_count": accepted_count,
+		"checkpoint_count": checkpoint_count,
 		"window_visible": is_window_visible(),
 		"reach_ok": reach_ok,
 		"reach_issue_count": reach_issue_count,
@@ -277,6 +285,7 @@ func _rebuild_map() -> void:
 	map.rebuild(preview.world)
 	if preview.is_playing() and preview.play_world != null:
 		map.show_player_pose(preview.play_world.get_pose(preview.player_id))
+		map.mark_accepted_checkpoints(preview.play_accepted_ids())
 	else:
 		map.clear_player_pose()
 
@@ -292,12 +301,14 @@ func _refresh_status() -> void:
 	if map != null:
 		reach_ok = map.reachability_ok()
 		reach_issue_count = map.reachability_issue_count()
-	_status.text = "connected=%s revision=%d entities=%d restart=%s playing=%s reach_ok=%s issues=%d" % [
+	_status.text = "connected=%s revision=%d entities=%d restart=%s playing=%s pads=%d/%d reach_ok=%s issues=%d" % [
 		str(preview.connected),
 		preview.preview_revision,
 		entity_count,
 		str(preview.needs_restart),
 		str(preview.is_playing()),
+		preview.play_accepted_count(),
+		preview.play_checkpoint_count(),
 		str(reach_ok),
 		reach_issue_count,
 	]

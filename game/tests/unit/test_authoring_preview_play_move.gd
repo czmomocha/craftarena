@@ -3,7 +3,8 @@ extends GutTest
 ## Preview play MoveIntent: while playing, apply existing MoveIntent through
 ## TraprushIntentStepper. WASD maps to world XZ. Caller supplies dx/dz; the
 ## shell step is a presentation stub, not a product speed. Jump/Shove/reset
-## stay refused. No gravity, no tick Hz, no settlement.
+## stay refused. Occupancy is in test_authoring_preview_play_pads. No gravity,
+## no tick Hz, no settlement.
 
 const AuthoringDocument := preload("res://src/creator/authoring_document.gd")
 const AuthoringPreview := preload("res://src/creator/authoring_preview.gd")

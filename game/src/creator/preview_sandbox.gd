@@ -4,6 +4,7 @@ extends Node
 ## Not the main scene. Not CI. Play current scene (F6), not the project (F5).
 ## Preview Play compiles this seeded world and draws the player marker.
 ## WASD moves the marker in world XZ while the Preview window is visible.
+## Occupancy accepts checkpoint pads; status shows pads=n/m.
 
 const CELL: int = 65536
 

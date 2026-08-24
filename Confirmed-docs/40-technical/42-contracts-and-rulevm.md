@@ -153,7 +153,7 @@ trace_id
 
 各玩法允许的具体 Intent 列表见 [CD-21 §8](../20-gameplay/21-traprush.md) 与 [CD-22 §7.3](../20-gameplay/22-bastion.md)。名字的代码落点是 `game/src/shared/commands/player_intent_names.gd`。
 
-EDIT 命令必须带白名单 `op`：`place` / `remove` / `set_component`。这三项覆盖摆放、删除和改组件。未知 payload 键拒绝。网格、楼层、传送连线、发布前可达性、AuthoringDocument、Preview Patch、Preview 窗口、3D 占位映射、传送连线 gizmos、检查点顺序 gizmos、可达性叠加、编辑外壳、编辑窗口 3D 映射与 TRAPRUSH 工具面板 **不是**新 `op`：带 `transform` 的袋必须落在 [CD-32 §3](../30-ugc/32-editor-and-preview.md#3-从编辑到预览) 的吸附格上；`portal.target_id` 在 AuthoringWorld 上分类为连线；通路/循环在 `evaluate_reachability` 上检查；桌面与 Web 交换同一份 AuthoringDocument 快照；Preview 用同一套 `op` 在安全点应用到独立会话；桌面 Preview 窗口由 `AuthoringPreviewShell` 托管；窗口内 `AuthoringPreviewMap` 把带 `transform` 的实体画成 1 米占位盒，并把 `portal_links()`、检查点 `order` 与发布前问题码画成表现 gizmos；`AuthoringEditorShell` 把 UI 按钮变成同一套 `op`，并挂同一套 map 按 AuthoringWorld 重建；成功写入（含 Undo / Redo）把同一条 `op` 按 Preview 世界算出的等级转发给已连接的 Preview，转发被拒只脱同步、不回滚编辑；`TraprushEditorPanel` 把检查点、传送门、删除与楼层按钮变成同一套 `op`（楼层只改下一次 `cell_y`）；`AuthoringValidatorPanel` 只读 `evaluate_reachability` 列出问题码，Focus 对焦有 `transform` 的实体，不是新 `op`，不是写入门禁。两张官方赛道 JSON 也不是新 `op`。内部开发 EditorPlugin 也不是新 `op`。本地草稿恢复也不是新 `op`。编辑写入自动进 Preview 也不是新 `op`。TRAPRUSH 拓扑编译也不是新 `op`。Preview 试玩也不是新 `op`。Preview 试玩 MoveIntent 也不是新 `op`。
+EDIT 命令必须带白名单 `op`：`place` / `remove` / `set_component`。这三项覆盖摆放、删除和改组件。未知 payload 键拒绝。网格、楼层、传送连线、发布前可达性、AuthoringDocument、Preview Patch、Preview 窗口、3D 占位映射、传送连线 gizmos、检查点顺序 gizmos、可达性叠加、编辑外壳、编辑窗口 3D 映射与 TRAPRUSH 工具面板 **不是**新 `op`：带 `transform` 的袋必须落在 [CD-32 §3](../30-ugc/32-editor-and-preview.md#3-从编辑到预览) 的吸附格上；`portal.target_id` 在 AuthoringWorld 上分类为连线；通路/循环在 `evaluate_reachability` 上检查；桌面与 Web 交换同一份 AuthoringDocument 快照；Preview 用同一套 `op` 在安全点应用到独立会话；桌面 Preview 窗口由 `AuthoringPreviewShell` 托管；窗口内 `AuthoringPreviewMap` 把带 `transform` 的实体画成 1 米占位盒，并把 `portal_links()`、检查点 `order` 与发布前问题码画成表现 gizmos；`AuthoringEditorShell` 把 UI 按钮变成同一套 `op`，并挂同一套 map 按 AuthoringWorld 重建；成功写入（含 Undo / Redo）把同一条 `op` 按 Preview 世界算出的等级转发给已连接的 Preview，转发被拒只脱同步、不回滚编辑；`TraprushEditorPanel` 把检查点、传送门、删除与楼层按钮变成同一套 `op`（楼层只改下一次 `cell_y`）；`AuthoringValidatorPanel` 只读 `evaluate_reachability` 列出问题码，Focus 对焦有 `transform` 的实体，不是新 `op`，不是写入门禁。两张官方赛道 JSON 也不是新 `op`。内部开发 EditorPlugin 也不是新 `op`。本地草稿恢复也不是新 `op`。编辑写入自动进 Preview 也不是新 `op`。TRAPRUSH 拓扑编译也不是新 `op`。Preview 试玩也不是新 `op`。Preview 试玩 MoveIntent 也不是新 `op`。Preview 试玩检查点占用验收也不是新 `op`。
 
 | `op` | payload |
 |---|---|
@@ -200,7 +200,7 @@ Undo / Redo 是会话内对成功命令派生的反向 payload（`place`↔`remo
 | SimulationBundle | `game/src/ugc/simulation_bundle.gd` |
 | TRAPRUSH 拓扑编译 | `game/src/ugc/traprush_topology_compiler.gd` |
 | TRAPRUSH 拓扑加载 | `game/src/games/traprush/traprush_topology_loader.gd` |
-| Preview 试玩 | `game/src/creator/authoring_preview.gd`（`try_start_play` / `try_stop_play` / `try_advance_play` / `try_apply_play_intent`） |
+| Preview 试玩 | `game/src/creator/authoring_preview.gd`（`try_start_play` / `try_stop_play` / `try_advance_play` / `try_apply_play_intent` / `try_accept_play_checkpoint`） |
 | 编辑表面名 | `game/src/creator/authoring_surface_names.gd` |
 | 领域事件 | `game/src/shared/events/shared_domain_event.gd` |
 | 可哈希 payload 白名单 | `game/src/shared/protocol/canonical_payload.gd` |
@@ -223,4 +223,4 @@ JSON Schema 落点：
 | SimulationBundle | `backend/contracts/schemas/simulation_bundle.schema.json` |
 | 正反例与校验 | `tools/content-validator/`（由根目录 `npm test` 收集） |
 
-`payload` 只允许 nil / bool / int / String / Array / Dictionary（字符串键）；禁止 float、Object、Callable。PLAYER 命令必须带白名单 `intent` 字符串。EDIT 命令必须带白名单 `op` 字符串，payload 形状见 [§3.3](#33-服务端处理管线)。SYSTEM 命令允许 `actor_id = 0`。Component Schema v1 字段见 [§1.2](#12-字段标识符v1)。AuthoringDocument 字段见 [CD-32 §1.4](../30-ugc/32-editor-and-preview.md#14-共同数据模型)。SimulationBundle v1 字段见本表与 [CD-32 §3](../30-ugc/32-editor-and-preview.md#3-从编辑到预览)「TRAPRUSH 拓扑编译」。Preview 试玩与 MoveIntent 见 [CD-32 §3](../30-ugc/32-editor-and-preview.md#3-从编辑到预览)「Preview 试玩」。Rule VM 图的 JSON Schema 仍未落地。OpenAPI 仍未落地。签名二进制包仍待。
+`payload` 只允许 nil / bool / int / String / Array / Dictionary（字符串键）；禁止 float、Object、Callable。PLAYER 命令必须带白名单 `intent` 字符串。EDIT 命令必须带白名单 `op` 字符串，payload 形状见 [§3.3](#33-服务端处理管线)。SYSTEM 命令允许 `actor_id = 0`。Component Schema v1 字段见 [§1.2](#12-字段标识符v1)。AuthoringDocument 字段见 [CD-32 §1.4](../30-ugc/32-editor-and-preview.md#14-共同数据模型)。SimulationBundle v1 字段见本表与 [CD-32 §3](../30-ugc/32-editor-and-preview.md#3-从编辑到预览)「TRAPRUSH 拓扑编译」。Preview 试玩、MoveIntent 与检查点占用验收见 [CD-32 §3](../30-ugc/32-editor-and-preview.md#3-从编辑到预览)「Preview 试玩」。Rule VM 图的 JSON Schema 仍未落地。OpenAPI 仍未落地。签名二进制包仍待。

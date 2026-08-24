@@ -5,7 +5,8 @@ extends Node3D
 ## Authority stays on AuthoringWorld Q48.16; float conversion happens only here.
 ## One 1×1×1 m BoxMesh per entity with transform; portal_link, checkpoint-order,
 ## and reachability-issue gizmos. Preview play draws the sim player pose as a
-## presentation stub. Placeholders and gizmos are not hitboxes.
+## presentation stub and marks accepted checkpoint labels with *. Placeholders
+## and gizmos are not hitboxes.
 ## Rebuild after every editor write or preview patch. Overlay reads evaluate();
 ## it is not a write gate.
 
@@ -269,6 +270,16 @@ func direction_node(source_id: int) -> MeshInstance3D:
 
 func checkpoint_node(entity_id: int) -> Label3D:
 	return get_node_or_null(checkpoint_name(entity_id)) as Label3D
+
+
+func mark_accepted_checkpoints(entity_ids: PackedInt32Array) -> void:
+	for index: int in range(entity_ids.size()):
+		var node: Label3D = checkpoint_node(entity_ids[index])
+		if node == null:
+			continue
+		if node.text.ends_with("*"):
+			continue
+		node.text = "%s*" % node.text
 
 
 func sequence_node(from_id: int, to_id: int) -> MeshInstance3D:

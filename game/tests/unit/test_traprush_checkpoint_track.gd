@@ -89,6 +89,24 @@ func test_is_finished_only_when_every_mandatory_checkpoint_is_done() -> void:
 	assert_false(track.try_accept(10))
 
 
+func test_ordered_and_accepted_ids_are_copies() -> void:
+	var track: Track = Track.new(PackedInt32Array([10, 20, 30]))
+	var ordered: PackedInt32Array = track.ordered_ids()
+	assert_eq(ordered.size(), 3)
+	assert_eq(ordered[0], 10)
+	assert_eq(track.accepted_ids().size(), 0)
+	assert_true(track.try_accept(10))
+	assert_true(track.try_accept(20))
+	var accepted: PackedInt32Array = track.accepted_ids()
+	assert_eq(accepted.size(), 2)
+	assert_eq(accepted[0], 10)
+	assert_eq(accepted[1], 20)
+	accepted[0] = 99
+	assert_eq(track.last_accepted_id(), 20)
+	ordered[0] = 1
+	assert_eq(track.ordered_ids()[0], 10)
+
+
 func test_empty_track_is_already_finished() -> void:
 	var track: Track = Track.new(PackedInt32Array())
 	assert_true(track.is_finished())
