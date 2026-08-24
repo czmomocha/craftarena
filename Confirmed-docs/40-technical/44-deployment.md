@@ -42,6 +42,8 @@
 - 连续 **10 分钟**无此类输入则关闭进程；
 - 每场对局进程异常时尽力保留最后关键快照和日志。
 
+实现落点：MatchHost（`backend/match-host/`，含租约/端口/回收与 `GodotProcessLauncher`）与对局进程入口（`game/src/server/match_server.gd`，课程→`TraprushMatchSession`→引擎节奏 tick→心跳 JSON→`--max-ticks` 自退/坏配置 exit 1）。进程内 socket 监听仍待后续章节。
+
 ## 4. 数据库所有权
 
 - SQLite 是测试期方案，PostgreSQL 为产品化迁移目标；

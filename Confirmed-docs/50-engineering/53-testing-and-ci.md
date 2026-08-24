@@ -135,6 +135,7 @@ AI 生成代码必须比普通手写代码有**更强的自动化证据**，因�
 - 第三张官方赛道：地面走道可破坏箱 + `one_way` 上楼 + 上层 `two_way` 对，与前两张布局不同，是首张带 `one_way` 连线的官方赛道；decode 成功且 `reach_ok`；编译加载出 4 垫 / 3 传送 / 1 终点 / 1 固体箱；Preview 全程试玩（破箱 → 走垫 → `one_way` 落地 → 上层两垫 → 冲线）；删 `one_way` 传送则跨层不可达；编辑导入不是写入门禁；不结算；
 - 对局进程多人仿真循环：1/8 人边界与 0/9 拒绝；两玩家同图独立进度与独立冲线 tick；箱破坏全员共享；重置只动本人；意图不进 tick、`commit_tick` 才推进；同磁带同哈希序列、不同磁带不同尾哈希；无网络、无结算；
 - 对局二进制协议 v1：四种意图命令帧与快照帧编解码回环（含 s64 极值）；未接线意图（Shove/Interact）拒绝编码；保留字段非零、版本不符、未知类型、截断、尾随字节均拒绝解码；同帧编码字节恒等；
+- 对局进程仿真入口：参数只认 `--key=value`；坏配置（缺课程/人数越界/负 max-ticks）拒绝启动；课程编成 bundle 启动 1~8 人会话；心跳 JSON 含 tick/人数/状态哈希；同参数两次启动同哈希；MatchHost 启动参数含 `--course`/`--players`（纯函数断言，不 spawn 进程）；
 - 内部开发 EditorPlugin：`plugin.cfg` 入库；`project.godot` 启用 GUT + authoring_editor、不含 `godot_ai` / `_mcp_game_helper`；host 打开已有外壳，关闭只隐藏并保持会话，`detach` 释放，不结算；
 - 本地草稿恢复：成功写入落 `latest` 且文件非空；空会话打开恢复；恢复后工具条下一个 Place 使用新 id；编辑器 `plugin.gd` `@tool` 落盘；`world_committed`；失败写入不改草稿；损坏 / 多余键拒绝；拒绝写入 `res://`；检查点最多 30；不结算；
 - 编辑写入自动进 Preview：place / remove / Undo / Redo 都到达已连接 Preview 且两个世界 revision 同步；`set_component` 等级按 Preview 世界算（按编辑世界算会低报被拒）；失败写入不转发且仍跟随；越界补丁与整份 `import_document` 脱同步且不回滚编辑；无 Preview 时不谎报跟随；窗口隐藏仍跟随；状态栏 `follow` 可见；不结算；
