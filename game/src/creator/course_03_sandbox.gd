@@ -1,0 +1,26 @@
+extends Node
+
+## F6 visual sandbox for the third official TRAPRUSH course.
+## Not the main scene. Not CI. Play current scene (F6), not the project (F5).
+## Imports the published AuthoringDocument. Validator should be empty.
+## Open Preview, then Play: the player marker sits on the first checkpoint pad.
+## A crate blocks the ground lane: break it with Use item, then WASD on.
+## The ground portal is one_way upstairs; the upper pair is two_way.
+## After the last pad, walking onto the finish marker records finish=n.
+## Reset or R snaps the marker back to the last accepted pad.
+## Status shows pads=n/m, floor=n, crates=n/m, and finish=n.
+
+const AuthoringDocument := preload("res://src/creator/authoring_document.gd")
+const AuthoringEditorShell := preload("res://src/creator/authoring_editor_shell.gd")
+const AuthoringSurfaceNames := preload("res://src/creator/authoring_surface_names.gd")
+
+const COURSE_PATH := "res://content/official/traprush/course_03.json"
+
+
+func _ready() -> void:
+	var shell: AuthoringEditorShell = AuthoringEditorShell.create(AuthoringSurfaceNames.INTERNAL_DEV)
+	add_child(shell)
+	shell.open()
+	var data: Dictionary = AuthoringDocument.load_json(COURSE_PATH)
+	if data.is_empty() or not shell.import_document(data):
+		push_error("official TRAPRUSH course 03 failed to load")
