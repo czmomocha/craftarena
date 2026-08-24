@@ -95,7 +95,7 @@
 
 ### M3：权威联机与进程隔离
 
-状态：**进行中**（2026-08-24 启动，人类选定 M3 先于 M5）。已合入：对局进程多人仿真循环（无网络，`TraprushMatchSession`）、对局二进制协议 v1（`MatchFrameCodec`）。本刀锁：对局进程仿真入口——`match_server.gd` 从 M0 占位升级为真仿真（课程→`TraprushMatchSession`→引擎节奏 tick→结构化心跳→`--max-ticks` 自退/坏配置 exit 1），MatchHost 启动参数补 `--course`/`--players`（开发期占位，真源是控制面对局配置）。不锁：名次排序、TLS WebSocket Gateway、进程内 socket 监听、快照/插值/校正、防伪造门禁、离线模式（均为后续章节）。
+状态：**进行中**（2026-08-24 启动，人类选定 M3 先于 M5）。已合入：对局进程多人仿真循环（无网络，`TraprushMatchSession`）、对局二进制协议 v1（`MatchFrameCodec`）、对局进程仿真入口（`match_server.gd` 真仿真 + MatchHost 传参）。本刀锁：对局进程实时回路——`match_server.gd` 在本场端口监听 WebSocket，`MatchRealtime` 管连接槽位（1~8 按需占用/断开释放/满员拒绝），二进制命令帧 FIFO 排队、在 commit_tick 边界按到达顺序应用（命令 tick 只解码不信任，服务端 tick 权威），每 2 tick 广播一帧二进制快照（占位节奏）。不锁：TLS WebSocket Gateway 代理与票据对接、名次排序、快照/插值/校正、防伪造门禁、离线模式（均为后续章节）。
 
 产出：
 

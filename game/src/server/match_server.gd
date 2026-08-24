@@ -4,24 +4,31 @@ extends Node
 ## 分配内网端口、处理租约并回收。本进程把 --course 指定的 AuthoringDocument 编成
 ## SimulationBundle 并启动 TraprushMatchSession（M3 首章），随后随引擎 physics
 ## tick 推进权威仿真——引擎节奏不是产品 Tick Hz 锁定（CD-43 §4）。
+## 实时回路：在本场内网端口监听 WebSocket（--bind 占位 0.0.0.0，公网暴露由部署层
+## 与网关拓扑阻止），二进制命令帧经 MatchRealtime 排队、在 commit_tick 边界按到达
+## 顺序应用；每 SNAPSHOT_EVERY_TICKS 个 tick 广播一帧二进制快照。命令帧 tick 只
+## 解码不信任，服务端 tick 权威（CD-43 §3）。防伪造门禁是后续章节。
 ## 心跳：每 HEARTBEAT_EVERY_TICKS 个 tick 打印一行结构化 JSON（含状态哈希），
 ## 供 MatchHost 的 recentOutput 留存与跨进程确定性核对；心跳不续租（CD-44 §3）。
 ## --max-ticks 到达后打印最终心跳并 exit 0；配置非法打印错误事件并 exit 1。
-## 出生偏移、胶囊尺寸与心跳节奏均为进程内占位桩，不锁产品出生布局或数值。
-## 无 socket：端口只由 MatchHost 记账占用；WebSocket 监听在后续章节。
+## 出生偏移、胶囊尺寸与心跳/快照节奏均为进程内占位桩，不锁产品出生布局或数值。
 
 const AuthoringDocument := preload("res://src/creator/authoring_document.gd")
 const AuthoringWorld := preload("res://src/creator/authoring_world.gd")
+const MatchRealtime := preload("res://src/server/match_realtime.gd")
 const SimulationBundle := preload("res://src/ugc/simulation_bundle.gd")
 const TraprushMatchSession := preload("res://src/games/traprush/match_session.gd")
 const TraprushTopologyCompiler := preload("res://src/ugc/traprush_topology_compiler.gd")
 
 const BOOT_EVENT: String = "match_server_boot"
+const LISTEN_EVENT: String = "match_listen"
 const TICK_EVENT: String = "match_tick"
 const ERROR_EVENT: String = "match_server_error"
 
 ## 占位心跳节奏（每 60 个引擎 tick 一行），不是产品快照频率。
 const HEARTBEAT_EVERY_TICKS: int = 60
+## 占位快照广播节奏（每 2 个 tick 一帧），不是产品快照频率（CD-43 §4）。
+const SNAPSHOT_EVERY_TICKS: int = 2
 ## 占位胶囊半径/身高与出生间隔，不锁产品尺寸或出生布局。
 const CAPSULE_RADIUS: int = 8192
 const CAPSULE_HEIGHT: int = 8192
@@ -30,8 +37,11 @@ const SPAWN_STRIDE: int = 32768
 const MATCH_SEED: int = 1
 
 var _session: TraprushMatchSession = null
+var _realtime: MatchRealtime = null
 var _match_id: String = ""
 var _max_ticks: int = 0
+var _tcp: TCPServer = null
+var _peers: Dictionary = {}
 
 
 func _ready() -> void:
@@ -48,29 +58,90 @@ func _ready() -> void:
 		get_tree().quit(1)
 		return
 	_session = session
+	_realtime = MatchRealtime.new()
+	_realtime.session = session
 	_match_id = config.get("match_id", "")
 	_max_ticks = config.get("max_ticks", 0)
+	var port: int = config.get("port", 0)
+	var bind: String = config.get("bind", "")
+	_tcp = TCPServer.new()
+	var listen_err: int = _tcp.listen(port, bind)
+	if listen_err != OK:
+		print(JSON.stringify({"event": ERROR_EVENT, "error": "listen_failed", "code": listen_err}))
+		get_tree().quit(1)
+		return
 	print(JSON.stringify({
 		"event": BOOT_EVENT,
 		"match_id": _match_id,
-		"port": config.get("port", 0),
+		"port": port,
 		"pid": OS.get_process_id(),
 		"headless": DisplayServer.get_name() == "headless",
 		"course": config.get("course", ""),
 		"players": config.get("players", 0),
 	}))
+	print(JSON.stringify({
+		"event": LISTEN_EVENT,
+		"match_id": _match_id,
+		"port": port,
+		"bind": bind,
+	}))
+
+
+func _process(_delta: float) -> void:
+	if _tcp == null or _realtime == null:
+		return
+	while _tcp.is_connection_available():
+		var stream: StreamPeerTCP = _tcp.take_connection()
+		if stream == null:
+			break
+		var peer: WebSocketPeer = WebSocketPeer.new()
+		var accept_err: int = peer.accept_stream(stream)
+		if accept_err != OK:
+			continue
+		var slot: int = _realtime.add_player()
+		if slot < 0:
+			peer.close(1008, "match full")
+			continue
+		_peers[peer] = slot
+	var closed: Array = []
+	for peer: WebSocketPeer in _peers.keys():
+		peer.poll()
+		var state: int = peer.get_ready_state()
+		if state == WebSocketPeer.STATE_OPEN:
+			while peer.get_available_packet_count() > 0:
+				var slot: int = _peers[peer]
+				_realtime.accept_command(slot, peer.get_packet())
+		elif state == WebSocketPeer.STATE_CLOSED:
+			closed.append(peer)
+	for peer: WebSocketPeer in closed:
+		var slot: int = _peers[peer]
+		_realtime.remove_player(slot)
+		_peers.erase(peer)
 
 
 func _physics_process(_delta: float) -> void:
-	if _session == null:
+	if _session == null or _realtime == null:
 		return
-	_session.commit_tick()
+	_realtime.commit_tick()
 	var tick: int = _session.tick_index()
+	if tick % SNAPSHOT_EVERY_TICKS == 0:
+		_broadcast_snapshot()
 	var at_max: bool = _max_ticks > 0 and tick >= _max_ticks
 	if tick % HEARTBEAT_EVERY_TICKS == 0 or at_max:
 		print(_heartbeat_line(_match_id, _session))
 	if at_max:
 		get_tree().quit(0)
+
+
+func _broadcast_snapshot() -> void:
+	if _realtime == null:
+		return
+	var frame: PackedByteArray = _realtime.snapshot_frame()
+	if frame.is_empty():
+		return
+	for peer: WebSocketPeer in _peers.keys():
+		if peer.get_ready_state() == WebSocketPeer.STATE_OPEN:
+			peer.send(frame, WebSocketPeer.WRITE_MODE_BINARY)
 
 
 ## 只接受 `--key=value` 形式。裸开关与位置参数一律忽略，避免 MatchHost 传参出错时
@@ -116,6 +187,9 @@ static func _boot_config(options: Dictionary) -> Dictionary:
 		max_ticks = _parse_int(max_ticks_raw, -1)
 		if max_ticks < 1:
 			return failed
+	var bind: String = options.get("bind", "0.0.0.0")
+	if bind.is_empty():
+		return failed
 	return {
 		"ok": true,
 		"match_id": match_id,
@@ -123,6 +197,7 @@ static func _boot_config(options: Dictionary) -> Dictionary:
 		"course": course,
 		"players": players,
 		"max_ticks": max_ticks,
+		"bind": bind,
 	}
 
 
