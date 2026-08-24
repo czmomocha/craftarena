@@ -4,7 +4,7 @@ Godot 4 + UGC 双玩法（TRAPRUSH / BASTION）项目 Monorepo。代码与仓库
 
 - 工程规则入口：[AGENTS.md](AGENTS.md)
 - 规范唯一事实源：[Confirmed-docs](Confirmed-docs/README.md)
-- 当前阶段：M2 进行中（2026-08-24）。工具链评审已通过；内部开发 EditorPlugin 与本地草稿恢复已合入。本刀为编辑写入自动进已连接 Preview。进度见 [CD-61](Confirmed-docs/60-plan/61-milestones.md)。
+- 当前阶段：M2 进行中（2026-08-24）。工具链评审已通过；编辑写入自动进 Preview 已合入。本刀为 AuthoringWorld 编成 v1 TRAPRUSH SimulationBundle。进度见 [CD-61](Confirmed-docs/60-plan/61-milestones.md)。
 
 ## 目录
 

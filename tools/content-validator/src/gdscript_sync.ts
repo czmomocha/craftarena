@@ -4,6 +4,7 @@ import {
 	AUTHORING_DOCUMENT_SCHEMA_VERSION,
 	COMPONENT_SCHEMA_VERSION,
 	L0_CONTRACT_VERSION,
+	SIMULATION_BUNDLE_SCHEMA_VERSION,
 } from "../../../backend/contracts/src/schemas.ts";
 import { CANONICAL_MAX_DEPTH } from "./canonical_depth.ts";
 import { loadJsonFile } from "./json_schema.ts";
@@ -22,6 +23,8 @@ import {
 	SHARED_COMMAND_PATH,
 	SHARED_DOMAIN_EVENT_PATH,
 	SHARED_IDS_PATH,
+	SIMULATION_BUNDLE_PATH,
+	SIMULATION_BUNDLE_SCHEMA_PATH,
 	TOWER_TARGET_PRIORITIES_PATH,
 } from "./paths.ts";
 
@@ -111,6 +114,20 @@ export function collectGdscriptSchemaMismatches(): SyncMismatch[] {
 			name: "authoring_document_schema_version",
 			expected: String(AUTHORING_DOCUMENT_SCHEMA_VERSION),
 			actual: String(authoringSchemaVersion),
+		});
+	}
+
+	const bundleSchema = loadJsonFile(SIMULATION_BUNDLE_SCHEMA_PATH);
+	const bundleFields = parseStringConstants(readFileSync(SIMULATION_BUNDLE_PATH, "utf8"));
+	const schemaBundleFields = schemaRequired(bundleSchema);
+	pushListMismatch(mismatches, "simulation_bundle_fields", bundleFields, schemaBundleFields);
+
+	const bundleSchemaVersion = parseIntConstant(readFileSync(SIMULATION_BUNDLE_PATH, "utf8"), "SCHEMA_VERSION");
+	if (bundleSchemaVersion !== SIMULATION_BUNDLE_SCHEMA_VERSION) {
+		mismatches.push({
+			name: "simulation_bundle_schema_version",
+			expected: String(SIMULATION_BUNDLE_SCHEMA_VERSION),
+			actual: String(bundleSchemaVersion),
 		});
 	}
 

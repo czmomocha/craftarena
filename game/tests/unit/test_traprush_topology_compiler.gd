@@ -1,0 +1,222 @@
+extends GutTest
+
+## TRAPRUSH topology compile: AuthoringWorld -> SimulationBundle -> SimulationWorld.
+## Official courses compile. Dangling portals are omitted. Checkpoints without
+## transform fail the whole compile. Loaded pads are non-solid occupancy boxes.
+## one_way landing uses the existing portal graph. Never settlement. Not a new op.
+
+const AuthoringDocument := preload("res://src/creator/authoring_document.gd")
+const AuthoringPortalKinds := preload("res://src/creator/authoring_portal_kinds.gd")
+const AuthoringWorld := preload("res://src/creator/authoring_world.gd")
+const SharedComponentRecord := preload("res://src/shared/schema/component_record.gd")
+const SimulationBundle := preload("res://src/ugc/simulation_bundle.gd")
+const TraprushPortalLanding := preload("res://src/games/traprush/portal_landing.gd")
+const TraprushTopologyCompiler := preload("res://src/ugc/traprush_topology_compiler.gd")
+const TraprushTopologyLoader := preload("res://src/games/traprush/traprush_topology_loader.gd")
+
+const COURSE_01_PATH: String = "res://content/official/traprush/course_01.json"
+const COURSE_02_PATH: String = "res://content/official/traprush/course_02.json"
+const CELL: int = 65536
+
+
+func test_empty_world_compiles_to_empty_bundle() -> void:
+	var world: AuthoringWorld = AuthoringWorld.new()
+	var bundle: SimulationBundle = TraprushTopologyCompiler.compile(world)
+	assert_not_null(bundle)
+	assert_eq(bundle.cell, CELL)
+	assert_eq(bundle.source_revision, 0)
+	assert_eq(bundle.pads.size(), 0)
+	assert_eq(bundle.portals.size(), 0)
+	var encoded: Dictionary = bundle.to_dictionary()
+	var decoded: SimulationBundle = SimulationBundle.from_dictionary(encoded)
+	assert_not_null(decoded)
+	assert_eq(decoded.pads.size(), 0)
+
+
+func test_official_courses_compile_distinct_topology() -> void:
+	var first: SimulationBundle = _compile_path(COURSE_01_PATH)
+	var second: SimulationBundle = _compile_path(COURSE_02_PATH)
+	assert_not_null(first)
+	assert_not_null(second)
+	assert_eq(first.pads.size(), 3)
+	assert_eq(first.portals.size(), 2)
+	assert_eq(second.pads.size(), 3)
+	assert_eq(second.portals.size(), 2)
+	var first_pad_x: int = _pad(first, 1).get("x", -1)
+	var first_pad_z: int = _pad(first, 1).get("z", -1)
+	var second_pad_z: int = _pad(second, 3).get("z", -1)
+	var first_kind: String = str(_portal(first, 10).get("kind", ""))
+	var first_dest_x: int = _portal(first, 10).get("dest_x", -1)
+	var first_dest_y: int = _portal(first, 10).get("dest_y", -1)
+	var first_dest_z: int = _portal(first, 10).get("dest_z", -1)
+	var second_kind: String = str(_portal(second, 20).get("kind", ""))
+	var second_dest_z: int = _portal(second, 20).get("dest_z", -1)
+	assert_eq(first_pad_x, 0)
+	assert_eq(first_pad_z, 0)
+	assert_eq(second_pad_z, 2 * CELL)
+	assert_eq(first_kind, AuthoringPortalKinds.TWO_WAY)
+	assert_eq(first_dest_x, 0)
+	assert_eq(first_dest_y, CELL)
+	assert_eq(first_dest_z, 0)
+	assert_eq(second_kind, AuthoringPortalKinds.TWO_WAY)
+	assert_eq(second_dest_z, 2 * CELL)
+	assert_ne(first_dest_z, second_dest_z)
+	assert_true(_flag(TraprushTopologyLoader.try_load(first, 1)))
+	assert_true(_flag(TraprushTopologyLoader.try_load(second, 1)))
+
+
+func test_dangling_portal_is_omitted_and_one_way_is_kept() -> void:
+	var world: AuthoringWorld = AuthoringWorld.new()
+	assert_true(world.put(_portal_record(1, 2, 0, 0)))
+	assert_true(world.put(_portal_record(2, 99, CELL, 16384)))
+	var bundle: SimulationBundle = TraprushTopologyCompiler.compile(world)
+	assert_not_null(bundle)
+	assert_eq(bundle.pads.size(), 0)
+	assert_eq(bundle.portals.size(), 1)
+	var portal: Dictionary = bundle.portals[0]
+	var portal_id: int = portal.get("entity_id", 0)
+	var target_id: int = portal.get("target_id", 0)
+	var kind: String = str(portal.get("kind", ""))
+	var dest_x: int = portal.get("dest_x", -1)
+	var dest_yaw_bam: int = portal.get("dest_yaw_bam", -1)
+	assert_eq(portal_id, 1)
+	assert_eq(target_id, 2)
+	assert_eq(kind, AuthoringPortalKinds.ONE_WAY)
+	assert_eq(dest_x, CELL)
+	assert_eq(dest_yaw_bam, 16384)
+
+
+func test_checkpoint_without_transform_fails_compile() -> void:
+	var world: AuthoringWorld = AuthoringWorld.new()
+	var record: SharedComponentRecord = SharedComponentRecord.create(1, {
+		"checkpoint": {
+			"order": 0,
+			"respawn_dx": 0,
+			"respawn_dy": 0,
+			"respawn_dz": 0,
+		},
+	})
+	assert_not_null(record)
+	assert_true(world.put(record))
+	assert_null(TraprushTopologyCompiler.compile(world))
+
+
+func test_extra_bundle_key_is_rejected() -> void:
+	var world: AuthoringWorld = AuthoringWorld.new()
+	var bundle: SimulationBundle = TraprushTopologyCompiler.compile(world)
+	assert_not_null(bundle)
+	var data: Dictionary = bundle.to_dictionary()
+	data["signed"] = false
+	assert_null(SimulationBundle.from_dictionary(data))
+
+
+func test_dangling_kind_in_bundle_is_rejected() -> void:
+	var data: Dictionary = {
+		"schema_version": 1,
+		"cell": CELL,
+		"source_revision": 0,
+		"pads": [],
+		"portals": [
+			{
+				"entity_id": 1,
+				"target_id": 2,
+				"kind": AuthoringPortalKinds.DANGLING,
+				"dest_x": 0,
+				"dest_y": 0,
+				"dest_z": 0,
+				"dest_yaw_bam": 0,
+			},
+		],
+	}
+	assert_null(SimulationBundle.from_dictionary(data))
+
+
+func test_loaded_pads_are_non_solid_occupancy_and_world_ticks() -> void:
+	var bundle: SimulationBundle = _compile_path(COURSE_01_PATH)
+	assert_not_null(bundle)
+	var loaded: Dictionary = TraprushTopologyLoader.try_load(bundle, 1)
+	assert_true(_flag(loaded))
+	var world: SimulationWorld = loaded["world"]
+	var pad_ids: Dictionary = loaded["pad_ids"]
+	assert_eq(pad_ids.size(), 3)
+	var box_id: int = pad_ids[1]
+	assert_false(world.is_static_box_solid(box_id))
+	var capsule_id: int = world.spawn_capsule(0, 0, 0, 0, 1, 1)
+	var overlapping: PackedInt32Array = world.overlapping_static_boxes(capsule_id)
+	assert_true(_has_id(overlapping, box_id))
+	assert_eq(world.tick_index, 0)
+	world.tick()
+	assert_eq(world.tick_index, 1)
+
+
+func test_one_way_bundle_lands_on_dest_transform() -> void:
+	var world: AuthoringWorld = AuthoringWorld.new()
+	assert_true(world.put(_portal_record(1, 2, 0, 0)))
+	assert_true(world.put(_portal_record(2, 99, 2 * CELL, 16384)))
+	var bundle: SimulationBundle = TraprushTopologyCompiler.compile(world)
+	assert_not_null(bundle)
+	var loaded: Dictionary = TraprushTopologyLoader.try_load(bundle, 1)
+	assert_true(_flag(loaded))
+	var sim: SimulationWorld = loaded["world"]
+	var graph: TraprushPortalGraph = loaded["graph"]
+	var capsule_id: int = sim.spawn_capsule(0, 0, 0, 8, 1, 1)
+	var result: Dictionary = TraprushPortalLanding.try_land(sim, capsule_id, graph, 1, 1)
+	assert_true(_flag(result))
+	var landed: bool = result.get("landed", false)
+	assert_true(landed)
+	var pose: Dictionary = sim.get_pose(capsule_id)
+	var pose_x: int = pose.get("x", -1)
+	var pose_y: int = pose.get("y", -1)
+	var pose_z: int = pose.get("z", -1)
+	var pose_yaw: int = pose.get("yaw", -1)
+	assert_eq(pose_x, 2 * CELL)
+	assert_eq(pose_y, 0)
+	assert_eq(pose_z, 0)
+	assert_eq(pose_yaw, 16384)
+	assert_eq(sim.tick_index, 0)
+
+
+func test_null_world_or_bundle_fails() -> void:
+	assert_null(TraprushTopologyCompiler.compile(null))
+	var loaded: Dictionary = TraprushTopologyLoader.try_load(null, 1)
+	assert_false(_flag(loaded))
+
+
+func _compile_path(path: String) -> SimulationBundle:
+	var world: AuthoringWorld = AuthoringDocument.load_from_path(path)
+	if world == null:
+		return null
+	return TraprushTopologyCompiler.compile(world)
+
+
+func _pad(bundle: SimulationBundle, entity_id: int) -> Dictionary:
+	for pad: Dictionary in bundle.pads:
+		if pad.get("entity_id", 0) == entity_id:
+			return pad
+	return {}
+
+
+func _portal(bundle: SimulationBundle, entity_id: int) -> Dictionary:
+	for portal: Dictionary in bundle.portals:
+		if portal.get("entity_id", 0) == entity_id:
+			return portal
+	return {}
+
+
+func _portal_record(entity_id: int, target_id: int, x: int, yaw_bam: int) -> SharedComponentRecord:
+	return SharedComponentRecord.create(entity_id, {
+		"transform": {"x": x, "y": 0, "z": 0, "yaw_bam": 0},
+		"portal": {"target_id": target_id, "yaw_bam": yaw_bam, "cooldown_ticks": 0},
+	})
+
+
+func _flag(result: Dictionary) -> bool:
+	var flag: bool = result.get("ok", false)
+	return flag
+
+
+func _has_id(ids: PackedInt32Array, box_id: int) -> bool:
+	for index: int in range(ids.size()):
+		if ids[index] == box_id:
+			return true
+	return false

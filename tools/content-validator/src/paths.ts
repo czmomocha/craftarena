@@ -7,6 +7,7 @@ export const REPO_ROOT = join(here, "../../..");
 export const CONTRACTS_SCHEMA_DIR = join(REPO_ROOT, "backend/contracts/schemas");
 export const SHARED_SRC_DIR = join(REPO_ROOT, "game/src/shared");
 export const CREATOR_SRC_DIR = join(REPO_ROOT, "game/src/creator");
+export const UGC_SRC_DIR = join(REPO_ROOT, "game/src/ugc");
 export const FIXTURES_DIR = join(here, "../fixtures");
 export const OFFICIAL_CONTENT_DIR = join(REPO_ROOT, "game/content/official");
 
@@ -21,9 +22,11 @@ export const COLLISION_SHAPE_KINDS_PATH = join(SHARED_SRC_DIR, "schema/collision
 export const TOWER_TARGET_PRIORITIES_PATH = join(SHARED_SRC_DIR, "schema/tower_target_priorities.gd");
 export const COMPONENT_RECORD_PATH = join(SHARED_SRC_DIR, "schema/component_record.gd");
 export const AUTHORING_DOCUMENT_PATH = join(CREATOR_SRC_DIR, "authoring_document.gd");
+export const SIMULATION_BUNDLE_PATH = join(UGC_SRC_DIR, "simulation_bundle.gd");
 
 export const COMMAND_SCHEMA_PATH = join(CONTRACTS_SCHEMA_DIR, "shared_command.schema.json");
 export const EVENT_SCHEMA_PATH = join(CONTRACTS_SCHEMA_DIR, "shared_domain_event.schema.json");
 export const CANONICAL_SCHEMA_PATH = join(CONTRACTS_SCHEMA_DIR, "canonical_payload.schema.json");
 export const COMPONENT_SCHEMA_PATH = join(CONTRACTS_SCHEMA_DIR, "component_record.schema.json");
 export const AUTHORING_DOCUMENT_SCHEMA_PATH = join(CONTRACTS_SCHEMA_DIR, "authoring_document.schema.json");
+export const SIMULATION_BUNDLE_SCHEMA_PATH = join(CONTRACTS_SCHEMA_DIR, "simulation_bundle.schema.json");

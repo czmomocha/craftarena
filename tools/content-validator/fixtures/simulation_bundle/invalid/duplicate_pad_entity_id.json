@@ -1,0 +1,28 @@
+{
+	"schema_version": 1,
+	"cell": 65536,
+	"source_revision": 0,
+	"pads": [
+		{
+			"entity_id": 1,
+			"x": 0,
+			"y": 0,
+			"z": 0,
+			"order": 0,
+			"respawn_dx": 0,
+			"respawn_dy": 0,
+			"respawn_dz": 0
+		},
+		{
+			"entity_id": 1,
+			"x": 65536,
+			"y": 0,
+			"z": 0,
+			"order": 1,
+			"respawn_dx": 0,
+			"respawn_dy": 0,
+			"respawn_dz": 0
+		}
+	],
+	"portals": []
+}

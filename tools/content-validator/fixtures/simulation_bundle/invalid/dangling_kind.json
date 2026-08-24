@@ -1,0 +1,17 @@
+{
+	"schema_version": 1,
+	"cell": 65536,
+	"source_revision": 0,
+	"pads": [],
+	"portals": [
+		{
+			"entity_id": 2,
+			"target_id": 99,
+			"kind": "dangling",
+			"dest_x": 0,
+			"dest_y": 0,
+			"dest_z": 0,
+			"dest_yaw_bam": 0
+		}
+	]
+}
