@@ -1,7 +1,7 @@
 import type { Duplex } from "node:stream";
 
 import Fastify, { type FastifyInstance } from "fastify";
-import { WebSocketServer, type WebSocket } from "ws";
+import { WebSocketServer, WebSocket } from "ws";
 
 import {
 	SERVICE_IDS,
@@ -33,19 +33,23 @@ export interface Gateway {
 }
 
 /**
- * 实时网关骨架。
+ * 实时网关。
  *
  * 宪法第二十二条要求客户端只能连 TLS WebSocket 网关。本进程只讲明文 ws，
  * **TLS 由部署层反向代理终结**——直接把这个进程暴露到公网就违反了那一条。
  *
- * M0 只打通"握手 + 票据边界 + 健康检查"，不实现任何玩法协议：客户端发来的消息
- * 一律回 `gateway_not_implemented`，避免有人误把 echo 当成可用通道去对接。
+ * 代理语义：票据裁决携带上游地址（对局进程的内网 WebSocket），网关把升级后的
+ * 连接与上游一对一绑定，双向原样转发帧（二进制/文本标志保留），任一侧关闭或
+ * 出错即关闭另一侧。网关不解析帧内容——协议归对局进程与客户端（CD-43），
+ * 网关只是宪法要求的唯一入口。M0 的 gateway_hello / gateway_not_implemented
+ * 占位已退役：通道现在就是上游协议本身。
  */
 export function buildGateway(options: BuildGatewayOptions): Gateway {
 	const startedAt = Date.now();
 	const app = Fastify({ logger: options.logger });
 	const wss = new WebSocketServer({ noServer: true });
 	const connections = new Set<WebSocket>();
+	const upstreams = new Map<WebSocket, WebSocket>();
 
 	const uptimeSeconds = (): number => Math.max(0, Math.floor((Date.now() - startedAt) / 1000));
 
@@ -89,27 +93,52 @@ export function buildGateway(options: BuildGatewayOptions): Gateway {
 					rejectUpgrade(socket, 401, "Unauthorized");
 					return;
 				}
+				if (verdict.upstreamUrl === undefined) {
+					app.log.error("ticket verdict carried no upstream");
+					rejectUpgrade(socket, 502, "Bad Gateway");
+					return;
+				}
 
-				wss.handleUpgrade(request, socket, head, (ws) => {
-					connections.add(ws);
-					app.log.info({ connections: connections.size }, "websocket connected");
+				const upstream = new WebSocket(verdict.upstreamUrl, { perMessageDeflate: false });
+				let upstreamOpen = false;
+				upstream.once("open", () => {
+					upstreamOpen = true;
+					wss.handleUpgrade(request, socket, head, (ws) => {
+						connections.add(ws);
+						upstreams.set(ws, upstream);
+						app.log.info({ connections: connections.size }, "websocket proxied");
 
-					ws.send(
-						JSON.stringify({
-							type: "gateway_hello",
-							service: SERVICE_IDS.realtimeGateway,
-							version: options.version,
-						}),
-					);
+						ws.on("message", (data: Buffer, isBinary: boolean) => {
+							if (upstream.readyState === WebSocket.OPEN) {
+								upstream.send(data, { binary: isBinary });
+							}
+						});
+						upstream.on("message", (data: Buffer, isBinary: boolean) => {
+							if (ws.readyState === WebSocket.OPEN) {
+								ws.send(data, { binary: isBinary });
+							}
+						});
 
-					ws.on("message", () => {
-						ws.send(JSON.stringify({ type: "gateway_not_implemented" }));
+						ws.on("close", () => {
+							connections.delete(ws);
+							upstreams.delete(ws);
+							upstream.close();
+							app.log.info({ connections: connections.size }, "websocket closed");
+						});
+						upstream.on("close", () => {
+							ws.close();
+						});
+						upstream.on("error", (error: Error) => {
+							app.log.warn({ error }, "upstream websocket errored");
+							ws.close(1011, "upstream error");
+						});
 					});
-
-					ws.on("close", () => {
-						connections.delete(ws);
-						app.log.info({ connections: connections.size }, "websocket closed");
-					});
+				});
+				upstream.once("error", (error: Error) => {
+					if (!upstreamOpen) {
+						app.log.warn({ error }, "upstream unreachable");
+						rejectUpgrade(socket, 502, "Bad Gateway");
+					}
 				});
 			})
 			.catch((error: unknown) => {
@@ -125,7 +154,11 @@ export function buildGateway(options: BuildGatewayOptions): Gateway {
 			for (const ws of connections) {
 				ws.close(1001, "gateway shutting down");
 			}
+			for (const upstream of upstreams.values()) {
+				upstream.close();
+			}
 			connections.clear();
+			upstreams.clear();
 			await new Promise<void>((resolvePromise) => wss.close(() => resolvePromise()));
 			await app.close();
 		},

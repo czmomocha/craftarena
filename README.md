@@ -4,7 +4,7 @@ Godot 4 + UGC 双玩法（TRAPRUSH / BASTION）项目 Monorepo。代码与仓库
 
 - 工程规则入口：[AGENTS.md](AGENTS.md)
 - 规范唯一事实源：[Confirmed-docs](Confirmed-docs/README.md)
-- 当前阶段：M3 进行中（2026-08-24 启动）。已落地对局多人仿真循环、二进制协议 v1 与对局进程仿真入口；本刀为对局进程实时回路（WebSocket 监听 + 命令队列/快照广播）。进度见 [CD-61](Confirmed-docs/60-plan/61-milestones.md)。
+- 当前阶段：M3 进行中（2026-08-24 启动）。已落地对局多人仿真循环、二进制协议 v1、对局进程仿真入口与实时回路；本刀为实时网关代理（票据裁决→代理到对局进程端口）。进度见 [CD-61](Confirmed-docs/60-plan/61-milestones.md)。
 
 ## 目录
 

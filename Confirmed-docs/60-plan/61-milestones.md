@@ -95,7 +95,7 @@
 
 ### M3：权威联机与进程隔离
 
-状态：**进行中**（2026-08-24 启动，人类选定 M3 先于 M5）。已合入：对局进程多人仿真循环（无网络，`TraprushMatchSession`）、对局二进制协议 v1（`MatchFrameCodec`）、对局进程仿真入口（`match_server.gd` 真仿真 + MatchHost 传参）。本刀锁：对局进程实时回路——`match_server.gd` 在本场端口监听 WebSocket，`MatchRealtime` 管连接槽位（1~8 按需占用/断开释放/满员拒绝），二进制命令帧 FIFO 排队、在 commit_tick 边界按到达顺序应用（命令 tick 只解码不信任，服务端 tick 权威），每 2 tick 广播一帧二进制快照（占位节奏）。不锁：TLS WebSocket Gateway 代理与票据对接、名次排序、快照/插值/校正、防伪造门禁、离线模式（均为后续章节）。
+状态：**进行中**（2026-08-24 启动，人类选定 M3 先于 M5）。已合入：对局进程多人仿真循环（无网络，`TraprushMatchSession`）、对局二进制协议 v1（`MatchFrameCodec`）、对局进程仿真入口（`match_server.gd` 真仿真 + MatchHost 传参）、对局进程实时回路（WebSocket 监听 + `MatchRealtime` 槽位/命令队列/快照广播）。本刀锁：实时网关代理——票据裁决携带上游对局地址（网关不记账不查库），升级后连接与上游一对一绑定、双向原样转发帧（二进制/文本标志保留）、任一侧关闭即关闭另一侧；开发期 `DevTicketVerifier` 用 `GATEWAY_DEV_UPSTREAM` 固定上游，M0 的 `gateway_hello`/`gateway_not_implemented` 占位退役。不锁：真票据签发/校验（控制面接口）、名次排序、快照/插值/校正、防伪造门禁、离线模式（均为后续章节）。
 
 产出：
 
