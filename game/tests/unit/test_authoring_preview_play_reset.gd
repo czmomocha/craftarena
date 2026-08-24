@@ -2,7 +2,8 @@ extends GutTest
 
 ## Preview play ResetToCheckpointIntent: while playing, apply the existing
 ## reset name through TraprushIntentStepper and the compiled pad respawn
-## table. No client coordinates. Progress is kept. Jump/Shove stay refused.
+## table. No client coordinates. Progress is kept. Shove/Interact stay
+## refused.
 ## R rising-edge and the Reset button are presentation stubs, not a product
 ## hold duration or stun. No gravity, tick Hz, or settlement.
 
@@ -163,12 +164,12 @@ func test_reset_refused_unless_playing() -> void:
 	assert_true(preview.is_safe_point())
 
 
-func test_jump_still_refused() -> void:
+func test_shove_still_refused() -> void:
 	var preview: AuthoringPreview = _connected_course(COURSE_01_PATH)
 	assert_true(preview.try_start_play(1, PLAY_RADIUS, PLAY_RADIUS))
 	var start: Dictionary = preview.play_world.get_pose(preview.player_id)
 	assert_false(preview.try_apply_play_intent({
-		"intent": PlayerIntentNames.JUMP,
+		"intent": PlayerIntentNames.SHOVE,
 	}))
 	var pose: Dictionary = preview.play_world.get_pose(preview.player_id)
 	var start_x: int = start.get("x", -2)

@@ -3,7 +3,7 @@ extends GutTest
 ## Preview play finish occupancy: overlapping a compiled finish box after every
 ## mandatory pad records finish_tick through TraprushFinishAccept.try_cross.
 ## Occupancy is observed by Preview. No FinishIntent. Teleport does not finish.
-## Missing pads or missing overlap stay refused. No gravity, Jump/Shove, tick Hz,
+## Missing pads or missing overlap stay refused. No gravity, Shove, tick Hz,
 ## or settlement.
 
 const AuthoringDocument := preload("res://src/creator/authoring_document.gd")

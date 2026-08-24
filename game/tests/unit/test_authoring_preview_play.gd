@@ -5,7 +5,7 @@ extends GutTest
 ## Empty pads / compile failure refuse. Patches stay refused until stop.
 ## MoveIntent while playing is in test_authoring_preview_play_move.
 ## Checkpoint occupancy is in test_authoring_preview_play_pads.
-## Never settlement. Not a new EDIT op. Jump, gravity, and Rule VM wait.
+## Never settlement. Not a new EDIT op. Shove, gravity, and Rule VM wait.
 
 const AuthoringDocument := preload("res://src/creator/authoring_document.gd")
 const AuthoringEditorShell := preload("res://src/creator/authoring_editor_shell.gd")

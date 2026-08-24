@@ -5,7 +5,7 @@ extends GutTest
 ## because the dest is also a portal source. Occupancy is observed by Preview.
 ## After landing, dest volume is latched until the capsule leaves, so two_way
 ## does not bounce. Teleport does not skip checkpoints; PadAccept still refuses.
-## Occupied dest waits without moving. No gravity, finish, Jump/Shove, tick Hz,
+## Occupied dest waits without moving. No gravity, finish, Shove, tick Hz,
 ## or settlement.
 
 const AuthoringDocument := preload("res://src/creator/authoring_document.gd")

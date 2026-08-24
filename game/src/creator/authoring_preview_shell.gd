@@ -10,7 +10,9 @@ extends Node
 ## presentation stub, not a product speed. Reset button and R rising-edge
 ## encode ResetToCheckpointIntent; that sample is a stub, not a hold
 ## duration. Use item button and use_item rising-edge encode UseItemIntent;
-## play_use_item_damage / reach are stubs, not a blast table. Occupancy
+## play_use_item_damage / reach are stubs, not a blast table. Jump button
+## and jump rising-edge encode JumpIntent; play_jump_dy / play_support_dy
+## are stubs, not a locked jump height or gravity. Occupancy
 ## accepts overlapping checkpoint pads through PadAccept and portal boxes
 ## through PortalLanding.try_land_exit; status shows pads=n/m, floor=n,
 ## finish=n, and crates=n/m.
@@ -23,7 +25,9 @@ const PLAY_NAME: String = "Play"
 const STOP_NAME: String = "Stop"
 const RESET_NAME: String = "Reset"
 const USE_ITEM_NAME: String = "UseItem"
+const JUMP_NAME: String = "Jump"
 const _USE_ITEM: String = "use_item"
+const _JUMP: String = "jump"
 const _STATUS_NAME: String = "Status"
 const _MAP_NAME: String = "PreviewMap"
 const _OVERLAY_NAME: String = "Overlay"
@@ -41,9 +45,12 @@ var play_use_item_damage: int = 1
 var play_use_item_reach_dx: int = 0
 var play_use_item_reach_dy: int = 0
 var play_use_item_reach_dz: int = Fixed.SCALE
+var play_jump_dy: int = Fixed.SCALE
+var play_support_dy: int = 0
 var _status: Label = null
 var _reset_held: bool = false
 var _use_item_held: bool = false
+var _jump_held: bool = false
 var _play_view_busy: bool = false # rebuilds must not re-enter _process sampling
 
 
@@ -106,7 +113,9 @@ func try_start_play(seed: int = 1, radius: int = 0, cylinder_height: int = 0) ->
 		return false
 	_reset_held = false
 	_use_item_held = false
+	_jump_held = false
 	_copy_use_item_stubs()
+	_copy_jump_stubs()
 	_play_view_busy = true
 	var ok: bool = preview.try_start_play(seed, radius, cylinder_height)
 	_rebuild_map()
@@ -120,6 +129,7 @@ func try_stop_play() -> bool:
 		return false
 	_reset_held = false
 	_use_item_held = false
+	_jump_held = false
 	_play_view_busy = true
 	var ok: bool = preview.try_stop_play()
 	_rebuild_map()
@@ -222,6 +232,23 @@ func try_sample_play_reset(pressed: bool) -> bool:
 	})
 
 
+func try_sample_play_jump(pressed: bool) -> bool:
+	if preview == null or not preview.is_playing():
+		_jump_held = pressed
+		return false
+	if window == null or not window.visible:
+		_jump_held = pressed
+		return false
+	var rising: bool = pressed and not _jump_held
+	_jump_held = pressed
+	if not rising:
+		return false
+	_copy_jump_stubs()
+	return try_apply_play_intent({
+		"intent": PlayerIntentNames.JUMP,
+	})
+
+
 func allows_settlement() -> bool:
 	return false
 
@@ -314,6 +341,7 @@ func _ensure_window() -> void:
 	_add_button(action_row, STOP_NAME, "Stop", _on_stop)
 	_add_button(action_row, RESET_NAME, "Reset", _on_reset)
 	_add_button(action_row, USE_ITEM_NAME, "Use item", _on_use_item)
+	_add_button(action_row, JUMP_NAME, "Jump", _on_jump)
 	map = AuthoringPreviewMap.new()
 	map.name = _MAP_NAME
 	window.add_child(map)
@@ -346,6 +374,13 @@ func _on_use_item() -> void:
 	})
 
 
+func _on_jump() -> void:
+	_copy_jump_stubs()
+	try_apply_play_intent({
+		"intent": PlayerIntentNames.JUMP,
+	})
+
+
 func _copy_use_item_stubs() -> void:
 	if preview == null:
 		return
@@ -353,6 +388,13 @@ func _copy_use_item_stubs() -> void:
 	preview.play_use_item_reach_dx = play_use_item_reach_dx
 	preview.play_use_item_reach_dy = play_use_item_reach_dy
 	preview.play_use_item_reach_dz = play_use_item_reach_dz
+
+
+func _copy_jump_stubs() -> void:
+	if preview == null:
+		return
+	preview.play_jump_dy = play_jump_dy
+	preview.play_support_dy = play_support_dy
 
 
 func _process(_delta: float) -> void:
@@ -370,6 +412,7 @@ func _process(_delta: float) -> void:
 	)
 	try_sample_play_reset(Input.is_physical_key_pressed(KEY_R))
 	try_sample_play_use_item(Input.is_action_pressed(_USE_ITEM))
+	try_sample_play_jump(Input.is_action_pressed(_JUMP))
 
 
 func _add_button(row: BoxContainer, node_name: String, text: String, handler: Callable) -> void:
