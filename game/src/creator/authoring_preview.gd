@@ -7,8 +7,9 @@ extends RefCounted
 ## try_start_play compiles the Preview world into a v1 TRAPRUSH topology
 ## bundle, loads SimulationWorld, and spawns on the lowest-order pad.
 ## Play enters tick so patches are refused until try_stop_play.
-## try_apply_play_intent accepts only MoveIntent and steps XZ through
-## TraprushIntentStepper; dx/dz are caller-provided. Does not tick.
+## try_apply_play_intent accepts MoveIntent (caller dx/dz) and
+## ResetToCheckpointIntent (compiled pad respawn table, no client
+## coordinates). Jump/Shove stay refused. Does not tick.
 ## Occupancy uses existing TraprushPadAccept: overlapping a checkpoint pad
 ## advances ordered progress. Occupancy uses existing TraprushPortalLanding
 ## try_land_exit: overlapping a portal source box lands one hop. two_way dest
@@ -16,7 +17,9 @@ extends RefCounted
 ## the MoveIntent without walking through. Occupancy uses existing
 ## TraprushFinishAccept.try_cross: all mandatory pads then overlapping the
 ## compiled finish box records finish_tick. Observed by Preview, not a client
-## assertion. No FinishIntent. Never settlement or online writes.
+## assertion. No FinishIntent. Reset uses existing TraprushCheckpointSpawn
+## plus IntentStepper and does not rewind progress. Never settlement or
+## online writes.
 ## Capsule radius/height are caller-provided, not a locked product size.
 ## Window host is AuthoringPreviewShell.
 
@@ -30,6 +33,7 @@ var play_pad_ids: Dictionary = {}
 var play_portal_ids: Dictionary = {}
 var play_finish_ids: Dictionary = {}
 var play_track: TraprushCheckpointTrack = null
+var play_spawn: TraprushCheckpointSpawn = null
 var play_cell: int = 0
 var player_id: int = 0
 var _in_tick: bool = false
@@ -93,6 +97,9 @@ func try_start_play(seed: int, radius: int = 0, cylinder_height: int = 0) -> boo
 	var start: Dictionary = _start_pose(bundle)
 	if start.is_empty():
 		return false
+	var spawn: TraprushCheckpointSpawn = _play_spawn_from_bundle(bundle, start)
+	if spawn == null:
+		return false
 	var loaded: Dictionary = TraprushTopologyLoader.try_load(bundle, seed)
 	var loaded_ok: bool = loaded.get("ok", false)
 	if not loaded_ok:
@@ -131,6 +138,7 @@ func try_start_play(seed: int, radius: int = 0, cylinder_height: int = 0) -> boo
 	play_portal_ids = portal_ids
 	play_finish_ids = finish_ids
 	play_track = TraprushCheckpointTrack.new(_ordered_checkpoint_ids(bundle))
+	play_spawn = spawn
 	play_cell = bundle.cell
 	player_id = spawned_id
 	_playing = true
@@ -164,26 +172,29 @@ func try_advance_play() -> bool:
 func try_apply_play_intent(payload: Dictionary) -> bool:
 	if not is_playing():
 		return false
-	var decoded: Dictionary = TraprushMoveIntent.decode(payload)
-	var decoded_ok: bool = decoded.get("ok", false)
-	if not decoded_ok:
+	var move_decoded: Dictionary = TraprushMoveIntent.decode(payload)
+	var move_ok: bool = move_decoded.get("ok", false)
+	var reset_ok: bool = TraprushCheckpointSpawn.is_reset_intent(payload)
+	if not move_ok and not reset_ok:
 		return false
-	if _resolve_play_portals():
+	if move_ok and _resolve_play_portals():
 		return true
-	var unused_spawn: TraprushCheckpointSpawn = TraprushCheckpointSpawn.new()
-	var unused_track: TraprushCheckpointTrack = TraprushCheckpointTrack.new()
+	if play_spawn == null or play_track == null:
+		return false
 	var stepped: Dictionary = TraprushIntentStepper.apply(
 		play_world,
 		player_id,
 		payload,
 		0,
-		unused_spawn,
-		unused_track,
+		play_spawn,
+		play_track,
 		0
 	)
 	var stepped_ok: bool = stepped.get("ok", false)
 	if not stepped_ok:
 		return false
+	if reset_ok:
+		_portal_latch = {}
 	_accept_overlapping_play_pads()
 	_resolve_play_portals()
 	_accept_overlapping_play_pads()
@@ -354,6 +365,7 @@ func _clear_play() -> void:
 	play_portal_ids = {}
 	play_finish_ids = {}
 	play_track = null
+	play_spawn = null
 	play_cell = 0
 	player_id = 0
 	_portal_latch = {}
@@ -491,4 +503,88 @@ func _start_pose(bundle: SimulationBundle) -> Dictionary:
 		"x": x_add.value,
 		"y": y_add.value,
 		"z": z_add.value,
+	}
+
+
+func _play_spawn_from_bundle(
+	bundle: SimulationBundle,
+	start: Dictionary
+) -> TraprushCheckpointSpawn:
+	if bundle == null:
+		return null
+	if not start.has("x") or not start.has("y") or not start.has("z"):
+		return null
+	if (
+		typeof(start["x"]) != TYPE_INT
+		or typeof(start["y"]) != TYPE_INT
+		or typeof(start["z"]) != TYPE_INT
+	):
+		return null
+	var start_x: int = start["x"]
+	var start_y: int = start["y"]
+	var start_z: int = start["z"]
+	var start_pose: Dictionary = {
+		"ok": true,
+		"x": start_x,
+		"y": start_y,
+		"z": start_z,
+		"yaw_bam": 0,
+	}
+	var by_id: Dictionary = {}
+	for pad: Dictionary in bundle.pads:
+		var pad_id: int = pad["entity_id"]
+		by_id[pad_id] = pad
+	var poses: Array[Dictionary] = []
+	var ids: PackedInt32Array = _ordered_checkpoint_ids(bundle)
+	for index: int in range(ids.size()):
+		var entity_id: int = ids[index]
+		if not by_id.has(entity_id):
+			return null
+		var pad_raw: Variant = by_id[entity_id]
+		if typeof(pad_raw) != TYPE_DICTIONARY:
+			return null
+		var pad: Dictionary = pad_raw
+		var pose: Dictionary = _respawn_pose(pad)
+		if pose.is_empty():
+			return null
+		poses.append(pose)
+	return TraprushCheckpointSpawn.new(start_pose, poses)
+
+
+func _respawn_pose(pad: Dictionary) -> Dictionary:
+	if (
+		not pad.has("x")
+		or not pad.has("y")
+		or not pad.has("z")
+		or not pad.has("respawn_dx")
+		or not pad.has("respawn_dy")
+		or not pad.has("respawn_dz")
+	):
+		return {}
+	if (
+		typeof(pad["x"]) != TYPE_INT
+		or typeof(pad["y"]) != TYPE_INT
+		or typeof(pad["z"]) != TYPE_INT
+		or typeof(pad["respawn_dx"]) != TYPE_INT
+		or typeof(pad["respawn_dy"]) != TYPE_INT
+		or typeof(pad["respawn_dz"]) != TYPE_INT
+	):
+		return {}
+	var pad_x: int = pad["x"]
+	var pad_y: int = pad["y"]
+	var pad_z: int = pad["z"]
+	var dx: int = pad["respawn_dx"]
+	var dy: int = pad["respawn_dy"]
+	var dz: int = pad["respawn_dz"]
+	var x_add: FixedResult = Fixed.try_add(pad_x, dx)
+	var y_add: FixedResult = Fixed.try_add(pad_y, dy)
+	var z_add: FixedResult = Fixed.try_add(pad_z, dz)
+	if not x_add.ok or not y_add.ok or not z_add.ok:
+		return {}
+	return {
+		"ok": true,
+		"x": x_add.value,
+		"y": y_add.value,
+		"z": z_add.value,
+		"yaw_bam": 0,
 	}

@@ -6,7 +6,8 @@ extends Node
 ## WASD moves the marker in world XZ while the Preview window is visible.
 ## Occupancy accepts checkpoint pads; walking into a portal marker lands
 ## through try_land_exit. Overlapping the finish box after every pad records
-## finish=n. Status shows pads=n/m, floor=n, and finish=n.
+## finish=n. Reset or R snaps back to the last accepted pad. Status shows
+## pads=n/m, floor=n, and finish=n.
 
 const CELL: int = 65536
 
