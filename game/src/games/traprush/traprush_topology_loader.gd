@@ -2,9 +2,9 @@ class_name TraprushTopologyLoader
 extends RefCounted
 
 ## Loads a v1 TRAPRUSH SimulationBundle into a SimulationWorld + portal graph.
-## Checkpoint pads become non-solid static boxes. Half-extents are cell / 2
-## (derived from the authoring lattice, not a new product budget). Does not
-## spawn a player. Does not tick. Never settlement.
+## Checkpoint pads and portal sources become non-solid static boxes.
+## Half-extents are cell / 2 (derived from the authoring lattice, not a new
+## product budget). Does not spawn a player. Does not tick. Never settlement.
 
 static func try_load(bundle: SimulationBundle, seed: int) -> Dictionary:
 	var failed: Dictionary = {"ok": false}
@@ -15,6 +15,7 @@ static func try_load(bundle: SimulationBundle, seed: int) -> Dictionary:
 	var world: SimulationWorld = SimulationWorld.new(seed)
 	var graph: TraprushPortalGraph = TraprushPortalGraph.new()
 	var pad_ids: Dictionary = {}
+	var portal_ids: Dictionary = {}
 	var half: int = bundle.cell / 2
 	for pad: Dictionary in bundle.pads:
 		var entity_id: int = pad["entity_id"]
@@ -30,10 +31,21 @@ static func try_load(bundle: SimulationBundle, seed: int) -> Dictionary:
 	for portal: Dictionary in bundle.portals:
 		var source_id: int = portal["entity_id"]
 		var dest_id: int = portal["target_id"]
+		var source_x: int = portal["x"]
+		var source_y: int = portal["y"]
+		var source_z: int = portal["z"]
 		var dest_x: int = portal["dest_x"]
 		var dest_y: int = portal["dest_y"]
 		var dest_z: int = portal["dest_z"]
 		var dest_yaw_bam: int = portal["dest_yaw_bam"]
+		var portal_box_id: int = world.spawn_static_box(
+			source_x, source_y, source_z, half, half, half
+		)
+		if portal_box_id < 1:
+			return failed
+		if not world.set_static_box_solid(portal_box_id, false):
+			return failed
+		portal_ids[source_id] = portal_box_id
 		var link: TraprushPortalLink = TraprushPortalLink.new(
 			source_id,
 			dest_id,
@@ -49,4 +61,5 @@ static func try_load(bundle: SimulationBundle, seed: int) -> Dictionary:
 		"world": world,
 		"graph": graph,
 		"pad_ids": pad_ids,
+		"portal_ids": portal_ids,
 	}

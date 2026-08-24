@@ -16,7 +16,7 @@
 | `SharedContracts` | 稳定 ID、Schema、命令、事件、快照协议 |
 | `SimulationCore` | 纯数据、固定 Tick 的权威仿真 |
 | `UGCRuntime` | 白名单 Archetype、版本化规则字节码解释器、gas 预算 |
-| `CreatorTools` | 共用编辑器外壳（代码创建 Editor 窗口）、内部开发 EditorPlugin（Project > Tools）、本地草稿恢复（`user://` latest + 30 检查点）、TRAPRUSH 工具面板、验证器详情、两张官方 TRAPRUSH 赛道 AuthoringDocument、EditCommand、Undo/Redo、AuthoringDocument、独立持续 Preview 窗口、编辑与 Preview 共用 3D 占位映射、传送连线、检查点顺序与可达性叠加 gizmos、TRAPRUSH 拓扑编译（AuthoringWorld → v1 SimulationBundle JSON → 非固体垫盒 + PortalGraph）、Preview 安全点试玩（编译当前 Preview 世界、加载、在最小 order 垫生成胶囊）、Preview 试玩 MoveIntent（开玩后 WASD → 已有 MoveIntent，经 IntentStepper 改胶囊 XZ）、Preview 试玩检查点占用验收（PadAccept，胶囊与垫相交才推进有序进度） |
+| `CreatorTools` | 共用编辑器外壳（代码创建 Editor 窗口）、内部开发 EditorPlugin（Project > Tools）、本地草稿恢复（`user://` latest + 30 检查点）、TRAPRUSH 工具面板、验证器详情、两张官方 TRAPRUSH 赛道 AuthoringDocument、EditCommand、Undo/Redo、AuthoringDocument、独立持续 Preview 窗口、编辑与 Preview 共用 3D 占位映射、传送连线、检查点顺序与可达性叠加 gizmos、TRAPRUSH 拓扑编译（AuthoringWorld → v1 SimulationBundle JSON → 非固体垫盒与传送源点占用盒 + PortalGraph）、Preview 安全点试玩（编译当前 Preview 世界、加载、在最小 order 垫生成胶囊）、Preview 试玩 MoveIntent（开玩后 WASD → 已有 MoveIntent，经 IntentStepper 改胶囊 XZ）、Preview 试玩检查点占用验收（PadAccept，胶囊与垫相交才推进有序进度）、Preview 试玩传送占用落地（PortalLanding.try_land_exit 单跳，胶囊与源点盒相交才落地） |
 | `ContentPlatform` | 验证、构建、签名、自动公开、热发布和回滚 |
 | `MatchServer` | 一局一 Godot Headless 进程、服务器权威、命令校验、快照同步和回放 |
 | `ControlPlane` | TypeScript + Fastify、SQLite、Content Registry、Matchmaker 与结果接收 |

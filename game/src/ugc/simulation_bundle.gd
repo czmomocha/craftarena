@@ -3,6 +3,7 @@ extends RefCounted
 
 ## v1 TRAPRUSH topology compile of AuthoringWorld. Field list owner: CD-42 §3.4.
 ## Pads and two_way / one_way portals only. Dangling portals are omitted.
+## Portal bags include source occupancy x/y/z and dest landing pose.
 ## Godot JSON.parse_string may yield whole-number floats; decode coerces those
 ## that round-trip through int. Not a signed binary. Not a Rule VM graph.
 
@@ -131,7 +132,7 @@ static func _parse_pad(body: Dictionary) -> Dictionary:
 
 
 static func _parse_portal(body: Dictionary) -> Dictionary:
-	if body.size() != 7:
+	if body.size() != 10:
 		return {}
 	if not _int_at_least(body, "entity_id", 1):
 		return {}
@@ -141,6 +142,12 @@ static func _parse_portal(body: Dictionary) -> Dictionary:
 		return {}
 	var kind: String = body["kind"]
 	if kind != AuthoringPortalKinds.TWO_WAY and kind != AuthoringPortalKinds.ONE_WAY:
+		return {}
+	if not _is_int_field(body, "x"):
+		return {}
+	if not _is_int_field(body, "y"):
+		return {}
+	if not _is_int_field(body, "z"):
 		return {}
 	if not _is_int_field(body, "dest_x"):
 		return {}
@@ -154,6 +161,9 @@ static func _parse_portal(body: Dictionary) -> Dictionary:
 		"entity_id": body["entity_id"],
 		"target_id": body["target_id"],
 		"kind": kind,
+		"x": body["x"],
+		"y": body["y"],
+		"z": body["z"],
 		"dest_x": body["dest_x"],
 		"dest_y": body["dest_y"],
 		"dest_z": body["dest_z"],

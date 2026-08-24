@@ -6,12 +6,9 @@
 	"portals": [
 		{
 			"entity_id": 2,
-			"target_id": 99,
-			"kind": "dangling",
-			"x": 0,
-			"y": 0,
-			"z": 0,
-			"dest_x": 0,
+			"target_id": 3,
+			"kind": "one_way",
+			"dest_x": 65536,
 			"dest_y": 0,
 			"dest_z": 0,
 			"dest_yaw_bam": 0
