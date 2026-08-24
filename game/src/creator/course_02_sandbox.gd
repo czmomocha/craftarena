@@ -7,6 +7,7 @@ extends Node
 ## WASD moves the marker in world XZ while the Preview window is visible.
 ## Occupancy accepts checkpoint pads; walking into a portal marker lands upstairs.
 ## After the last pad, walking onto the finish marker records finish=n.
+## Reset or R snaps the marker back to the last accepted pad.
 ## Status shows pads=n/m, floor=n, and finish=n.
 
 const AuthoringDocument := preload("res://src/creator/authoring_document.gd")

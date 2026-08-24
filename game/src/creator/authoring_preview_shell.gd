@@ -7,9 +7,11 @@ extends Node
 ## Play compiles the connected Preview world into a SimulationBundle, loads
 ## it, and draws the player pose as a presentation stub. While playing and
 ## visible, WASD maps to world-space MoveIntent; play_move_step is a
-## presentation stub, not a product speed. Occupancy accepts overlapping
-## checkpoint pads through PadAccept and portal boxes through
-## PortalLanding.try_land_exit; status shows pads=n/m, floor=n, and finish=n.
+## presentation stub, not a product speed. Reset button and R rising-edge
+## encode ResetToCheckpointIntent; that sample is a stub, not a hold
+## duration. Occupancy accepts overlapping checkpoint pads through
+## PadAccept and portal boxes through PortalLanding.try_land_exit; status
+## shows pads=n/m, floor=n, and finish=n.
 ## Tab host
 ## is reserved and refused.
 ## Never settlement.
@@ -17,6 +19,7 @@ extends Node
 const TITLE: String = "Preview"
 const PLAY_NAME: String = "Play"
 const STOP_NAME: String = "Stop"
+const RESET_NAME: String = "Reset"
 const _STATUS_NAME: String = "Status"
 const _MAP_NAME: String = "PreviewMap"
 const _OVERLAY_NAME: String = "Overlay"
@@ -31,6 +34,7 @@ var window: Window = null
 var map: AuthoringPreviewMap = null
 var play_move_step: int = Fixed.SCALE / 16
 var _status: Label = null
+var _reset_held: bool = false
 
 
 static func create(p_kind: String) -> AuthoringPreviewShell:
@@ -90,6 +94,7 @@ func try_apply_patch(level: String, command: SharedCommand) -> bool:
 func try_start_play(seed: int = 1, radius: int = 0, cylinder_height: int = 0) -> bool:
 	if preview == null:
 		return false
+	_reset_held = false
 	var ok: bool = preview.try_start_play(seed, radius, cylinder_height)
 	_rebuild_map()
 	_refresh_status()
@@ -99,6 +104,7 @@ func try_start_play(seed: int = 1, radius: int = 0, cylinder_height: int = 0) ->
 func try_stop_play() -> bool:
 	if preview == null:
 		return false
+	_reset_held = false
 	var ok: bool = preview.try_stop_play()
 	_rebuild_map()
 	_refresh_status()
@@ -160,6 +166,22 @@ func try_sample_play_move(forward: bool, back: bool, left: bool, right: bool) ->
 	if payload.is_empty():
 		return false
 	return try_apply_play_intent(payload)
+
+
+func try_sample_play_reset(pressed: bool) -> bool:
+	if preview == null or not preview.is_playing():
+		_reset_held = pressed
+		return false
+	if window == null or not window.visible:
+		_reset_held = pressed
+		return false
+	var rising: bool = pressed and not _reset_held
+	_reset_held = pressed
+	if not rising:
+		return false
+	return try_apply_play_intent({
+		"intent": PlayerIntentNames.RESET_TO_CHECKPOINT,
+	})
 
 
 func allows_settlement() -> bool:
@@ -246,6 +268,7 @@ func _ensure_window() -> void:
 	overlay.add_child(action_row)
 	_add_button(action_row, PLAY_NAME, "Play", _on_play)
 	_add_button(action_row, STOP_NAME, "Stop", _on_stop)
+	_add_button(action_row, RESET_NAME, "Reset", _on_reset)
 	map = AuthoringPreviewMap.new()
 	map.name = _MAP_NAME
 	window.add_child(map)
@@ -265,6 +288,12 @@ func _on_stop() -> void:
 	try_stop_play()
 
 
+func _on_reset() -> void:
+	try_apply_play_intent({
+		"intent": PlayerIntentNames.RESET_TO_CHECKPOINT,
+	})
+
+
 func _process(_delta: float) -> void:
 	if preview == null or not preview.is_playing():
 		return
@@ -276,6 +305,7 @@ func _process(_delta: float) -> void:
 		Input.is_action_pressed(_MOVE_LEFT),
 		Input.is_action_pressed(_MOVE_RIGHT)
 	)
+	try_sample_play_reset(Input.is_physical_key_pressed(KEY_R))
 
 
 func _add_button(row: BoxContainer, node_name: String, text: String, handler: Callable) -> void:
