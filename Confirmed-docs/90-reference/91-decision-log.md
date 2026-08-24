@@ -188,7 +188,7 @@
 
 ## D.8 网络、仿真与测试
 
-- `network_serialization = json_control_binary_match`。
+- `network_serialization = json_control_binary_match`。该句中「对局二进制」被 `match_wire_protocol = versioned_binary_v1`（2026-08-24）具体化：命令帧定长 35 字节、快照帧变长，版本字节 + 类型字节，严格拒绝截断/尾随/保留字段非零；Shove/Interact 暂无线上 id。帧布局单一事实源在 [CD-43 §1](../40-technical/43-networking-and-replay.md#1-序列化分工)。
 - `realtime_transport = websocket_all_first`。
 - `simulation_numeric_model = fixed_point_core`。该值被 `fixed_point_contract = q48_16_trunc_reject_lut4096`（2026-08-21）具体化：[ADR-0005](../../docs/adr/0005-fixed-point-numeric-model.md) 选项 1。空间 `SCALE = 65536`；经济/伤害尺度 1；向零截断；溢出拒绝 + 64×64→128；BAM + 4096 整数 LUT + 整数插值。数字只在 [CD-42 §1.1](../40-technical/42-contracts-and-rulevm.md) 维护。
 - `authoritative_collision_shapes = primitive_compound`。

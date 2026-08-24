@@ -95,7 +95,7 @@
 
 ### M3：权威联机与进程隔离
 
-状态：**进行中**（2026-08-24 启动，人类选定 M3 先于 M5）。本刀锁：对局进程多人仿真循环（无网络）——`TraprushMatchSession` 把一份编译拓扑装进共享权威 SimulationWorld，1~8 名玩家各自独立 CheckpointTrack / finish_tick / 传送门闩，可破坏箱全员共享，同磁带同哈希序列，占用扫描顺序与 Preview 试玩逐字对齐。不锁：名次排序、MatchHost 拉起、TLS WebSocket Gateway、版本化二进制协议、快照/插值/校正、防伪造门禁、离线模式（均为后续章节）。
+状态：**进行中**（2026-08-24 启动，人类选定 M3 先于 M5）。已合入：对局进程多人仿真循环（无网络，`TraprushMatchSession`）。本刀锁：对局二进制协议 v1——`MatchFrameCodec` 版本化命令/快照帧编解码（布局见 [CD-43 §1](../40-technical/43-networking-and-replay.md#1-序列化分工)），严格拒绝畸形帧，不锁 Tick/快照频率。不锁：名次排序、MatchHost 拉起、TLS WebSocket Gateway、快照/插值/校正、防伪造门禁、离线模式（均为后续章节）。
 
 产出：
 

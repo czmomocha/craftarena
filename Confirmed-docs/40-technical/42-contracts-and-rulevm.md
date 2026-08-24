@@ -203,6 +203,7 @@ Undo / Redo 是会话内对成功命令派生的反向 payload（`place`↔`remo
 | TRAPRUSH 拓扑编译 | `game/src/ugc/traprush_topology_compiler.gd` |
 | TRAPRUSH 拓扑加载 | `game/src/games/traprush/traprush_topology_loader.gd` |
 | 对局进程多人仿真循环 | `game/src/games/traprush/match_session.gd` |
+| 对局二进制协议 v1 | `game/src/shared/protocol/match_frame_codec.gd` |
 | Preview 试玩 | `game/src/creator/authoring_preview.gd`（`try_start_play` / `try_stop_play` / `try_advance_play` / `try_apply_play_intent` / `try_accept_play_checkpoint` / `try_land_exit` 占用扫门 / `try_cross_play_finish` 占用扫终点 / `ResetToCheckpointIntent` 复活表 / `UseItemIntent` 可破坏占用 / `JumpIntent` 接地跳跃） |
 | UseItem 打箱 | `game/src/games/traprush/destructible_break.gd` |
 | 编辑表面名 | `game/src/creator/authoring_surface_names.gd` |
