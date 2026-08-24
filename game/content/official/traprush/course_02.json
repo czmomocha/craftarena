@@ -1,7 +1,7 @@
 {
 	"schema_version": 1,
 	"cell": 65536,
-	"revision": 5,
+	"revision": 6,
 	"entities": [
 		{
 			"schema_version": 1,
@@ -88,6 +88,29 @@
 					"target_id": 20,
 					"yaw_bam": 0,
 					"cooldown_ticks": 0
+				}
+			}
+		},
+		{
+			"schema_version": 1,
+			"entity_id": 30,
+			"components": {
+				"transform": {
+					"x": 131072,
+					"y": 65536,
+					"z": 131072,
+					"yaw_bam": 0
+				},
+				"zone": {
+					"shape": {
+						"kind": "box",
+						"hx": 32768,
+						"hy": 32768,
+						"hz": 32768
+					},
+					"tags": [
+						"finish"
+					]
 				}
 			}
 		}

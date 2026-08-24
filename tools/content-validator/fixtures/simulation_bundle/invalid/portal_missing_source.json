@@ -13,5 +13,6 @@
 			"dest_z": 0,
 			"dest_yaw_bam": 0
 		}
-	]
+	],
+	"finish": []
 }

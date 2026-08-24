@@ -164,10 +164,13 @@ function applyArray(schema: SchemaObject, instance: unknown, path: string, ctx: 
 	if (!Array.isArray(instance)) {
 		return schema.type === "array" ? [{ path, message: "expected array" }] : [];
 	}
-	if (!Object.hasOwn(schema, "items")) {
-		return [];
-	}
 	const errors: JsonSchemaError[] = [];
+	if (typeof schema.maxItems === "number" && instance.length > schema.maxItems) {
+		errors.push({ path, message: `longer than maxItems ${schema.maxItems}` });
+	}
+	if (!Object.hasOwn(schema, "items")) {
+		return errors;
+	}
 	for (const [index, item] of instance.entries()) {
 		errors.push(...apply(schema.items, item, `${path}/${index}`, ctx));
 	}

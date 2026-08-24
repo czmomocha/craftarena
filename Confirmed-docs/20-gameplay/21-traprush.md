@@ -203,7 +203,7 @@ UGC 权威碰撞形状约束见 [CD-42](../40-technical/42-contracts-and-rulevm.
 - 一键启动 1 个 Headless + 2～4 个客户端；
 - 从报错直接定位到对象或规则节点。
 
-吸附格、楼层查询、传送连线分类、发布前通路/循环、Preview Patch、共同 AuthoringDocument、Preview 窗口宿主、3D 占位映射、传送连线可视化、检查点顺序可视化、可达性叠加、内部开发编辑外壳、编辑窗口 3D 映射、TRAPRUSH 工具面板、验证器详情（从报错定位）、两张官方赛道 JSON 与内部开发 EditorPlugin 与本地草稿恢复与 Preview 试玩与 Preview 试玩 MoveIntent 与 Preview 试玩检查点占用验收与 Preview 试玩传送占用落地的数据落点见 [CD-32 §2](../30-ugc/32-editor-and-preview.md#2-草稿持久化与协同) 与 [CD-32 §3](../30-ugc/32-editor-and-preview.md#3-从编辑到预览)。走路可达仍待。通用编辑器框架与预览行为见 [CD-32](../30-ugc/32-editor-and-preview.md)。
+吸附格、楼层查询、传送连线分类、发布前通路/循环、Preview Patch、共同 AuthoringDocument、Preview 窗口宿主、3D 占位映射、传送连线可视化、检查点顺序可视化、可达性叠加、内部开发编辑外壳、编辑窗口 3D 映射、TRAPRUSH 工具面板、验证器详情（从报错定位）、两张官方赛道 JSON 与内部开发 EditorPlugin 与本地草稿恢复与 Preview 试玩与 Preview 试玩 MoveIntent 与 Preview 试玩检查点占用验收与 Preview 试玩传送占用落地与 Preview 试玩冲线占用的数据落点见 [CD-32 §2](../30-ugc/32-editor-and-preview.md#2-草稿持久化与协同) 与 [CD-32 §3](../30-ugc/32-editor-and-preview.md#3-从编辑到预览)。走路可达仍待。通用编辑器框架与预览行为见 [CD-32](../30-ugc/32-editor-and-preview.md)。
 
 ## 8. 网络与仿真基线
 

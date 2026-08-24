@@ -2,9 +2,10 @@ class_name TraprushTopologyLoader
 extends RefCounted
 
 ## Loads a v1 TRAPRUSH SimulationBundle into a SimulationWorld + portal graph.
-## Checkpoint pads and portal sources become non-solid static boxes.
-## Half-extents are cell / 2 (derived from the authoring lattice, not a new
-## product budget). Does not spawn a player. Does not tick. Never settlement.
+## Checkpoint pads, portal sources, and the optional finish occupancy become
+## non-solid static boxes. Half-extents are cell / 2 (derived from the
+## authoring lattice, not a new product budget). Does not spawn a player.
+## Does not tick. Never settlement.
 
 static func try_load(bundle: SimulationBundle, seed: int) -> Dictionary:
 	var failed: Dictionary = {"ok": false}
@@ -16,6 +17,7 @@ static func try_load(bundle: SimulationBundle, seed: int) -> Dictionary:
 	var graph: TraprushPortalGraph = TraprushPortalGraph.new()
 	var pad_ids: Dictionary = {}
 	var portal_ids: Dictionary = {}
+	var finish_ids: Dictionary = {}
 	var half: int = bundle.cell / 2
 	for pad: Dictionary in bundle.pads:
 		var entity_id: int = pad["entity_id"]
@@ -56,10 +58,24 @@ static func try_load(bundle: SimulationBundle, seed: int) -> Dictionary:
 		)
 		if not graph.add_link(link):
 			return failed
+	for item: Dictionary in bundle.finish:
+		var finish_id: int = item["entity_id"]
+		var finish_x: int = item["x"]
+		var finish_y: int = item["y"]
+		var finish_z: int = item["z"]
+		var finish_box_id: int = world.spawn_static_box(
+			finish_x, finish_y, finish_z, half, half, half
+		)
+		if finish_box_id < 1:
+			return failed
+		if not world.set_static_box_solid(finish_box_id, false):
+			return failed
+		finish_ids[finish_id] = finish_box_id
 	return {
 		"ok": true,
 		"world": world,
 		"graph": graph,
 		"pad_ids": pad_ids,
 		"portal_ids": portal_ids,
+		"finish_ids": finish_ids,
 	}

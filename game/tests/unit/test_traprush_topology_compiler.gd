@@ -2,8 +2,9 @@ extends GutTest
 
 ## TRAPRUSH topology compile: AuthoringWorld -> SimulationBundle -> SimulationWorld.
 ## Official courses compile. Dangling portals are omitted. Checkpoints without
-## transform fail the whole compile. Loaded pads are non-solid occupancy boxes.
-## one_way landing uses the existing portal graph. Never settlement. Not a new op.
+## transform fail the whole compile. Loaded pads and finish are non-solid
+## occupancy boxes. one_way landing uses the existing portal graph. Never
+## settlement. Not a new op.
 
 const AuthoringDocument := preload("res://src/creator/authoring_document.gd")
 const AuthoringPortalKinds := preload("res://src/creator/authoring_portal_kinds.gd")
@@ -27,6 +28,7 @@ func test_empty_world_compiles_to_empty_bundle() -> void:
 	assert_eq(bundle.source_revision, 0)
 	assert_eq(bundle.pads.size(), 0)
 	assert_eq(bundle.portals.size(), 0)
+	assert_eq(bundle.finish.size(), 0)
 	var encoded: Dictionary = bundle.to_dictionary()
 	var decoded: SimulationBundle = SimulationBundle.from_dictionary(encoded)
 	assert_not_null(decoded)
@@ -42,6 +44,18 @@ func test_official_courses_compile_distinct_topology() -> void:
 	assert_eq(first.portals.size(), 2)
 	assert_eq(second.pads.size(), 3)
 	assert_eq(second.portals.size(), 2)
+	assert_eq(first.finish.size(), 1)
+	assert_eq(second.finish.size(), 1)
+	var first_finish: Dictionary = _finish(first, 30)
+	var second_finish: Dictionary = _finish(second, 30)
+	var first_finish_x: int = first_finish.get("x", -1)
+	var first_finish_y: int = first_finish.get("y", -1)
+	var first_finish_z: int = first_finish.get("z", -1)
+	var second_finish_z: int = second_finish.get("z", -1)
+	assert_eq(first_finish_x, 2 * CELL)
+	assert_eq(first_finish_y, CELL)
+	assert_eq(first_finish_z, 0)
+	assert_eq(second_finish_z, 2 * CELL)
 	var first_pad_x: int = _pad(first, 1).get("x", -1)
 	var first_pad_z: int = _pad(first, 1).get("z", -1)
 	var second_pad_z: int = _pad(second, 3).get("z", -1)
@@ -122,6 +136,7 @@ func test_portal_bag_without_source_pose_is_rejected() -> void:
 				"dest_yaw_bam": 0,
 			},
 		],
+		"finish": [],
 	}
 	assert_null(SimulationBundle.from_dictionary(data))
 
@@ -170,6 +185,7 @@ func test_dangling_kind_in_bundle_is_rejected() -> void:
 				"dest_yaw_bam": 0,
 			},
 		],
+		"finish": [],
 	}
 	assert_null(SimulationBundle.from_dictionary(data))
 
@@ -182,19 +198,27 @@ func test_loaded_pads_are_non_solid_occupancy_and_world_ticks() -> void:
 	var world: SimulationWorld = loaded["world"]
 	var pad_ids: Dictionary = loaded["pad_ids"]
 	var portal_ids: Dictionary = loaded["portal_ids"]
+	var finish_ids: Dictionary = loaded["finish_ids"]
 	assert_eq(pad_ids.size(), 3)
 	assert_eq(portal_ids.size(), 2)
+	assert_eq(finish_ids.size(), 1)
 	var box_id: int = pad_ids[1]
 	assert_false(world.is_static_box_solid(box_id))
 	var portal_box_id: int = portal_ids[10]
 	assert_false(world.is_static_box_solid(portal_box_id))
+	var finish_box_id: int = finish_ids[30]
+	assert_false(world.is_static_box_solid(finish_box_id))
 	var capsule_id: int = world.spawn_capsule(0, 0, 0, 0, 1, 1)
 	var overlapping: PackedInt32Array = world.overlapping_static_boxes(capsule_id)
 	assert_true(_has_id(overlapping, box_id))
 	assert_false(_has_id(overlapping, portal_box_id))
+	assert_false(_has_id(overlapping, finish_box_id))
 	var at_portal: int = world.spawn_capsule(3 * CELL, 0, 0, 0, 1, 1)
 	var portal_overlap: PackedInt32Array = world.overlapping_static_boxes(at_portal)
 	assert_true(_has_id(portal_overlap, portal_box_id))
+	var at_finish: int = world.spawn_capsule(2 * CELL, CELL, 0, 0, 1, 1)
+	var finish_overlap: PackedInt32Array = world.overlapping_static_boxes(at_finish)
+	assert_true(_has_id(finish_overlap, finish_box_id))
 	assert_eq(world.tick_index, 0)
 	world.tick()
 	assert_eq(world.tick_index, 1)
@@ -233,6 +257,70 @@ func test_null_world_or_bundle_fails() -> void:
 	assert_false(_flag(loaded))
 
 
+func test_two_finish_zones_fail_compile() -> void:
+	var world: AuthoringWorld = AuthoringWorld.new()
+	assert_true(world.put(_finish_record(30, 0, 0, 0)))
+	assert_true(world.put(_finish_record(31, CELL, 0, 0)))
+	assert_null(TraprushTopologyCompiler.compile(world))
+
+
+func test_finish_without_transform_fails_compile() -> void:
+	var world: AuthoringWorld = AuthoringWorld.new()
+	var record: SharedComponentRecord = SharedComponentRecord.create(30, {
+		"zone": {
+			"shape": {"kind": "box", "hx": CELL / 2, "hy": CELL / 2, "hz": CELL / 2},
+			"tags": [TraprushTopologyCompiler.FINISH_ZONE_TAG],
+		},
+	})
+	assert_not_null(record)
+	assert_true(world.put(record))
+	assert_null(TraprushTopologyCompiler.compile(world))
+
+
+func test_finish_on_checkpoint_fails_compile() -> void:
+	var world: AuthoringWorld = AuthoringWorld.new()
+	var record: SharedComponentRecord = SharedComponentRecord.create(1, {
+		"transform": {"x": 0, "y": 0, "z": 0, "yaw_bam": 0},
+		"checkpoint": {
+			"order": 0,
+			"respawn_dx": 0,
+			"respawn_dy": 0,
+			"respawn_dz": 0,
+		},
+		"zone": {
+			"shape": {"kind": "box", "hx": CELL / 2, "hy": CELL / 2, "hz": CELL / 2},
+			"tags": [TraprushTopologyCompiler.FINISH_ZONE_TAG],
+		},
+	})
+	assert_not_null(record)
+	assert_true(world.put(record))
+	assert_null(TraprushTopologyCompiler.compile(world))
+
+
+func test_bundle_without_finish_key_is_rejected() -> void:
+	var world: AuthoringWorld = AuthoringWorld.new()
+	var bundle: SimulationBundle = TraprushTopologyCompiler.compile(world)
+	assert_not_null(bundle)
+	var data: Dictionary = bundle.to_dictionary()
+	data.erase(SimulationBundle.FIELD_FINISH)
+	assert_null(SimulationBundle.from_dictionary(data))
+
+
+func test_two_finish_bags_are_rejected() -> void:
+	var data: Dictionary = {
+		"schema_version": 1,
+		"cell": CELL,
+		"source_revision": 0,
+		"pads": [],
+		"portals": [],
+		"finish": [
+			{"entity_id": 30, "x": 0, "y": 0, "z": 0},
+			{"entity_id": 31, "x": CELL, "y": 0, "z": 0},
+		],
+	}
+	assert_null(SimulationBundle.from_dictionary(data))
+
+
 func _compile_path(path: String) -> SimulationBundle:
 	var world: AuthoringWorld = AuthoringDocument.load_from_path(path)
 	if world == null:
@@ -254,10 +342,28 @@ func _portal(bundle: SimulationBundle, entity_id: int) -> Dictionary:
 	return {}
 
 
+func _finish(bundle: SimulationBundle, entity_id: int) -> Dictionary:
+	for item: Dictionary in bundle.finish:
+		if item.get("entity_id", 0) == entity_id:
+			return item
+	return {}
+
+
 func _portal_record(entity_id: int, target_id: int, x: int, yaw_bam: int) -> SharedComponentRecord:
 	return SharedComponentRecord.create(entity_id, {
 		"transform": {"x": x, "y": 0, "z": 0, "yaw_bam": 0},
 		"portal": {"target_id": target_id, "yaw_bam": yaw_bam, "cooldown_ticks": 0},
+	})
+
+
+func _finish_record(entity_id: int, x: int, y: int, z: int) -> SharedComponentRecord:
+	var half: int = CELL / 2
+	return SharedComponentRecord.create(entity_id, {
+		"transform": {"x": x, "y": y, "z": z, "yaw_bam": 0},
+		"zone": {
+			"shape": {"kind": "box", "hx": half, "hy": half, "hz": half},
+			"tags": [TraprushTopologyCompiler.FINISH_ZONE_TAG],
+		},
 	})
 
 
