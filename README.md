@@ -4,7 +4,7 @@ Godot 4 + UGC 双玩法（TRAPRUSH / BASTION）项目 Monorepo。代码与仓库
 
 - 工程规则入口：[AGENTS.md](AGENTS.md)
 - 规范唯一事实源：[Confirmed-docs](Confirmed-docs/README.md)
-- 当前阶段：M2 进行中（2026-08-24）。工具链评审已通过；Preview 试玩 JumpIntent 接地跳跃已合入。本刀修 dev-launcher worktree setup 的 Windows spawn（`npm.cmd` 包 shell）。进度见 [CD-61](Confirmed-docs/60-plan/61-milestones.md)。
+- 当前阶段：M2 进行中（2026-08-24）。工具链评审已通过；dev-launcher Windows spawn 修复已合入。本刀为第三张官方 TRAPRUSH 赛道（`one_way` 上楼 + 走道可破坏箱）。进度见 [CD-61](Confirmed-docs/60-plan/61-milestones.md)。
 
 ## 目录
 

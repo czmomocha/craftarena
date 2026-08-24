@@ -1,0 +1,6 @@
+[gd_scene format=3 uid="uid://bq8offcourse03scn"]
+
+[ext_resource type="Script" uid="uid://bq8offcourse03sbx" path="res://src/creator/course_03_sandbox.gd" id="1_course"]
+
+[node name="Course03Sandbox" type="Node" unique_id=308230301]
+script = ExtResource("1_course")
