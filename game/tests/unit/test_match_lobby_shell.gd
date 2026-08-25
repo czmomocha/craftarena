@@ -6,6 +6,7 @@ extends GutTest
 const MatchFrameCodec := preload("res://src/shared/protocol/match_frame_codec.gd")
 const MatchJoinSession := preload("res://src/client/match_join_session.gd")
 const MatchLobbyShell := preload("res://src/client/match_lobby_shell.gd")
+const MatchOfflineSession := preload("res://src/client/match_offline_session.gd")
 const MatchPlaySession := preload("res://src/client/match_play_session.gd")
 const PlayerIntentNames := preload("res://src/shared/commands/player_intent_names.gd")
 
@@ -223,8 +224,54 @@ func test_buttons_exist_and_live_io_stays_off_in_tests() -> void:
 	assert_false(_shell.live_io)
 	assert_not_null(_shell.window.get_node("VBoxContainer/MatchActions/%s" % MatchLobbyShell.QUICK_NAME))
 	assert_not_null(_shell.window.get_node("VBoxContainer/MatchActions/%s" % MatchLobbyShell.CREATE_NAME))
+	assert_not_null(_shell.window.get_node("VBoxContainer/MatchActions/%s" % MatchLobbyShell.SOLO_NAME))
 	assert_not_null(_shell.window.get_node("VBoxContainer/%s" % MatchLobbyShell.ROOM_NAME))
 	assert_eq(_shell.play_move_step, Fixed.SCALE / 16)
+
+
+func test_solo_play_maps_local_authority_without_http() -> void:
+	_shell = _open_shell()
+	assert_true(_shell.try_solo())
+	assert_eq(_shell.offline.state, MatchOfflineSession.STATE_PLAYING)
+	assert_eq(_shell.join.state, MatchJoinSession.STATE_IDLE)
+	assert_false(_shell.join.has_pending())
+	assert_eq(_shell.play.state, MatchPlaySession.STATE_IDLE)
+	assert_eq(_shell.map.player_count(), 1)
+	assert_eq(_shell.standings.standing_count(), 1)
+	assert_eq(_shell.standings.standing_node(0).text, "#1 P0 1/3")
+	assert_true(_shell.status_label_text().contains(MatchOfflineSession.BANNER))
+	assert_true(_shell.status_label_text().contains("offline=playing"))
+	assert_true(_shell.status_label_text().contains("standings=#1s0 mvp=-"))
+	assert_false(_shell.try_quick())
+	assert_false(_shell.try_create_room())
+	assert_false(_shell.join.has_pending())
+	var before_x: float = _shell.map.player_node(0).position.x
+	var move: PackedByteArray = _shell.try_sample_play_move(false, false, false, true)
+	assert_false(move.is_empty())
+	assert_gt(_shell.map.player_node(0).position.x, before_x)
+	assert_true(_shell.try_cancel())
+	assert_eq(_shell.offline.state, MatchOfflineSession.STATE_IDLE)
+	assert_eq(_shell.map.player_count(), 0)
+	assert_eq(_shell.standings.standing_count(), 0)
+	assert_eq(_shell.crates.crate_count(), 1)
+	assert_false(_shell.status_label_text().contains(MatchOfflineSession.BANNER))
+	assert_false(_shell.allows_settlement())
+	assert_false(_shell.allows_online_writes())
+
+
+func test_solo_refuses_web_and_online_busy() -> void:
+	_shell = _open_shell()
+	_shell.web_platform = true
+	assert_false(_shell.try_solo())
+	assert_eq(_shell.offline.last_error, "web_locked")
+	assert_eq(_shell.map.player_count(), 0)
+	_shell.web_platform = false
+	assert_true(_shell.try_quick())
+	assert_true(_shell.accept_http(201, _join("ABCD23", "ticket-solo")))
+	assert_eq(_shell.play.state, MatchPlaySession.STATE_CONNECTING)
+	assert_false(_shell.try_solo())
+	assert_eq(_shell.offline.state, MatchOfflineSession.STATE_IDLE)
+	assert_eq(_shell.play.websocket_url, "ws://127.0.0.1:8090/ws?ticket=ticket-solo")
 
 
 func test_snapshot_standings_rank_finished_first_without_settlement() -> void:
