@@ -1,9 +1,13 @@
 extends Node
 
-## 客户端启动场景。M0 阶段只负责证明工程能起来，并打印一行结构化启动日志，
-## 供 Headless 烟测与 CI 直接断言。真正的大厅与玩法入口在后续里程碑接入。
+## Client boot scene. Prints a structured boot line for Headless smoke,
+## then opens the TRAPRUSH match lobby (code-created Window). Live HTTP/WS
+## stays off in headless so CI --quit does not call localhost.
 
 const BOOT_EVENT: String = "client_boot"
+const MatchLobbyShellGd := preload("res://src/client/match_lobby_shell.gd")
+
+var lobby: MatchLobbyShellGd = null
 
 
 func _ready() -> void:
@@ -14,6 +18,12 @@ func _ready() -> void:
 		"headless": DisplayServer.get_name() == "headless",
 		"debug_build": OS.is_debug_build(),
 	}))
+	lobby = MatchLobbyShellGd.create()
+	if lobby == null:
+		return
+	lobby.live_io = DisplayServer.get_name() != "headless"
+	add_child(lobby)
+	lobby.open()
 
 
 static func _format_log_line(event: String, fields: Dictionary) -> String:

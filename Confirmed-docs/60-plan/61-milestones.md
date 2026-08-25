@@ -95,7 +95,7 @@
 
 ### M3：权威联机与进程隔离
 
-状态：**进行中**（2026-08-24 启动，人类选定 M3 先于 M5）。已合入：对局进程多人仿真循环（无网络，`TraprushMatchSession`）、对局二进制协议 v1（`MatchFrameCodec`）、对局进程仿真入口（`match_server.gd` 真仿真 + MatchHost 传参）、对局进程实时回路（WebSocket 监听 + `MatchRealtime` 槽位/命令队列/快照广播）、实时网关代理（[PR #119](https://github.com/czmomocha/craftarena/pull/119)）、控制面真票据签发/校验（[PR #120](https://github.com/czmomocha/craftarena/pull/120)）、MatchHost 自动登记上游（[PR #121](https://github.com/czmomocha/craftarena/pull/121)）、MatchHost 等待 listen 后登记（[PR #122](https://github.com/czmomocha/craftarena/pull/122)）、MatchHost 停止后注销会话（[PR #123](https://github.com/czmomocha/craftarena/pull/123)）、真匹配与房间码（[PR #124](https://github.com/czmomocha/craftarena/pull/124)）。本刀锁：FIFO 等待队列与预计等待——MatchHost 容量满时控制面把快速游戏/建房写入 FIFO，查询位次与预计等待，取消，会话注销后按 FIFO 出队并签发票据。不锁：账号绑定、重连补票、名次排序、快照/插值/校正、防伪造门禁、离线模式（均为后续章节）。
+状态：**进行中**（2026-08-24 启动，人类选定 M3 先于 M5）。已合入：对局进程多人仿真循环（无网络，`TraprushMatchSession`）、对局二进制协议 v1（`MatchFrameCodec`）、对局进程仿真入口（`match_server.gd` 真仿真 + MatchHost 传参）、对局进程实时回路（WebSocket 监听 + `MatchRealtime` 槽位/命令队列/快照广播）、实时网关代理（[PR #119](https://github.com/czmomocha/craftarena/pull/119)）、控制面真票据签发/校验（[PR #120](https://github.com/czmomocha/craftarena/pull/120)）、MatchHost 自动登记上游（[PR #121](https://github.com/czmomocha/craftarena/pull/121)）、MatchHost 等待 listen 后登记（[PR #122](https://github.com/czmomocha/craftarena/pull/122)）、MatchHost 停止后注销会话（[PR #123](https://github.com/czmomocha/craftarena/pull/123)）、真匹配与房间码（[PR #124](https://github.com/czmomocha/craftarena/pull/124)）、FIFO 等待队列与预计等待（[PR #125](https://github.com/czmomocha/craftarena/pull/125)）。本刀锁：客户端匹配入场与权威快照跟从——Godot 大厅走快速游戏/建房/按码加入与 FIFO 轮询，持票经网关入场，发送已有命令帧并跟从最新快照。不锁：账号绑定、重连补票、名次排序、快照插值/预测校正、防伪造门禁、离线模式（均为后续章节）。
 
 产出：
 

@@ -1,0 +1,486 @@
+class_name MatchLobbyShell
+extends Node
+
+## TRAPRUSH channel lobby (CD-12): quick play, room code, FIFO wait.
+## Code-created Window; close only hides. Injected HTTP/WS in tests;
+## live_io uses HTTPRequest + WebSocketPeer. Follows the latest snapshot
+## with no interpolation. WASD / Jump / Reset / Use item encode existing
+## intents. play_move_step is a presentation stub, not a product speed.
+## No BASTION, accounts, reconnect tickets, settlement, or offline writes.
+
+const MatchFrameCodec := preload("res://src/shared/protocol/match_frame_codec.gd")
+const MatchJoinSessionGd := preload("res://src/client/match_join_session.gd")
+const MatchPlaySessionGd := preload("res://src/client/match_play_session.gd")
+const PlayerIntentNames := preload("res://src/shared/commands/player_intent_names.gd")
+
+const TITLE: String = "Traprush"
+const DEFAULT_CONTROL_PLANE: String = "http://127.0.0.1:8080"
+const DEFAULT_GATEWAY: String = "ws://127.0.0.1:8090"
+const DEFAULT_QUEUE_POLL_S: float = 1.0
+const QUICK_NAME: String = "QuickPlay"
+const CREATE_NAME: String = "CreateRoom"
+const JOIN_NAME: String = "JoinRoom"
+const CANCEL_NAME: String = "Cancel"
+const POLL_NAME: String = "Poll"
+const ROOM_NAME: String = "RoomCode"
+const _STATUS_NAME: String = "Status"
+const _MOVE_FORWARD: String = "move_forward"
+const _MOVE_BACK: String = "move_back"
+const _MOVE_LEFT: String = "move_left"
+const _MOVE_RIGHT: String = "move_right"
+const _USE_ITEM: String = "use_item"
+const _JUMP: String = "jump"
+
+var join: MatchJoinSessionGd = null
+var play: MatchPlaySessionGd = null
+var window: Window = null
+var live_io: bool = false
+var control_plane_base: String = DEFAULT_CONTROL_PLANE
+var gateway_base: String = DEFAULT_GATEWAY
+var play_move_step: int = Fixed.SCALE / 16
+var queue_poll_s: float = DEFAULT_QUEUE_POLL_S
+var last_sent_command: PackedByteArray = PackedByteArray()
+
+var _status: Label = null
+var _room_edit: LineEdit = null
+var _http: HTTPRequest = null
+var _http_busy: bool = false
+var _peer: WebSocketPeer = null
+var _poll_accum: float = 0.0
+var _reset_held: bool = false
+var _use_item_held: bool = false
+var _jump_held: bool = false
+var _opened_socket: bool = false
+
+
+static func create() -> MatchLobbyShell:
+	var shell := new()
+	shell.join = MatchJoinSessionGd.create()
+	shell.play = MatchPlaySessionGd.new()
+	return shell
+
+
+func open() -> bool:
+	if join == null:
+		return false
+	_ensure_window()
+	if window == null:
+		return false
+	if live_io:
+		_ensure_http()
+	window.visible = true
+	_refresh_status()
+	return true
+
+
+func show_window() -> bool:
+	if window == null:
+		return false
+	window.visible = true
+	_refresh_status()
+	return true
+
+
+func hide_window() -> void:
+	if window != null:
+		window.visible = false
+
+
+func is_window_visible() -> bool:
+	return window != null and window.visible
+
+
+func room_code_text() -> String:
+	if _room_edit == null:
+		return ""
+	return _room_edit.text
+
+
+func set_room_code_text(text: String) -> void:
+	if _room_edit != null:
+		_room_edit.text = text
+
+
+func try_quick() -> bool:
+	if join == null:
+		return false
+	if not join.try_quick():
+		return false
+	_dispatch_pending()
+	_refresh_status()
+	return true
+
+
+func try_create_room() -> bool:
+	if join == null:
+		return false
+	if not join.try_create_room():
+		return false
+	_dispatch_pending()
+	_refresh_status()
+	return true
+
+
+func try_join_room(raw_code: String = "") -> bool:
+	if join == null:
+		return false
+	var code: String = raw_code
+	if code == "" and _room_edit != null:
+		code = _room_edit.text
+	if not join.try_join_room(code):
+		return false
+	_dispatch_pending()
+	_refresh_status()
+	return true
+
+
+func try_poll() -> bool:
+	if join == null:
+		return false
+	if not join.try_poll():
+		return false
+	_dispatch_pending()
+	_refresh_status()
+	return true
+
+
+func try_cancel() -> bool:
+	if join == null:
+		return false
+	if not join.try_cancel():
+		return false
+	_dispatch_pending()
+	_refresh_status()
+	return true
+
+
+func accept_http(status_code: int, body: Dictionary) -> bool:
+	if join == null:
+		return false
+	var ok: bool = join.accept_http(status_code, body)
+	_after_join_http()
+	return ok
+
+
+func apply_http_text(status_code: int, text: String) -> bool:
+	if join == null:
+		return false
+	var ok: bool = join.apply_http_text(status_code, text)
+	_after_join_http()
+	return ok
+
+
+func try_begin_play() -> bool:
+	if join == null or play == null:
+		return false
+	if not play.try_begin(join, gateway_base):
+		return false
+	_opened_socket = false
+	if live_io:
+		_connect_gateway()
+	_refresh_status()
+	return true
+
+
+func on_socket_open() -> bool:
+	if play == null:
+		return false
+	var ok: bool = play.on_open()
+	_refresh_status()
+	return ok
+
+
+func on_socket_close() -> void:
+	if play != null:
+		play.on_close()
+	_refresh_status()
+
+
+func on_binary(bytes: PackedByteArray) -> bool:
+	if play == null:
+		return false
+	var ok: bool = play.on_binary(bytes)
+	_refresh_status()
+	return ok
+
+
+func try_sample_play_move(forward: bool, back: bool, left: bool, right: bool) -> PackedByteArray:
+	if play == null or window == null or not window.visible:
+		return PackedByteArray()
+	var bytes: PackedByteArray = play.try_encode_move_axes(forward, back, left, right, play_move_step)
+	_note_command(bytes)
+	return bytes
+
+
+func try_sample_play_reset(pressed: bool) -> PackedByteArray:
+	var rising: bool = pressed and not _reset_held
+	_reset_held = pressed
+	if not rising or play == null or window == null or not window.visible:
+		return PackedByteArray()
+	var bytes: PackedByteArray = play.try_encode_intent(PlayerIntentNames.RESET_TO_CHECKPOINT, 0, 0, 0)
+	_note_command(bytes)
+	return bytes
+
+
+func try_sample_play_use_item(pressed: bool) -> PackedByteArray:
+	var rising: bool = pressed and not _use_item_held
+	_use_item_held = pressed
+	if not rising or play == null or window == null or not window.visible:
+		return PackedByteArray()
+	var bytes: PackedByteArray = play.try_encode_intent(PlayerIntentNames.USE_ITEM, 0, 0, 0)
+	_note_command(bytes)
+	return bytes
+
+
+func try_sample_play_jump(pressed: bool) -> PackedByteArray:
+	var rising: bool = pressed and not _jump_held
+	_jump_held = pressed
+	if not rising or play == null or window == null or not window.visible:
+		return PackedByteArray()
+	var bytes: PackedByteArray = play.try_encode_intent(PlayerIntentNames.JUMP, 0, 0, 0)
+	_note_command(bytes)
+	return bytes
+
+
+func status_view() -> Dictionary:
+	var join_view: Dictionary = {}
+	var play_view: Dictionary = {}
+	if join != null:
+		join_view = join.status_view()
+	if play != null:
+		play_view = play.status_view()
+	return {
+		"join_state": join_view.get("state", ""),
+		"error": join_view.get("error", ""),
+		"pending": join_view.get("pending", false),
+		"position": join_view.get("position", 0),
+		"estimated_wait_ms": join_view.get("estimated_wait_ms", 0),
+		"room_code": join_view.get("room_code", ""),
+		"ticket": join_view.get("ticket", ""),
+		"play_state": play_view.get("state", ""),
+		"tick": play_view.get("tick", -1),
+		"player_count": play_view.get("player_count", 0),
+		"crate_count": play_view.get("crate_count", 0),
+		"window_visible": is_window_visible(),
+	}
+
+
+func status_label_text() -> String:
+	if _status == null:
+		return ""
+	return _status.text
+
+
+func allows_settlement() -> bool:
+	return false
+
+
+func allows_online_writes() -> bool:
+	return false
+
+
+func _process(delta: float) -> void:
+	if live_io:
+		_poll_queue_clock(delta)
+		_poll_gateway()
+	if window == null or not window.visible:
+		return
+	try_sample_play_move(
+		Input.is_action_pressed(_MOVE_FORWARD),
+		Input.is_action_pressed(_MOVE_BACK),
+		Input.is_action_pressed(_MOVE_LEFT),
+		Input.is_action_pressed(_MOVE_RIGHT)
+	)
+	try_sample_play_reset(Input.is_physical_key_pressed(KEY_R))
+	try_sample_play_use_item(Input.is_action_pressed(_USE_ITEM))
+	try_sample_play_jump(Input.is_action_pressed(_JUMP))
+
+
+func _ensure_window() -> void:
+	if window != null:
+		return
+	if not Engine.is_editor_hint():
+		var host_viewport: Viewport = get_viewport()
+		if host_viewport != null:
+			host_viewport.gui_embed_subwindows = true
+	window = Window.new()
+	window.title = TITLE
+	window.size = Vector2i(520, 240)
+	window.exclusive = false
+	window.transient = false
+	window.close_requested.connect(_on_close_requested)
+	var root: VBoxContainer = VBoxContainer.new()
+	root.name = "VBoxContainer"
+	root.set_anchors_preset(Control.PRESET_FULL_RECT)
+	root.offset_left = 8
+	root.offset_top = 8
+	root.offset_right = -8
+	root.offset_bottom = -8
+	window.add_child(root)
+	_status = Label.new()
+	_status.name = _STATUS_NAME
+	_status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	root.add_child(_status)
+	var row: HBoxContainer = HBoxContainer.new()
+	row.name = "MatchActions"
+	root.add_child(row)
+	_add_button(row, QUICK_NAME, "Quick play", try_quick)
+	_add_button(row, CREATE_NAME, "Create room", try_create_room)
+	_add_button(row, JOIN_NAME, "Join room", try_join_room)
+	_add_button(row, CANCEL_NAME, "Cancel", try_cancel)
+	_add_button(row, POLL_NAME, "Poll", try_poll)
+	_room_edit = LineEdit.new()
+	_room_edit.name = ROOM_NAME
+	_room_edit.placeholder_text = "Room code"
+	_room_edit.max_length = 6
+	root.add_child(_room_edit)
+	add_child(window)
+
+
+func _ensure_http() -> void:
+	if _http != null:
+		return
+	_http = HTTPRequest.new()
+	_http.timeout = 10.0
+	_http.request_completed.connect(_on_http_completed)
+	add_child(_http)
+
+
+func _add_button(row: BoxContainer, node_name: String, text: String, handler: Callable) -> void:
+	var button: Button = Button.new()
+	button.name = node_name
+	button.text = text
+	button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	button.pressed.connect(handler)
+	row.add_child(button)
+
+
+func _dispatch_pending() -> void:
+	if not live_io or _http == null or join == null or not join.has_pending() or _http_busy:
+		return
+	var url: String = MatchJoinSessionGd.http_url(control_plane_base, join.pending_path())
+	if url == "":
+		join.fail_transport()
+		_refresh_status()
+		return
+	var method: String = join.pending_method()
+	var err: int = ERR_BUG
+	if method == "POST":
+		err = _http.request(url, PackedStringArray(), HTTPClient.METHOD_POST, "")
+	elif method == "GET":
+		err = _http.request(url, PackedStringArray(), HTTPClient.METHOD_GET)
+	elif method == "DELETE":
+		err = _http.request(url, PackedStringArray(), HTTPClient.METHOD_DELETE)
+	if err != OK:
+		join.fail_transport()
+		_refresh_status()
+		return
+	_http_busy = true
+
+
+func _on_http_completed(result: int, response_code: int, _headers: PackedStringArray, body: PackedByteArray) -> void:
+	_http_busy = false
+	if join == null:
+		return
+	if result != HTTPRequest.RESULT_SUCCESS:
+		join.fail_transport()
+		_refresh_status()
+		return
+	apply_http_text(response_code, body.get_string_from_utf8())
+
+
+func _after_join_http() -> void:
+	if join != null and join.state == MatchJoinSessionGd.STATE_READY and play != null:
+		if play.state == MatchPlaySessionGd.STATE_IDLE or play.state == MatchPlaySessionGd.STATE_CLOSED:
+			try_begin_play()
+	_refresh_status()
+
+
+func _connect_gateway() -> void:
+	if play == null or play.websocket_url == "":
+		return
+	_peer = WebSocketPeer.new()
+	var err: int = _peer.connect_to_url(play.websocket_url)
+	if err != OK:
+		play.on_close()
+		_peer = null
+
+
+func _poll_queue_clock(delta: float) -> void:
+	if join == null or join.state != MatchJoinSessionGd.STATE_WAITING:
+		_poll_accum = 0.0
+		return
+	if join.has_pending() or _http_busy:
+		return
+	_poll_accum += delta
+	if _poll_accum < queue_poll_s:
+		return
+	_poll_accum = 0.0
+	try_poll()
+
+
+func _poll_gateway() -> void:
+	if _peer == null:
+		return
+	_peer.poll()
+	var ready: int = _peer.get_ready_state()
+	if ready == WebSocketPeer.STATE_OPEN:
+		if not _opened_socket:
+			_opened_socket = true
+			on_socket_open()
+		while _peer.get_available_packet_count() > 0:
+			on_binary(_peer.get_packet())
+		if not last_sent_command.is_empty() and play != null and not play.last_command.is_empty():
+			if last_sent_command != play.last_command:
+				_peer.send(play.last_command, WebSocketPeer.WRITE_MODE_BINARY)
+				last_sent_command = play.last_command
+	elif ready == WebSocketPeer.STATE_CLOSED:
+		_peer = null
+		_opened_socket = false
+		on_socket_close()
+
+
+func _note_command(bytes: PackedByteArray) -> void:
+	if bytes.is_empty() or _peer == null:
+		return
+	if _peer.get_ready_state() != WebSocketPeer.STATE_OPEN:
+		return
+	_peer.send(bytes, WebSocketPeer.WRITE_MODE_BINARY)
+	last_sent_command = bytes
+	_refresh_status()
+
+
+func _refresh_status() -> void:
+	if _status == null:
+		return
+	var view: Dictionary = status_view()
+	var join_state: String = view.get("join_state", "")
+	var play_state: String = view.get("play_state", "")
+	var parts: PackedStringArray = PackedStringArray()
+	parts.append("join=%s" % join_state)
+	if view.get("pending", false):
+		parts.append("pending=1")
+	if join_state == MatchJoinSessionGd.STATE_WAITING:
+		var position: int = view.get("position", 0)
+		var wait_ms: int = view.get("estimated_wait_ms", 0)
+		parts.append("pos=%d" % position)
+		parts.append("wait_ms=%d" % wait_ms)
+	var room_code: String = str(view.get("room_code", ""))
+	if room_code != "":
+		parts.append("room=%s" % room_code)
+	var error_text: String = str(view.get("error", ""))
+	if error_text != "":
+		parts.append("error=%s" % error_text)
+	parts.append("play=%s" % play_state)
+	if play_state == MatchPlaySessionGd.STATE_IN_MATCH:
+		var tick: int = view.get("tick", -1)
+		var player_count: int = view.get("player_count", 0)
+		var crate_count: int = view.get("crate_count", 0)
+		parts.append("tick=%d" % tick)
+		parts.append("players=%d" % player_count)
+		parts.append("crates=%d" % crate_count)
+	_status.text = " ".join(parts)
+
+
+func _on_close_requested() -> void:
+	hide_window()
