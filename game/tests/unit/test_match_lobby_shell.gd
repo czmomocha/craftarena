@@ -26,14 +26,18 @@ func test_open_window_quick_play_ready_begins_play() -> void:
 	assert_true(_shell.window.own_world_3d)
 	assert_not_null(_shell.map)
 	assert_not_null(_shell.course)
+	assert_not_null(_shell.crates)
 	assert_eq(_shell.map.player_count(), 0)
 	assert_eq(_shell.course.pad_count(), 3)
 	assert_eq(_shell.course.portal_count(), 2)
 	assert_eq(_shell.course.finish_count(), 1)
 	assert_eq(_shell.course.crate_node_count(), 0)
+	assert_eq(_shell.crates.crate_count(), 1)
 	assert_almost_eq(_shell.course.finish_node(30).position.x, 2.0, 0.0001)
 	assert_almost_eq(_shell.course.finish_node(30).position.z, 0.0, 0.0001)
+	assert_almost_eq(_shell.crates.crate_node(40).position.z, 1.0, 0.0001)
 	assert_true(_shell.status_label_text().contains("course=3/2/1"))
+	assert_true(_shell.status_label_text().contains("crates_mapped=1"))
 	assert_true(_shell.try_quick())
 	assert_true(_shell.status_label_text().contains("pending=1"))
 	assert_true(_shell.accept_http(201, _join("ABCD23", "ticket-a")))
@@ -49,9 +53,11 @@ func test_open_window_quick_play_ready_begins_play() -> void:
 	assert_almost_eq(marker.position.x, 12.0 / float(Fixed.SCALE), 0.0001)
 	assert_eq(_shell.map.crate_node_count(), 0)
 	assert_eq(_shell.course.pad_count(), 3)
+	assert_eq(_shell.crates.crate_count(), 0)
 	assert_true(_shell.status_label_text().contains("tick=2"))
 	assert_true(_shell.status_label_text().contains("mapped=1"))
 	assert_true(_shell.status_label_text().contains("course=3/2/1"))
+	assert_true(_shell.status_label_text().contains("crates_mapped=0"))
 	assert_true(_shell.status_label_text().contains("room=ABCD23"))
 	assert_false(_shell.allows_settlement())
 	assert_false(_shell.allows_online_writes())
@@ -133,6 +139,29 @@ func test_stale_or_bad_snapshot_keeps_mapped_pose() -> void:
 	assert_almost_eq(_shell.map.player_node(0).position.x, 2.0, 0.0001)
 	assert_eq(_shell.course.pad_count(), 3)
 	assert_almost_eq(_shell.course.finish_node(30).position.z, 0.0, 0.0001)
+	assert_eq(_shell.crates.crate_count(), 0)
+
+
+func test_snapshot_crate_durability_hides_without_moving_or_redrawing_course() -> void:
+	_shell = _open_shell()
+	assert_eq(_shell.crates.crate_count(), 1)
+	assert_true(_shell.try_quick())
+	assert_true(_shell.accept_http(201, _join("ABCD23", "ticket-d")))
+	assert_true(_shell.on_socket_open())
+	assert_true(_shell.on_binary(_snapshot(3, Fixed.SCALE, [_crate(40, 1)])))
+	assert_eq(_shell.crates.crate_count(), 1)
+	assert_almost_eq(_shell.crates.crate_node(40).position.z, 1.0, 0.0001)
+	assert_eq(_shell.course.pad_count(), 3)
+	assert_true(_shell.on_binary(_snapshot(4, 2 * Fixed.SCALE, [_crate(40, 0)])))
+	assert_eq(_shell.crates.crate_count(), 0)
+	assert_eq(_shell.course.pad_count(), 3)
+	assert_almost_eq(_shell.map.player_node(0).position.x, 2.0, 0.0001)
+	assert_false(_shell.on_binary(PackedByteArray([1, 2, 3])))
+	assert_eq(_shell.crates.crate_count(), 0)
+	assert_true(_shell.on_binary(_snapshot(5, 3 * Fixed.SCALE, [_crate(40, 1)])))
+	assert_eq(_shell.crates.crate_count(), 1)
+	assert_almost_eq(_shell.crates.crate_node(40).position.z, 1.0, 0.0001)
+	assert_almost_eq(_shell.map.player_node(0).position.x, 3.0, 0.0001)
 
 
 func test_buttons_exist_and_live_io_stays_off_in_tests() -> void:
@@ -163,7 +192,14 @@ func _join(room_code: String, ticket: String) -> Dictionary:
 	}
 
 
-func _snapshot(tick: int, x: int) -> PackedByteArray:
+func _crate(entity_id: int, durability: int) -> Dictionary:
+	return {
+		"entity_id": entity_id,
+		"durability": durability,
+	}
+
+
+func _snapshot(tick: int, x: int, crates: Array[Dictionary] = []) -> PackedByteArray:
 	var players: Array[Dictionary] = [{
 		"x": x,
 		"y": 0,
@@ -172,5 +208,4 @@ func _snapshot(tick: int, x: int) -> PackedByteArray:
 		"accepted_count": 0,
 		"finish_tick": -1,
 	}]
-	var crates: Array[Dictionary] = []
 	return MatchFrameCodec.encode_snapshot(tick, players, crates)

@@ -5,7 +5,8 @@ extends Node3D
 ## Each snapshot player becomes a 1 m box at the Q48.16 pose. Authority
 ## stays in MatchSnapshotFollow; float conversion happens only here.
 ## Placeholders are not hitboxes. Crates have no pose in the v1 snapshot
-## frame, so they are not drawn. No interpolation, prediction, or ranking.
+## frame, so they are not drawn here; MatchCrateMap uses topology poses.
+## No interpolation, prediction, or ranking.
 
 const MatchSnapshotFollowGd := preload("res://src/client/match_snapshot_follow.gd")
 

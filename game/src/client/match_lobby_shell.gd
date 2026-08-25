@@ -5,7 +5,8 @@ extends Node
 ## Code-created Window; close only hides. Injected HTTP/WS in tests;
 ## live_io uses HTTPRequest + WebSocketPeer. Follows the latest snapshot
 ## and maps player poses to 1 m boxes. Maps compiled course occupancy
-## (pads / portals / finish) to 1 m boxes. Destructibles stay undrawn.
+## (pads / portals / finish) to 1 m boxes. Maps compiled destructibles
+## to 1 m boxes and hides them when snapshot durability is <= 0 or omitted.
 ## No interpolation. WASD / Jump / Reset / Use item encode existing
 ## intents. play_move_step is a presentation stub, not a product speed.
 ## No BASTION, accounts, reconnect tickets, settlement, or offline writes.
@@ -14,6 +15,7 @@ const MatchFrameCodec := preload("res://src/shared/protocol/match_frame_codec.gd
 const MatchJoinSessionGd := preload("res://src/client/match_join_session.gd")
 const MatchPlaySessionGd := preload("res://src/client/match_play_session.gd")
 const MatchCourseMapGd := preload("res://src/client/match_course_map.gd")
+const MatchCrateMapGd := preload("res://src/client/match_crate_map.gd")
 const MatchSnapshotMapGd := preload("res://src/client/match_snapshot_map.gd")
 const PlayerIntentNames := preload("res://src/shared/commands/player_intent_names.gd")
 
@@ -31,6 +33,7 @@ const ROOM_NAME: String = "RoomCode"
 const _STATUS_NAME: String = "Status"
 const _MAP_NAME: String = "SnapshotMap"
 const _COURSE_NAME: String = "CourseMap"
+const _CRATE_NAME: String = "CrateMap"
 const _MOVE_FORWARD: String = "move_forward"
 const _MOVE_BACK: String = "move_back"
 const _MOVE_LEFT: String = "move_left"
@@ -42,6 +45,7 @@ var join: MatchJoinSessionGd = null
 var play: MatchPlaySessionGd = null
 var map: MatchSnapshotMapGd = null
 var course: MatchCourseMapGd = null
+var crates: MatchCrateMapGd = null
 var window: Window = null
 var live_io: bool = false
 var control_plane_base: String = DEFAULT_CONTROL_PLANE
@@ -265,12 +269,15 @@ func status_view() -> Dictionary:
 	var mapped_pads: int = 0
 	var mapped_portals: int = 0
 	var mapped_finish: int = 0
+	var mapped_crates: int = 0
 	if map != null:
 		mapped_players = map.player_count()
 	if course != null:
 		mapped_pads = course.pad_count()
 		mapped_portals = course.portal_count()
 		mapped_finish = course.finish_count()
+	if crates != null:
+		mapped_crates = crates.crate_count()
 	return {
 		"join_state": join_view.get("state", ""),
 		"error": join_view.get("error", ""),
@@ -287,6 +294,7 @@ func status_view() -> Dictionary:
 		"mapped_pads": mapped_pads,
 		"mapped_portals": mapped_portals,
 		"mapped_finish": mapped_finish,
+		"mapped_crates": mapped_crates,
 		"window_visible": is_window_visible(),
 	}
 
@@ -366,9 +374,13 @@ func _ensure_window() -> void:
 	course = MatchCourseMapGd.new()
 	course.name = _COURSE_NAME
 	map.add_child(course)
+	crates = MatchCrateMapGd.new()
+	crates.name = _CRATE_NAME
+	map.add_child(crates)
 	add_child(window)
 	map.ensure_rig()
 	course.apply_path(course_path)
+	crates.apply_path(course_path)
 
 
 func _ensure_http() -> void:
@@ -519,13 +531,18 @@ func _refresh_status() -> void:
 	var mapped_portals: int = view.get("mapped_portals", 0)
 	var mapped_finish: int = view.get("mapped_finish", 0)
 	parts.append("course=%d/%d/%d" % [mapped_pads, mapped_portals, mapped_finish])
+	var mapped_crates: int = view.get("mapped_crates", 0)
+	parts.append("crates_mapped=%d" % mapped_crates)
 	_status.text = " ".join(parts)
 
 
 func _apply_snapshot_map() -> void:
-	if map == null or play == null:
+	if play == null:
 		return
-	map.apply_follow(play.follow)
+	if map != null:
+		map.apply_follow(play.follow)
+	if crates != null:
+		crates.apply_follow(play.follow)
 
 
 func _on_close_requested() -> void:
