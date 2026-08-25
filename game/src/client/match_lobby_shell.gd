@@ -7,6 +7,8 @@ extends Node
 ## and maps player poses to 1 m boxes. Maps compiled course occupancy
 ## (pads / portals / finish) to 1 m boxes. Maps compiled destructibles
 ## to 1 m boxes and hides them when snapshot durability is <= 0 or omitted.
+## Maps compiled portal source→dest as bar gizmos; one_way adds a
+## direction marker. Dangling bags are omitted by the compiler.
 ## No interpolation. WASD / Jump / Reset / Use item encode existing
 ## intents. play_move_step is a presentation stub, not a product speed.
 ## No BASTION, accounts, reconnect tickets, settlement, or offline writes.
@@ -16,6 +18,7 @@ const MatchJoinSessionGd := preload("res://src/client/match_join_session.gd")
 const MatchPlaySessionGd := preload("res://src/client/match_play_session.gd")
 const MatchCourseMapGd := preload("res://src/client/match_course_map.gd")
 const MatchCrateMapGd := preload("res://src/client/match_crate_map.gd")
+const MatchPortalLinkMapGd := preload("res://src/client/match_portal_link_map.gd")
 const MatchSnapshotMapGd := preload("res://src/client/match_snapshot_map.gd")
 const PlayerIntentNames := preload("res://src/shared/commands/player_intent_names.gd")
 
@@ -34,6 +37,7 @@ const _STATUS_NAME: String = "Status"
 const _MAP_NAME: String = "SnapshotMap"
 const _COURSE_NAME: String = "CourseMap"
 const _CRATE_NAME: String = "CrateMap"
+const _LINK_NAME: String = "PortalLinkMap"
 const _MOVE_FORWARD: String = "move_forward"
 const _MOVE_BACK: String = "move_back"
 const _MOVE_LEFT: String = "move_left"
@@ -46,6 +50,7 @@ var play: MatchPlaySessionGd = null
 var map: MatchSnapshotMapGd = null
 var course: MatchCourseMapGd = null
 var crates: MatchCrateMapGd = null
+var links: MatchPortalLinkMapGd = null
 var window: Window = null
 var live_io: bool = false
 var control_plane_base: String = DEFAULT_CONTROL_PLANE
@@ -270,6 +275,7 @@ func status_view() -> Dictionary:
 	var mapped_portals: int = 0
 	var mapped_finish: int = 0
 	var mapped_crates: int = 0
+	var mapped_links: int = 0
 	if map != null:
 		mapped_players = map.player_count()
 	if course != null:
@@ -278,6 +284,8 @@ func status_view() -> Dictionary:
 		mapped_finish = course.finish_count()
 	if crates != null:
 		mapped_crates = crates.crate_count()
+	if links != null:
+		mapped_links = links.link_count()
 	return {
 		"join_state": join_view.get("state", ""),
 		"error": join_view.get("error", ""),
@@ -295,6 +303,7 @@ func status_view() -> Dictionary:
 		"mapped_portals": mapped_portals,
 		"mapped_finish": mapped_finish,
 		"mapped_crates": mapped_crates,
+		"mapped_links": mapped_links,
 		"window_visible": is_window_visible(),
 	}
 
@@ -377,10 +386,14 @@ func _ensure_window() -> void:
 	crates = MatchCrateMapGd.new()
 	crates.name = _CRATE_NAME
 	map.add_child(crates)
+	links = MatchPortalLinkMapGd.new()
+	links.name = _LINK_NAME
+	map.add_child(links)
 	add_child(window)
 	map.ensure_rig()
 	course.apply_path(course_path)
 	crates.apply_path(course_path)
+	links.apply_path(course_path)
 
 
 func _ensure_http() -> void:
@@ -533,6 +546,8 @@ func _refresh_status() -> void:
 	parts.append("course=%d/%d/%d" % [mapped_pads, mapped_portals, mapped_finish])
 	var mapped_crates: int = view.get("mapped_crates", 0)
 	parts.append("crates_mapped=%d" % mapped_crates)
+	var mapped_links: int = view.get("mapped_links", 0)
+	parts.append("links_mapped=%d" % mapped_links)
 	_status.text = " ".join(parts)
 
 

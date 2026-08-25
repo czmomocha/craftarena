@@ -6,6 +6,7 @@ extends Node3D
 ## stays in MatchSnapshotFollow; float conversion happens only here.
 ## Placeholders are not hitboxes. Crates have no pose in the v1 snapshot
 ## frame, so they are not drawn here; MatchCrateMap uses topology poses.
+## Portal source→dest bars stay undrawn here; MatchPortalLinkMap draws them.
 ## No interpolation, prediction, or ranking.
 
 const MatchSnapshotFollowGd := preload("res://src/client/match_snapshot_follow.gd")
@@ -60,6 +61,10 @@ func player_count() -> int:
 
 
 func crate_node_count() -> int:
+	return 0
+
+
+func link_node_count() -> int:
 	return 0
 
 
