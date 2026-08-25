@@ -163,7 +163,8 @@ AI 生成代码必须比普通手写代码有**更强的自动化证据**，因�
 - 对局大厅本席摄像机跟随：`follow_slot` 把 SnapshotCamera 对准该席表现位姿（偏移与 Preview 相同）；缺席/空名单看原点；Solo 跟本地盒、线上跟本席不跟远端；Cancel 回到原点；
 - 对局大厅本席移动朝向：大厅 WASD 把 8 向离散水平 `yaw_bam` 写入已有 Move（W=0 为 -Z；省略哨兵仍是 `-1`）；`MatchLocalPredict` overlay 朝向，更新 tick 硬贴；Solo 走本地权威；玩家盒带 local -Z 面向标记；显式 `try_encode_intent(..., -1)` 仍省略朝向；不发明 atan2、不锁产品转向、不改 Preview WASD；
 - 对局大厅本席分色：`follow_slot` 把本席盒涂成 `OWN_ALBEDO`（青）、远端仍 `REMOTE_ALBEDO`（海军蓝）；名次标本席前缀 `*`；`follow_slot < 0` 全员远端色；Solo / 线上 seat 0 与 seat 1 对调；Cancel 清 `follow_slot`；不是产品皮肤；
-- 对局大厅本席检查点占用高亮：本席 `accepted_count` 把垫涂成已验收 / 当前目标 / 未到；`accepted_count < 0` 全员原垫色；Solo 出生点已验收第一垫；走到第二垫后当前目标前移；线上跟本席进度不跟远端；Cancel 恢复原垫色；不是走路可达；人类真机步骤见 [章节真机清单](../../docs/runbooks/chapter-device-check.md) 本刀（人工检查，非 CI 门禁）；
+- 对局大厅本席检查点占用高亮：本席 `accepted_count` 把垫涂成已验收 / 当前目标 / 未到；`accepted_count < 0` 全员原垫色；Solo 出生点已验收第一垫；走到第二垫后当前目标前移；线上跟本席进度不跟远端；Cancel 恢复原垫色；不是走路可达；
+- 对局大厅本席冲线闭环表现：本席 `finish_tick` 把终点涂成未到 / 当前目标 / 已冲线；HUD `pads=n/m` / `finish=n`；Solo 走完 course_01 后 `result=`；线上仅本席垫齐时终点变当前、仅全员冲线才 `result=`；Cancel 恢复原金色且去掉 `pads=` / `result=`；不是结算写库或走路可达；人类真机步骤见 [章节真机清单](../../docs/runbooks/chapter-device-check.md) 本刀（人工检查，非 CI 门禁）；
 - 内部开发 EditorPlugin：`plugin.cfg` 入库；`project.godot` 启用 GUT + authoring_editor、不含 `godot_ai` / `_mcp_game_helper`；host 打开已有外壳，关闭只隐藏并保持会话，`detach` 释放，不结算；
 - 本地草稿恢复：成功写入落 `latest` 且文件非空；空会话打开恢复；恢复后工具条下一个 Place 使用新 id；编辑器 `plugin.gd` `@tool` 落盘；`world_committed`；失败写入不改草稿；损坏 / 多余键拒绝；拒绝写入 `res://`；检查点最多 30；不结算；
 - 编辑写入自动进 Preview：place / remove / Undo / Redo 都到达已连接 Preview 且两个世界 revision 同步；`set_component` 等级按 Preview 世界算（按编辑世界算会低报被拒）；失败写入不转发且仍跟随；越界补丁与整份 `import_document` 脱同步且不回滚编辑；无 Preview 时不谎报跟随；窗口隐藏仍跟随；状态栏 `follow` 可见；不结算；
