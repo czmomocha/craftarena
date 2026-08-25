@@ -1,7 +1,8 @@
 extends GutTest
 
 ## Latest-snapshot follow: apply decoded frames, ignore older ticks, keep
-## the last good snapshot when a frame is malformed. No interpolation.
+## the last good snapshot when a frame is malformed. Newer ticks keep the
+## previous player list for interpolation.
 
 const MatchFrameCodec := preload("res://src/shared/protocol/match_frame_codec.gd")
 const MatchSnapshotFollow := preload("res://src/client/match_snapshot_follow.gd")
@@ -37,6 +38,33 @@ func test_applies_latest_snapshot_and_rejects_older_or_bad() -> void:
 	assert_eq(follow.tick, 5)
 	assert_false(follow.allows_settlement())
 	assert_false(follow.allows_online_writes())
+
+
+func test_newer_tick_keeps_previous_players() -> void:
+	var follow: MatchSnapshotFollow = MatchSnapshotFollow.new()
+	assert_true(follow.apply_frame(_snapshot(3, 10, 1)))
+	assert_false(follow.has_previous)
+	assert_true(follow.apply_frame(_snapshot(5, 20, 0)))
+	assert_true(follow.has_previous)
+	assert_eq(follow.previous_tick, 3)
+	assert_eq(follow.tick, 5)
+	var previous_player: Dictionary = follow.previous_players[0]
+	var latest_player: Dictionary = follow.players[0]
+	var previous_x: int = previous_player.get("x", -1)
+	var latest_x: int = latest_player.get("x", -1)
+	assert_eq(previous_x, 10)
+	assert_eq(latest_x, 20)
+	assert_true(follow.apply_frame(_snapshot(5, 30, 0)))
+	assert_eq(follow.previous_tick, 3)
+	var kept_previous: Dictionary = follow.previous_players[0]
+	var replaced: Dictionary = follow.players[0]
+	var kept_x: int = kept_previous.get("x", -1)
+	var replaced_x: int = replaced.get("x", -1)
+	assert_eq(kept_x, 10)
+	assert_eq(replaced_x, 30)
+	assert_false(follow.apply_frame(_snapshot(4, 99, 0)))
+	assert_eq(follow.previous_tick, 3)
+	assert_eq(follow.tick, 5)
 
 
 func test_equal_tick_replaces_payload() -> void:

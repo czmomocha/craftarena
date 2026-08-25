@@ -4,7 +4,8 @@ extends RefCounted
 ## After a ready join ticket, build the gateway URL and follow snapshots.
 ## Commands use MatchFrameCodec; the command tick is 0 because the server
 ## tick is authoritative (CD-43 §3). Shove/Interact stay unencoded.
-## Sockets stay outside this type. No interpolation or prediction.
+## Sockets stay outside this type. Interpolation is sampled by the lobby
+## from the follower's previous/latest poses. No prediction.
 ## After a close, a new ticket from reconnect can try_begin again.
 
 const MatchFrameCodec := preload("res://src/shared/protocol/match_frame_codec.gd")

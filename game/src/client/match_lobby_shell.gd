@@ -15,7 +15,9 @@ extends Node
 ## Path distance is not ranked. Solo play starts a local
 ## TraprushMatchSession (CD-13 §3); the HUD keeps
 ## "离线试玩，成绩不上传" while it runs. Web is refused.
-## No interpolation. WASD / Jump / Reset / Use item encode existing
+## Player boxes and standing labels sample MatchSnapshotInterp between
+## the last two snapshots. play_interp_step is a presentation stub, not
+## an interpolation window. WASD / Jump / Reset / Use item encode existing
 ## intents. play_move_step is a presentation stub, not a product speed.
 ## Unexpected socket close while connecting or in-match reissues the
 ## consumed ticket and follows the latest snapshot again.
@@ -33,6 +35,7 @@ const MatchCourseMapGd := preload("res://src/client/match_course_map.gd")
 const MatchCrateMapGd := preload("res://src/client/match_crate_map.gd")
 const MatchPortalLinkMapGd := preload("res://src/client/match_portal_link_map.gd")
 const MatchSnapshotFollowGd := preload("res://src/client/match_snapshot_follow.gd")
+const MatchSnapshotInterpGd := preload("res://src/client/match_snapshot_interp.gd")
 const MatchSnapshotMapGd := preload("res://src/client/match_snapshot_map.gd")
 const MatchStandingMapGd := preload("res://src/client/match_standing_map.gd")
 const OfficialTraprushCoursesGd := preload("res://src/shared/official_traprush_courses.gd")
@@ -83,8 +86,11 @@ var gateway_base: String = DEFAULT_GATEWAY
 var course_path: String = DEFAULT_COURSE
 var course_id: String = OfficialTraprushCoursesGd.DEFAULT_ID
 var play_move_step: int = Fixed.SCALE / 16
+var play_interp_step: int = Fixed.SCALE / 2
 var queue_poll_s: float = DEFAULT_QUEUE_POLL_S
 var last_sent_command: PackedByteArray = PackedByteArray()
+var _interp_t: int = 0
+var _interp_tick: int = -1
 
 var _status: Label = null
 var _room_edit: LineEdit
@@ -252,6 +258,7 @@ func try_solo() -> bool:
 	if id == "":
 		return false
 	_prepare_offline_stubs()
+	_reset_interp()
 	course_path = OfficialTraprushCoursesGd.document_path(id)
 	if not offline.try_begin(course_path, web_platform):
 		_refresh_status()
@@ -267,6 +274,7 @@ func try_stop_offline() -> bool:
 		return false
 	if not offline.try_stop():
 		return false
+	_reset_interp()
 	if map != null:
 		map.apply_players([])
 	if standings != null:
@@ -310,6 +318,7 @@ func try_begin_play() -> bool:
 		return false
 	if not play.try_begin(join, gateway_base):
 		return false
+	_reset_interp()
 	_opened_socket = false
 	if live_io:
 		_connect_gateway()
@@ -509,6 +518,28 @@ func status_label_text() -> String:
 	return _status.text
 
 
+func try_advance_interp() -> bool:
+	if window == null or not window.visible:
+		return false
+	if play_interp_step < 1:
+		return false
+	var follow: MatchSnapshotFollowGd = _active_follow()
+	if follow == null or not follow.has_previous:
+		return false
+	if _interp_t >= Fixed.SCALE:
+		return false
+	var next_t: int = _interp_t + play_interp_step
+	if next_t < _interp_t or next_t > Fixed.SCALE:
+		next_t = Fixed.SCALE
+	_interp_t = next_t
+	_apply_snapshot_map()
+	return true
+
+
+func interp_progress() -> int:
+	return _interp_t
+
+
 func allows_settlement() -> bool:
 	return false
 
@@ -534,6 +565,8 @@ func _process(delta: float) -> void:
 	try_sample_play_jump(Input.is_action_pressed(_JUMP))
 	if _offline_playing():
 		offline.try_advance()
+	try_advance_interp()
+	if _offline_playing():
 		_apply_snapshot_map()
 		_refresh_status()
 
@@ -820,22 +853,58 @@ func _refresh_status() -> void:
 
 
 func _apply_snapshot_map() -> void:
-	var follow: MatchSnapshotFollowGd = null
-	if _offline_playing():
-		follow = offline.follow
-	elif play != null:
-		follow = play.follow
-	if follow == null:
+	var follow: MatchSnapshotFollowGd = _active_follow()
+	if follow == null or not follow.has_snapshot:
 		return
+	_sync_interp_t(follow)
+	var previous_players: Array = []
+	if follow.has_previous:
+		previous_players = follow.previous_players
+	var sampled: Dictionary = MatchSnapshotInterpGd.try_sample(
+		previous_players,
+		follow.players,
+		_interp_t
+	)
+	if not sampled.get("ok", false):
+		return
+	var players_raw: Variant = sampled.get("players", [])
+	if typeof(players_raw) != TYPE_ARRAY:
+		return
+	var players: Array = players_raw
 	if map != null:
-		map.apply_follow(follow)
+		map.apply_players(players, follow.crates)
 	if crates != null:
 		crates.apply_follow(follow)
 	if standings != null:
 		var pad_total: int = 0
 		if course != null:
 			pad_total = course.pad_count()
-		standings.apply_follow(follow, pad_total)
+		standings.apply_players(players, pad_total)
+
+
+func _active_follow() -> MatchSnapshotFollowGd:
+	if _offline_playing():
+		return offline.follow
+	if play != null:
+		return play.follow
+	return null
+
+
+func _sync_interp_t(follow: MatchSnapshotFollowGd) -> void:
+	if follow == null or not follow.has_snapshot:
+		return
+	if follow.tick == _interp_tick:
+		return
+	_interp_tick = follow.tick
+	if follow.has_previous:
+		_interp_t = 0
+	else:
+		_interp_t = Fixed.SCALE
+
+
+func _reset_interp() -> void:
+	_interp_t = 0
+	_interp_tick = -1
 
 
 func _offline_playing() -> bool:

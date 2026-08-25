@@ -11,6 +11,6 @@ alwaysApply: true
 
 一章 = 同一条链路的一次闭合：要锁的契约 + 实现 + 正反例测试 + 所有者文档落点。
 
-- 做：M3 第二十四章「人数按场下发」——HTTP JSON `seats` 为 1～8 整数（不接受 `players` 别名或非整）；空 body / `{}` / 省略 `seats` 默认 2；`POST /matchmaking/quick` 与 `POST /matchmaking/rooms` 可带 `{ course, seats }`；按码加入仍无 body，响应带回该房已锁 `seats`；201 / ready / waiting 都带 `seats`；快速游戏只进同一赛道且同一人数未满公开房；队列记住 `seats`，余席只给同课同人数，建房等待不占邻房余席；控制面 `launch({ course, seats })` → MatchHost `POST /matches { course, seats }` → Godot `--players=N`；登记 `POST /match-sessions` 带同一人数；大厅选人数；Solo 仍为 1 人本地会话；0 / 9 / 别名 / 多余字段 400。作为一章。
-- 不做：账号绑定、快照插值/预测校正、可达性叠加 gizmos、走路可达/合法路径距离、检查点到达时间、本机最佳轨迹幽灵、已缓存 UGC/草稿试玩、个人试玩记录落盘、墙钟发送速率、MMR、限时未全员冲线结算、Shove/Interact 线上 id、Tick/快照频率锁定、2 秒云端上传、5 分钟定时、BASTION 面板、批量生成、性能分析、时延自动门禁、重力/下落、二进制签名、产品速度、复活硬直；不开 M4 / M5 新章节；不为了两域并行而各交半章。
+- 做：M3 第二十五章「对局快照插值」——`MatchSnapshotFollow` 在 tick 前进时保留上一份玩家位姿；`MatchSnapshotInterp.try_sample` 用 Q48.16 `t`（0～`Fixed.SCALE`）对 x/y/z 线性插值、对 `yaw_bam` 按最短 BAM 弧插值；`accepted_count` / `finish_tick` 取最新权威；无上一份或任一轴位移 ≥ `Fixed.SCALE`（1 表现米格子，不是对账阈值）则贴最新；溢出贴最新；箱子 / 赛道 / 连线 / 顺序 gizmos 不插值；大厅 `play_interp_step` 是表现桩，可见窗口才推进 `t`，隐藏不推进；名次文字用最新权威、标签位姿跟插值；同 tick 替换不建 previous；不预测、不校正、不锁插值窗口 / 快照频率。作为一章。
+- 不做：账号绑定、本地移动预测、远端外推碰撞、平滑对账、可达性叠加 gizmos、走路可达/合法路径距离、检查点到达时间、本机最佳轨迹幽灵、已缓存 UGC/草稿试玩、个人试玩记录落盘、墙钟发送速率、MMR、限时未全员冲线结算、Shove/Interact 线上 id、Tick/快照频率锁定、2 秒云端上传、5 分钟定时、BASTION 面板、批量生成、性能分析、时延自动门禁、重力/下落、二进制签名、产品速度、复活硬直；不开 M4 / M5 新章节；不为了两域并行而各交半章。
 - 仍不做：把预算数字、走路可达、多人试玩房、Rule VM 真应用和整个 M3 塞进一个 PR。

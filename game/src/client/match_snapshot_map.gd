@@ -9,7 +9,8 @@ extends Node3D
 ## Portal source→dest bars stay undrawn here; MatchPortalLinkMap draws them.
 ## Checkpoint-order gizmos stay undrawn here; MatchCheckpointOrderMap
 ## draws them. Standing labels stay undrawn here; MatchStandingMap
-## draws them. No interpolation or prediction.
+## draws them. This node does not interpolate; the lobby may pass
+## sampled poses from MatchSnapshotInterp. No prediction.
 
 const MatchSnapshotFollowGd := preload("res://src/client/match_snapshot_follow.gd")
 

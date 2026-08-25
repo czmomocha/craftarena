@@ -19,7 +19,7 @@
 - BASTION 只按蓝图声明的合法真人阵容开始；
 - 在线房不自动补机器人。
 
-实现落点（2026-08-25）：在线入场票据绑定席位。断线后控制面 `POST /match-sessions/:matchId/tickets/reconnect` 用已消费票补发**同一席位**新票，不占额外席、不绑账号。客户端跟从最新权威快照。注销后不能补票。离线不走该接口。不锁账号绑定、插值/预测。传输细节见 [CD-43 §2](../40-technical/43-networking-and-replay.md#2-传输)。
+实现落点（2026-08-25）：在线入场票据绑定席位。断线后控制面 `POST /match-sessions/:matchId/tickets/reconnect` 用已消费票补发**同一席位**新票，不占额外席、不绑账号。客户端跟从最新权威快照，大厅可对相邻快照做表现插值（见 [CD-43 §2](../40-technical/43-networking-and-replay.md#2-传输)）。注销后不能补票。离线不走该接口。不锁账号绑定、本地预测/校正。传输细节见 [CD-43 §2](../40-technical/43-networking-and-replay.md#2-传输)。
 
 ## 2. Guest 与正式账号
 
