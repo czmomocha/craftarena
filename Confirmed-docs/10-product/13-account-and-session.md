@@ -56,3 +56,5 @@
 - 结算结果不生成 MMR，不影响下一局匹配权重。
 
 TRAPRUSH 的完整排序优先级见 [CD-21 §6.1](../20-gameplay/21-traprush.md)；BASTION 的胜负与 MVP 判定见 [CD-22 §5.2](../20-gameplay/22-bastion.md)。
+
+实现落点（2026-08-25）：大厅直播名次板从最新权威快照的 `finish_tick` / `accepted_count` 派生（`TraprushStanding` + `MatchStandingMap`），只覆盖 [CD-21 §6.1](../20-gameplay/21-traprush.md#61-排序优先级) 第 1、2 条，并以槽位作为稳定键。这是表现，不是结算写库，也不生成 MMR。合法路径距离与到达当前检查点时间仍待。落点见 [CD-42 §3.4](../40-technical/42-contracts-and-rulevm.md#34-实现落点) 与 [CD-43 §2](../40-technical/43-networking-and-replay.md#2-传输)。

@@ -7,7 +7,8 @@ extends Node3D
 ## orders are labeled only and stay out of the chain. Authority stays on
 ## SimulationBundle; float conversion happens only here. Gizmos are not
 ## hitboxes. Portal bars stay undrawn here; MatchPortalLinkMap draws them.
-## No interpolation, prediction, ranking, or course-selection API.
+## Standing labels stay undrawn here; MatchStandingMap draws them.
+## No interpolation, prediction, or course-selection API.
 
 const AuthoringDocumentGd := preload("res://src/creator/authoring_document.gd")
 const TraprushTopologyCompilerGd := preload("res://src/ugc/traprush_topology_compiler.gd")
@@ -81,6 +82,10 @@ func crate_node_count() -> int:
 
 
 func link_node_count() -> int:
+	return 0
+
+
+func standing_node_count() -> int:
 	return 0
 
 

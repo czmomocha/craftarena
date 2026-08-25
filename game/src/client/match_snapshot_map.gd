@@ -8,7 +8,8 @@ extends Node3D
 ## frame, so they are not drawn here; MatchCrateMap uses topology poses.
 ## Portal source→dest bars stay undrawn here; MatchPortalLinkMap draws them.
 ## Checkpoint-order gizmos stay undrawn here; MatchCheckpointOrderMap
-## draws them. No interpolation, prediction, or ranking.
+## draws them. Standing labels stay undrawn here; MatchStandingMap
+## draws them. No interpolation or prediction.
 
 const MatchSnapshotFollowGd := preload("res://src/client/match_snapshot_follow.gd")
 
@@ -70,6 +71,10 @@ func link_node_count() -> int:
 
 
 func checkpoint_node_count() -> int:
+	return 0
+
+
+func standing_node_count() -> int:
 	return 0
 
 

@@ -8,8 +8,9 @@ extends Node3D
 ## poses in the bundle but stay undrawn here; MatchCrateMap draws them.
 ## Portal source→dest bars stay undrawn here; MatchPortalLinkMap draws them.
 ## Checkpoint-order labels and sequence bars stay undrawn here;
-## MatchCheckpointOrderMap draws them.
-## No interpolation, prediction, ranking, or course-selection API.
+## MatchCheckpointOrderMap draws them. Standing labels stay undrawn
+## here; MatchStandingMap draws them.
+## No interpolation, prediction, or course-selection API.
 
 const AuthoringDocumentGd := preload("res://src/creator/authoring_document.gd")
 const TraprushTopologyCompilerGd := preload("res://src/ugc/traprush_topology_compiler.gd")
@@ -103,6 +104,10 @@ func link_node_count() -> int:
 
 
 func checkpoint_node_count() -> int:
+	return 0
+
+
+func standing_node_count() -> int:
 	return 0
 
 

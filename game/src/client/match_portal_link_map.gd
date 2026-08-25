@@ -7,8 +7,9 @@ extends Node3D
 ## Dangling bags are omitted by the compiler and are not drawn.
 ## Checkpoint-order gizmos stay undrawn here; MatchCheckpointOrderMap
 ## draws them. Authority stays on SimulationBundle; float conversion
-## happens only here. Gizmos are not hitboxes. No interpolation,
-## prediction, ranking, or course-selection API.
+## happens only here. Gizmos are not hitboxes. Standing labels stay
+## undrawn here; MatchStandingMap draws them. No interpolation,
+## prediction, or course-selection API.
 
 const AuthoringDocumentGd := preload("res://src/creator/authoring_document.gd")
 const AuthoringPortalKindsGd := preload("res://src/creator/authoring_portal_kinds.gd")
@@ -92,6 +93,10 @@ func crate_node_count() -> int:
 
 
 func checkpoint_node_count() -> int:
+	return 0
+
+
+func standing_node_count() -> int:
 	return 0
 
 

@@ -32,6 +32,7 @@ func test_official_course_01_maps_occupancy_and_skips_crates() -> void:
 	assert_eq(_map.crate_node_count(), 0)
 	assert_eq(_map.link_node_count(), 0)
 	assert_eq(_map.checkpoint_node_count(), 0)
+	assert_eq(_map.standing_node_count(), 0)
 	var pad: MeshInstance3D = _map.pad_node(1)
 	var finish: MeshInstance3D = _map.finish_node(30)
 	assert_not_null(pad)

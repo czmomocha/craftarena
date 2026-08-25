@@ -204,6 +204,8 @@ Undo / Redo 是会话内对成功命令派生的反向 payload（`place`↔`remo
 | TRAPRUSH 拓扑加载 | `game/src/games/traprush/traprush_topology_loader.gd` |
 | 对局进程多人仿真循环 | `game/src/games/traprush/match_session.gd` |
 | 对局二进制协议 v1 | `game/src/shared/protocol/match_frame_codec.gd` |
+| TRAPRUSH 直播名次 | `game/src/games/traprush/standing.gd` |
+| 对局大厅名次表现映射 | `game/src/client/match_standing_map.gd` |
 | 对局进程入口 | `game/src/server/match_server.gd` |
 | 对局进程实时回路 | `game/src/server/match_realtime.gd` |
 | 实时网关代理 | `backend/realtime-gateway/src/server.ts` |

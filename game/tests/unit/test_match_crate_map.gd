@@ -32,6 +32,7 @@ func test_official_course_01_maps_alive_crate() -> void:
 	assert_true(_map.apply_path(COURSE_01_PATH))
 	assert_eq(_map.crate_count(), 1)
 	assert_eq(_map.checkpoint_node_count(), 0)
+	assert_eq(_map.standing_node_count(), 0)
 	var crate: MeshInstance3D = _map.crate_node(40)
 	assert_not_null(crate)
 	assert_almost_eq(crate.position.x, 0.0, EPS)
