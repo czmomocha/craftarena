@@ -27,7 +27,9 @@ var websocket_url: String = ""
 var follow: MatchSnapshotFollowGd = MatchSnapshotFollowGd.new()
 var predict: MatchLocalPredictGd = MatchLocalPredictGd.new()
 var last_command: PackedByteArray = PackedByteArray()
-## Presentation jump stub; match-server jump_dy is still 0. Not a product height.
+## Online overlay jump stays 0 so snapshots are not stacked with a fake hop.
+## Match-server jump_dy is the Preview placeholder. Official courses have
+## no solid footing, so Jump is still an airborne no-op there. Not a product height.
 var play_jump_dy: int = 0
 
 

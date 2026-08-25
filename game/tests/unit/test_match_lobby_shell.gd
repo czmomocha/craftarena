@@ -513,6 +513,19 @@ func test_offline_solo_does_not_stack_local_predict_overlay() -> void:
 	assert_almost_eq(moved_x - origin_x, step, 0.0001)
 
 
+func test_solo_use_item_from_spawn_breaks_course_01_crate() -> void:
+	_shell = _open_shell()
+	assert_true(_shell.try_solo())
+	assert_eq(_shell.crates.crate_count(), 1)
+	assert_eq(_shell.offline.session.destructible_alive_count(), 1)
+	var use_item: PackedByteArray = _shell.try_sample_play_use_item(true)
+	assert_false(use_item.is_empty())
+	assert_eq(_shell.offline.session.destructible_alive_count(), 0)
+	assert_eq(_shell.crates.crate_count(), 0)
+	assert_false(_shell.allows_settlement())
+	assert_false(_shell.allows_online_writes())
+
+
 func _open_shell() -> MatchLobbyShell:
 	var shell: MatchLobbyShell = MatchLobbyShell.create()
 	add_child(shell)

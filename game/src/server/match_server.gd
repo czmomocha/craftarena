@@ -14,10 +14,12 @@ extends Node
 ## 全员冲线后另含 settlement；供 MatchHost 停止前写库与跨进程确定性核对。
 ## 心跳不续租（CD-44 §3）。
 ## --max-ticks 到达后打印最终心跳并 exit 0；配置非法打印错误事件并 exit 1。
-## 出生偏移、胶囊尺寸与心跳/快照节奏均为进程内占位桩，不锁产品出生布局或数值。
+## 出生偏移、胶囊尺寸、心跳/快照节奏与动作数值（跳跃/支撑/道具伤害与触达）
+## 均为进程内占位桩，不锁产品出生布局或数值。与大厅 Solo 占位桩同值。
 
 const AuthoringDocument := preload("res://src/creator/authoring_document.gd")
 const AuthoringWorld := preload("res://src/creator/authoring_world.gd")
+const Fixed := preload("res://src/shared/fixed/fixed.gd")
 const MatchRealtime := preload("res://src/server/match_realtime.gd")
 const SimulationBundle := preload("res://src/ugc/simulation_bundle.gd")
 const TraprushMatchSession := preload("res://src/games/traprush/match_session.gd")
@@ -39,6 +41,8 @@ const CAPSULE_HEIGHT: int = 8192
 const SPAWN_STRIDE: int = 32768
 ## 占位仿真种子；对局种子由控制面下发是后续章节。
 const MATCH_SEED: int = 1
+## 占位动作数值，与大厅 Solo 对齐，不是产品跳跃高度、支撑探测或爆破表。
+const STUB_USE_ITEM_DAMAGE: int = 1
 
 var _session: TraprushMatchSession = null
 var _realtime: MatchRealtime = null
@@ -240,7 +244,7 @@ static func boot_session(config: Dictionary) -> TraprushMatchSession:
 	var bundle: SimulationBundle = TraprushTopologyCompiler.compile(world)
 	if bundle == null:
 		return null
-	return TraprushMatchSession.create(
+	var session: TraprushMatchSession = TraprushMatchSession.create(
 		bundle,
 		MATCH_SEED,
 		players,
@@ -248,6 +252,15 @@ static func boot_session(config: Dictionary) -> TraprushMatchSession:
 		CAPSULE_RADIUS,
 		CAPSULE_HEIGHT
 	)
+	if session == null:
+		return null
+	session.jump_dy = Fixed.SCALE
+	session.support_dy = Fixed.SCALE
+	session.use_item_damage = STUB_USE_ITEM_DAMAGE
+	session.use_item_reach_dx = 0
+	session.use_item_reach_dy = 0
+	session.use_item_reach_dz = Fixed.SCALE
+	return session
 
 
 static func _spawn_offsets(players: int) -> Array[Dictionary]:

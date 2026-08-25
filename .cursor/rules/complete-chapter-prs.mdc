@@ -13,6 +13,6 @@ alwaysApply: true
 
 真机：PR Test plan 与 [章节真机清单](docs/runbooks/chapter-device-check.md) 本刀必须是编号步骤（怎么开、点什么、期望 / 失败）；禁止只写「真机再看一眼」。无 GUI 的章写「无」加原因。人工检查，不是 CI 门禁。口径见 [CD-52 §3.2](Confirmed-docs/50-engineering/52-ai-workflow.md)。
 
-- 做：M3 第二十六章「对局本席移动预测」——入场就绪 JSON 带本票 `seat`（0 起，须 < `seats`）；补票回同一席；`MatchLocalPredict` 把已有 Move/Jump 的 Q48.16 位移叠在最新权威本席位姿上，本席不插值、远端仍插值；更新的快照 tick 硬贴权威并清 overlay；传送 / 重置 / 道具 / 冲线不预测；大厅 WASD 立即移动本席盒；Solo 不叠 overlay。作为一章。
+- 做：M3 「对局进程动作数值占位桩」——`match_server` boot 与 Preview 对齐跳跃/支撑/道具占位值，官方 `course_01` 出生点 UseItem 打碎 +Z 箱，Solo 占位桩与进程对齐，作为一章。
 - 不做：账号绑定、远端外推碰撞、平滑对账、可达性叠加 gizmos、走路可达/合法路径距离、检查点到达时间、本机最佳轨迹幽灵、已缓存 UGC/草稿试玩、个人试玩记录落盘、墙钟发送速率、MMR、限时未全员冲线结算、Shove/Interact 线上 id、Tick/快照频率锁定、2 秒云端上传、5 分钟定时、BASTION 面板、批量生成、性能分析、时延自动门禁、重力/下落、二进制签名、产品速度、复活硬直；不开 M4 / M5 新章节；不为了两域并行而各交半章。
 - 仍不做：把预算数字、走路可达、多人试玩房、Rule VM 真应用和整个 M3 塞进一个 PR。
