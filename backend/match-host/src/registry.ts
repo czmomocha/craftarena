@@ -76,6 +76,7 @@ export class MatchCapacityError extends Error {
 interface MatchEntry {
 	record: MatchRecord;
 	readonly process: LaunchedProcess;
+	settlementPosted: boolean;
 }
 
 /**
@@ -167,7 +168,7 @@ export class MatchRegistry {
 			course,
 		};
 
-		this.#entries.set(matchId, { record, process });
+		this.#entries.set(matchId, { record, process, settlementPosted: false });
 		this.#options.onEvent?.({ type: "started", matchId, port });
 
 		// 进程自己退出（崩溃或正常结束）时同步状态并注销，不然注册表会一直显示 running，
@@ -275,6 +276,28 @@ export class MatchRegistry {
 		return this.#finalize(matchId, reason);
 	}
 
+	/**
+	 * 运行中心跳一旦带上全员冲线结算，立刻 POST 控制面（409 视为已写入）。
+	 * 停止路径仍会再 POST 一次。失败不杀进程，下轮重试。
+	 */
+	async flushSettlements(): Promise<void> {
+		for (const [matchId, entry] of this.#entries) {
+			if (entry.record.state !== "running" || entry.settlementPosted) {
+				continue;
+			}
+			const settlement = parseMatchTickSettlement(entry.process.recentOutput());
+			if (settlement === undefined) {
+				continue;
+			}
+			try {
+				await this.#options.registrar.recordSettlement(matchId, settlement);
+				entry.settlementPosted = true;
+			} catch {
+				continue;
+			}
+		}
+	}
+
 	/** 扫描并回收到期对局。由 MatchHost 定时调用。 */
 	async reclaimExpired(): Promise<readonly MatchRecord[]> {
 		const now = this.#now();
@@ -349,6 +372,7 @@ export class MatchRegistry {
 			const settlement = parseMatchTickSettlement(entry.process.recentOutput());
 			if (settlement !== undefined) {
 				await this.#options.registrar.recordSettlement(matchId, settlement);
+				entry.settlementPosted = true;
 			}
 		} catch (error) {
 			if (error instanceof MatchSessionSettlementError) {

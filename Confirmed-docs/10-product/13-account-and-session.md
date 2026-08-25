@@ -61,4 +61,4 @@
 
 TRAPRUSH 的完整排序优先级见 [CD-21 §6.1](../20-gameplay/21-traprush.md)；BASTION 的胜负与 MVP 判定见 [CD-22 §5.2](../20-gameplay/22-bastion.md)。
 
-实现落点（2026-08-25）：大厅直播名次板从最新权威快照的 `finish_tick` / `accepted_count` 派生（`TraprushStanding` + `MatchStandingMap`），只覆盖 [CD-21 §6.1](../20-gameplay/21-traprush.md#61-排序优先级) 第 1、2 条，并以槽位作为稳定键。合法路径距离与到达当前检查点时间仍待。全部配置玩家冲线后，`TraprushMatchSettlement` 用同一套排序生成单局记录；MatchHost 停止前 `POST /match-sessions/:matchId/settlement` 由控制面写库一次，同场第二次 409，注销会话后记录仍在。离线与客户端不写。不生成 MMR。落点见 [CD-42 §3.4](../40-technical/42-contracts-and-rulevm.md#34-实现落点) 与 [CD-43 §2](../40-technical/43-networking-and-replay.md#2-传输)。
+实现落点（2026-08-25）：大厅直播名次板从最新权威快照的 `finish_tick` / `accepted_count` 派生（`TraprushStanding` + `MatchStandingMap`），只覆盖 [CD-21 §6.1](../20-gameplay/21-traprush.md#61-排序优先级) 第 1、2 条，并以槽位作为稳定键。合法路径距离与到达当前检查点时间仍待。全部配置玩家冲线后，`TraprushMatchSettlement` 用同一套排序生成单局记录；MatchHost 对 running 场解析心跳，一旦有合法 settlement 就 POST；停止前再 POST 一次（409 视为已写入）。大厅线上全员冲线后 GET 同一份记录，200 后 HUD `settled=`；404 不把 join 打成 FAILED。离线与客户端不 POST。不生成 MMR。落点见 [CD-42 §3.4](../40-technical/42-contracts-and-rulevm.md#34-实现落点) 与 [CD-43 §2](../40-technical/43-networking-and-replay.md#2-传输)。

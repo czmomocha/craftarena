@@ -6,7 +6,8 @@ extends RefCounted
 ## Injected HTTP only: try_* records the next request; accept_http applies
 ## the status + object. No SceneTree, no sockets. Room-code alphabet and
 ## length match the current development placeholder (not a product lock).
-## Does not bind accounts or write settlement. Reconnect reissues a
+## Does not bind accounts or POST settlement. READY may GET the
+## control-plane board read-only; 404 keeps READY. Reconnect reissues a
 ## consumed ticket for the same match seat. try_abandon locally drops a
 ## ready/failed ticket without a leave-match HTTP API. Queue cancel
 ## (DELETE) still requires WAITING. Quick play / create room
@@ -62,6 +63,21 @@ const _REISSUE_KEYS: PackedStringArray = [
 	"expiresAt",
 	"seat",
 ]
+const _SETTLEMENT_KEYS: PackedStringArray = [
+	"matchId",
+	"tick",
+	"stateHash",
+	"padTotal",
+	"mvpSlot",
+	"rows",
+	"createdAt",
+]
+const _SETTLEMENT_ROW_KEYS: PackedStringArray = [
+	"slot",
+	"place",
+	"finishTick",
+	"acceptedCount",
+]
 
 var state: String = STATE_IDLE
 var error: String = ""
@@ -77,6 +93,8 @@ var seats: int = 0
 var issued: int = 0
 var seat: int = -1
 var course: String = ""
+var settlement_line: String = ""
+var has_settlement: bool = false
 
 var _pending_method: String = ""
 var _pending_path: String = ""
@@ -198,12 +216,22 @@ func try_reconnect() -> bool:
 	)
 
 
+func try_get_settlement() -> bool:
+	if state != STATE_READY or match_id == "" or has_pending():
+		return false
+	return _begin_request("GET", "/match-sessions/%s/settlement" % match_id.uri_encode())
+
+
 func accept_http(status_code: int, body: Dictionary) -> bool:
 	if not has_pending():
 		return false
 	var method: String = _pending_method
 	var path: String = _pending_path
 	_clear_pending()
+	if path.ends_with("/settlement"):
+		if status_code == 200:
+			return _accept_settlement(body)
+		return true
 	if status_code == 201:
 		if path.ends_with("/tickets/reconnect"):
 			return _accept_reissue(body)
@@ -230,14 +258,20 @@ func accept_http(status_code: int, body: Dictionary) -> bool:
 func fail_transport() -> bool:
 	if not has_pending():
 		return false
+	var keep_ready: bool = _is_settlement_get()
 	_clear_pending()
+	if keep_ready:
+		return true
 	return _fail("transport_error")
 
 
 func fail_parse() -> bool:
 	if not has_pending():
 		return false
+	var keep_ready: bool = _is_settlement_get()
 	_clear_pending()
+	if keep_ready:
+		return true
 	return _fail("parse_error")
 
 
@@ -269,6 +303,8 @@ func status_view() -> Dictionary:
 		"issued": issued,
 		"seat": seat,
 		"course": course,
+		"settlement_line": settlement_line,
+		"has_settlement": has_settlement,
 	}
 
 
@@ -284,7 +320,9 @@ func _begin_request(method: String, path: String, body: String = "") -> bool:
 	if has_pending():
 		return false
 	if state == STATE_READY:
-		if method != "POST" or not path.ends_with("/tickets/reconnect"):
+		var reconnect_ok: bool = method == "POST" and path.ends_with("/tickets/reconnect")
+		var settlement_ok: bool = method == "GET" and path.ends_with("/settlement")
+		if not reconnect_ok and not settlement_ok:
 			return false
 	elif state == STATE_WAITING and method == "POST":
 		return false
@@ -333,6 +371,91 @@ func _accept_reissue(body: Dictionary) -> bool:
 	error = ""
 	state = STATE_READY
 	return true
+
+
+func _accept_settlement(body: Dictionary) -> bool:
+	if not _keys_only(body, _SETTLEMENT_KEYS):
+		return true
+	var next_match: String = str(body.get("matchId", "")).strip_edges()
+	if next_match == "" or next_match != match_id:
+		return true
+	var tick_read: Dictionary = _read_int(body, "tick")
+	var pad_read: Dictionary = _read_int(body, "padTotal")
+	var mvp_read: Dictionary = _read_int(body, "mvpSlot")
+	var tick_ok: bool = tick_read.get("ok", false)
+	var pad_ok: bool = pad_read.get("ok", false)
+	var mvp_ok: bool = mvp_read.get("ok", false)
+	if not tick_ok or not pad_ok or not mvp_ok:
+		return true
+	var tick_value: int = tick_read.get("value", -1)
+	var pad_value: int = pad_read.get("value", -1)
+	var mvp_value: int = mvp_read.get("value", -1)
+	if tick_value < 0 or pad_value < 0 or mvp_value < 0 or mvp_value > 7:
+		return true
+	var state_hash: String = str(body.get("stateHash", "")).strip_edges()
+	var created_at: String = str(body.get("createdAt", "")).strip_edges()
+	if state_hash == "" or created_at == "":
+		return true
+	var rows_raw: Variant = body.get("rows", null)
+	if typeof(rows_raw) != TYPE_ARRAY:
+		return true
+	var rows: Array = rows_raw
+	var parsed: Dictionary = _parse_settlement_rows(rows, mvp_value)
+	if not parsed.get("ok", false):
+		return true
+	settlement_line = str(parsed.get("line", ""))
+	has_settlement = settlement_line != ""
+	error = ""
+	return true
+
+
+func _parse_settlement_rows(rows: Array, mvp_slot: int) -> Dictionary:
+	if rows.is_empty() or rows.size() > 8:
+		return {"ok": false}
+	var slots: Dictionary = {}
+	var places: Dictionary = {}
+	var winner_slot: int = -1
+	var by_place: Dictionary = {}
+	for item: Variant in rows:
+		if typeof(item) != TYPE_DICTIONARY:
+			return {"ok": false}
+		var row: Dictionary = item
+		if not _keys_only(row, _SETTLEMENT_ROW_KEYS):
+			return {"ok": false}
+		var slot_read: Dictionary = _read_int(row, "slot")
+		var place_read: Dictionary = _read_int(row, "place")
+		var finish_read: Dictionary = _read_int(row, "finishTick")
+		var accepted_read: Dictionary = _read_int(row, "acceptedCount")
+		if not slot_read.get("ok", false) or not place_read.get("ok", false):
+			return {"ok": false}
+		if not finish_read.get("ok", false) or not accepted_read.get("ok", false):
+			return {"ok": false}
+		var slot_value: int = slot_read.get("value", -1)
+		var place_value: int = place_read.get("value", 0)
+		var finish_value: int = finish_read.get("value", -1)
+		var accepted_value: int = accepted_read.get("value", -1)
+		if slot_value < 0 or slot_value > 7:
+			return {"ok": false}
+		if place_value < 1 or place_value > 8:
+			return {"ok": false}
+		if finish_value < 0 or accepted_value < 0:
+			return {"ok": false}
+		if slots.has(slot_value) or places.has(place_value):
+			return {"ok": false}
+		slots[slot_value] = true
+		places[place_value] = true
+		by_place[place_value] = slot_value
+		if place_value == 1:
+			winner_slot = slot_value
+	if winner_slot < 0 or winner_slot != mvp_slot:
+		return {"ok": false}
+	var parts: PackedStringArray = PackedStringArray()
+	for place_index: int in range(1, rows.size() + 1):
+		if not places.has(place_index):
+			return {"ok": false}
+		var slot_at_place: int = by_place.get(place_index, -1)
+		parts.append("#%ds%d" % [place_index, slot_at_place])
+	return {"ok": true, "line": "%s mvp=%d" % [",".join(parts), mvp_slot]}
 
 
 func _accept_waiting(body: Dictionary) -> bool:
@@ -511,6 +634,8 @@ func _clear_ready_fields() -> void:
 	expires_at = ""
 	issued = 0
 	seat = -1
+	settlement_line = ""
+	has_settlement = false
 
 
 func _match_body(course_id: String, seat_count: int) -> String:
@@ -525,3 +650,7 @@ func _clear_pending() -> void:
 	_pending_method = ""
 	_pending_path = ""
 	_pending_body = ""
+
+
+func _is_settlement_get() -> bool:
+	return _pending_method == "GET" and _pending_path.ends_with("/settlement")

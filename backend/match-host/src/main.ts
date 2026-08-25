@@ -69,6 +69,11 @@ const server = app;
 
 const reclaimTimer = setInterval(() => {
 	void registry
+		.flushSettlements()
+		.catch((error: unknown) => {
+			server.log.error({ error }, "failed to flush live settlements");
+		});
+	void registry
 		.reclaimExpired()
 		.then((reclaimed) => {
 			if (reclaimed.length > 0) {
