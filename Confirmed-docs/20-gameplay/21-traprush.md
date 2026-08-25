@@ -234,6 +234,6 @@ ResetToCheckpointIntent
 
 客户端不得发送最终位置、冲线结果、障碍死亡、道具命中和检查点完成断言。
 
-实现落点（2026-08-25）：在线大厅本席 `MatchLocalPredict` 只叠加已有 Move/Jump 的 Q48.16 位移到最新权威位姿；本席不插值。更新的快照 tick 硬贴权威（不是平滑对账）。传送、重置、道具、冲线、远端胶囊外推碰撞不预测。在线 `play_jump_dy` 仍为 0（不叠假跳跃 overlay）；对局进程 `jump_dy` 已是 Preview 占位桩。官方赛道无固体立足点，Jump 仍为空操作。对局进程 UseItem 伤害/触达与 Preview 对齐，官方 `course_01` 出生点可打碎 +Z 箱。落点见 [CD-43 §2](../40-technical/43-networking-and-replay.md#2-传输) 与 [CD-44 §3](../40-technical/44-deployment.md#3-进程隔离与租约)。
+实现落点（2026-08-25）：在线大厅本席 `MatchLocalPredict` 只叠加已有 Move/Jump 的 Q48.16 位移到最新权威位姿；本席不插值。更新的快照 tick 硬贴权威（不是平滑对账）。传送、重置、道具、冲线、远端胶囊外推碰撞不预测。在线 `play_jump_dy` 仍为 0（不叠假跳跃 overlay）；对局进程 `jump_dy` 已是 Preview 占位桩。官方赛道无固体立足点，Jump 仍为空操作。对局进程 UseItem 伤害/触达与 Preview 对齐，官方 `course_01` 出生点可打碎 +Z 箱。大厅 SnapshotCamera 跟随本席表现位姿（线上预测 overlay / Solo 本地权威），偏移与 Preview 相同；远端不拉镜头。落点见 [CD-43 §2](../40-technical/43-networking-and-replay.md#2-传输) 与 [CD-12 §1](../10-product/12-product-structure.md#1-入口结构)。
 
 网络故障正确性与手感一期只进行临时人工测试，不设固定频率或自动门禁。该选择**不代表**协议已经具备弱网鲁棒性；真实香港样本形成后再定义目标。若可靠传输队头阻塞被实测证明影响 TRAPRUSH，再评估原生 ENet 或 WebRTC，不能提前维护两套传输。

@@ -19,7 +19,9 @@ extends Node
 ## the last two snapshots. play_interp_step is a presentation stub, not
 ## an interpolation window. The local seat overlays MatchLocalPredict on
 ## the latest authority for Move/Jump; remotes still interpolate.
-## WASD / Jump / Reset / Use item encode existing
+## SnapshotCamera follows the own-seat presentation pose (predicted
+## online, local authority offline) with the Preview camera offset.
+## Remotes do not pull the camera. WASD / Jump / Reset / Use item encode existing
 ## intents. play_move_step is a presentation stub, not a product speed.
 ## Unexpected socket close while connecting or in-match reissues the
 ## consumed ticket and follows the latest snapshot again.
@@ -280,6 +282,7 @@ func try_stop_offline() -> bool:
 		return false
 	_reset_interp()
 	if map != null:
+		map.follow_slot = -1
 		map.apply_players([])
 	if standings != null:
 		standings.apply_players([])
@@ -315,6 +318,7 @@ func try_leave_play() -> bool:
 	last_sent_command = PackedByteArray()
 	_reset_interp()
 	if map != null:
+		map.follow_slot = -1
 		map.apply_players([])
 	if standings != null:
 		standings.apply_players([])
@@ -925,6 +929,7 @@ func _apply_snapshot_map() -> void:
 			if typeof(predicted_raw) == TYPE_ARRAY:
 				players = predicted_raw
 	if map != null:
+		map.follow_slot = _camera_follow_slot()
 		map.apply_players(players, follow.crates)
 	if crates != null:
 		crates.apply_follow(follow)
@@ -941,6 +946,14 @@ func _active_follow() -> MatchSnapshotFollowGd:
 	if play != null:
 		return play.follow
 	return null
+
+
+func _camera_follow_slot() -> int:
+	if _offline_playing():
+		return 0
+	if play != null and play.state == MatchPlaySessionGd.STATE_IN_MATCH:
+		return play.predict.own_slot
+	return -1
 
 
 func _sync_interp_t(follow: MatchSnapshotFollowGd) -> void:
