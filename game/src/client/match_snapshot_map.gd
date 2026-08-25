@@ -15,8 +15,10 @@ extends Node3D
 ## follow_slot aims SnapshotCamera at that player's presentation pose
 ## with the same offset as AuthoringPreviewMap; < 0 or a missing slot
 ## looks at the origin. The offset is a presentation stub, not a
-## product camera rig. Each player box has a local -Z facing marker so
-## yaw is visible on a cube. Not a product turn speed.
+## product camera rig. follow_slot also tints that box as the own seat
+## (OWN_ALBEDO); other seats use REMOTE_ALBEDO. Not product cosmetics.
+## Each player box has a local -Z facing marker so yaw is visible on a
+## cube. Not a product turn speed.
 
 const MatchSnapshotFollowGd := preload("res://src/client/match_snapshot_follow.gd")
 
@@ -28,8 +30,9 @@ const CAMERA_OFFSET: Vector3 = Vector3(6.0, 8.0, 6.0)
 const FACE_NAME: String = "face"
 const FACE_OFFSET: Vector3 = Vector3(0.0, 0.15, -0.55)
 const FACE_SIZE: Vector3 = Vector3(0.18, 0.18, 0.28)
+const OWN_ALBEDO: Color = Color(0.15, 0.85, 0.75)
+const REMOTE_ALBEDO: Color = Color(0.2, 0.45, 0.95)
 const _LIGHT_ROT_DEG: Vector3 = Vector3(-50.0, -30.0, 0.0)
-const _PLAYER_ALBEDO: Color = Color(0.2, 0.45, 0.95)
 const _FACE_ALBEDO: Color = Color(0.95, 0.92, 0.35)
 
 var follow_slot: int = -1
@@ -46,6 +49,12 @@ static func yaw_radians_from_bam(yaw_bam: int) -> float:
 
 static func player_name(slot: int) -> String:
 	return "%s%d" % [PLAYER_PREFIX, slot]
+
+
+static func player_albedo(slot: int, followed: int) -> Color:
+	if followed >= 0 and slot == followed:
+		return OWN_ALBEDO
+	return REMOTE_ALBEDO
 
 
 func apply_follow(follow: MatchSnapshotFollowGd) -> bool:
@@ -172,7 +181,7 @@ func _spawn_player(slot: int, body: Dictionary) -> void:
 	var yaw_bam: int = pose["yaw_bam"]
 	var mesh: BoxMesh = BoxMesh.new()
 	mesh.size = PLACEHOLDER_SIZE
-	mesh.material = _unshaded(_PLAYER_ALBEDO)
+	mesh.material = _unshaded(player_albedo(slot, follow_slot))
 	var node: MeshInstance3D = MeshInstance3D.new()
 	node.name = player_name(slot)
 	node.mesh = mesh

@@ -4,6 +4,7 @@ extends GutTest
 ## Injected HTTP and socket events. Close only hides. Never settlement.
 ## Own-seat SnapshotCamera follows the presentation pose; remotes do not.
 ## WASD writes discrete 8-way yaw_bam; player boxes show a facing marker.
+## Own-seat box uses OWN_ALBEDO; standing labels prefix the own seat with "*".
 
 const MatchFrameCodec := preload("res://src/shared/protocol/match_frame_codec.gd")
 const MatchJoinSession := preload("res://src/client/match_join_session.gd")
@@ -12,6 +13,7 @@ const MatchMoveFacing := preload("res://src/client/match_move_facing.gd")
 const MatchOfflineSession := preload("res://src/client/match_offline_session.gd")
 const MatchPlaySession := preload("res://src/client/match_play_session.gd")
 const MatchSnapshotMap := preload("res://src/client/match_snapshot_map.gd")
+const MatchStandingMap := preload("res://src/client/match_standing_map.gd")
 const PlayerIntentNames := preload("res://src/shared/commands/player_intent_names.gd")
 
 var _shell: MatchLobbyShell = null
@@ -92,7 +94,7 @@ func test_open_window_quick_play_ready_begins_play() -> void:
 	assert_almost_eq(marker.position.x, 12.0 / float(Fixed.SCALE), 0.0001)
 	var standing_mark: Label3D = _shell.standings.standing_node(0)
 	assert_not_null(standing_mark)
-	assert_eq(standing_mark.text, "#1 P0 0/3")
+	assert_eq(standing_mark.text, "*#1 P0 0/3")
 	assert_almost_eq(standing_mark.position.x, 12.0 / float(Fixed.SCALE), 0.0001)
 	assert_eq(_shell.map.crate_node_count(), 0)
 	assert_eq(_shell.map.link_node_count(), 0)
@@ -277,7 +279,7 @@ func test_stale_or_bad_snapshot_keeps_mapped_pose() -> void:
 	assert_eq(_shell.orders.checkpoint_count(), 3)
 	assert_almost_eq(_shell.orders.checkpoint_node(3).position.z, 0.0, 0.0001)
 	assert_eq(_shell.standings.standing_count(), 1)
-	assert_eq(_shell.standings.standing_node(0).text, "#1 P0 0/3")
+	assert_eq(_shell.standings.standing_node(0).text, "*#1 P0 0/3")
 	assert_almost_eq(_shell.standings.standing_node(0).position.x, 2.0, 0.0001)
 
 
@@ -329,7 +331,7 @@ func test_solo_play_maps_local_authority_without_http() -> void:
 	assert_eq(_shell.play.state, MatchPlaySession.STATE_IDLE)
 	assert_eq(_shell.map.player_count(), 1)
 	assert_eq(_shell.standings.standing_count(), 1)
-	assert_eq(_shell.standings.standing_node(0).text, "#1 P0 1/3")
+	assert_eq(_shell.standings.standing_node(0).text, "*#1 P0 1/3")
 	assert_true(_shell.status_label_text().contains(MatchOfflineSession.BANNER))
 	assert_true(_shell.status_label_text().contains("offline=playing"))
 	assert_true(_shell.status_label_text().contains("standings=#1s0 mvp=-"))
@@ -376,7 +378,7 @@ func test_snapshot_standings_rank_finished_first_without_settlement() -> void:
 	])))
 	assert_eq(_shell.standings.standing_count(), 2)
 	assert_eq(_shell.standings.mvp_slot(), 1)
-	assert_eq(_shell.standings.standing_node(0).text, "#2 P0 1/3")
+	assert_eq(_shell.standings.standing_node(0).text, "*#2 P0 1/3")
 	assert_eq(_shell.standings.standing_node(1).text, "#1 P1")
 	assert_almost_eq(_shell.standings.standing_node(1).position.x, 1.0, 0.0001)
 	assert_true(_shell.status_label_text().contains("standings=#1s1,#2s0 mvp=1"))
@@ -386,7 +388,7 @@ func test_snapshot_standings_rank_finished_first_without_settlement() -> void:
 	assert_eq(_shell.links.standing_node_count(), 0)
 	assert_eq(_shell.orders.standing_node_count(), 0)
 	assert_false(_shell.on_binary(PackedByteArray([1, 2, 3])))
-	assert_eq(_shell.standings.standing_node(0).text, "#2 P0 1/3")
+	assert_eq(_shell.standings.standing_node(0).text, "*#2 P0 1/3")
 	assert_eq(_shell.standings.mvp_slot(), 1)
 	assert_false(_shell.allows_settlement())
 	assert_false(_shell.allows_online_writes())
@@ -593,6 +595,42 @@ func test_online_wasd_overlays_yaw_then_hard_snaps() -> void:
 	_assert_player_yaw(_shell.map.player_node(0), MatchMoveFacing.YAW_FORWARD)
 
 
+func test_solo_own_slot_tints_box_and_stars_standing() -> void:
+	_shell = _open_shell()
+	assert_true(_shell.try_solo())
+	assert_eq(_player_albedo(_shell.map.player_node(0)), MatchSnapshotMap.OWN_ALBEDO)
+	var mark: Label3D = _shell.standings.standing_node(0)
+	assert_not_null(mark)
+	assert_true(mark.text.begins_with(MatchStandingMap.OWN_MARK_PREFIX))
+	assert_true(_shell.try_cancel())
+	assert_eq(_shell.map.follow_slot, -1)
+	assert_eq(_shell.standings.follow_slot, -1)
+
+
+func test_online_own_slot_tints_self_not_remote() -> void:
+	_shell = _open_shell()
+	assert_true(_shell.try_quick())
+	assert_true(_shell.accept_http(201, _join("ABCD23", "ticket-tint")))
+	assert_true(_shell.on_socket_open())
+	assert_true(_shell.on_binary(_two_player_snapshot(1, 0, 2 * Fixed.SCALE)))
+	assert_eq(_player_albedo(_shell.map.player_node(0)), MatchSnapshotMap.OWN_ALBEDO)
+	assert_eq(_player_albedo(_shell.map.player_node(1)), MatchSnapshotMap.REMOTE_ALBEDO)
+	assert_true(_shell.standings.standing_node(0).text.begins_with("*"))
+	assert_false(_shell.standings.standing_node(1).text.begins_with("*"))
+
+
+func test_online_seat_one_tints_second_box() -> void:
+	_shell = _open_shell()
+	assert_true(_shell.try_quick())
+	assert_true(_shell.accept_http(201, _join("ABCD23", "ticket-tint1", "course_01", 2, 1)))
+	assert_true(_shell.on_socket_open())
+	assert_true(_shell.on_binary(_two_player_snapshot(1, 0, 2 * Fixed.SCALE)))
+	assert_eq(_player_albedo(_shell.map.player_node(0)), MatchSnapshotMap.REMOTE_ALBEDO)
+	assert_eq(_player_albedo(_shell.map.player_node(1)), MatchSnapshotMap.OWN_ALBEDO)
+	assert_false(_shell.standings.standing_node(0).text.begins_with("*"))
+	assert_true(_shell.standings.standing_node(1).text.begins_with("*"))
+
+
 func test_solo_use_item_from_spawn_breaks_course_01_crate() -> void:
 	_shell = _open_shell()
 	assert_true(_shell.try_solo())
@@ -672,6 +710,15 @@ func _ranked_player(x: int, accepted_count: int, finish_tick: int) -> Dictionary
 func _ranked_snapshot(tick: int, players: Array[Dictionary]) -> PackedByteArray:
 	var crates: Array[Dictionary] = []
 	return MatchFrameCodec.encode_snapshot(tick, players, crates)
+
+
+func _player_albedo(node: MeshInstance3D) -> Color:
+	assert_not_null(node)
+	var box: BoxMesh = node.mesh as BoxMesh
+	assert_not_null(box)
+	var material: StandardMaterial3D = box.material as StandardMaterial3D
+	assert_not_null(material)
+	return material.albedo_color
 
 
 func _assert_player_yaw(node: Node3D, yaw_bam: int) -> void:
