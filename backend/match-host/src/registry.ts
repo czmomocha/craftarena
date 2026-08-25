@@ -45,7 +45,7 @@ export interface MatchRegistryOptions {
 	readonly listenProbe: MatchListenProbe;
 	/** 拼 `ws://{host}:{port}` 用的广告主机名，默认由调用方从配置传入。 */
 	readonly upstreamHost: string;
-	/** 本场席位，随登记交给控制面。来自 MatchHost 配置，不是产品锁定开局人数。 */
+	/** 本场席位，随登记交给控制面。省略 POST /matches.seats 时用这个默认。 */
 	readonly seats: number;
 	/** 空 POST /matches 时使用的官方赛道。省略时 `course_01`。 */
 	readonly defaultCourse?: string;
@@ -99,14 +99,17 @@ export class MatchRegistry {
 		this.#now = options.now ?? (() => Date.now());
 	}
 
-	async start(course: OfficialTraprushCourseId = this.#defaultCourse()): Promise<MatchRecord> {
+	async start(
+		course: OfficialTraprushCourseId = this.#defaultCourse(),
+		seats: number = this.#options.seats,
+	): Promise<MatchRecord> {
 		if (this.occupiedCount() >= this.#options.maxConcurrentMatches) {
 			throw new MatchCapacityError(this.#options.maxConcurrentMatches);
 		}
 
 		this.#reservations += 1;
 		try {
-			return await this.#launchAndRegister(course);
+			return await this.#launchAndRegister(course, seats);
 		} finally {
 			this.#reservations -= 1;
 		}
@@ -118,7 +121,7 @@ export class MatchRegistry {
 			: DEFAULT_OFFICIAL_TRAPRUSH_COURSE;
 	}
 
-	async #launchAndRegister(course: OfficialTraprushCourseId): Promise<MatchRecord> {
+	async #launchAndRegister(course: OfficialTraprushCourseId, seats: number): Promise<MatchRecord> {
 		const matchId = randomUUID();
 		const port = this.#ports.allocate();
 		let process: LaunchedProcess | undefined;
@@ -129,12 +132,13 @@ export class MatchRegistry {
 				matchId,
 				port,
 				course: officialTraprushCoursePath(course),
+				players: seats,
 			});
 			await this.#waitUntilListening(process, port);
 			await this.#options.registrar.register({
 				matchId,
 				upstreamUrl,
-				seats: this.#options.seats,
+				seats,
 				course,
 			});
 		} catch (error) {
@@ -159,7 +163,7 @@ export class MatchRegistry {
 			startedAt: now,
 			lease: createLease(now, this.#options.leaseDurationMs),
 			upstreamUrl,
-			seats: this.#options.seats,
+			seats,
 			course,
 		};
 

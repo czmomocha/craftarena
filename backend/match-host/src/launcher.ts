@@ -5,6 +5,8 @@ export interface MatchLaunchSpec {
 	readonly port: number;
 	/** Godot `--course=` 路径。省略时用启动器默认。 */
 	readonly course?: string;
+	/** Godot `--players=`。省略时用启动器默认。 */
+	readonly players?: number;
 }
 
 export interface MatchExit {
@@ -36,7 +38,7 @@ export interface GodotLauncherOptions {
 	readonly scene: string;
 	/**
 	 * 本机默认课程路径。控制面按场下发官方 id 后，MatchHost 把它映射成这条
-	 * `res://` 路径再传给对局进程。人数仍是启动器级占位。
+	 * `res://` 路径再传给对局进程。`players` 是省略人数时的占位。
 	 */
 	readonly course: string;
 	readonly players: number;
@@ -66,7 +68,7 @@ export class GodotProcessLauncher implements ProcessLauncher {
 			`--match-id=${spec.matchId}`,
 			`--port=${spec.port}`,
 			`--course=${spec.course ?? this.#options.course}`,
-			`--players=${this.#options.players}`,
+			`--players=${spec.players ?? this.#options.players}`,
 		];
 	}
 

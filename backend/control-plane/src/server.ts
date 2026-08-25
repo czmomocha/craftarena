@@ -8,7 +8,7 @@ import {
 	recordMatchSettlementBodySchema,
 	registerMatchSessionBodySchema,
 	verifyMatchTicketBodySchema,
-	readOfficialCourseBody,
+	readOfficialMatchBody,
 	isOfficialTraprushCourseId,
 	type CancelMatchQueueResponse,
 	type HealthPayload,
@@ -389,13 +389,13 @@ export function buildServer(options: BuildServerOptions): FastifyInstance {
 	);
 
 	app.post("/matchmaking/quick", async (request, reply) => {
-		const courseResult = readOfficialCourseBody(request.body);
-		if (!courseResult.ok) {
+		const matchResult = readOfficialMatchBody(request.body);
+		if (!matchResult.ok) {
 			reply.code(400);
-			return { error: courseResult.error };
+			return { error: matchResult.error };
 		}
 
-		const open = options.database.findOldestOpenRoom(courseResult.course);
+		const open = options.database.findOldestOpenRoom(matchResult.course, matchResult.seats);
 		if (open !== undefined) {
 			try {
 				reply.code(201);
@@ -415,16 +415,17 @@ export function buildServer(options: BuildServerOptions): FastifyInstance {
 			queueTtlMs,
 			queueSlotEstimateMs,
 			"quick",
-			courseResult.course,
+			matchResult.course,
+			matchResult.seats,
 			runDrain,
 		);
 	});
 
 	app.post("/matchmaking/rooms", async (request, reply) => {
-		const courseResult = readOfficialCourseBody(request.body);
-		if (!courseResult.ok) {
+		const matchResult = readOfficialMatchBody(request.body);
+		if (!matchResult.ok) {
 			reply.code(400);
-			return { error: courseResult.error };
+			return { error: matchResult.error };
 		}
 
 		return launchOrEnqueue(
@@ -435,7 +436,8 @@ export function buildServer(options: BuildServerOptions): FastifyInstance {
 			queueTtlMs,
 			queueSlotEstimateMs,
 			"create_room",
-			courseResult.course,
+			matchResult.course,
+			matchResult.seats,
 			runDrain,
 		);
 	});
@@ -587,6 +589,7 @@ async function launchOrEnqueue(
 	queueSlotEstimateMs: number,
 	kind: MatchQueueKind,
 	course: OfficialTraprushCourseId,
+	seats: number,
 	runDrain: () => Promise<void>,
 ): Promise<MatchmakingJoinResponse | MatchmakingQueueWaitingResponse | { error: string; message?: string }> {
 	if (options.matchLauncher === undefined) {
@@ -595,12 +598,12 @@ async function launchOrEnqueue(
 	}
 
 	try {
-		const matchId = await launchRegisteredRoom(options, course);
+		const matchId = await launchRegisteredRoom(options, course, seats);
 		reply.code(201);
 		return admitToRoom(options, matchId, now(), ticketTtlMs);
 	} catch (error) {
 		if (error instanceof MatchHostCapacityError) {
-			const queued = options.database.enqueue(kind, now(), queueTtlMs, course);
+			const queued = options.database.enqueue(kind, now(), queueTtlMs, course, seats);
 			await runDrain();
 			const view = viewQueue(options, queued.token, now(), queueSlotEstimateMs);
 			if (view !== undefined && view.status === "ready") {
@@ -620,6 +623,7 @@ async function launchOrEnqueue(
 					estimatedWaitMs: queueSlotEstimateMs,
 					expiresAt: queued.expiresAt,
 					course,
+					seats,
 				}
 			);
 		}
@@ -644,7 +648,7 @@ async function drainQueue(options: BuildServerOptions, now: () => Date, ticketTt
 			if (waiter.kind !== "quick") {
 				continue;
 			}
-			const open = options.database.findOldestOpenRoom(waiter.course);
+			const open = options.database.findOldestOpenRoom(waiter.course, waiter.seats);
 			if (open === undefined) {
 				continue;
 			}
@@ -663,7 +667,7 @@ async function drainQueue(options: BuildServerOptions, now: () => Date, ticketTt
 		if (head === undefined) {
 			return;
 		}
-		if (head.kind === "quick" && options.database.findOldestOpenRoom(head.course) !== undefined) {
+		if (head.kind === "quick" && options.database.findOldestOpenRoom(head.course, head.seats) !== undefined) {
 			progress = true;
 			continue;
 		}
@@ -672,7 +676,7 @@ async function drainQueue(options: BuildServerOptions, now: () => Date, ticketTt
 		}
 
 		try {
-			const matchId = await launchRegisteredRoom(options, head.course);
+			const matchId = await launchRegisteredRoom(options, head.course, head.seats);
 			try {
 				options.database.fulfillWaiter(head.tokenHash, matchId, now(), ticketTtlMs);
 			} catch (error) {
@@ -700,12 +704,13 @@ async function drainQueue(options: BuildServerOptions, now: () => Date, ticketTt
 async function launchRegisteredRoom(
 	options: BuildServerOptions,
 	course: OfficialTraprushCourseId,
+	seats: number,
 ): Promise<string> {
 	if (options.matchLauncher === undefined) {
 		throw new MatchHostLaunchError("match host is unavailable");
 	}
 
-	const launched = await options.matchLauncher.launch({ course });
+	const launched = await options.matchLauncher.launch({ course, seats });
 	if (options.database.getMatchSession(launched.matchId) === undefined) {
 		throw new MatchHostLaunchError("session_not_registered");
 	}
@@ -759,6 +764,7 @@ function viewQueue(
 		estimatedWaitMs: position * queueSlotEstimateMs,
 		expiresAt: record.expiresAt,
 		course: record.course,
+		seats: record.seats,
 	};
 }
 

@@ -147,8 +147,10 @@ describe("godot process launcher args", () => {
 			matchId: "m-1",
 			port: 42000,
 			course: "res://content/official/traprush/course_03.json",
+			players: 8,
 		});
 		assert.ok(overridden.includes("--course=res://content/official/traprush/course_03.json"));
+		assert.ok(overridden.includes("--players=8"));
 
 		assert.ok(args.includes("--match-id=m-1"));
 		assert.ok(args.includes("--port=42000"));
@@ -825,18 +827,36 @@ describe("match host http", () => {
 		}
 	});
 
-	test("POST /matches launches the requested official course", async () => {
+	test("POST /matches launches the requested official course and seats", async () => {
 		const { app, registrar } = makeApp();
 		try {
 			const created = await app.inject({
 				method: "POST",
 				url: "/matches",
 				headers: { "content-type": "application/json" },
-				payload: { course: "course_02" },
+				payload: { course: "course_02", seats: 8 },
 			});
 			assert.equal(created.statusCode, 201);
 			assert.equal(created.json<{ course: string }>().course, "course_02");
+			assert.equal(created.json<{ seats: number }>().seats, 8);
 			assert.equal(registrar.registered[0]?.course, "course_02");
+			assert.equal(registrar.registered[0]?.seats, 8);
+		} finally {
+			await app.close();
+		}
+	});
+
+	test("POST /matches rejects seats outside 1..8", async () => {
+		const { app } = makeApp();
+		try {
+			const response = await app.inject({
+				method: "POST",
+				url: "/matches",
+				headers: { "content-type": "application/json" },
+				payload: { seats: 9 },
+			});
+			assert.equal(response.statusCode, 400);
+			assert.equal(response.json<{ error: string }>().error, "invalid_seats");
 		} finally {
 			await app.close();
 		}
@@ -1363,11 +1383,11 @@ describe("match host registers with a real control plane", () => {
 			version: "1.2.3-test",
 			logger: false,
 			matchLauncher: {
-				launch: () => {
+				launch: (request) => {
 					if (launcherHolder.current === undefined) {
 						throw new Error("match host launcher is not bound");
 					}
-					return launcherHolder.current.launch();
+					return launcherHolder.current.launch(request);
 				},
 			},
 		});
@@ -1415,6 +1435,67 @@ describe("match host registers with a real control plane", () => {
 			});
 			assert.equal(full.statusCode, 409);
 			assert.equal(full.json<{ error: string }>().error, "room_full");
+		} finally {
+			await app.close();
+			await controlPlane.close();
+			database.close();
+		}
+	});
+
+	test("control-plane matchmaking forwards seats to MatchHost", async () => {
+		const database = new ControlPlaneDatabase(":memory:");
+		database.migrate();
+		const launcherHolder: { current: MatchHostHttpLauncher | undefined } = { current: undefined };
+		const controlPlane = buildServer({
+			database,
+			version: "1.2.3-test",
+			logger: false,
+			matchLauncher: {
+				launch: (request) => {
+					if (launcherHolder.current === undefined) {
+						throw new Error("match host launcher is not bound");
+					}
+					return launcherHolder.current.launch(request);
+				},
+			},
+		});
+		await controlPlane.listen({ host: "127.0.0.1", port: 0 });
+
+		const godotLauncher = new FakeLauncher();
+		const registry = new MatchRegistry({
+			launcher: godotLauncher,
+			registrar: new ControlPlaneMatchSessionRegistrar(httpBase(controlPlane)),
+			listenProbe: new FakeListenProbe(),
+			upstreamHost: "127.0.0.1",
+			seats: 2,
+			portRangeMin: 42010,
+			portRangeMax: 42019,
+			leaseDurationMs: LEASE_MS,
+			idleTimeoutMs: IDLE_MS,
+			maxConcurrentMatches: 2,
+		});
+		const app = buildMatchHost({
+			registry,
+			maxConcurrentMatches: 2,
+			version: "1.2.3-test",
+			logger: false,
+		});
+		await app.listen({ host: "127.0.0.1", port: 0 });
+		launcherHolder.current = new MatchHostHttpLauncher(httpBase(app));
+
+		try {
+			const created = await controlPlane.inject({
+				method: "POST",
+				url: "/matchmaking/rooms",
+				payload: { course: "course_02", seats: 8 },
+			});
+			assert.equal(created.statusCode, 201);
+			const room = created.json<MatchmakingJoinResponse>();
+			assert.equal(room.seats, 8);
+			assert.equal(room.course, "course_02");
+			assert.equal(registry.get(room.matchId)?.seats, 8);
+			assert.equal(godotLauncher.launched[0]?.players, 8);
+			assert.equal(godotLauncher.launched[0]?.course, "res://content/official/traprush/course_02.json");
 		} finally {
 			await app.close();
 			await controlPlane.close();

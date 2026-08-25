@@ -71,6 +71,8 @@ func test_open_window_quick_play_ready_begins_play() -> void:
 	assert_true(_shell.status_label_text().contains("orders_mapped=3/2"))
 	assert_true(_shell.try_quick())
 	assert_true(_shell.join.pending_body().contains("course_01"))
+	assert_true(_shell.join.pending_body().contains("\"seats\":2"))
+	assert_true(_shell.status_label_text().contains("seats=2"))
 	assert_true(_shell.status_label_text().contains("pending=1"))
 	assert_true(_shell.accept_http(201, _join("ABCD23", "ticket-a")))
 	assert_eq(_shell.join.state, MatchJoinSession.STATE_READY)
@@ -144,10 +146,12 @@ func test_queue_wait_poll_cancel_and_invalid_code() -> void:
 		"estimatedWaitMs": 30000,
 		"expiresAt": "2026-08-25T02:10:00.000Z",
 		"course": "course_01",
+		"seats": 2,
 	}))
 	assert_eq(_shell.join.state, MatchJoinSession.STATE_WAITING)
 	assert_true(_shell.status_label_text().contains("pos=1"))
 	assert_true(_shell.status_label_text().contains("wait_ms=30000"))
+	assert_true(_shell.status_label_text().contains("seats=2"))
 	assert_true(_shell.try_poll())
 	assert_true(_shell.accept_http(200, {
 		"status": "waiting",
@@ -156,6 +160,7 @@ func test_queue_wait_poll_cancel_and_invalid_code() -> void:
 		"estimatedWaitMs": 30000,
 		"expiresAt": "2026-08-25T02:10:00.000Z",
 		"course": "course_01",
+		"seats": 2,
 	}))
 	assert_true(_shell.try_cancel())
 	assert_true(_shell.accept_http(200, {"ok": true}))
@@ -354,6 +359,22 @@ func test_selected_course_is_sent_and_join_response_remounts_maps() -> void:
 	assert_true(_shell.status_label_text().contains("orders_mapped=4/3"))
 
 
+func test_selected_seats_are_sent_and_invalid_counts_rejected() -> void:
+	_shell = _open_shell()
+	assert_eq(_shell.seats_text(), "2")
+	_shell.set_seats_text("9")
+	assert_false(_shell.try_quick())
+	assert_false(_shell.join.has_pending())
+	_shell.set_seats_text("x")
+	assert_false(_shell.try_create_room())
+	_shell.set_seats_text("8")
+	assert_true(_shell.try_quick())
+	assert_true(_shell.join.pending_body().contains("\"seats\":8"))
+	assert_true(_shell.accept_http(201, _join("ABCD23", "ticket-seats", "course_01", 8)))
+	assert_eq(_shell.join.seats, 8)
+	assert_true(_shell.status_label_text().contains("seats=8"))
+
+
 func test_solo_uses_selected_official_course() -> void:
 	_shell = _open_shell()
 	_shell.set_course_id_text("course_03")
@@ -373,13 +394,13 @@ func _open_shell() -> MatchLobbyShell:
 	return shell
 
 
-func _join(room_code: String, ticket: String, course: String = "course_01") -> Dictionary:
+func _join(room_code: String, ticket: String, course: String = "course_01", seats: int = 2) -> Dictionary:
 	return {
 		"roomCode": room_code,
 		"ticket": ticket,
 		"matchId": "match-1",
 		"expiresAt": "2026-08-25T03:00:00.000Z",
-		"seats": 2,
+		"seats": seats,
 		"issued": 1,
 		"course": course,
 	}

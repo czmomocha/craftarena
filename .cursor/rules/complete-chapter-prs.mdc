@@ -11,6 +11,6 @@ alwaysApply: true
 
 一章 = 同一条链路的一次闭合：要锁的契约 + 实现 + 正反例测试 + 所有者文档落点。
 
-- 做：M3 第二十三章「官方赛道选择」——HTTP JSON 只用官方 id `course_01` / `course_02` / `course_03`（不接受 `res://` 路径或 UGC 课）；空 body / `{}` 默认 `course_01`；`POST /matchmaking/quick` 与 `POST /matchmaking/rooms` 可带 `{ course }`；按码加入仍无 body，响应带回该房已锁 `course`；201 / ready / waiting 都带 `course`；快速游戏只进同一赛道未满公开房；队列记住 `course`，余席只给同课，建房等待不占邻房余席；控制面 `launch({ course })` → MatchHost `POST /matches { course }` → Godot `--course=res://content/official/traprush/{id}.json`；登记 `POST /match-sessions` 带 `course`；大厅选课、跟从响应编译同一赛道；Solo 复用同一选择器；未知课 / 路径 / 多余字段 400。作为一章。
-- 不做：账号绑定、快照插值/预测校正、人数按场下发、可达性叠加 gizmos、走路可达/合法路径距离、检查点到达时间、本机最佳轨迹幽灵、已缓存 UGC/草稿试玩、个人试玩记录落盘、墙钟发送速率、MMR、限时未全员冲线结算、Shove/Interact 线上 id、Tick/快照频率锁定、2 秒云端上传、5 分钟定时、BASTION 面板、批量生成、性能分析、时延自动门禁、重力/下落、二进制签名、产品速度、复活硬直；不开 M4 / M5 新章节；不为了两域并行而各交半章。
+- 做：M3 第二十四章「人数按场下发」——HTTP JSON `seats` 为 1～8 整数（不接受 `players` 别名或非整）；空 body / `{}` / 省略 `seats` 默认 2；`POST /matchmaking/quick` 与 `POST /matchmaking/rooms` 可带 `{ course, seats }`；按码加入仍无 body，响应带回该房已锁 `seats`；201 / ready / waiting 都带 `seats`；快速游戏只进同一赛道且同一人数未满公开房；队列记住 `seats`，余席只给同课同人数，建房等待不占邻房余席；控制面 `launch({ course, seats })` → MatchHost `POST /matches { course, seats }` → Godot `--players=N`；登记 `POST /match-sessions` 带同一人数；大厅选人数；Solo 仍为 1 人本地会话；0 / 9 / 别名 / 多余字段 400。作为一章。
+- 不做：账号绑定、快照插值/预测校正、可达性叠加 gizmos、走路可达/合法路径距离、检查点到达时间、本机最佳轨迹幽灵、已缓存 UGC/草稿试玩、个人试玩记录落盘、墙钟发送速率、MMR、限时未全员冲线结算、Shove/Interact 线上 id、Tick/快照频率锁定、2 秒云端上传、5 分钟定时、BASTION 面板、批量生成、性能分析、时延自动门禁、重力/下落、二进制签名、产品速度、复活硬直；不开 M4 / M5 新章节；不为了两域并行而各交半章。
 - 仍不做：把预算数字、走路可达、多人试玩房、Rule VM 真应用和整个 M3 塞进一个 PR。

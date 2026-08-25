@@ -8,7 +8,8 @@ extends RefCounted
 ## length match the current development placeholder (not a product lock).
 ## Does not bind accounts or write settlement. Reconnect reissues a
 ## consumed ticket for the same match seat. Quick play / create room
-## send an official course id; join-by-code uses the room's course.
+## send an official course id and seats; join-by-code uses the room's
+## course and seats.
 
 const OfficialTraprushCoursesGd := preload("res://src/shared/official_traprush_courses.gd")
 
@@ -35,6 +36,7 @@ const _WAITING_KEYS: PackedStringArray = [
 	"estimatedWaitMs",
 	"expiresAt",
 	"course",
+	"seats",
 ]
 const _READY_KEYS: PackedStringArray = [
 	"status",
@@ -128,15 +130,21 @@ func pending_body() -> String:
 	return _pending_body
 
 
-func try_quick(course_id: String = OfficialTraprushCoursesGd.DEFAULT_ID) -> bool:
-	var payload: String = _course_body(course_id)
+func try_quick(
+	course_id: String = OfficialTraprushCoursesGd.DEFAULT_ID,
+	seat_count: int = OfficialTraprushCoursesGd.DEFAULT_SEATS
+) -> bool:
+	var payload: String = _match_body(course_id, seat_count)
 	if payload == "":
 		return false
 	return _begin_request("POST", "/matchmaking/quick", payload)
 
 
-func try_create_room(course_id: String = OfficialTraprushCoursesGd.DEFAULT_ID) -> bool:
-	var payload: String = _course_body(course_id)
+func try_create_room(
+	course_id: String = OfficialTraprushCoursesGd.DEFAULT_ID,
+	seat_count: int = OfficialTraprushCoursesGd.DEFAULT_SEATS
+) -> bool:
+	var payload: String = _match_body(course_id, seat_count)
 	if payload == "":
 		return false
 	return _begin_request("POST", "/matchmaking/rooms", payload)
@@ -397,11 +405,19 @@ func _copy_waiting_fields(body: Dictionary) -> bool:
 	var next_course: String = OfficialTraprushCoursesGd.normalize_id(str(body.get("course", "")))
 	if next_course == "":
 		return false
+	var next_seats: Dictionary = _read_int(body, "seats")
+	var seats_ok: bool = next_seats.get("ok", false)
+	if not seats_ok:
+		return false
+	var seats_value: int = next_seats.get("value", 0)
+	if OfficialTraprushCoursesGd.normalize_seats(seats_value) == 0:
+		return false
 	queue_token = next_token
 	queue_expires_at = next_expires
 	position = position_value
 	estimated_wait_ms = wait_value
 	course = next_course
+	seats = seats_value
 	return true
 
 
@@ -446,6 +462,7 @@ func _reset_match_fields() -> void:
 	_clear_queue_fields()
 	_clear_ready_fields()
 	course = ""
+	seats = 0
 
 
 func _clear_queue_fields() -> void:
@@ -460,15 +477,15 @@ func _clear_ready_fields() -> void:
 	match_id = ""
 	room_code = ""
 	expires_at = ""
-	seats = 0
 	issued = 0
 
 
-func _course_body(course_id: String) -> String:
+func _match_body(course_id: String, seat_count: int) -> String:
 	var id: String = OfficialTraprushCoursesGd.normalize_id(course_id)
-	if id == "":
+	var seats_value: int = OfficialTraprushCoursesGd.normalize_seats(seat_count)
+	if id == "" or seats_value == 0:
 		return ""
-	return JSON.stringify({"course": id})
+	return JSON.stringify({"course": id, "seats": seats_value})
 
 
 func _clear_pending() -> void:

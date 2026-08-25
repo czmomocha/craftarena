@@ -34,16 +34,20 @@ export {
 	type MatchmakingQueueWaitingResponse,
 } from "./match_room.ts";
 export {
+	DEFAULT_MATCHMAKING_SEATS,
 	DEFAULT_OFFICIAL_TRAPRUSH_COURSE,
+	MAX_MATCH_SEATS,
+	MIN_MATCH_SEATS,
 	OFFICIAL_TRAPRUSH_COURSE_IDS,
 	isOfficialTraprushCourseId,
+	isValidMatchSeats,
 	matchCourseBodySchema,
 	officialTraprushCourseIdFromPath,
 	officialTraprushCourseIdSchema,
 	officialTraprushCoursePath,
-	readOfficialCourseBody,
-	type OfficialCourseBodyError,
-	type OfficialCourseBodyResult,
+	readOfficialMatchBody,
+	type OfficialMatchBodyError,
+	type OfficialMatchBodyResult,
 	type OfficialTraprushCourseId,
 } from "./official_courses.ts";
 export {
