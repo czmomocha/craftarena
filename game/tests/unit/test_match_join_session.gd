@@ -99,6 +99,14 @@ func test_cancel_waiting_returns_idle_and_ready_cannot_cancel() -> void:
 	assert_eq(session.state, MatchJoinSession.STATE_READY)
 	assert_false(session.try_cancel())
 	assert_false(session.try_quick())
+	assert_true(session.try_abandon())
+	assert_eq(session.state, MatchJoinSession.STATE_IDLE)
+	assert_eq(session.ticket, "")
+	assert_false(session.has_pending())
+	assert_false(session.try_abandon())
+	var waiting: MatchJoinSession = _waiting_session()
+	assert_false(waiting.try_abandon())
+	assert_eq(waiting.state, MatchJoinSession.STATE_WAITING)
 
 
 func test_cancel_already_ready_stays_waiting_so_client_can_poll() -> void:

@@ -5,9 +5,10 @@ extends Node3D
 ## CD-21 §6.1). Each snapshot player becomes a Label3D at the Q48.16 pose.
 ## Authority stays in TraprushStanding + MatchSnapshotFollow; float
 ## conversion happens only here. Labels are not hitboxes. Course / crates
-## / portal bars / checkpoint-order gizmos stay undrawn here. No
-## interpolation, prediction, settlement, path-distance ranking, or
-## online writes.
+## / portal bars / checkpoint-order gizmos stay undrawn here. This
+## node does not interpolate; the lobby may pass sampled poses from
+## MatchSnapshotInterp. Ranking still uses finish_tick / accepted_count.
+## No prediction, settlement, path-distance ranking, or online writes.
 
 const MatchSnapshotFollowGd := preload("res://src/client/match_snapshot_follow.gd")
 const TraprushStandingGd := preload("res://src/games/traprush/standing.gd")

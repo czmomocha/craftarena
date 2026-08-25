@@ -5,7 +5,7 @@ extends RefCounted
 ## TraprushMatchSession — the same SimulationCore as the online match
 ## process. Commands use MatchFrameCodec; the command tick is 0 because
 ## the local session tick is authoritative. Snapshots feed
-## MatchSnapshotFollow so the lobby maps stay unchanged.
+## MatchSnapshotFollow so the lobby can interpolate presentation poses.
 ## The banner is always "离线试玩，成绩不上传". Web is refused.
 ## No HTTP, sockets, settlement, ghosts, or online writes.
 

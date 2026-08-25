@@ -4,7 +4,7 @@ Godot 4 + UGC 双玩法（TRAPRUSH / BASTION）项目 Monorepo。代码与仓库
 
 - 工程规则入口：[AGENTS.md](AGENTS.md)
 - 规范唯一事实源：[Confirmed-docs](Confirmed-docs/README.md)
-- 当前阶段：M3 进行中（2026-08-24 启动）。已落地对局多人仿真循环、二进制协议 v1、对局进程仿真入口、实时回路、网关代理、控制面真票据、MatchHost 自动登记、等待 listen 后登记、停止后注销、真匹配/房间码、FIFO 等待队列、客户端匹配入场、权威快照与赛道几何 / 可破坏箱 / 传送连线 / 检查点顺序 / 直播名次表现映射、机关狂奔离线单人试玩、对局命令门禁、全员冲线单局结算写库、断线重连补票、官方赛道选择；本刀为人数按场下发（1～8、同课同人数匹配、大厅选人数）。进度见 [CD-61](Confirmed-docs/60-plan/61-milestones.md)。
+- 当前阶段：M3 进行中（2026-08-24 启动）。已落地对局多人仿真循环、二进制协议 v1、对局进程仿真入口、实时回路、网关代理、控制面真票据、MatchHost 自动登记、等待 listen 后登记、停止后注销、真匹配/房间码、FIFO 等待队列、客户端匹配入场、权威快照与赛道几何 / 可破坏箱 / 传送连线 / 检查点顺序 / 直播名次表现映射、机关狂奔离线单人试玩、对局命令门禁、全员冲线单局结算写库、断线重连补票、官方赛道选择、人数按场下发；本刀为对局快照插值（相邻快照采样玩家盒与名次标签，≥1 格贴最新，不预测）。进度见 [CD-61](Confirmed-docs/60-plan/61-milestones.md)。
 
 ## 目录
 
@@ -58,7 +58,7 @@ export GODOT_AI_DISABLE_TELEMETRY=true
 - 类型相关警告全局设为 Error，`res://addons` 例外（宪法第二十三条，理由见 [ADR-0001](docs/adr/0001-strict-gdscript-typing-gate.md)）；
 - CD-51 §5 要求的 17 个输入动作，移动类绑定 physical keycode；
 - 脚本与场景文件名 `snake_case`；
-- 启动场景 `res://src/client/main.tscn`，打印一行结构化启动日志并打开机关狂奔匹配大厅（代码创建 Window，最新快照玩家、所选官方赛道占用与可破坏箱映射为 1 米占位盒，classified portal 画 gizmo 条，检查点垫标 `order` 且唯一 `order` 连线，最新快照直播名次标到玩家盒上方；快速游戏 / 建房发送官方赛道 id 与本场人数，按码加入跟从该房课程与人数；Solo play 走本地内嵌权威并持续显示「离线试玩，成绩不上传」；Headless 不发起 live HTTP/WS）。
+- 启动场景 `res://src/client/main.tscn`，打印一行结构化启动日志并打开机关狂奔匹配大厅（代码创建 Window，相邻快照采样后的玩家位姿、所选官方赛道占用与可破坏箱映射为 1 米占位盒，classified portal 画 gizmo 条，检查点垫标 `order` 且唯一 `order` 连线，最新快照直播名次标到玩家盒上方；快速游戏 / 建房发送官方赛道 id 与本场人数，按码加入跟从该房课程与人数；Solo play 走本地内嵌权威并持续显示「离线试玩，成绩不上传」；Headless 不发起 live HTTP/WS）。
 
 这些设置由 `game/tests/unit/test_project_contract.gd` 断言守护，改坏了跑测试就会红。
 
@@ -72,6 +72,7 @@ export GODOT_AI_DISABLE_TELEMETRY=true
 |---|---|---|
 | 查看引擎版本 | `& $env:GODOT4_CONSOLE --version` | `"$GODOT4" --version` |
 | 打开编辑器 | `& $env:GODOT4 --editor --path game` | `"$GODOT4" --editor --path game` |
+| 运行主场景（窗口，真机） | `& $env:GODOT4 --path game` | `"$GODOT4" --path game` |
 | Headless 导入检查 | `& $env:GODOT4_CONSOLE --headless --path game --import` | `"$GODOT4" --headless --path game --import` |
 | Headless 启动主场景 | `& $env:GODOT4_CONSOLE --headless --path game --quit` | `"$GODOT4" --headless --path game --quit` |
 | 单文件语法与类型检查 | `& $env:GODOT4_CONSOLE --headless --path game --check-only -s res://src/client/main.gd` | `"$GODOT4" --headless --path game --check-only -s res://src/client/main.gd` |
@@ -111,7 +112,7 @@ CI 当前实际启用了哪些门禁、哪些还没实现，以 [CD-53 §4.1](Co
 
 提交、推送与合入 `main` 的边界见 [CD-52 §1.1](Confirmed-docs/50-engineering/52-ai-workflow.md)。宪法第十八条的人类门禁落在合入 `main`、部署与发布。项目级 `.cursor/hooks.json` 会拦向 `main` 的 git 提交/推送，以及 `git worktree remove --force`。
 
-任务完成判定见 [CD-53 §5 Definition of Done](Confirmed-docs/50-engineering/53-testing-and-ci.md)。
+任务完成判定见 [CD-53 §5 Definition of Done](Confirmed-docs/50-engineering/53-testing-and-ci.md)。完整章节 PR 的人类真机步骤义务见 [CD-52 §3.2](Confirmed-docs/50-engineering/52-ai-workflow.md)，可执行清单是 [章节真机清单](docs/runbooks/chapter-device-check.md)（人工检查，不是 CI 门禁）。
 
 ## 并行工作区
 

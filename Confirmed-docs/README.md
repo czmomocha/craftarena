@@ -47,6 +47,7 @@
 | 想知道"某个设计为什么是这样" | — | [CD-91 决策记录](90-reference/91-decision-log.md) |
 | 发现某件事没定过 | CD-00 | [CD-63 开发期决策清单](60-plan/63-open-decisions.md)、[CD-62 风险登记册](60-plan/62-risk-register.md) |
 | 作为 AI Agent 接手任务 | CD-00 | [CD-52 AI 协作规范](50-engineering/52-ai-workflow.md) |
+| 写本章真机步骤或按清单验收 | CD-00 | [CD-52 §3.2](50-engineering/52-ai-workflow.md)、[章节真机清单](../docs/runbooks/chapter-device-check.md) |
 | 启用或调整多 Agent 并行 | CD-00 | [CD-52 §5](50-engineering/52-ai-workflow.md)、[ADR-0004](../docs/adr/0004-multi-agent-adoption-timing-and-architecture.md) |
 
 ## 4. 完整文档地图
@@ -95,7 +96,7 @@
 | ID | 文档 | 内容 |
 |---|---|---|
 | CD-51 | [51-dev-environment.md](50-engineering/51-dev-environment.md) | 工具选型与版本锁定、Windows 安装、Godot 项目设置、AI 环境烟测、Godot AI 安装与遥测开关 |
-| CD-52 | [52-ai-workflow.md](50-engineering/52-ai-workflow.md) | 人机分工、任务循环、任务单模板、AI 使用规则、多 Agent 与协作约定、Godot AI MCP 使用边界 |
+| CD-52 | [52-ai-workflow.md](50-engineering/52-ai-workflow.md) | 人机分工、任务循环、任务单模板、完整章节 PR 的人类真机步骤义务、AI 使用规则、多 Agent 与协作约定、Godot AI MCP 使用边界 |
 | CD-53 | [53-testing-and-ci.md](50-engineering/53-testing-and-ci.md) | 测试原则与层级、性能观察参考、CI 门禁、Definition of Done、首批测试用例 |
 
 ### 60 计划与风险
@@ -135,7 +136,7 @@
 | 协议编码、传输、回放内容 | CD-43 |
 | 容量、租约、部署形态、数据库所有权 | CD-44 |
 | 工具版本、安装步骤、项目设置、Godot 主 MCP 与其遥测开关 | CD-51 |
-| AI 权限边界、工作流与 Godot AI 使用边界 | CD-52 |
+| AI 权限边界、工作流、完整章节 PR 的人类真机步骤义务与 Godot AI 使用边界 | CD-52 |
 | 测试层级、CI 门禁、DoD、性能观察值 | CD-53 |
 | 里程碑与验收 | CD-61 |
 | 风险状态 | CD-62 |

@@ -64,6 +64,11 @@ func test_wasd_axes_encode_move_only_when_in_match() -> void:
 	assert_eq(dx, 16)
 	assert_eq(dz, -16)
 	assert_true(play.try_encode_move_axes(false, false, false, false, 16).is_empty())
+	assert_true(play.try_leave())
+	assert_eq(play.state, MatchPlaySession.STATE_IDLE)
+	assert_true(play.try_encode_move_axes(true, false, false, false, 16).is_empty())
+	assert_false(play.on_binary(_one_player_snapshot(3, 8)))
+	assert_false(play.try_leave())
 
 
 func test_gateway_url_rejects_userinfo_and_empty_ticket() -> void:

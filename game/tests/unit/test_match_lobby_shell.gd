@@ -136,6 +136,54 @@ func test_in_match_close_reconnects_and_follows_new_snapshot() -> void:
 	assert_almost_eq(marker.position.x, 24.0 / float(Fixed.SCALE), 0.0001)
 
 
+func test_in_match_cancel_leaves_without_reconnect() -> void:
+	_shell = _open_shell()
+	assert_true(_shell.try_quick())
+	assert_true(_shell.accept_http(201, _join("ABCD23", "ticket-a")))
+	assert_true(_shell.on_socket_open())
+	assert_true(_shell.on_binary(_snapshot(2, 12)))
+	assert_eq(_shell.map.player_count(), 1)
+	assert_eq(_shell.play.follow.tick, 2)
+	assert_true(_shell.status_label_text().contains("tick=2"))
+	assert_true(_shell.try_cancel())
+	assert_eq(_shell.play.state, MatchPlaySession.STATE_IDLE)
+	assert_eq(_shell.join.state, MatchJoinSession.STATE_IDLE)
+	assert_false(_shell.join.has_pending())
+	assert_eq(_shell.map.player_count(), 0)
+	assert_eq(_shell.standings.standing_count(), 0)
+	assert_false(_shell.status_label_text().contains("tick=2"))
+	assert_true(_shell.status_label_text().contains("play=idle"))
+	assert_true(_shell.status_label_text().contains("join=idle"))
+	assert_true(_shell.try_sample_play_move(false, false, false, true).is_empty())
+	assert_false(_shell.on_binary(_snapshot(3, 24)))
+	assert_eq(_shell.map.player_count(), 0)
+	assert_false(_shell.join.has_pending())
+	assert_true(_shell.try_quick())
+	assert_true(_shell.join.has_pending())
+
+
+func test_reconnect_pending_cancel_does_not_reissue() -> void:
+	_shell = _open_shell()
+	assert_true(_shell.try_quick())
+	assert_true(_shell.accept_http(201, _join("ABCD23", "ticket-a")))
+	assert_true(_shell.on_socket_open())
+	assert_true(_shell.on_binary(_snapshot(2, 12)))
+	_shell.on_socket_close()
+	assert_eq(_shell.play.state, MatchPlaySession.STATE_CLOSED)
+	assert_true(_shell.join.has_pending())
+	assert_true(_shell.try_cancel())
+	assert_eq(_shell.play.state, MatchPlaySession.STATE_IDLE)
+	assert_eq(_shell.join.state, MatchJoinSession.STATE_IDLE)
+	assert_false(_shell.join.has_pending())
+	assert_false(_shell.accept_http(201, {
+		"ticket": "ticket-b",
+		"matchId": "match-1",
+		"expiresAt": "2026-08-25T04:11:00.000Z",
+	}))
+	assert_eq(_shell.play.state, MatchPlaySession.STATE_IDLE)
+	assert_eq(_shell.map.player_count(), 0)
+
+
 func test_queue_wait_poll_cancel_and_invalid_code() -> void:
 	_shell = _open_shell()
 	assert_true(_shell.try_create_room())
@@ -263,6 +311,7 @@ func test_buttons_exist_and_live_io_stays_off_in_tests() -> void:
 	assert_not_null(_shell.window.get_node("VBoxContainer/MatchActions/%s" % MatchLobbyShell.SOLO_NAME))
 	assert_not_null(_shell.window.get_node("VBoxContainer/%s" % MatchLobbyShell.ROOM_NAME))
 	assert_eq(_shell.play_move_step, Fixed.SCALE / 16)
+	assert_eq(_shell.play_interp_step, Fixed.SCALE / 2)
 
 
 func test_solo_play_maps_local_authority_without_http() -> void:
@@ -384,6 +433,36 @@ func test_solo_uses_selected_official_course() -> void:
 	assert_eq(_shell.orders.checkpoint_count(), 4)
 	assert_true(_shell.offline.course_path.ends_with("course_03.json"))
 	assert_true(_shell.status_label_text().contains("course=4/3/1"))
+
+
+func test_sub_cell_snapshot_interpolates_and_hidden_window_does_not_advance() -> void:
+	_shell = _open_shell()
+	assert_true(_shell.try_quick())
+	assert_true(_shell.accept_http(201, _join("ABCD23", "ticket-interp")))
+	assert_true(_shell.on_socket_open())
+	assert_true(_shell.on_binary(_snapshot(1, 0, [_crate(40, 1)])))
+	assert_almost_eq(_shell.map.player_node(0).position.x, 0.0, 0.0001)
+	assert_eq(_shell.interp_progress(), Fixed.SCALE)
+	assert_eq(_shell.crates.crate_count(), 1)
+	assert_true(_shell.on_binary(_snapshot(2, Fixed.SCALE / 2, [_crate(40, 0)])))
+	assert_eq(_shell.interp_progress(), 0)
+	assert_almost_eq(_shell.map.player_node(0).position.x, 0.0, 0.0001)
+	assert_almost_eq(_shell.standings.standing_node(0).position.x, 0.0, 0.0001)
+	assert_eq(_shell.crates.crate_count(), 0)
+	_shell.play_interp_step = Fixed.SCALE / 2
+	assert_true(_shell.try_advance_interp())
+	assert_almost_eq(_shell.map.player_node(0).position.x, 0.25, 0.0001)
+	assert_almost_eq(_shell.standings.standing_node(0).position.x, 0.25, 0.0001)
+	assert_eq(_shell.crates.crate_count(), 0)
+	assert_true(_shell.try_advance_interp())
+	assert_almost_eq(_shell.map.player_node(0).position.x, 0.5, 0.0001)
+	assert_eq(_shell.interp_progress(), Fixed.SCALE)
+	assert_false(_shell.try_advance_interp())
+	_shell.hide_window()
+	assert_false(_shell.try_advance_interp())
+	assert_almost_eq(_shell.map.player_node(0).position.x, 0.5, 0.0001)
+	assert_false(_shell.allows_settlement())
+	assert_false(_shell.allows_online_writes())
 
 
 func _open_shell() -> MatchLobbyShell:

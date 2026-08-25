@@ -4,8 +4,10 @@ extends RefCounted
 ## After a ready join ticket, build the gateway URL and follow snapshots.
 ## Commands use MatchFrameCodec; the command tick is 0 because the server
 ## tick is authoritative (CD-43 §3). Shove/Interact stay unencoded.
-## Sockets stay outside this type. No interpolation or prediction.
+## Sockets stay outside this type. Interpolation is sampled by the lobby
+## from the follower's previous/latest poses. No prediction.
 ## After a close, a new ticket from reconnect can try_begin again.
+## try_leave returns the session to idle and drops followed snapshots.
 
 const MatchFrameCodec := preload("res://src/shared/protocol/match_frame_codec.gd")
 const MatchJoinSessionGd := preload("res://src/client/match_join_session.gd")
@@ -87,6 +89,16 @@ func on_open() -> bool:
 func on_close() -> void:
 	if state == STATE_CONNECTING or state == STATE_IN_MATCH:
 		state = STATE_CLOSED
+
+
+func try_leave() -> bool:
+	if state != STATE_CONNECTING and state != STATE_IN_MATCH and state != STATE_CLOSED:
+		return false
+	state = STATE_IDLE
+	websocket_url = ""
+	follow = MatchSnapshotFollowGd.new()
+	last_command = PackedByteArray()
+	return true
 
 
 func on_binary(bytes: PackedByteArray) -> bool:

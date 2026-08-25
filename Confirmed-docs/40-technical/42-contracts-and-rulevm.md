@@ -218,6 +218,7 @@ Undo / Redo 是会话内对成功命令派生的反向 payload（`place`↔`remo
 | 对局重连补票 | `backend/control-plane/src/db/database.ts`（`reconnectTicket`） |
 | 官方 TRAPRUSH 赛道 id 与匹配 `seats` | `backend/contracts/src/official_courses.ts` |
 | 客户端官方赛道 id 与匹配人数 | `game/src/shared/official_traprush_courses.gd` |
+| 对局快照插值 | `game/src/client/match_snapshot_interp.gd` |
 | 匹配 / 房间码 HTTP 契约 | `backend/contracts/src/match_room.ts` |
 | 控制面票据校验器 | `backend/realtime-gateway/src/ticket.ts` |
 | Preview 试玩 | `game/src/creator/authoring_preview.gd`（`try_start_play` / `try_stop_play` / `try_advance_play` / `try_apply_play_intent` / `try_accept_play_checkpoint` / `try_land_exit` 占用扫门 / `try_cross_play_finish` 占用扫终点 / `ResetToCheckpointIntent` 复活表 / `UseItemIntent` 可破坏占用 / `JumpIntent` 接地跳跃） |
