@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
+import { createServer as createTcpServer } from "node:net";
 import { describe, test } from "node:test";
 
 import type { IssueMatchTicketResponse, VerifyMatchTicketSuccess } from "../../contracts/src/index.ts";
@@ -9,6 +10,13 @@ import { loadConfig } from "../src/config.ts";
 import { createLease, evaluateLease, renewLease } from "../src/lease.ts";
 import type { LaunchedProcess, MatchExit, MatchLaunchSpec, ProcessLauncher } from "../src/launcher.ts";
 import { GodotProcessLauncher } from "../src/launcher.ts";
+import {
+	MATCH_LISTEN_PROBE_HOST,
+	MatchListenError,
+	TcpMatchListenProbe,
+	type MatchListenProbe,
+	type MatchListenWaitSpec,
+} from "../src/listen_probe.ts";
 import { PortAllocator } from "../src/ports.ts";
 import {
 	ControlPlaneMatchSessionRegistrar,
@@ -62,6 +70,21 @@ describe("match host config", () => {
 		const defaults = loadConfig({}, "linux");
 		assert.equal(defaults.controlPlaneUrl, "http://127.0.0.1:8080");
 		assert.equal(defaults.upstreamHost, "127.0.0.1");
+		assert.equal(defaults.listenTimeoutMs, 15_000);
+		assert.equal(defaults.listenPollMs, 50);
+		assert.equal(defaults.listenProbeHost, MATCH_LISTEN_PROBE_HOST);
+	});
+
+	test("listen timeout and poll interval are overridable and must be positive", () => {
+		const overridden = loadConfig(
+			{ MATCH_HOST_LISTEN_TIMEOUT_MS: "4000", MATCH_HOST_LISTEN_POLL_MS: "25" },
+			"linux",
+		);
+		assert.equal(overridden.listenTimeoutMs, 4000);
+		assert.equal(overridden.listenPollMs, 25);
+
+		assert.throws(() => loadConfig({ MATCH_HOST_LISTEN_TIMEOUT_MS: "0" }, "linux"), /LISTEN_TIMEOUT/);
+		assert.throws(() => loadConfig({ MATCH_HOST_LISTEN_POLL_MS: "0" }, "linux"), /LISTEN_POLL/);
 	});
 
 	test("strips a trailing slash on CONTROL_PLANE_URL and accepts an advertised host", () => {
@@ -138,10 +161,46 @@ class FakeRegistrar implements MatchSessionRegistrar {
 	}
 }
 
+/** 假的 listen 探测：默认立刻成功，让租约测试不必开 socket。 */
+class FakeListenProbe implements MatchListenProbe {
+	readonly probed: number[] = [];
+	failWith: Error | undefined;
+	gate: Promise<void> | undefined;
+
+	async waitUntilListening(spec: MatchListenWaitSpec): Promise<void> {
+		this.probed.push(spec.port);
+		if (spec.signal.aborted) {
+			throw new MatchListenError("listen wait aborted");
+		}
+
+		const aborted = new Promise<never>((_resolve, reject) => {
+			spec.signal.addEventListener(
+				"abort",
+				() => {
+					reject(new MatchListenError("listen wait aborted"));
+				},
+				{ once: true },
+			);
+		});
+
+		const work = async (): Promise<void> => {
+			if (this.gate !== undefined) {
+				await this.gate;
+			}
+			if (this.failWith !== undefined) {
+				throw this.failWith;
+			}
+		};
+
+		await Promise.race([work(), aborted]);
+	}
+}
+
 /** 假的进程启动器：让租约、端口与回收逻辑可以在没装 Godot 的机器上测。 */
 class FakeLauncher implements ProcessLauncher {
 	readonly launched: MatchLaunchSpec[] = [];
 	readonly killed: string[] = [];
+	exitOnLaunch = false;
 	#nextPid = 1000;
 
 	launch(spec: MatchLaunchSpec): LaunchedProcess {
@@ -152,7 +211,7 @@ class FakeLauncher implements ProcessLauncher {
 			settle = resolvePromise;
 		});
 
-		return {
+		const launched: LaunchedProcess = {
 			pid,
 			exited,
 			recentOutput: () => [`fake process ${pid} output`],
@@ -161,6 +220,12 @@ class FakeLauncher implements ProcessLauncher {
 				settle({ code: 0, signal: "SIGTERM" });
 			},
 		};
+		if (this.exitOnLaunch) {
+			queueMicrotask(() => {
+				settle({ code: 1, signal: null });
+			});
+		}
+		return launched;
 	}
 }
 
@@ -222,13 +287,21 @@ describe("lease rules (CD-44 section 3)", () => {
 
 describe("match registry", () => {
 	function makeRegistry(
-		overrides: { now?: () => number; maxConcurrentMatches?: number; registrar?: FakeRegistrar } = {},
+		overrides: {
+			now?: () => number;
+			maxConcurrentMatches?: number;
+			registrar?: FakeRegistrar;
+			listenProbe?: FakeListenProbe;
+			launcher?: FakeLauncher;
+		} = {},
 	) {
-		const launcher = new FakeLauncher();
+		const launcher = overrides.launcher ?? new FakeLauncher();
 		const registrar = overrides.registrar ?? new FakeRegistrar();
+		const listenProbe = overrides.listenProbe ?? new FakeListenProbe();
 		const registry = new MatchRegistry({
 			launcher,
 			registrar,
+			listenProbe,
 			upstreamHost: "127.0.0.1",
 			portRangeMin: 42000,
 			portRangeMax: 42009,
@@ -237,7 +310,7 @@ describe("match registry", () => {
 			maxConcurrentMatches: overrides.maxConcurrentMatches ?? 10,
 			...(overrides.now === undefined ? {} : { now: overrides.now }),
 		});
-		return { launcher, registrar, registry };
+		return { launcher, registrar, listenProbe, registry };
 	}
 
 	test("starting a match launches one process with its own port", async () => {
@@ -279,6 +352,7 @@ describe("match registry", () => {
 				},
 			},
 			registrar,
+			listenProbe: new FakeListenProbe(),
 			upstreamHost: "127.0.0.1",
 			portRangeMin: 42000,
 			portRangeMax: 42000,
@@ -295,6 +369,82 @@ describe("match registry", () => {
 		const recovered = await registry.start();
 		assert.equal(recovered.port, 42000);
 		assert.equal(registrar.registered.length, 1);
+	});
+
+	test("registers only after the listen probe succeeds", async () => {
+		let release: () => void = () => {};
+		const listenProbe = new FakeListenProbe();
+		listenProbe.gate = new Promise<void>((resolvePromise) => {
+			release = resolvePromise;
+		});
+		const { launcher, registrar, registry } = makeRegistry({ listenProbe });
+
+		const pending = registry.start();
+		await waitFor(() => listenProbe.probed.length === 1);
+		assert.equal(launcher.launched.length, 1);
+		assert.deepEqual(registrar.registered, []);
+
+		release();
+		const match = await pending;
+		assert.deepEqual(registrar.registered, [
+			{ matchId: match.matchId, upstreamUrl: `ws://127.0.0.1:${match.port}` },
+		]);
+		assert.deepEqual(listenProbe.probed, [match.port]);
+	});
+
+	test("does not register when listen times out and frees the slot", async () => {
+		const listenProbe = new FakeListenProbe();
+		listenProbe.failWith = new MatchListenError("timed out waiting for TCP listen on 127.0.0.1:42000");
+		const { launcher, registrar, registry } = makeRegistry({ listenProbe, maxConcurrentMatches: 1 });
+
+		await assert.rejects(() => registry.start(), MatchListenError);
+		assert.equal(launcher.killed.length, 1);
+		assert.deepEqual(registrar.registered, []);
+		assert.equal(registry.runningCount(), 0);
+		assert.equal(registry.occupiedCount(), 0);
+
+		listenProbe.failWith = undefined;
+		const recovered = await registry.start();
+		assert.equal(recovered.state, "running");
+		assert.equal(registry.runningCount(), 1);
+	});
+
+	test("does not register when the process exits before listen", async () => {
+		const listenProbe = new FakeListenProbe();
+		listenProbe.gate = new Promise<void>(() => {
+			// 永远不放行：必须靠进程退出把 wait abort 掉，而不是等到超时。
+		});
+		const launcher = new FakeLauncher();
+		launcher.exitOnLaunch = true;
+		const { registrar, registry } = makeRegistry({ launcher, listenProbe, maxConcurrentMatches: 1 });
+
+		await assert.rejects(() => registry.start(), /exited before listen/);
+		assert.deepEqual(registrar.registered, []);
+		assert.equal(registry.runningCount(), 0);
+		assert.equal(registry.occupiedCount(), 0);
+
+		launcher.exitOnLaunch = false;
+		listenProbe.gate = undefined;
+		const recovered = await registry.start();
+		assert.equal(recovered.state, "running");
+	});
+
+	test("counts an in-flight listen wait against capacity", async () => {
+		let release: () => void = () => {};
+		const listenProbe = new FakeListenProbe();
+		listenProbe.gate = new Promise<void>((resolvePromise) => {
+			release = resolvePromise;
+		});
+		const { registry } = makeRegistry({ listenProbe, maxConcurrentMatches: 1 });
+
+		const pending = registry.start();
+		await waitFor(() => registry.occupiedCount() === 1);
+		await assert.rejects(() => registry.start(), MatchCapacityError);
+
+		release();
+		const match = await pending;
+		assert.equal(match.state, "running");
+		assert.equal(registry.runningCount(), 1);
 	});
 
 	test("kills the process and frees the slot when registration fails", async () => {
@@ -398,10 +548,15 @@ describe("match registry", () => {
 });
 
 describe("match host http", () => {
-	function makeApp(maxConcurrentMatches = 10, registrar: FakeRegistrar = new FakeRegistrar()) {
+	function makeApp(
+		maxConcurrentMatches = 10,
+		registrar: FakeRegistrar = new FakeRegistrar(),
+		listenProbe: FakeListenProbe = new FakeListenProbe(),
+	) {
 		const registry = new MatchRegistry({
 			launcher: new FakeLauncher(),
 			registrar,
+			listenProbe,
 			upstreamHost: "127.0.0.1",
 			portRangeMin: 42000,
 			portRangeMax: 42009,
@@ -523,6 +678,23 @@ describe("match host http", () => {
 		}
 	});
 
+	test("POST /matches returns 502 when listen never happens", async () => {
+		const listenProbe = new FakeListenProbe();
+		listenProbe.failWith = new MatchListenError("timed out waiting for TCP listen on 127.0.0.1:42000");
+		const { app, registry } = makeApp(1, new FakeRegistrar(), listenProbe);
+		try {
+			const rejected = await app.inject({ method: "POST", url: "/matches" });
+			assert.equal(rejected.statusCode, 502);
+			assert.equal(rejected.json<{ error: string }>().error, "session_listen_failed");
+			assert.equal(registry.runningCount(), 0);
+
+			const ready = await app.inject({ method: "GET", url: "/readyz" });
+			assert.equal(ready.statusCode, 200);
+		} finally {
+			await app.close();
+		}
+	});
+
 	test("POST /matches returns 503 at capacity and /readyz agrees", async () => {
 		const { app } = makeApp(1);
 		try {
@@ -624,6 +796,7 @@ describe("match host registers with a real control plane", () => {
 		const registry = new MatchRegistry({
 			launcher: new FakeLauncher(),
 			registrar: new ControlPlaneMatchSessionRegistrar(httpBase(controlPlane)),
+			listenProbe: new FakeListenProbe(),
 			upstreamHost: "127.0.0.1",
 			portRangeMin: 42000,
 			portRangeMax: 42009,
@@ -673,6 +846,51 @@ describe("match host registers with a real control plane", () => {
 	});
 });
 
+describe("tcp listen probe", () => {
+	test("resolves once the port accepts a TCP connection", async () => {
+		const server = createTcpServer((socket) => {
+			socket.destroy();
+		});
+		await new Promise<void>((resolvePromise, rejectPromise) => {
+			server.once("error", rejectPromise);
+			server.listen(0, MATCH_LISTEN_PROBE_HOST, () => resolvePromise());
+		});
+		try {
+			const port = socketPort(server.address());
+			const probe = new TcpMatchListenProbe({ timeoutMs: 500, intervalMs: 20 });
+			await probe.waitUntilListening({ port, signal: new AbortController().signal });
+		} finally {
+			await closeTcp(server);
+		}
+	});
+
+	test("times out when nothing is listening", async () => {
+		const holder = createTcpServer();
+		await new Promise<void>((resolvePromise, rejectPromise) => {
+			holder.once("error", rejectPromise);
+			holder.listen(0, MATCH_LISTEN_PROBE_HOST, () => resolvePromise());
+		});
+		const port = socketPort(holder.address());
+		await closeTcp(holder);
+
+		const probe = new TcpMatchListenProbe({ timeoutMs: 80, intervalMs: 20 });
+		await assert.rejects(
+			() => probe.waitUntilListening({ port, signal: new AbortController().signal }),
+			/timed out waiting for TCP listen/,
+		);
+	});
+
+	test("stops waiting when the abort signal fires", async () => {
+		const abort = new AbortController();
+		abort.abort();
+		const probe = new TcpMatchListenProbe({ timeoutMs: 5_000, intervalMs: 50 });
+		await assert.rejects(
+			() => probe.waitUntilListening({ port: 9, signal: abort.signal }),
+			/listen wait aborted/,
+		);
+	});
+});
+
 function httpBase(app: { server: { address(): string | { port: number } | null } }): string {
 	return `http://127.0.0.1:${socketPort(app.server.address())}`;
 }
@@ -715,4 +933,16 @@ async function waitFor(condition: () => boolean, timeoutMs = 2000): Promise<void
 		}
 		await new Promise((resolvePromise) => setTimeout(resolvePromise, 5));
 	}
+}
+
+function closeTcp(server: { close(callback?: (error?: Error) => void): void }): Promise<void> {
+	return new Promise((resolvePromise, rejectPromise) => {
+		server.close((error) => {
+			if (error) {
+				rejectPromise(error);
+				return;
+			}
+			resolvePromise();
+		});
+	});
 }

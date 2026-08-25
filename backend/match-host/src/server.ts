@@ -8,6 +8,7 @@ import {
 	type ReadinessPayload,
 } from "../../contracts/src/index.ts";
 import { MatchCapacityError, type MatchRecord, type MatchRegistry } from "./registry.ts";
+import { MatchListenError } from "./listen_probe.ts";
 import { MatchSessionRegisterError } from "./registrar.ts";
 
 export interface BuildMatchHostOptions {
@@ -114,6 +115,10 @@ export function buildMatchHost(options: BuildMatchHostOptions): FastifyInstance 
 				// 容量满按 CD-44 §2 是排队场景，不是服务故障，所以用 503 而不是 500。
 				reply.code(503);
 				return { error: "capacity_exhausted", message: error.message };
+			}
+			if (error instanceof MatchListenError) {
+				reply.code(502);
+				return { error: "session_listen_failed", message: error.message };
 			}
 			if (error instanceof MatchSessionRegisterError) {
 				// 控制面不可达或拒绝登记：进程已杀掉，对调用方是上游失败，不是本机容量问题。
