@@ -158,6 +158,48 @@ func test_disconnect_drops_queued_command_before_rejoin() -> void:
 	assert_eq(pose_x, 0)
 
 
+func test_occupy_slot_binds_explicit_seat_and_resumes_pose() -> void:
+	var realtime: MatchRealtime = _two_player_realtime()
+	assert_true(realtime.occupy_slot(1))
+	assert_eq(realtime.add_player(), 0)
+	assert_false(realtime.occupy_slot(1))
+	assert_false(realtime.occupy_slot(2))
+	assert_false(realtime.occupy_slot(-1))
+	var move: PackedByteArray = MatchFrameCodec.encode_command(0, PlayerIntentNames.MOVE, CELL, 0, -1)
+	assert_true(realtime.accept_command(1, move))
+	realtime.commit_tick()
+	assert_true(realtime.remove_player(1))
+	assert_eq(realtime.occupied_count(), 1)
+	assert_true(realtime.occupy_slot(1))
+	var pose: Dictionary = realtime.session.player_pose(1)
+	var pose_x: int = pose.get("x", -1)
+	assert_eq(pose_x, CELL)
+	assert_eq(realtime.pending_count(), 0)
+
+
+func test_parse_requested_slot_reads_query() -> void:
+	var missing: Dictionary = MatchRealtime.parse_requested_slot("ws://127.0.0.1:9/")
+	var missing_present: bool = missing.get("present", true)
+	var missing_ok: bool = missing.get("ok", false)
+	assert_false(missing_present)
+	assert_true(missing_ok)
+	var parsed: Dictionary = MatchRealtime.parse_requested_slot("/?slot=1")
+	var parsed_present: bool = parsed.get("present", false)
+	var parsed_ok: bool = parsed.get("ok", false)
+	var parsed_slot: int = parsed.get("slot", -1)
+	assert_true(parsed_present)
+	assert_true(parsed_ok)
+	assert_eq(parsed_slot, 1)
+	var full: Dictionary = MatchRealtime.parse_requested_slot("ws://127.0.0.1:9/?slot=0")
+	var full_slot: int = full.get("slot", -1)
+	assert_eq(full_slot, 0)
+	var bad: Dictionary = MatchRealtime.parse_requested_slot("/?slot=9")
+	var bad_present: bool = bad.get("present", false)
+	var bad_ok: bool = bad.get("ok", true)
+	assert_true(bad_present)
+	assert_false(bad_ok)
+
+
 func test_snapshot_frame_is_not_a_command() -> void:
 	var realtime: MatchRealtime = _two_player_realtime()
 	var slot: int = realtime.add_player()

@@ -6,7 +6,8 @@ extends RefCounted
 ## Injected HTTP only: try_* records the next request; accept_http applies
 ## the status + object. No SceneTree, no sockets. Room-code alphabet and
 ## length match the current development placeholder (not a product lock).
-## Does not bind accounts, reissue tickets, or write settlement.
+## Does not bind accounts or write settlement. Reconnect reissues a
+## consumed ticket for the same match seat.
 
 const STATE_IDLE: String = "idle"
 const STATE_WAITING: String = "waiting"
@@ -43,6 +44,12 @@ const _QUEUE_FAILED_KEYS: PackedStringArray = ["status", "error"]
 const _ERROR_KEYS: PackedStringArray = ["error", "message"]
 const _CANCEL_KEYS: PackedStringArray = ["ok"]
 
+const _REISSUE_KEYS: PackedStringArray = [
+	"ticket",
+	"matchId",
+	"expiresAt",
+]
+
 var state: String = STATE_IDLE
 var error: String = ""
 var queue_token: String = ""
@@ -58,6 +65,7 @@ var issued: int = 0
 
 var _pending_method: String = ""
 var _pending_path: String = ""
+var _pending_body: String = ""
 
 
 static func create() -> MatchJoinSession:
@@ -109,6 +117,10 @@ func pending_path() -> String:
 	return _pending_path
 
 
+func pending_body() -> String:
+	return _pending_body
+
+
 func try_quick() -> bool:
 	return _begin_request("POST", "/matchmaking/quick")
 
@@ -136,12 +148,28 @@ func try_cancel() -> bool:
 	return _begin_request("DELETE", "/matchmaking/queue/%s" % queue_token.uri_encode())
 
 
+func try_reconnect() -> bool:
+	if state != STATE_READY or ticket == "" or match_id == "" or has_pending():
+		return false
+	var payload: String = JSON.stringify({"ticket": ticket})
+	if payload == "":
+		return false
+	return _begin_request(
+		"POST",
+		"/match-sessions/%s/tickets/reconnect" % match_id.uri_encode(),
+		payload
+	)
+
+
 func accept_http(status_code: int, body: Dictionary) -> bool:
 	if not has_pending():
 		return false
 	var method: String = _pending_method
+	var path: String = _pending_path
 	_clear_pending()
 	if status_code == 201:
+		if path.ends_with("/tickets/reconnect"):
+			return _accept_reissue(body)
 		return _accept_join(body)
 	if status_code == 202:
 		return _accept_waiting(body)
@@ -213,14 +241,15 @@ func allows_online_writes() -> bool:
 	return false
 
 
-func _begin_request(method: String, path: String) -> bool:
+func _begin_request(method: String, path: String, body: String = "") -> bool:
 	if has_pending():
 		return false
 	if state == STATE_READY:
+		if method != "POST" or not path.ends_with("/tickets/reconnect"):
+			return false
+	elif state == STATE_WAITING and method == "POST":
 		return false
-	if state == STATE_WAITING and method == "POST":
-		return false
-	if state == STATE_IDLE or state == STATE_FAILED:
+	elif state == STATE_IDLE or state == STATE_FAILED:
 		if method != "POST":
 			return false
 		_reset_match_fields()
@@ -228,6 +257,7 @@ func _begin_request(method: String, path: String) -> bool:
 		state = STATE_IDLE
 	_pending_method = method
 	_pending_path = path
+	_pending_body = body
 	return true
 
 
@@ -237,6 +267,23 @@ func _accept_join(body: Dictionary) -> bool:
 	if not _copy_join_fields(body):
 		return _fail("parse_error")
 	_clear_queue_fields()
+	error = ""
+	state = STATE_READY
+	return true
+
+
+func _accept_reissue(body: Dictionary) -> bool:
+	if not _keys_only(body, _REISSUE_KEYS):
+		return _fail("parse_error")
+	var next_ticket: String = str(body.get("ticket", "")).strip_edges()
+	var next_match: String = str(body.get("matchId", "")).strip_edges()
+	var next_expires: String = str(body.get("expiresAt", "")).strip_edges()
+	if next_ticket == "" or next_match == "" or next_expires == "":
+		return _fail("parse_error")
+	if next_match != match_id:
+		return _fail("parse_error")
+	ticket = next_ticket
+	expires_at = next_expires
 	error = ""
 	state = STATE_READY
 	return true
@@ -397,3 +444,4 @@ func _clear_ready_fields() -> void:
 func _clear_pending() -> void:
 	_pending_method = ""
 	_pending_path = ""
+	_pending_body = ""

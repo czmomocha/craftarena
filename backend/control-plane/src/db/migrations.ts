@@ -99,4 +99,12 @@ export const MIGRATIONS: readonly Migration[] = [
 			) STRICT`,
 		],
 	},
+	{
+		id: "0006_match_ticket_seats",
+		statements: [
+			// 入场票据绑定席位。重连补发同席位新票时旧行标 superseded_at，不占额外席位。
+			`ALTER TABLE match_tickets ADD COLUMN seat INTEGER NOT NULL DEFAULT 0`,
+			`ALTER TABLE match_tickets ADD COLUMN superseded_at TEXT`,
+		],
+	},
 ];

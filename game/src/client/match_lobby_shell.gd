@@ -17,8 +17,9 @@ extends Node
 ## "离线试玩，成绩不上传" while it runs. Web is refused.
 ## No interpolation. WASD / Jump / Reset / Use item encode existing
 ## intents. play_move_step is a presentation stub, not a product speed.
-## No BASTION, accounts, reconnect tickets, settlement, ghosts,
-## or offline writes.
+## Unexpected socket close while connecting or in-match reissues the
+## consumed ticket and follows the latest snapshot again.
+## No BASTION, accounts, settlement, ghosts, or offline writes.
 
 const MatchFrameCodec := preload("res://src/shared/protocol/match_frame_codec.gd")
 const MatchJoinSessionGd := preload("res://src/client/match_join_session.gd")
@@ -261,9 +262,26 @@ func on_socket_open() -> bool:
 
 
 func on_socket_close() -> void:
+	var should_reconnect: bool = false
 	if play != null:
+		should_reconnect = (
+			play.state == MatchPlaySessionGd.STATE_CONNECTING
+			or play.state == MatchPlaySessionGd.STATE_IN_MATCH
+		)
 		play.on_close()
+	if should_reconnect:
+		try_reconnect()
 	_refresh_status()
+
+
+func try_reconnect() -> bool:
+	if join == null or _offline_playing():
+		return false
+	if not join.try_reconnect():
+		return false
+	_dispatch_pending()
+	_refresh_status()
+	return true
 
 
 func on_binary(bytes: PackedByteArray) -> bool:
@@ -546,7 +564,11 @@ func _dispatch_pending() -> void:
 	var method: String = join.pending_method()
 	var err: int = ERR_BUG
 	if method == "POST":
-		err = _http.request(url, PackedStringArray(), HTTPClient.METHOD_POST, "")
+		var body: String = join.pending_body()
+		var headers: PackedStringArray = PackedStringArray()
+		if body != "":
+			headers.append("Content-Type: application/json")
+		err = _http.request(url, headers, HTTPClient.METHOD_POST, body)
 	elif method == "GET":
 		err = _http.request(url, PackedStringArray(), HTTPClient.METHOD_GET)
 	elif method == "DELETE":

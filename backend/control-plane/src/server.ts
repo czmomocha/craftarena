@@ -2,6 +2,7 @@ import Fastify, { type FastifyInstance } from "fastify";
 
 import {
 	SERVICE_IDS,
+	RECONNECT_TICKET_ERRORS,
 	TICKET_REJECT_REASONS,
 	isReady,
 	recordMatchSettlementBodySchema,
@@ -336,6 +337,46 @@ export function buildServer(options: BuildServerOptions): FastifyInstance {
 		},
 	);
 
+	app.post<{ Params: MatchIdParams; Body: VerifyMatchTicketRequest }>(
+		"/match-sessions/:matchId/tickets/reconnect",
+		{ schema: { body: verifyMatchTicketBodySchema } },
+		async (request, reply) => {
+			if (hasUnexpectedKeys(request.body, ["ticket"])) {
+				reply.code(400);
+				return { error: "unexpected_request_body" };
+			}
+			if (!isMatchId(request.params.matchId)) {
+				reply.code(400);
+				return { error: "invalid_match_id" };
+			}
+
+			const ticket = request.body.ticket.trim();
+			if (ticket === "") {
+				reply.code(400);
+				return { error: RECONNECT_TICKET_ERRORS.unknownTicket };
+			}
+
+			const result = options.database.reconnectTicket(
+				request.params.matchId,
+				ticket,
+				now(),
+				ticketTtlMs,
+			);
+			if (!result.ok) {
+				reply.code(result.error === RECONNECT_TICKET_ERRORS.matchNotFound ? 404 : 400);
+				return { error: result.error };
+			}
+
+			reply.code(201);
+			const body: IssueMatchTicketResponse = {
+				ticket: result.ticket,
+				matchId: result.matchId,
+				expiresAt: result.expiresAt,
+			};
+			return body;
+		},
+	);
+
 	app.post("/matchmaking/quick", async (request, reply) => {
 		if (hasRequestBody(request.body)) {
 			reply.code(400);
@@ -490,7 +531,7 @@ export function buildServer(options: BuildServerOptions): FastifyInstance {
 				return { ok: false, reason: result.reason };
 			}
 
-			return { ok: true, upstreamUrl: result.upstreamUrl };
+			return { ok: true, upstreamUrl: result.upstreamUrl, seat: result.seat };
 		},
 	);
 

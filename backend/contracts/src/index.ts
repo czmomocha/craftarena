@@ -8,10 +8,13 @@ export {
 } from "./health.ts";
 export { L0_CONTRACT_VERSION, L0_SCHEMA_FILES, type L0SchemaFile } from "./schemas.ts";
 export {
+	RECONNECT_TICKET_ERRORS,
 	TICKET_REJECT_REASONS,
 	registerMatchSessionBodySchema,
 	verifyMatchTicketBodySchema,
 	type IssueMatchTicketResponse,
+	type ReconnectMatchTicketRequest,
+	type ReconnectTicketError,
 	type RegisterMatchSessionRequest,
 	type RegisterMatchSessionResponse,
 	type TicketRejectReason,

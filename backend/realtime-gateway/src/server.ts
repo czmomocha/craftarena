@@ -10,7 +10,7 @@ import {
 	type ReadinessCheck,
 	type ReadinessPayload,
 } from "../../contracts/src/index.ts";
-import type { TicketVerifier } from "./ticket.ts";
+import { appendSlotQuery, type TicketVerifier } from "./ticket.ts";
 
 export const WEBSOCKET_PATH = "/ws";
 
@@ -99,7 +99,11 @@ export function buildGateway(options: BuildGatewayOptions): Gateway {
 					return;
 				}
 
-				const upstream = new WebSocket(verdict.upstreamUrl, { perMessageDeflate: false });
+				const upstreamUrl =
+					typeof verdict.seat === "number"
+						? appendSlotQuery(verdict.upstreamUrl, verdict.seat)
+						: verdict.upstreamUrl;
+				const upstream = new WebSocket(upstreamUrl, { perMessageDeflate: false });
 				let upstreamOpen = false;
 				upstream.once("open", () => {
 					upstreamOpen = true;

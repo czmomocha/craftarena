@@ -199,6 +199,57 @@ func test_json_whole_floats_are_accepted() -> void:
 	assert_eq(session.estimated_wait_ms, 30000)
 
 
+func test_reconnect_from_ready_replaces_ticket() -> void:
+	var session: MatchJoinSession = MatchJoinSession.create()
+	assert_true(session.try_quick())
+	assert_true(session.accept_http(201, _join("ABCD23", "ticket-a")))
+	assert_false(session.try_quick())
+	assert_true(session.try_reconnect())
+	assert_eq(session.pending_method(), "POST")
+	assert_eq(session.pending_path(), "/match-sessions/match-1/tickets/reconnect")
+	assert_true(session.pending_body().contains("ticket-a"))
+	assert_true(session.accept_http(201, {
+		"ticket": "ticket-b",
+		"matchId": "match-1",
+		"expiresAt": "2026-08-25T04:11:00.000Z",
+	}))
+	assert_eq(session.state, MatchJoinSession.STATE_READY)
+	assert_eq(session.ticket, "ticket-b")
+	assert_eq(session.room_code, "ABCD23")
+	assert_eq(session.match_id, "match-1")
+	assert_false(session.has_pending())
+
+
+func test_reconnect_rejects_unconsumed_path_errors_and_idle() -> void:
+	var idle: MatchJoinSession = MatchJoinSession.create()
+	assert_false(idle.try_reconnect())
+	var session: MatchJoinSession = MatchJoinSession.create()
+	assert_true(session.try_quick())
+	assert_true(session.accept_http(201, _join("ABCD23", "ticket-a")))
+	assert_true(session.try_reconnect())
+	assert_true(session.accept_http(400, {"error": "ticket_not_consumed"}))
+	assert_eq(session.state, MatchJoinSession.STATE_FAILED)
+	assert_eq(session.error, "ticket_not_consumed")
+	assert_eq(session.ticket, "")
+	var extra: MatchJoinSession = MatchJoinSession.create()
+	assert_true(extra.try_quick())
+	assert_true(extra.accept_http(201, _join("ABCD23", "ticket-c")))
+	assert_true(extra.try_reconnect())
+	assert_true(extra.accept_http(201, {
+		"ticket": "ticket-d",
+		"matchId": "match-1",
+		"expiresAt": "2026-08-25T04:11:00.000Z",
+		"extra": true,
+	}))
+	assert_eq(extra.error, "parse_error")
+	var gone: MatchJoinSession = MatchJoinSession.create()
+	assert_true(gone.try_quick())
+	assert_true(gone.accept_http(201, _join("ABCD23", "ticket-e")))
+	assert_true(gone.try_reconnect())
+	assert_true(gone.accept_http(404, {"error": "match_not_found"}))
+	assert_eq(gone.error, "match_not_found")
+
+
 func _waiting_session() -> MatchJoinSession:
 	var session: MatchJoinSession = MatchJoinSession.create()
 	assert_true(session.try_create_room())

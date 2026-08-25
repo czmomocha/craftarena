@@ -22,6 +22,7 @@ import {
 import {
 	ControlPlaneTicketVerifier,
 	DevTicketVerifier,
+	appendSlotQuery,
 	type TicketVerdict,
 	type TicketVerifier,
 } from "../src/ticket.ts";
@@ -41,6 +42,16 @@ class RejectingVerifier implements TicketVerifier {
 		return { ok: false, reason: "stubbed rejection" };
 	}
 }
+
+describe("appendSlotQuery", () => {
+	test("adds slot without dropping the upstream host", () => {
+		assert.equal(
+			new URL(appendSlotQuery("ws://127.0.0.1:18211", 2)).searchParams.get("slot"),
+			"2",
+		);
+		assert.equal(new URL(appendSlotQuery("ws://127.0.0.1:18211", 2)).port, "18211");
+	});
+});
 
 describe("dev ticket verifier", () => {
 	test("rejects missing and blank tickets", async () => {
@@ -91,13 +102,28 @@ describe("control plane ticket verifier", () => {
 	test("maps a successful verify to the returned upstream", async () => {
 		const stub = await listenJson((_req, res) => {
 			res.writeHead(200, { "content-type": "application/json" });
-			res.end(JSON.stringify({ ok: true, upstreamUrl: "ws://10.0.0.8:9100" }));
+			res.end(JSON.stringify({ ok: true, upstreamUrl: "ws://10.0.0.8:9100", seat: 3 }));
 		});
 		try {
 			const verifier = new ControlPlaneTicketVerifier(stub.url);
 			const verdict = await verifier.verify("issued-ticket");
 			assert.equal(verdict.ok, true);
 			assert.equal(verdict.upstreamUrl, "ws://10.0.0.8:9100");
+			assert.equal(verdict.seat, 3);
+		} finally {
+			await stub.close();
+		}
+	});
+
+	test("rejects a successful verify that omits seat", async () => {
+		const stub = await listenJson((_req, res) => {
+			res.writeHead(200, { "content-type": "application/json" });
+			res.end(JSON.stringify({ ok: true, upstreamUrl: "ws://10.0.0.8:9100" }));
+		});
+		try {
+			const verifier = new ControlPlaneTicketVerifier(stub.url);
+			const verdict = await verifier.verify("issued-ticket");
+			assert.equal(verdict.ok, false);
 		} finally {
 			await stub.close();
 		}
@@ -125,8 +151,10 @@ describe("gateway uses control plane tickets", () => {
 		await controlPlane.listen({ host: "127.0.0.1", port: 0 });
 
 		const upstreamInbox: Buffer[] = [];
+		let requestedUrl = "";
 		const upstream = new WebSocketServer({ host: "127.0.0.1", port: 0 });
-		upstream.on("connection", (socket) => {
+		upstream.on("connection", (socket, request) => {
+			requestedUrl = request.url ?? "";
 			socket.send(Buffer.from([1, 2, 3]), { binary: true });
 			socket.on("message", (data: Buffer) => {
 				upstreamInbox.push(Buffer.from(data));
@@ -163,6 +191,7 @@ describe("gateway uses control plane tickets", () => {
 			try {
 				const greeting = await nextRawMessage(socket);
 				assert.deepEqual([...greeting.data], [1, 2, 3]);
+				assert.match(requestedUrl, /(?:\?|&)slot=0(?:&|$)/);
 				socket.send(Buffer.from([9, 8, 7]), { binary: true });
 				await waitFor(() => upstreamInbox.length >= 1);
 				assert.deepEqual([...upstreamInbox[0]!], [9, 8, 7]);

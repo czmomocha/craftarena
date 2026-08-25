@@ -8,7 +8,8 @@ extends Node
 ## 与网关拓扑阻止），二进制命令帧经 MatchRealtime 排队、在 commit_tick 边界按到达
 ## 顺序应用；每 SNAPSHOT_EVERY_TICKS 个 tick 广播一帧二进制快照。命令帧 tick 只
 ## 解码不信任，服务端 tick 权威（CD-43 §3）。每槽每 tick 至多一条命令（先到先得），
-## 断开丢弃排队；墙钟发送速率仍待（CD-63）。
+## 断开丢弃排队；握手后按上游 URL 的 slot 占用席位，缺席位则占用最小空槽。
+## 墙钟发送速率仍待（CD-63）。
 ## 心跳：每 HEARTBEAT_EVERY_TICKS 个 tick 打印一行结构化 JSON（含状态哈希），
 ## 全员冲线后另含 settlement；供 MatchHost 停止前写库与跨进程确定性核对。
 ## 心跳不续租（CD-44 §3）。
@@ -101,25 +102,45 @@ func _process(_delta: float) -> void:
 		var accept_err: int = peer.accept_stream(stream)
 		if accept_err != OK:
 			continue
-		var slot: int = _realtime.add_player()
-		if slot < 0:
-			peer.close(1008, "match full")
-			continue
-		_peers[peer] = slot
+		_peers[peer] = -1
 	var closed: Array = []
 	for peer: WebSocketPeer in _peers.keys():
 		peer.poll()
 		var state: int = peer.get_ready_state()
 		if state == WebSocketPeer.STATE_OPEN:
+			var slot: int = _peers[peer]
+			if slot < 0:
+				slot = _bind_peer(peer)
+				if slot < 0:
+					peer.close(1008, "match full")
+					closed.append(peer)
+					continue
+				_peers[peer] = slot
 			while peer.get_available_packet_count() > 0:
-				var slot: int = _peers[peer]
 				_realtime.accept_command(slot, peer.get_packet())
 		elif state == WebSocketPeer.STATE_CLOSED:
 			closed.append(peer)
 	for peer: WebSocketPeer in closed:
 		var slot: int = _peers[peer]
-		_realtime.remove_player(slot)
+		if slot >= 0:
+			_realtime.remove_player(slot)
 		_peers.erase(peer)
+
+
+func _bind_peer(peer: WebSocketPeer) -> int:
+	if _realtime == null:
+		return -1
+	var parsed: Dictionary = MatchRealtime.parse_requested_slot(peer.get_requested_url())
+	var present: bool = parsed.get("present", false)
+	if present:
+		var parsed_ok: bool = parsed.get("ok", false)
+		if not parsed_ok:
+			return -1
+		var requested: int = parsed.get("slot", -1)
+		if _realtime.occupy_slot(requested):
+			return requested
+		return -1
+	return _realtime.add_player()
 
 
 func _physics_process(_delta: float) -> void:
@@ -143,6 +164,9 @@ func _broadcast_snapshot() -> void:
 	if frame.is_empty():
 		return
 	for peer: WebSocketPeer in _peers.keys():
+		var slot: int = _peers[peer]
+		if slot < 0:
+			continue
 		if peer.get_ready_state() == WebSocketPeer.STATE_OPEN:
 			peer.send(frame, WebSocketPeer.WRITE_MODE_BINARY)
 
