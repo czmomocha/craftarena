@@ -25,6 +25,10 @@ export interface RegisterMatchSessionResponse {
 	readonly upstreamUrl: string;
 }
 
+export interface UnregisterMatchSessionResponse {
+	readonly matchId: string;
+}
+
 export interface IssueMatchTicketResponse {
 	readonly ticket: string;
 	readonly matchId: string;

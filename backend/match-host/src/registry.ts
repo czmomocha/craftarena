@@ -6,6 +6,7 @@ import type { LaunchedProcess, MatchExit, ProcessLauncher } from "./launcher.ts"
 import { MatchListenError, type MatchListenProbe } from "./listen_probe.ts";
 import {
 	MatchSessionRegisterError,
+	MatchSessionUnregisterError,
 	buildMatchUpstreamUrl,
 	type MatchSessionRegistrar,
 } from "./registrar.ts";
@@ -66,8 +67,9 @@ interface MatchEntry {
 /**
  * 对局注册表：一场对局一个 Godot Headless 进程（CD-44 §3）。
  *
- * 这里管进程生命周期、端口、租约，以及 listen 可连后再经控制面 API 登记上游。
- * 它**不碰数据库**——宪法第二十一条规定只有控制面能直接读写 SQLite。
+ * 这里管进程生命周期、端口、租约，以及 listen 可连后再经控制面 API 登记上游；
+ * 停止时再经同一接口注销，避免给已死场签发票据。它**不碰数据库**——
+ * 宪法第二十一条规定只有控制面能直接读写 SQLite。
  */
 export class MatchRegistry {
 	readonly #options: MatchRegistryOptions;
@@ -133,9 +135,14 @@ export class MatchRegistry {
 		this.#entries.set(matchId, { record, process });
 		this.#options.onEvent?.({ type: "started", matchId, port });
 
-		// 进程自己退出（崩溃或正常结束）时同步状态，不然注册表会一直显示 running。
-		void process.exited.then((exit) => {
-			this.#finalize(matchId, "process_exited", exit);
+		// 进程自己退出（崩溃或正常结束）时同步状态并注销，不然注册表会一直显示 running，
+		// 控制面也会继续给已死场签发票据。
+		void process.exited.then(async (exit) => {
+			try {
+				await this.#finalize(matchId, "process_exited", exit);
+			} catch {
+				// 本地已经停了。控制面注销失败不能再抛，否则变成未处理拒绝。
+			}
 		});
 
 		return record;
@@ -223,7 +230,7 @@ export class MatchRegistry {
 		return entry.record;
 	}
 
-	stop(matchId: string, reason: MatchStopReason = "requested"): MatchRecord | undefined {
+	async stop(matchId: string, reason: MatchStopReason = "requested"): Promise<MatchRecord | undefined> {
 		const entry = this.#entries.get(matchId);
 		if (entry === undefined || entry.record.state !== "running") {
 			return entry?.record;
@@ -234,7 +241,7 @@ export class MatchRegistry {
 	}
 
 	/** 扫描并回收到期对局。由 MatchHost 定时调用。 */
-	reclaimExpired(): readonly MatchRecord[] {
+	async reclaimExpired(): Promise<readonly MatchRecord[]> {
 		const now = this.#now();
 		const reclaimed: MatchRecord[] = [];
 
@@ -248,9 +255,20 @@ export class MatchRegistry {
 				continue;
 			}
 
-			const stopped = this.stop(entry.record.matchId, status.reason);
-			if (stopped !== undefined) {
-				reclaimed.push(stopped);
+			const matchId = entry.record.matchId;
+			try {
+				const stopped = await this.stop(matchId, status.reason);
+				if (stopped !== undefined) {
+					reclaimed.push(stopped);
+				}
+			} catch (error) {
+				if (!(error instanceof MatchSessionUnregisterError)) {
+					throw error;
+				}
+				const stopped = this.get(matchId);
+				if (stopped !== undefined) {
+					reclaimed.push(stopped);
+				}
 			}
 		}
 
@@ -258,13 +276,19 @@ export class MatchRegistry {
 	}
 
 	/** 关闭全部对局。进程退出时调用，避免留下孤儿 Godot 进程。 */
-	shutdown(): void {
-		for (const matchId of [...this.#entries.keys()]) {
-			this.stop(matchId, "requested");
-		}
+	async shutdown(): Promise<void> {
+		await Promise.all(
+			[...this.#entries.keys()].map(async (matchId) => {
+				try {
+					await this.stop(matchId, "requested");
+				} catch {
+					// 子进程已经杀掉。控制面注销失败不能挡住关机。
+				}
+			}),
+		);
 	}
 
-	#finalize(matchId: string, reason: MatchStopReason, exit?: MatchExit): MatchRecord | undefined {
+	async #finalize(matchId: string, reason: MatchStopReason, exit?: MatchExit): Promise<MatchRecord | undefined> {
 		const entry = this.#entries.get(matchId);
 		if (entry === undefined || entry.record.state === "stopped") {
 			return entry?.record;
@@ -285,6 +309,15 @@ export class MatchRegistry {
 			reason,
 			recentOutput: entry.process.recentOutput(),
 		});
+
+		try {
+			await this.#options.registrar.unregister(matchId);
+		} catch (error) {
+			if (error instanceof MatchSessionUnregisterError) {
+				throw error;
+			}
+			throw new MatchSessionUnregisterError(error instanceof Error ? error.message : String(error));
+		}
 
 		return entry.record;
 	}

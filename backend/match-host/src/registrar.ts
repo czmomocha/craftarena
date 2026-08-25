@@ -13,12 +13,20 @@ export interface MatchSessionRegisterSpec {
 
 export interface MatchSessionRegistrar {
 	register(spec: MatchSessionRegisterSpec): Promise<void>;
+	unregister(matchId: string): Promise<void>;
 }
 
 export class MatchSessionRegisterError extends Error {
 	constructor(message: string) {
 		super(message);
 		this.name = "MatchSessionRegisterError";
+	}
+}
+
+export class MatchSessionUnregisterError extends Error {
+	constructor(message: string) {
+		super(message);
+		this.name = "MatchSessionUnregisterError";
 	}
 }
 
@@ -47,8 +55,8 @@ export function buildMatchUpstreamUrl(host: string, port: number): string {
 }
 
 /**
- * 生产路径：`POST /match-sessions` 登记同一 matchId 与上游。
- * 网关仍只调校验接口；MatchHost 也不查库。
+ * 生产路径：`POST /match-sessions` 登记同一 matchId 与上游；
+ * `DELETE /match-sessions/:matchId` 在停止后注销。网关仍只调校验接口；MatchHost 也不查库。
  */
 export class ControlPlaneMatchSessionRegistrar implements MatchSessionRegistrar {
 	readonly #baseUrl: string;
@@ -95,6 +103,44 @@ export class ControlPlaneMatchSessionRegistrar implements MatchSessionRegistrar 
 		const matchId = (body as { matchId?: unknown }).matchId;
 		if (matchId !== spec.matchId) {
 			throw new MatchSessionRegisterError("control plane register returned a mismatched match id");
+		}
+	}
+
+	async unregister(matchId: string): Promise<void> {
+		let response: Response;
+		try {
+			response = await fetch(`${this.#baseUrl}/match-sessions/${encodeURIComponent(matchId)}`, {
+				method: "DELETE",
+				signal: AbortSignal.timeout(this.#timeoutMs),
+			});
+		} catch (error) {
+			throw new MatchSessionUnregisterError(
+				error instanceof Error ? error.message : String(error),
+			);
+		}
+
+		// 404 = 控制面已经没有这场：进程先退出或重复停止都算注销成功。
+		if (response.status === 404) {
+			return;
+		}
+		if (response.status !== 200) {
+			throw new MatchSessionUnregisterError(`control plane unregister returned HTTP ${response.status}`);
+		}
+
+		let body: unknown;
+		try {
+			body = await response.json();
+		} catch {
+			throw new MatchSessionUnregisterError("control plane unregister returned a non-JSON body");
+		}
+
+		if (typeof body !== "object" || body === null) {
+			throw new MatchSessionUnregisterError("control plane unregister returned an invalid body");
+		}
+
+		const echoed = (body as { matchId?: unknown }).matchId;
+		if (echoed !== matchId) {
+			throw new MatchSessionUnregisterError("control plane unregister returned a mismatched match id");
 		}
 	}
 }

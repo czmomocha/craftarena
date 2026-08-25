@@ -17,7 +17,7 @@ export interface MatchHostConfig {
 	readonly maxConcurrentMatches: number;
 	readonly matchCourse: string;
 	readonly matchPlayers: number;
-	/** 控制面基址。MatchHost 只通过它登记对局上游，绝不直接碰数据库（宪法第二十一条）。 */
+	/** 控制面基址。MatchHost 只通过它登记/注销对局上游，绝不直接碰数据库（宪法第二十一条）。 */
 	readonly controlPlaneUrl: string;
 	/**
 	 * 拼进 `ws://{host}:{port}` 的对局广告地址。默认回环；网关与 MatchHost

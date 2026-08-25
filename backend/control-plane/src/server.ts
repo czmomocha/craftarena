@@ -12,6 +12,7 @@ import {
 	type ReadinessPayload,
 	type RegisterMatchSessionRequest,
 	type RegisterMatchSessionResponse,
+	type UnregisterMatchSessionResponse,
 	type VerifyMatchTicketRequest,
 } from "../../contracts/src/index.ts";
 import {
@@ -121,6 +122,35 @@ export function buildServer(options: BuildServerOptions): FastifyInstance {
 				if (error instanceof MatchSessionExistsError) {
 					reply.code(409);
 					return { error: "match_already_exists" };
+				}
+				throw error;
+			}
+		},
+	);
+
+	app.delete<{ Params: MatchIdParams }>(
+		"/match-sessions/:matchId",
+		async (request, reply) => {
+			if (hasRequestBody(request.body)) {
+				reply.code(400);
+				return {
+					error: "unexpected_request_body",
+					message: "DELETE /match-sessions/:matchId does not accept a request body",
+				};
+			}
+			if (!isMatchId(request.params.matchId)) {
+				reply.code(400);
+				return { error: "invalid_match_id" };
+			}
+
+			try {
+				const record = options.database.deleteMatchSession(request.params.matchId);
+				const body: UnregisterMatchSessionResponse = { matchId: record.matchId };
+				return body;
+			} catch (error) {
+				if (error instanceof MatchSessionNotFoundError) {
+					reply.code(404);
+					return { error: "match_not_found" };
 				}
 				throw error;
 			}

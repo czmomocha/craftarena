@@ -61,10 +61,16 @@ app = buildMatchHost({
 const server = app;
 
 const reclaimTimer = setInterval(() => {
-	const reclaimed = registry.reclaimExpired();
-	if (reclaimed.length > 0) {
-		server.log.info({ count: reclaimed.length }, "reclaimed expired matches");
-	}
+	void registry
+		.reclaimExpired()
+		.then((reclaimed) => {
+			if (reclaimed.length > 0) {
+				server.log.info({ count: reclaimed.length }, "reclaimed expired matches");
+			}
+		})
+		.catch((error: unknown) => {
+			server.log.error({ error }, "failed to reclaim expired matches");
+		});
 }, config.reclaimIntervalMs);
 
 let shuttingDown = false;
@@ -76,11 +82,10 @@ for (const signal of ["SIGINT", "SIGTERM"] as const) {
 		shuttingDown = true;
 		server.log.info({ signal }, "shutting down match host");
 		clearInterval(reclaimTimer);
-		// 先杀子进程再退出，否则 Godot 进程会变成孤儿，继续占着端口和内存。
-		registry.shutdown();
-
-		void server
-			.close()
+		// 先杀子进程并注销控制面会话，再退出；否则 Godot 会变成孤儿，票据也会指向已死场。
+		void registry
+			.shutdown()
+			.then(() => server.close())
 			.then(() => process.exit(0))
 			.catch((error: unknown) => {
 				server.log.error({ error }, "failed to shut down cleanly");
