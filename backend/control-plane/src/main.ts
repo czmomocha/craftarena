@@ -12,6 +12,8 @@ const app = buildServer({
 	version: config.version,
 	logger: { level: config.logLevel },
 	ticketTtlMs: config.ticketTtlMs,
+	queueTtlMs: config.queueTtlMs,
+	queueSlotEstimateMs: config.queueSlotEstimateMs,
 	matchLauncher: new MatchHostHttpLauncher(config.matchHostUrl, config.matchHostLaunchTimeoutMs),
 });
 

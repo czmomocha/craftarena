@@ -286,15 +286,6 @@ describe("control plane matchmaking", () => {
 		});
 	});
 
-	test("returns 503 when MatchHost is at capacity", async () => {
-		await withApp(async (app, launcher) => {
-			launcher.failWith = new MatchHostCapacityError("match host is at capacity");
-			const created = await app.inject({ method: "POST", url: "/matchmaking/rooms" });
-			assert.equal(created.statusCode, 503);
-			assert.equal(created.json<{ error: string }>().error, "capacity_exhausted");
-		});
-	});
-
 	test("returns 502 when MatchHost fails to launch", async () => {
 		await withApp(async (app, launcher) => {
 			launcher.failWith = new MatchHostLaunchError("match host launch returned HTTP 502");

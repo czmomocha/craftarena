@@ -1,8 +1,9 @@
 /**
- * 匹配 / 房间码 HTTP 契约。
+ * 匹配 / 房间码 / 等待队列 HTTP 契约。
  *
  * 玩家入口在控制面：快速游戏与按码加入都只换一张一次性票据。
- * MatchHost 不查库（宪法第二十一条）。OpenAPI 仍未生成。
+ * 容量满时入 FIFO，轮询换同一张票。MatchHost 不查库（宪法第二十一条）。
+ * OpenAPI 仍未生成。
  */
 
 export interface MatchmakingJoinResponse {
@@ -12,4 +13,32 @@ export interface MatchmakingJoinResponse {
 	readonly expiresAt: string;
 	readonly seats: number;
 	readonly issued: number;
+}
+
+export type MatchQueueKind = "quick" | "create_room";
+
+export interface MatchmakingQueueWaitingResponse {
+	readonly status: "waiting";
+	readonly queueToken: string;
+	readonly position: number;
+	readonly estimatedWaitMs: number;
+	readonly expiresAt: string;
+}
+
+export interface MatchmakingQueueReadyResponse extends MatchmakingJoinResponse {
+	readonly status: "ready";
+}
+
+export interface MatchmakingQueueFailedResponse {
+	readonly status: "failed";
+	readonly error: string;
+}
+
+export type MatchmakingQueueStatusResponse =
+	| MatchmakingQueueWaitingResponse
+	| MatchmakingQueueReadyResponse
+	| MatchmakingQueueFailedResponse;
+
+export interface CancelMatchQueueResponse {
+	readonly ok: true;
 }

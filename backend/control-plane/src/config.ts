@@ -1,5 +1,6 @@
 import { resolve } from "node:path";
 
+import { DEFAULT_QUEUE_SLOT_ESTIMATE_MS, DEFAULT_QUEUE_TTL_MS } from "./queue.ts";
 import { DEFAULT_TICKET_TTL_MS } from "./tickets.ts";
 
 export interface ControlPlaneConfig {
@@ -9,6 +10,10 @@ export interface ControlPlaneConfig {
 	readonly databasePath: string;
 	/** 一次性票据过期窗口。开发期占位，不是产品锁定值。 */
 	readonly ticketTtlMs: number;
+	/** 匹配队列条目过期窗口。开发期占位，不是产品锁定值。 */
+	readonly queueTtlMs: number;
+	/** 预计等待 = 位次 × 本间隔。开发期占位，不是产品局时。 */
+	readonly queueSlotEstimateMs: number;
 	/** MatchHost 基址。控制面只通过它拉起对局，绝不让 MatchHost 查库。 */
 	readonly matchHostUrl: string;
 	/**
@@ -38,6 +43,12 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): ControlPlaneCo
 		port: parsePort(env["CONTROL_PLANE_PORT"], DEFAULT_PORT),
 		databasePath: rawDatabasePath === ":memory:" ? rawDatabasePath : resolve(rawDatabasePath),
 		ticketTtlMs: parsePositiveInt(env["CONTROL_PLANE_TICKET_TTL_MS"], DEFAULT_TICKET_TTL_MS, "CONTROL_PLANE_TICKET_TTL_MS"),
+		queueTtlMs: parsePositiveInt(env["CONTROL_PLANE_QUEUE_TTL_MS"], DEFAULT_QUEUE_TTL_MS, "CONTROL_PLANE_QUEUE_TTL_MS"),
+		queueSlotEstimateMs: parsePositiveInt(
+			env["CONTROL_PLANE_QUEUE_SLOT_ESTIMATE_MS"],
+			DEFAULT_QUEUE_SLOT_ESTIMATE_MS,
+			"CONTROL_PLANE_QUEUE_SLOT_ESTIMATE_MS",
+		),
 		matchHostUrl: (env["MATCH_HOST_URL"] ?? DEFAULT_MATCH_HOST_URL).replace(/\/+$/, ""),
 		matchHostLaunchTimeoutMs: parsePositiveInt(
 			env["CONTROL_PLANE_MATCH_HOST_LAUNCH_TIMEOUT_MS"],
