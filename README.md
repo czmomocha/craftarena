@@ -72,6 +72,7 @@ export GODOT_AI_DISABLE_TELEMETRY=true
 |---|---|---|
 | 查看引擎版本 | `& $env:GODOT4_CONSOLE --version` | `"$GODOT4" --version` |
 | 打开编辑器 | `& $env:GODOT4 --editor --path game` | `"$GODOT4" --editor --path game` |
+| 运行主场景（窗口，真机） | `& $env:GODOT4 --path game` | `"$GODOT4" --path game` |
 | Headless 导入检查 | `& $env:GODOT4_CONSOLE --headless --path game --import` | `"$GODOT4" --headless --path game --import` |
 | Headless 启动主场景 | `& $env:GODOT4_CONSOLE --headless --path game --quit` | `"$GODOT4" --headless --path game --quit` |
 | 单文件语法与类型检查 | `& $env:GODOT4_CONSOLE --headless --path game --check-only -s res://src/client/main.gd` | `"$GODOT4" --headless --path game --check-only -s res://src/client/main.gd` |
@@ -111,7 +112,7 @@ CI 当前实际启用了哪些门禁、哪些还没实现，以 [CD-53 §4.1](Co
 
 提交、推送与合入 `main` 的边界见 [CD-52 §1.1](Confirmed-docs/50-engineering/52-ai-workflow.md)。宪法第十八条的人类门禁落在合入 `main`、部署与发布。项目级 `.cursor/hooks.json` 会拦向 `main` 的 git 提交/推送，以及 `git worktree remove --force`。
 
-任务完成判定见 [CD-53 §5 Definition of Done](Confirmed-docs/50-engineering/53-testing-and-ci.md)。
+任务完成判定见 [CD-53 §5 Definition of Done](Confirmed-docs/50-engineering/53-testing-and-ci.md)。完整章节 PR 的人类真机步骤义务见 [CD-52 §3.2](Confirmed-docs/50-engineering/52-ai-workflow.md)，可执行清单是 [章节真机清单](docs/runbooks/chapter-device-check.md)（人工检查，不是 CI 门禁）。
 
 ## 并行工作区
 

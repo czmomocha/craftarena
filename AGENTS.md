@@ -26,13 +26,14 @@
 → 实现
 → 运行自动化测试
 → 运行场景 / Headless 验证
+→ 将本章真机步骤写入 docs/runbooks/chapter-device-check.md 本刀（见 CD-52 §3.2）
 → 检查日志与性能
 → 人类审查
 → 人类决定是否合入 main / 部署 / 发布
 → 更新文档和任务状态
 ```
 
-不得用"代码看起来正确"代替运行证据。完整分工、任务单模板与提交边界见 [CD-52](Confirmed-docs/50-engineering/52-ai-workflow.md)。
+不得用"代码看起来正确"代替运行证据。完整分工、任务单模板、人类真机步骤义务与提交边界见 [CD-52](Confirmed-docs/50-engineering/52-ai-workflow.md)。
 
 ## 3. 二十六条红线
 

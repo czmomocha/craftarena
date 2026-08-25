@@ -1,10 +1,10 @@
 # CD-52 AI 主导开发方式
 
 > 文档 ID：CD-52
-> 单一事实源：人机分工与 AI 权限边界、标准任务循环、任务单模板、AI 使用规则、多 Agent 协作、项目治理与语言约定、Godot AI MCP 使用边界
+> 单一事实源：人机分工与 AI 权限边界、标准任务循环、任务单模板、完整章节 PR 的人类真机步骤义务、AI 使用规则、多 Agent 协作、项目治理与语言约定、Godot AI MCP 使用边界
 > 加载建议：AI Agent 接手任务时必读；调整协作流程或权限边界时读取
 > 上位约束：[CD-00 宪法](../00-constitution/CONSTITUTION.md) 第九、十、十一、十二、十八、二十条
-> 相关：[CD-53 测试与 CI](53-testing-and-ci.md)、[CD-51 开发环境](51-dev-environment.md)、[CD-61 里程碑路线](../60-plan/61-milestones.md)、[ADR-0003](../../docs/adr/0003-godot-mcp-selection.md)、[ADR-0004](../../docs/adr/0004-multi-agent-adoption-timing-and-architecture.md)
+> 相关：[CD-53 测试与 CI](53-testing-and-ci.md)、[CD-51 开发环境](51-dev-environment.md)、[CD-61 里程碑路线](../60-plan/61-milestones.md)、[章节真机清单](../../docs/runbooks/chapter-device-check.md)、[ADR-0003](../../docs/adr/0003-godot-mcp-selection.md)、[ADR-0004](../../docs/adr/0004-multi-agent-adoption-timing-and-architecture.md)
 > 派生自：初稿 v0.2 §43–§47
 
 ## 1. 角色分工
@@ -56,6 +56,7 @@
 → 实现
 → 运行自动化测试
 → 运行场景 / Headless 验证
+→ 将本章真机步骤写入 docs/runbooks/chapter-device-check.md 本刀（见 §3.2）
 → 检查日志与性能
 → 人类审查
 → 人类决定是否合入 main / 部署 / 发布
@@ -79,6 +80,7 @@ AI 不得用"代码看起来正确"代替运行证据。
 必须运行的测试：
 性能或安全预算：
 输出物：
+真机步骤：写入 docs/runbooks/chapter-device-check.md 本刀 | 无（原因）
 ```
 
 `隔离方式` 必填。阶段 A（§5.1 的四条退出条件未全绿）只允许 `无`，即单 Agent 串行、共享当前 checkout。阶段 B 起必须填 `worktree` 或 `cloud`：**Cursor 的 subagent 默认共享父 Agent 的 checkout，不显式要求隔离会静默互相覆盖。** 不得留空。
@@ -96,6 +98,17 @@ AI 不得用"代码看起来正确"代替运行证据。
 - 仍禁止：把 BASTION 面板、第三张赛道、预算数字、2 秒云端上传塞进同一个 PR。
 
 并行 2 域时，每个域交出的也必须是完整一章。决策来源见 [CD-91 D.6](../90-reference/91-decision-log.md) `pr_scope = complete_chapter`。
+
+### 3.2 人类真机验收步骤
+
+完整章节 PR 交给人类审查时，Test plan **禁止**只写「真机再看一眼」。必须给出**编号步骤**：启动什么、点哪个控件、期望看见什么、失败长什么样。同一份步骤写入 [章节真机清单](../../docs/runbooks/chapter-device-check.md) 的「本刀」节（**整节替换**上一章），人类只打开这一份就能验当前 PR。PR 正文可写「照 runbook 本刀」并粘贴同一份编号，不得只留一句口号。
+
+- 有开发机可见表面（大厅、Preview、编辑器窗口、导出安装包等）：必须写步骤。
+- 纯契约 / 纯库 / 无 GUI：本刀写「本章无开发机可见行为」加一句原因，避免人类空等窗口。
+- 这是人工检查，不是 CI 门禁（宪法第二十四条）。未勾选真机不等于自动门禁已覆盖。
+- 命令以 [README.md](../../README.md) 为准；本文件与 Confirmed-docs 不复述引擎路径或端口。
+
+决策来源见 [CD-91 D.6](../90-reference/91-decision-log.md) `chapter_device_check = numbered_runbook_and_pr`。
 
 ## 4. AI 使用规则
 
