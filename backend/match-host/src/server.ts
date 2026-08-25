@@ -8,6 +8,7 @@ import {
 	type ReadinessPayload,
 } from "../../contracts/src/index.ts";
 import { MatchCapacityError, type MatchRecord, type MatchRegistry } from "./registry.ts";
+import { MatchSessionRegisterError } from "./registrar.ts";
 
 export interface BuildMatchHostOptions {
 	readonly registry: MatchRegistry;
@@ -70,8 +71,8 @@ export function buildMatchHost(options: BuildMatchHostOptions): FastifyInstance 
 	});
 
 	app.get("/readyz", async (_request, reply): Promise<ReadinessPayload> => {
-		const running = options.registry.runningCount();
-		const hasCapacity = running < options.maxConcurrentMatches;
+		const occupied = options.registry.occupiedCount();
+		const hasCapacity = occupied < options.maxConcurrentMatches;
 		const checks: ReadinessCheck[] = [
 			{
 				name: "match_capacity",
@@ -105,7 +106,7 @@ export function buildMatchHost(options: BuildMatchHostOptions): FastifyInstance 
 		}
 
 		try {
-			const record = options.registry.start();
+			const record = await options.registry.start();
 			reply.code(201);
 			return toWire(record);
 		} catch (error) {
@@ -113,6 +114,11 @@ export function buildMatchHost(options: BuildMatchHostOptions): FastifyInstance 
 				// 容量满按 CD-44 §2 是排队场景，不是服务故障，所以用 503 而不是 500。
 				reply.code(503);
 				return { error: "capacity_exhausted", message: error.message };
+			}
+			if (error instanceof MatchSessionRegisterError) {
+				// 控制面不可达或拒绝登记：进程已杀掉，对调用方是上游失败，不是本机容量问题。
+				reply.code(502);
+				return { error: "session_register_failed", message: error.message };
 			}
 			throw error;
 		}
@@ -161,6 +167,7 @@ function toWire(record: MatchRecord): Record<string, unknown> {
 		port: record.port,
 		pid: record.pid,
 		state: record.state,
+		upstreamUrl: record.upstreamUrl,
 		startedAt: new Date(record.startedAt).toISOString(),
 		leaseExpiresAt: new Date(record.lease.expiresAt).toISOString(),
 		lastValidInputAt: new Date(record.lease.lastValidInputAt).toISOString(),

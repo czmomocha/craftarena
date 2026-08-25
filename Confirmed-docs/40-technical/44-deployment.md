@@ -42,7 +42,7 @@
 - 连续 **10 分钟**无此类输入则关闭进程；
 - 每场对局进程异常时尽力保留最后关键快照和日志。
 
-实现落点：MatchHost（`backend/match-host/`，含租约/端口/回收与 `GodotProcessLauncher`）与对局进程入口（`game/src/server/match_server.gd`，课程→`TraprushMatchSession`→引擎节奏 tick→心跳 JSON→`--max-ticks` 自退/坏配置 exit 1）。对局进程实时回路已落地（2026-08-24）：进程在本场端口监听 WebSocket（`--bind` 占位 0.0.0.0，公网暴露由部署层与网关拓扑阻止），命令/快照走 [CD-43 §1](43-networking-and-replay.md#1-序列化分工) 二进制帧，槽位/排队/广播语义见 [CD-43 §3](43-networking-and-replay.md#3-回放与确定性) 实现落点。运行入口是 `--scene res://src/server/match_server.tscn`：`-s` 直跑 extends Node 的脚本不会实例化场景（4.7 表现为主循环不启动）。控制面已能登记对局上游并签发入场票据（见 [CD-43 §2](43-networking-and-replay.md#2-传输)）；MatchHost 拉起后自动登记上游仍待。
+实现落点：MatchHost（`backend/match-host/`，含租约/端口/回收与 `GodotProcessLauncher`）与对局进程入口（`game/src/server/match_server.gd`，课程→`TraprushMatchSession`→引擎节奏 tick→心跳 JSON→`--max-ticks` 自退/坏配置 exit 1）。对局进程实时回路已落地（2026-08-24）：进程在本场端口监听 WebSocket（`--bind` 占位 0.0.0.0，公网暴露由部署层与网关拓扑阻止），命令/快照走 [CD-43 §1](43-networking-and-replay.md#1-序列化分工) 二进制帧，槽位/排队/广播语义见 [CD-43 §3](43-networking-and-replay.md#3-回放与确定性) 实现落点。运行入口是 `--scene res://src/server/match_server.tscn`：`-s` 直跑 extends Node 的脚本不会实例化场景（4.7 表现为主循环不启动）。控制面已能登记对局上游并签发入场票据（见 [CD-43 §2](43-networking-and-replay.md#2-传输)）。MatchHost 拉起对局进程后调用控制面 `POST /match-sessions` 登记同一 `matchId` 与 `ws` 上游（广告主机默认 `127.0.0.1`，可由 `MATCH_HOST_UPSTREAM_HOST` 覆盖；这是实现默认，不是产品锁定值）。登记失败则杀掉子进程，`POST /matches` 回 502。MatchHost 不查库（宪法第二十一条）。不等对局进程 `listen`；停止对局不注销控制面会话。真匹配/房间码仍待。
 
 ## 4. 数据库所有权
 
