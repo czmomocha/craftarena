@@ -2,8 +2,8 @@ extends Node
 
 ## Client boot scene. Prints a structured boot line for Headless smoke,
 ## then opens the TRAPRUSH match lobby (code-created Window) and maps the
-## default official course occupancy, destructible placeholders, and
-## compiled portal-link gizmos.
+## default official course occupancy, destructible placeholders,
+## compiled portal-link gizmos, and checkpoint-order gizmos.
 ## Live HTTP/WS stays off in headless
 ## so CI --quit does not call localhost.
 

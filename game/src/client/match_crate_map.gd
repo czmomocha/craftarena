@@ -6,7 +6,8 @@ extends Node3D
 ## durability. Float conversion happens only here. Placeholders are not
 ## hitboxes. Durability <= 0 or a crate omitted from the snapshot removes
 ## the box. Snapshots never move a crate. Portal source→dest bars stay
-## undrawn here; MatchPortalLinkMap draws them. No interpolation,
+## undrawn here; MatchPortalLinkMap draws them. Checkpoint-order gizmos
+## stay undrawn here; MatchCheckpointOrderMap draws them. No interpolation,
 ## prediction, ranking, or course-selection API.
 
 const AuthoringDocumentGd := preload("res://src/creator/authoring_document.gd")
@@ -78,6 +79,10 @@ func crate_node(entity_id: int) -> MeshInstance3D:
 
 
 func link_node_count() -> int:
+	return 0
+
+
+func checkpoint_node_count() -> int:
 	return 0
 
 

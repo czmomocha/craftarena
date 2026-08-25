@@ -7,7 +7,8 @@ extends Node3D
 ## Placeholders are not hitboxes. Crates have no pose in the v1 snapshot
 ## frame, so they are not drawn here; MatchCrateMap uses topology poses.
 ## Portal source→dest bars stay undrawn here; MatchPortalLinkMap draws them.
-## No interpolation, prediction, or ranking.
+## Checkpoint-order gizmos stay undrawn here; MatchCheckpointOrderMap
+## draws them. No interpolation, prediction, or ranking.
 
 const MatchSnapshotFollowGd := preload("res://src/client/match_snapshot_follow.gd")
 
@@ -65,6 +66,10 @@ func crate_node_count() -> int:
 
 
 func link_node_count() -> int:
+	return 0
+
+
+func checkpoint_node_count() -> int:
 	return 0
 
 
