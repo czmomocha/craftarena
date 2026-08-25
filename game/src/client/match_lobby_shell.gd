@@ -23,6 +23,7 @@ extends Node
 ## online, local authority offline) with the Preview camera offset.
 ## The own-seat box uses OWN_ALBEDO; remotes use REMOTE_ALBEDO. Standing
 ## labels prefix the own seat with "*". Remotes do not pull the camera.
+## Own-seat accepted_count tints course pads: done / current / pending.
 ## WASD encodes Move plus discrete 8-way yaw_bam; Jump / Reset / Use item
 ## encode existing intents.
 ## play_move_step is a presentation stub, not a product speed.
@@ -292,6 +293,8 @@ func try_stop_offline() -> bool:
 		standings.apply_players([])
 	if crates != null:
 		crates.apply_path(course_path)
+	if course != null:
+		course.apply_own_progress(-1)
 	_refresh_status()
 	return true
 
@@ -329,6 +332,8 @@ func try_leave_play() -> bool:
 		standings.apply_players([])
 	if crates != null:
 		crates.apply_path(course_path)
+	if course != null:
+		course.apply_own_progress(-1)
 	_refresh_status()
 	return true
 
@@ -938,6 +943,8 @@ func _apply_snapshot_map() -> void:
 		map.apply_players(players, follow.crates)
 	if crates != null:
 		crates.apply_follow(follow)
+	if course != null:
+		course.apply_own_progress(_own_accepted_count(follow.players))
 	if standings != null:
 		var pad_total: int = 0
 		if course != null:
@@ -960,6 +967,23 @@ func _camera_follow_slot() -> int:
 	if play != null and play.state == MatchPlaySessionGd.STATE_IN_MATCH:
 		return play.predict.own_slot
 	return -1
+
+
+func _own_accepted_count(players: Array) -> int:
+	var slot: int = _camera_follow_slot()
+	if slot < 0 or slot >= players.size():
+		return -1
+	var raw: Variant = players[slot]
+	if typeof(raw) != TYPE_DICTIONARY:
+		return -1
+	var body: Dictionary = raw
+	var count_raw: Variant = body.get("accepted_count", -1)
+	if typeof(count_raw) != TYPE_INT:
+		return -1
+	var accepted_count: int = count_raw
+	if accepted_count < 0:
+		return -1
+	return accepted_count
 
 
 func _sync_interp_t(follow: MatchSnapshotFollowGd) -> void:
