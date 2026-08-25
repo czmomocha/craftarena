@@ -5,7 +5,8 @@ extends Node3D
 ## Topology bags supply Q48.16 poses; the latest snapshot supplies
 ## durability. Float conversion happens only here. Placeholders are not
 ## hitboxes. Durability <= 0 or a crate omitted from the snapshot removes
-## the box. Snapshots never move a crate. Portal source→dest bars stay
+## the box. crate_count is live boxes; crate_total stays the compiled bag
+## count. Snapshots never move a crate. Portal source→dest bars stay
 ## undrawn here; MatchPortalLinkMap draws them. Checkpoint-order gizmos
 ## stay undrawn here; MatchCheckpointOrderMap draws them. Standing labels
 ## stay undrawn here; MatchStandingMap draws them. No interpolation,
@@ -73,6 +74,10 @@ func apply_crates(crates: Array) -> bool:
 
 func crate_count() -> int:
 	return _crate_count
+
+
+func crate_total() -> int:
+	return _poses.size()
 
 
 func crate_node(entity_id: int) -> MeshInstance3D:

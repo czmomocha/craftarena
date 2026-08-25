@@ -6,7 +6,8 @@ extends GutTest
 ## WASD writes discrete 8-way yaw_bam; player boxes show a facing marker.
 ## Own-seat box uses OWN_ALBEDO; standing labels prefix the own seat with "*".
 ## Own-seat accepted_count tints course pads done / current / pending.
-## Own-seat finish_tick tints the finish zone; HUD shows pads/finish/result.
+## Own-seat finish_tick tints the finish zone; HUD shows pads/floor/finish/crates/result.
+## Reset rising-edge returns to the last accepted pad without dropping progress.
 
 const MatchFrameCodec := preload("res://src/shared/protocol/match_frame_codec.gd")
 const MatchJoinSession := preload("res://src/client/match_join_session.gd")
@@ -645,7 +646,9 @@ func test_solo_own_progress_tints_pads_and_cancel_restores() -> void:
 	assert_eq(_pad_albedo(3), MatchCourseMap.PENDING_ALBEDO)
 	assert_eq(_finish_albedo(), MatchCourseMap.FINISH_PENDING_ALBEDO)
 	assert_true(_shell.status_label_text().contains("pads=1/3"))
+	assert_true(_shell.status_label_text().contains("floor=0"))
 	assert_true(_shell.status_label_text().contains("finish=-1"))
+	assert_true(_shell.status_label_text().contains("crates=1/1"))
 	assert_false(_shell.status_label_text().contains("result="))
 	assert_true(_shell.try_cancel())
 	assert_eq(_shell.course.own_accepted_count(), -1)
@@ -654,6 +657,8 @@ func test_solo_own_progress_tints_pads_and_cancel_restores() -> void:
 	assert_eq(_pad_albedo(2), MatchCourseMap.PENDING_ALBEDO)
 	assert_eq(_finish_albedo(), MatchCourseMap.FINISH_PENDING_ALBEDO)
 	assert_false(_shell.status_label_text().contains("pads="))
+	assert_false(_shell.status_label_text().contains("floor="))
+	assert_false(_shell.status_label_text().contains("crates=1/1"))
 	assert_false(_shell.status_label_text().contains("result="))
 
 
@@ -699,6 +704,7 @@ func test_solo_walk_finishes_and_marks_local_result() -> void:
 	assert_eq(_finish_albedo(), MatchCourseMap.FINISH_PENDING_ALBEDO)
 	assert_false(_shell.status_label_text().contains("result="))
 	assert_false(_shell.status_label_text().contains("pads="))
+	assert_false(_shell.status_label_text().contains("floor="))
 
 
 func test_online_own_progress_follows_seat_accepted_count() -> void:
@@ -758,13 +764,75 @@ func test_solo_use_item_from_spawn_breaks_course_01_crate() -> void:
 	_shell = _open_shell()
 	assert_true(_shell.try_solo())
 	assert_eq(_shell.crates.crate_count(), 1)
+	assert_eq(_shell.crates.crate_total(), 1)
 	assert_eq(_shell.offline.session.destructible_alive_count(), 1)
+	assert_true(_shell.status_label_text().contains("crates=1/1"))
 	var use_item: PackedByteArray = _shell.try_sample_play_use_item(true)
 	assert_false(use_item.is_empty())
 	assert_eq(_shell.offline.session.destructible_alive_count(), 0)
 	assert_eq(_shell.crates.crate_count(), 0)
+	assert_eq(_shell.crates.crate_total(), 1)
+	assert_true(_shell.status_label_text().contains("crates=0/1"))
 	assert_false(_shell.allows_settlement())
 	assert_false(_shell.allows_online_writes())
+
+
+func test_solo_reset_after_portal_returns_to_last_pad() -> void:
+	_shell = _open_shell()
+	assert_true(_shell.try_solo())
+	var steps: int = 0
+	while steps < 120:
+		assert_false(_shell.try_sample_play_move(false, false, false, true).is_empty())
+		var pose: Dictionary = _shell.offline.session.player_pose(0)
+		var pose_y: int = pose.get("y", 0)
+		if pose_y >= Fixed.SCALE:
+			break
+		steps += 1
+	var before: Dictionary = _shell.offline.session.player_pose(0)
+	var before_y: int = before.get("y", 0)
+	assert_gte(before_y, Fixed.SCALE)
+	assert_eq(_shell.offline.session.player_accepted_count(0), 2)
+	assert_true(_shell.status_label_text().contains("floor=1"))
+	assert_true(_shell.status_label_text().contains("pads=2/3"))
+	var reset: PackedByteArray = _shell.try_sample_play_reset(true)
+	assert_false(reset.is_empty())
+	var after: Dictionary = _shell.offline.session.player_pose(0)
+	var after_x: int = after.get("x", -1)
+	var after_y: int = after.get("y", -1)
+	var after_z: int = after.get("z", -1)
+	assert_eq(after_x, 2 * Fixed.SCALE)
+	assert_eq(after_y, 0)
+	assert_eq(after_z, 0)
+	assert_eq(_shell.offline.session.player_accepted_count(0), 2)
+	assert_true(_shell.status_label_text().contains("floor=0"))
+	assert_true(_shell.status_label_text().contains("pads=2/3"))
+	assert_true(_shell.status_label_text().contains("finish=-1"))
+	assert_almost_eq(_shell.map.player_node(0).position.x, 2.0, 0.0001)
+	assert_almost_eq(_shell.map.player_node(0).position.y, 0.0, 0.0001)
+	_assert_lobby_camera_on(_shell.map.player_node(0))
+
+
+func test_online_floor_uses_authority_y_not_interp() -> void:
+	_shell = _open_shell()
+	assert_eq(MatchLobbyShell.floor_index_from_y(0), 0)
+	assert_eq(MatchLobbyShell.floor_index_from_y(Fixed.SCALE), 1)
+	assert_eq(MatchLobbyShell.floor_index_from_y(-1), 0)
+	assert_eq(MatchLobbyShell.floor_index_from_y(-Fixed.SCALE), -1)
+	assert_true(_shell.try_quick())
+	assert_true(_shell.accept_http(201, _join("ABCD23", "ticket-floor")))
+	assert_true(_shell.on_socket_open())
+	assert_true(_shell.on_binary(_snapshot(1, 0, [_crate(40, 1)], Fixed.SCALE - 1)))
+	assert_true(_shell.status_label_text().contains("floor=0"))
+	assert_true(_shell.status_label_text().contains("crates=1/1"))
+	assert_true(_shell.on_binary(_snapshot(2, 0, [_crate(40, 1)], Fixed.SCALE)))
+	assert_eq(_shell.interp_progress(), 0)
+	assert_true(_shell.status_label_text().contains("floor=1"))
+	var floor_raw: Variant = _shell.status_view().get("own_floor_index", -1)
+	var floor_index: int = floor_raw
+	assert_eq(floor_index, 1)
+	assert_true(_shell.try_cancel())
+	assert_false(_shell.status_label_text().contains("floor="))
+	assert_false(_shell.status_label_text().contains("crates=1/1"))
 
 
 func _open_shell() -> MatchLobbyShell:
@@ -801,8 +869,8 @@ func _crate(entity_id: int, durability: int) -> Dictionary:
 	}
 
 
-func _snapshot(tick: int, x: int, crates: Array[Dictionary] = []) -> PackedByteArray:
-	var players: Array[Dictionary] = [_ranked_player(x, 0, -1)]
+func _snapshot(tick: int, x: int, crates: Array[Dictionary] = [], y: int = 0) -> PackedByteArray:
+	var players: Array[Dictionary] = [_ranked_player(x, 0, -1, y)]
 	return MatchFrameCodec.encode_snapshot(tick, players, crates)
 
 
@@ -819,10 +887,10 @@ func _two_player_snapshot(
 	return MatchFrameCodec.encode_snapshot(tick, players, crates)
 
 
-func _ranked_player(x: int, accepted_count: int, finish_tick: int) -> Dictionary:
+func _ranked_player(x: int, accepted_count: int, finish_tick: int, y: int = 0) -> Dictionary:
 	return {
 		"x": x,
-		"y": 0,
+		"y": y,
 		"z": 0,
 		"yaw_bam": 0,
 		"accepted_count": accepted_count,

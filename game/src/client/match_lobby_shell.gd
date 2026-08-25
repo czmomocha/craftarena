@@ -25,8 +25,12 @@ extends Node
 ## labels prefix the own seat with "*". Remotes do not pull the camera.
 ## Own-seat accepted_count tints course pads: done / current / pending.
 ## Own-seat finish_tick tints the finish zone: pending / current / done.
-## HUD shows pads=n/m and finish=n; result= appears when every snapshot
-## seat has finished. That line is local presentation, not a settlement write.
+## HUD shows pads=n/m, floor=n, finish=n, and crates=n/m; result= appears
+## when every snapshot seat has finished. floor uses own-seat authority y
+## (y / Fixed.SCALE toward zero), not interpolated samples. crates n/m is
+## live boxes over compiled bag count. Reset rising-edge encodes the
+## existing ResetToCheckpointIntent. result= is local presentation, not a
+## settlement write.
 ## WASD encodes Move plus discrete 8-way yaw_bam; Jump / Reset / Use item
 ## encode existing intents.
 ## play_move_step is a presentation stub, not a product speed.
@@ -81,6 +85,11 @@ const _MOVE_LEFT: String = "move_left"
 const _MOVE_RIGHT: String = "move_right"
 const _USE_ITEM: String = "use_item"
 const _JUMP: String = "jump"
+
+
+static func floor_index_from_y(y: int) -> int:
+	return y / Fixed.SCALE
+
 
 var join: MatchJoinSessionGd = null
 var play: MatchPlaySessionGd = null
@@ -508,6 +517,8 @@ func status_view() -> Dictionary:
 	var standing_line: String = ""
 	var own_accepted_count: int = -1
 	var own_finish_tick: int = -1
+	var own_floor_index: int = 0
+	var crate_total: int = 0
 	var match_finished: bool = false
 	if map != null:
 		mapped_players = map.player_count()
@@ -517,6 +528,7 @@ func status_view() -> Dictionary:
 		mapped_finish = course.finish_count()
 	if crates != null:
 		mapped_crates = crates.crate_count()
+		crate_total = crates.crate_total()
 	if links != null:
 		mapped_links = links.link_count()
 	if orders != null:
@@ -533,6 +545,7 @@ func status_view() -> Dictionary:
 	if follow != null and follow.has_snapshot:
 		own_accepted_count = _own_accepted_count(follow.players)
 		own_finish_tick = _own_finish_tick(follow.players)
+		own_floor_index = floor_index_from_y(_own_authority_y(follow.players))
 		match_finished = _all_players_finished(follow.players)
 	return {
 		"join_state": join_view.get("state", ""),
@@ -559,6 +572,7 @@ func status_view() -> Dictionary:
 		"mapped_portals": mapped_portals,
 		"mapped_finish": mapped_finish,
 		"mapped_crates": mapped_crates,
+		"crate_total": crate_total,
 		"mapped_links": mapped_links,
 		"mapped_orders": mapped_orders,
 		"mapped_sequences": mapped_sequences,
@@ -567,6 +581,7 @@ func status_view() -> Dictionary:
 		"standing_line": standing_line,
 		"own_accepted_count": own_accepted_count,
 		"own_finish_tick": own_finish_tick,
+		"own_floor_index": own_floor_index,
 		"match_finished": match_finished,
 		"window_visible": is_window_visible(),
 	}
@@ -907,16 +922,19 @@ func _refresh_status() -> void:
 	if play_state == MatchPlaySessionGd.STATE_IN_MATCH or offline_state == MatchOfflineSessionGd.STATE_PLAYING:
 		var tick: int = view.get("tick", -1)
 		var player_count: int = view.get("player_count", 0)
-		var crate_count: int = view.get("crate_count", 0)
 		parts.append("tick=%d" % tick)
 		parts.append("players=%d" % player_count)
-		parts.append("crates=%d" % crate_count)
 		var mapped_players: int = view.get("mapped_players", 0)
 		parts.append("mapped=%d" % mapped_players)
 		var own_accepted_count: int = view.get("own_accepted_count", -1)
 		var own_finish_tick: int = view.get("own_finish_tick", -1)
+		var own_floor_index: int = view.get("own_floor_index", 0)
+		var crate_alive: int = view.get("mapped_crates", 0)
+		var crate_total: int = view.get("crate_total", 0)
 		parts.append("pads=%d/%d" % [own_accepted_count, mapped_pads])
+		parts.append("floor=%d" % own_floor_index)
 		parts.append("finish=%d" % own_finish_tick)
+		parts.append("crates=%d/%d" % [crate_alive, crate_total])
 		if view.get("match_finished", false):
 			var result_line: String = str(view.get("standing_line", ""))
 			if result_line != "":
@@ -1001,6 +1019,20 @@ func _own_accepted_count(players: Array) -> int:
 
 func _own_finish_tick(players: Array) -> int:
 	return _own_player_int(players, "finish_tick", false)
+
+
+func _own_authority_y(players: Array) -> int:
+	var slot: int = _camera_follow_slot()
+	if slot < 0 or slot >= players.size():
+		return 0
+	var raw: Variant = players[slot]
+	if typeof(raw) != TYPE_DICTIONARY:
+		return 0
+	var body: Dictionary = raw
+	var y_raw: Variant = body.get("y", 0)
+	if typeof(y_raw) != TYPE_INT:
+		return 0
+	return y_raw
 
 
 func _own_player_int(players: Array, key: String, reject_negative: bool) -> int:
