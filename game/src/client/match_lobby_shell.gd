@@ -21,6 +21,8 @@ extends Node
 ## intents. play_move_step is a presentation stub, not a product speed.
 ## Unexpected socket close while connecting or in-match reissues the
 ## consumed ticket and follows the latest snapshot again.
+## Cancel stops solo play, cancels a waiting queue, and locally leaves
+## connecting / in-match / closed play without reissuing a ticket.
 ## Quick play / create room send an official course id and seats;
 ## join-by-code follows the room's course and remounts maps from that response.
 ## Solo play reuses the course selector only (always one local player).
@@ -288,11 +290,34 @@ func try_stop_offline() -> bool:
 func try_cancel() -> bool:
 	if _offline_playing():
 		return try_stop_offline()
+	if try_leave_play():
+		return true
 	if join == null:
 		return false
 	if not join.try_cancel():
 		return false
 	_dispatch_pending()
+	_refresh_status()
+	return true
+
+
+func try_leave_play() -> bool:
+	var left: bool = false
+	if play != null and play.try_leave():
+		left = true
+	if join != null and join.try_abandon():
+		left = true
+	if not left:
+		return false
+	_drop_gateway()
+	last_sent_command = PackedByteArray()
+	_reset_interp()
+	if map != null:
+		map.apply_players([])
+	if standings != null:
+		standings.apply_players([])
+	if crates != null:
+		crates.apply_path(course_path)
 	_refresh_status()
 	return true
 
@@ -734,11 +759,20 @@ func _after_join_http() -> void:
 func _connect_gateway() -> void:
 	if play == null or play.websocket_url == "":
 		return
+	_drop_gateway()
 	_peer = WebSocketPeer.new()
 	var err: int = _peer.connect_to_url(play.websocket_url)
 	if err != OK:
 		play.on_close()
 		_peer = null
+
+
+func _drop_gateway() -> void:
+	if _peer == null:
+		return
+	_peer.close(-1)
+	_peer = null
+	_opened_socket = false
 
 
 func _poll_queue_clock(delta: float) -> void:

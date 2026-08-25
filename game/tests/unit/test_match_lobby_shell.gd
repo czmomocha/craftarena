@@ -136,6 +136,54 @@ func test_in_match_close_reconnects_and_follows_new_snapshot() -> void:
 	assert_almost_eq(marker.position.x, 24.0 / float(Fixed.SCALE), 0.0001)
 
 
+func test_in_match_cancel_leaves_without_reconnect() -> void:
+	_shell = _open_shell()
+	assert_true(_shell.try_quick())
+	assert_true(_shell.accept_http(201, _join("ABCD23", "ticket-a")))
+	assert_true(_shell.on_socket_open())
+	assert_true(_shell.on_binary(_snapshot(2, 12)))
+	assert_eq(_shell.map.player_count(), 1)
+	assert_eq(_shell.play.follow.tick, 2)
+	assert_true(_shell.status_label_text().contains("tick=2"))
+	assert_true(_shell.try_cancel())
+	assert_eq(_shell.play.state, MatchPlaySession.STATE_IDLE)
+	assert_eq(_shell.join.state, MatchJoinSession.STATE_IDLE)
+	assert_false(_shell.join.has_pending())
+	assert_eq(_shell.map.player_count(), 0)
+	assert_eq(_shell.standings.standing_count(), 0)
+	assert_false(_shell.status_label_text().contains("tick=2"))
+	assert_true(_shell.status_label_text().contains("play=idle"))
+	assert_true(_shell.status_label_text().contains("join=idle"))
+	assert_true(_shell.try_sample_play_move(false, false, false, true).is_empty())
+	assert_false(_shell.on_binary(_snapshot(3, 24)))
+	assert_eq(_shell.map.player_count(), 0)
+	assert_false(_shell.join.has_pending())
+	assert_true(_shell.try_quick())
+	assert_true(_shell.join.has_pending())
+
+
+func test_reconnect_pending_cancel_does_not_reissue() -> void:
+	_shell = _open_shell()
+	assert_true(_shell.try_quick())
+	assert_true(_shell.accept_http(201, _join("ABCD23", "ticket-a")))
+	assert_true(_shell.on_socket_open())
+	assert_true(_shell.on_binary(_snapshot(2, 12)))
+	_shell.on_socket_close()
+	assert_eq(_shell.play.state, MatchPlaySession.STATE_CLOSED)
+	assert_true(_shell.join.has_pending())
+	assert_true(_shell.try_cancel())
+	assert_eq(_shell.play.state, MatchPlaySession.STATE_IDLE)
+	assert_eq(_shell.join.state, MatchJoinSession.STATE_IDLE)
+	assert_false(_shell.join.has_pending())
+	assert_false(_shell.accept_http(201, {
+		"ticket": "ticket-b",
+		"matchId": "match-1",
+		"expiresAt": "2026-08-25T04:11:00.000Z",
+	}))
+	assert_eq(_shell.play.state, MatchPlaySession.STATE_IDLE)
+	assert_eq(_shell.map.player_count(), 0)
+
+
 func test_queue_wait_poll_cancel_and_invalid_code() -> void:
 	_shell = _open_shell()
 	assert_true(_shell.try_create_room())

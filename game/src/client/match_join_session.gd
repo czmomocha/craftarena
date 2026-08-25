@@ -7,7 +7,9 @@ extends RefCounted
 ## the status + object. No SceneTree, no sockets. Room-code alphabet and
 ## length match the current development placeholder (not a product lock).
 ## Does not bind accounts or write settlement. Reconnect reissues a
-## consumed ticket for the same match seat. Quick play / create room
+## consumed ticket for the same match seat. try_abandon locally drops a
+## ready/failed ticket without a leave-match HTTP API. Queue cancel
+## (DELETE) still requires WAITING. Quick play / create room
 ## send an official course id and seats; join-by-code uses the room's
 ## course and seats.
 
@@ -167,6 +169,16 @@ func try_cancel() -> bool:
 	if state != STATE_WAITING or queue_token == "" or has_pending():
 		return false
 	return _begin_request("DELETE", "/matchmaking/queue/%s" % queue_token.uri_encode())
+
+
+func try_abandon() -> bool:
+	if state == STATE_IDLE or state == STATE_WAITING:
+		return false
+	_clear_pending()
+	_reset_match_fields()
+	error = ""
+	state = STATE_IDLE
+	return true
 
 
 func try_reconnect() -> bool:
