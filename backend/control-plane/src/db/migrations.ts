@@ -63,4 +63,24 @@ export const MIGRATIONS: readonly Migration[] = [
 			`CREATE UNIQUE INDEX match_sessions_room_code ON match_sessions (room_code) WHERE room_code IS NOT NULL`,
 		],
 	},
+	{
+		id: "0004_match_queue",
+		statements: [
+			// 容量满时的 FIFO。token 只存 sha256；就绪后暂存已签发票据明文，
+			// 直到条目取消或对局注销。票据表本身仍只存哈希。
+			`CREATE TABLE match_queue (
+				token_hash TEXT PRIMARY KEY,
+				kind TEXT NOT NULL CHECK (kind IN ('quick', 'create_room')),
+				status TEXT NOT NULL CHECK (status IN ('waiting', 'ready', 'failed', 'cancelled')),
+				created_at TEXT NOT NULL,
+				expires_at TEXT NOT NULL,
+				match_id TEXT,
+				ticket TEXT,
+				ticket_expires_at TEXT,
+				error TEXT
+			) STRICT`,
+			`CREATE INDEX match_queue_waiting ON match_queue (status, created_at, token_hash)`,
+			`CREATE INDEX match_queue_match_id ON match_queue (match_id)`,
+		],
+	},
 ];

@@ -3,7 +3,9 @@ import { mkdirSync } from "node:fs";
 import { dirname } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 
+import type { MatchQueueKind } from "../../../contracts/src/match_room.ts";
 import { TICKET_REJECT_REASONS, type TicketRejectReason } from "../../../contracts/src/match_ticket.ts";
+import { generateQueueToken, hashQueueToken } from "../queue.ts";
 import { generateTicket, hashTicket } from "../tickets.ts";
 import { MIGRATIONS, SCHEMA_MIGRATIONS_TABLE } from "./migrations.ts";
 
@@ -56,6 +58,36 @@ export class RoomCodeConflictError extends Error {
 		this.name = "RoomCodeConflictError";
 	}
 }
+
+export class MatchQueueNotWaitingError extends Error {
+	constructor(tokenHash: string) {
+		super(`match queue entry is not waiting: ${tokenHash}`);
+		this.name = "MatchQueueNotWaitingError";
+	}
+}
+
+export type MatchQueueRowStatus = "waiting" | "ready" | "failed" | "cancelled";
+
+export interface MatchQueueRecord {
+	readonly rowid: number;
+	readonly tokenHash: string;
+	readonly kind: MatchQueueKind;
+	readonly status: MatchQueueRowStatus;
+	readonly createdAt: string;
+	readonly expiresAt: string;
+	readonly matchId: string | undefined;
+	readonly ticket: string | undefined;
+	readonly ticketExpiresAt: string | undefined;
+	readonly error: string | undefined;
+}
+
+export interface EnqueuedMatch {
+	readonly token: string;
+	readonly createdAt: string;
+	readonly expiresAt: string;
+}
+
+export type CancelQueueResult = "cancelled" | "ready" | "missing";
 
 /**
  * 控制面对 SQLite 的唯一入口。
@@ -171,6 +203,13 @@ export class ControlPlaneDatabase {
 		this.#db.exec("BEGIN");
 		try {
 			this.#db.prepare("DELETE FROM match_tickets WHERE match_id = ?").run(matchId);
+			this.#db
+				.prepare(
+					`UPDATE match_queue
+					 SET status = 'failed', error = 'session_unregistered', ticket = NULL, ticket_expires_at = NULL
+					 WHERE match_id = ? AND status = 'ready'`,
+				)
+				.run(matchId);
 			this.#db.prepare("DELETE FROM match_sessions WHERE match_id = ?").run(matchId);
 			this.#db.exec("COMMIT");
 		} catch (error) {
@@ -265,32 +304,143 @@ export class ControlPlaneDatabase {
 	issueTicket(matchId: string, now: Date, ttlMs: number): IssuedTicket {
 		this.#db.exec("BEGIN");
 		try {
-			const session = this.getMatchSession(matchId);
-			if (session === undefined) {
-				throw new MatchSessionNotFoundError(matchId);
-			}
-
-			const issued = this.countTickets(matchId);
-			if (issued >= session.seats) {
-				throw new MatchSessionFullError(matchId);
-			}
-
-			const ticket = generateTicket();
-			const createdAt = now.toISOString();
-			const expiresAt = new Date(now.getTime() + ttlMs).toISOString();
-
-			this.#db
-				.prepare(
-					"INSERT INTO match_tickets (ticket_hash, match_id, expires_at, consumed_at, created_at) VALUES (?, ?, ?, NULL, ?)",
-				)
-				.run(hashTicket(ticket), matchId, expiresAt, createdAt);
-
+			const issued = this.#issueTicketUnlocked(matchId, now, ttlMs);
 			this.#db.exec("COMMIT");
-			return { ticket, matchId, expiresAt };
+			return issued;
 		} catch (error) {
 			this.#db.exec("ROLLBACK");
 			throw error;
 		}
+	}
+
+	enqueue(kind: MatchQueueKind, now: Date, ttlMs: number): EnqueuedMatch {
+		const token = generateQueueToken();
+		const createdAt = now.toISOString();
+		const expiresAt = new Date(now.getTime() + ttlMs).toISOString();
+		this.#db
+			.prepare(
+				`INSERT INTO match_queue (
+					token_hash, kind, status, created_at, expires_at, match_id, ticket, ticket_expires_at, error
+				) VALUES (?, ?, 'waiting', ?, ?, NULL, NULL, NULL, NULL)`,
+			)
+			.run(hashQueueToken(token), kind, createdAt, expiresAt);
+		return { token, createdAt, expiresAt };
+	}
+
+	getQueueByToken(token: string, now: Date): MatchQueueRecord | undefined {
+		const row = this.#db
+			.prepare(
+				`SELECT rowid, token_hash, kind, status, created_at, expires_at, match_id, ticket, ticket_expires_at, error
+				 FROM match_queue WHERE token_hash = ?`,
+			)
+			.get(hashQueueToken(token));
+		if (row === undefined) {
+			return undefined;
+		}
+
+		const record = queueFromRow(row);
+		if (record.status === "cancelled") {
+			return undefined;
+		}
+		if (record.status === "waiting" && record.expiresAt <= now.toISOString()) {
+			return undefined;
+		}
+		return record;
+	}
+
+	listWaiting(now: Date): readonly MatchQueueRecord[] {
+		const nowIso = now.toISOString();
+		return this.#db
+			.prepare(
+				`SELECT rowid, token_hash, kind, status, created_at, expires_at, match_id, ticket, ticket_expires_at, error
+				 FROM match_queue
+				 WHERE status = 'waiting' AND expires_at > ?
+				 ORDER BY rowid ASC`,
+			)
+			.all(nowIso)
+			.map((row) => queueFromRow(row));
+	}
+
+	waitingPosition(tokenHash: string, now: Date): number {
+		const nowIso = now.toISOString();
+		const row = this.#db
+			.prepare(
+				`SELECT rowid FROM match_queue WHERE token_hash = ? AND status = 'waiting' AND expires_at > ?`,
+			)
+			.get(tokenHash, nowIso);
+		if (row === undefined) {
+			return 0;
+		}
+
+		const counted = this.#db
+			.prepare(
+				`SELECT COUNT(*) AS waiting_count FROM match_queue
+				 WHERE status = 'waiting' AND expires_at > ? AND rowid <= ?`,
+			)
+			.get(nowIso, Number(row["rowid"]));
+		return counted === undefined ? 0 : Number(counted["waiting_count"]);
+	}
+
+	fulfillWaiter(tokenHash: string, matchId: string, now: Date, ticketTtlMs: number): IssuedTicket {
+		this.#db.exec("BEGIN");
+		try {
+			const row = this.#db
+				.prepare(
+					`SELECT rowid, token_hash, kind, status, created_at, expires_at, match_id, ticket, ticket_expires_at, error
+					 FROM match_queue WHERE token_hash = ?`,
+				)
+				.get(tokenHash);
+			if (row === undefined) {
+				throw new MatchQueueNotWaitingError(tokenHash);
+			}
+			const record = queueFromRow(row);
+			if (record.status !== "waiting" || record.expiresAt <= now.toISOString()) {
+				throw new MatchQueueNotWaitingError(tokenHash);
+			}
+
+			const issued = this.#issueTicketUnlocked(matchId, now, ticketTtlMs);
+			const updated = this.#db
+				.prepare(
+					`UPDATE match_queue
+					 SET status = 'ready', match_id = ?, ticket = ?, ticket_expires_at = ?
+					 WHERE token_hash = ? AND status = 'waiting'`,
+				)
+				.run(matchId, issued.ticket, issued.expiresAt, tokenHash);
+			if (updated.changes !== 1) {
+				throw new MatchQueueNotWaitingError(tokenHash);
+			}
+
+			this.#db.exec("COMMIT");
+			return issued;
+		} catch (error) {
+			this.#db.exec("ROLLBACK");
+			throw error;
+		}
+	}
+
+	markQueueFailed(tokenHash: string, error: string): boolean {
+		const updated = this.#db
+			.prepare("UPDATE match_queue SET status = 'failed', error = ? WHERE token_hash = ? AND status = 'waiting'")
+			.run(error, tokenHash);
+		return updated.changes === 1;
+	}
+
+	cancelQueue(token: string, now: Date): CancelQueueResult {
+		const record = this.getQueueByToken(token, now);
+		if (record === undefined) {
+			return "missing";
+		}
+		if (record.status === "ready") {
+			return "ready";
+		}
+		if (record.status !== "waiting") {
+			return "missing";
+		}
+
+		const updated = this.#db
+			.prepare("UPDATE match_queue SET status = 'cancelled' WHERE token_hash = ? AND status = 'waiting'")
+			.run(record.tokenHash);
+		return updated.changes === 1 ? "cancelled" : "missing";
 	}
 
 	/**
@@ -346,6 +496,57 @@ export class ControlPlaneDatabase {
 	close(): void {
 		this.#db.close();
 	}
+
+	#issueTicketUnlocked(matchId: string, now: Date, ttlMs: number): IssuedTicket {
+		const session = this.getMatchSession(matchId);
+		if (session === undefined) {
+			throw new MatchSessionNotFoundError(matchId);
+		}
+
+		const issued = this.countTickets(matchId);
+		if (issued >= session.seats) {
+			throw new MatchSessionFullError(matchId);
+		}
+
+		const ticket = generateTicket();
+		const createdAt = now.toISOString();
+		const expiresAt = new Date(now.getTime() + ttlMs).toISOString();
+
+		this.#db
+			.prepare(
+				"INSERT INTO match_tickets (ticket_hash, match_id, expires_at, consumed_at, created_at) VALUES (?, ?, ?, NULL, ?)",
+			)
+			.run(hashTicket(ticket), matchId, expiresAt, createdAt);
+
+		return { ticket, matchId, expiresAt };
+	}
+}
+
+function queueFromRow(row: Record<string, unknown>): MatchQueueRecord {
+	const matchId = row["match_id"];
+	const ticket = row["ticket"];
+	const ticketExpiresAt = row["ticket_expires_at"];
+	const error = row["error"];
+	return {
+		rowid: Number(row["rowid"]),
+		tokenHash: String(row["token_hash"]),
+		kind: row["kind"] === "create_room" ? "create_room" : "quick",
+		status: queueStatusFromRow(row["status"]),
+		createdAt: String(row["created_at"]),
+		expiresAt: String(row["expires_at"]),
+		matchId: matchId === null || matchId === undefined ? undefined : String(matchId),
+		ticket: ticket === null || ticket === undefined ? undefined : String(ticket),
+		ticketExpiresAt:
+			ticketExpiresAt === null || ticketExpiresAt === undefined ? undefined : String(ticketExpiresAt),
+		error: error === null || error === undefined ? undefined : String(error),
+	};
+}
+
+function queueStatusFromRow(value: unknown): MatchQueueRowStatus {
+	if (value === "ready" || value === "failed" || value === "cancelled" || value === "waiting") {
+		return value;
+	}
+	return "waiting";
 }
 
 function sessionFromRow(row: Record<string, unknown>): MatchSessionRecord {
