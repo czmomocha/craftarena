@@ -4,7 +4,7 @@ Godot 4 + UGC 双玩法（TRAPRUSH / BASTION）项目 Monorepo。代码与仓库
 
 - 工程规则入口：[AGENTS.md](AGENTS.md)
 - 规范唯一事实源：[Confirmed-docs](Confirmed-docs/README.md)
-- 当前阶段：M3 进行中（2026-08-24 启动）。已落地对局多人仿真循环、二进制协议 v1、对局进程仿真入口、实时回路、网关代理、控制面真票据、MatchHost 自动登记与等待 listen 后登记；本刀为 MatchHost 停止后注销会话。进度见 [CD-61](Confirmed-docs/60-plan/61-milestones.md)。
+- 当前阶段：M3 进行中（2026-08-24 启动）。已落地对局多人仿真循环、二进制协议 v1、对局进程仿真入口、实时回路、网关代理、控制面真票据、MatchHost 自动登记、等待 listen 后登记与停止后注销；本刀为真匹配与房间码。进度见 [CD-61](Confirmed-docs/60-plan/61-milestones.md)。
 
 ## 目录
 
@@ -119,7 +119,7 @@ CI 当前实际启用了哪些门禁、哪些还没实现，以 [CD-53 §4.1](Co
 
 Cursor 创建 worktree 时会跑 `.cursor/worktrees.json`：`npm install`、按需从 `$ROOT_WORKTREE_PATH` 拷 `.env` 与 `data/*.sqlite`、按 worktree 目录名写入端口偏移、用 `GODOT4`（Windows 优先 `GODOT4_CONSOLE`）对 `game/` 做 `--import`。主 checkout（与 `$ROOT_WORKTREE_PATH` 相同）不写 `.env`。
 
-端口公式（不要另猜）：`slot * 100` 加到各服务 `config.ts` 默认端口上。`slot` 为目录名哈希映射到 1–9；可用环境变量 `WORKTREE_SLOT=1`…`9` 覆盖。主 checkout 为 slot 0。写进该 worktree 的 `.env` 的键是 `CONTROL_PLANE_PORT`、`GATEWAY_PORT`、`MATCH_HOST_PORT`、`MATCH_HOST_PORT_RANGE_MIN`、`MATCH_HOST_PORT_RANGE_MAX`、`CONTROL_PLANE_URL`。
+端口公式（不要另猜）：`slot * 100` 加到各服务 `config.ts` 默认端口上。`slot` 为目录名哈希映射到 1–9；可用环境变量 `WORKTREE_SLOT=1`…`9` 覆盖。主 checkout 为 slot 0。写进该 worktree 的 `.env` 的键是 `CONTROL_PLANE_PORT`、`GATEWAY_PORT`、`MATCH_HOST_PORT`、`MATCH_HOST_PORT_RANGE_MIN`、`MATCH_HOST_PORT_RANGE_MAX`、`CONTROL_PLANE_URL`、`MATCH_HOST_URL`。
 
 | 用途 | 命令 |
 |---|---|

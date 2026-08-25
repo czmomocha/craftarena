@@ -21,4 +21,5 @@ export {
 	type VerifyMatchTicketResponse,
 	type VerifyMatchTicketSuccess,
 } from "./match_ticket.ts";
+export { type MatchmakingJoinResponse } from "./match_room.ts";
 

@@ -181,6 +181,7 @@ function toWire(record: MatchRecord): Record<string, unknown> {
 		pid: record.pid,
 		state: record.state,
 		upstreamUrl: record.upstreamUrl,
+		seats: record.seats,
 		startedAt: new Date(record.startedAt).toISOString(),
 		leaseExpiresAt: new Date(record.lease.expiresAt).toISOString(),
 		lastValidInputAt: new Date(record.lease.lastValidInputAt).toISOString(),

@@ -9,6 +9,7 @@
 export interface MatchSessionRegisterSpec {
 	readonly matchId: string;
 	readonly upstreamUrl: string;
+	readonly seats: number;
 }
 
 export interface MatchSessionRegistrar {
@@ -76,6 +77,7 @@ export class ControlPlaneMatchSessionRegistrar implements MatchSessionRegistrar 
 				body: JSON.stringify({
 					matchId: spec.matchId,
 					upstreamUrl: spec.upstreamUrl,
+					seats: spec.seats,
 				}),
 				signal: AbortSignal.timeout(this.#timeoutMs),
 			});

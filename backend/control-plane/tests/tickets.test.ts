@@ -104,6 +104,38 @@ describe("control plane match tickets", () => {
 		});
 	});
 
+	test("rejects a ninth ticket when the default seat cap is full", async () => {
+		const created = await app.inject({
+			method: "POST",
+			url: "/match-sessions",
+			payload: { upstreamUrl: "ws://127.0.0.1:18213" },
+		});
+		const matchId = created.json<RegisterMatchSessionResponse>().matchId;
+		assert.equal(created.json<RegisterMatchSessionResponse>().seats, 8);
+		for (let index = 0; index < 8; index += 1) {
+			const issued = await app.inject({ method: "POST", url: `/match-sessions/${matchId}/tickets` });
+			assert.equal(issued.statusCode, 201, `ticket ${index + 1}`);
+		}
+		const overflow = await app.inject({ method: "POST", url: `/match-sessions/${matchId}/tickets` });
+		assert.equal(overflow.statusCode, 409);
+		assert.equal(overflow.json<{ error: string }>().error, "match_full");
+	});
+
+	test("honors a caller-supplied seat count of one", async () => {
+		const created = await app.inject({
+			method: "POST",
+			url: "/match-sessions",
+			payload: { upstreamUrl: "ws://127.0.0.1:18214", seats: 1 },
+		});
+		assert.equal(created.statusCode, 201);
+		assert.equal(created.json<RegisterMatchSessionResponse>().seats, 1);
+		const matchId = created.json<RegisterMatchSessionResponse>().matchId;
+		assert.equal((await app.inject({ method: "POST", url: `/match-sessions/${matchId}/tickets` })).statusCode, 201);
+		const overflow = await app.inject({ method: "POST", url: `/match-sessions/${matchId}/tickets` });
+		assert.equal(overflow.statusCode, 409);
+		assert.equal(overflow.json<{ error: string }>().error, "match_full");
+	});
+
 	test("issues independent one-time tickets for the same match", async () => {
 		const created = await app.inject({
 			method: "POST",

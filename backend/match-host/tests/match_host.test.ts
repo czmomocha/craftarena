@@ -3,8 +3,13 @@ import { createServer, type IncomingMessage, type ServerResponse } from "node:ht
 import { createServer as createTcpServer } from "node:net";
 import { describe, test } from "node:test";
 
-import type { IssueMatchTicketResponse, VerifyMatchTicketSuccess } from "../../contracts/src/index.ts";
+import type {
+	IssueMatchTicketResponse,
+	MatchmakingJoinResponse,
+	VerifyMatchTicketSuccess,
+} from "../../contracts/src/index.ts";
 import { ControlPlaneDatabase } from "../../control-plane/src/db/database.ts";
+import { MatchHostHttpLauncher } from "../../control-plane/src/match_host.ts";
 import { buildServer } from "../../control-plane/src/server.ts";
 import { loadConfig } from "../src/config.ts";
 import { createLease, evaluateLease, renewLease } from "../src/lease.ts";
@@ -327,6 +332,7 @@ describe("match registry", () => {
 			registrar,
 			listenProbe,
 			upstreamHost: "127.0.0.1",
+			seats: 2,
 			portRangeMin: 42000,
 			portRangeMax: 42009,
 			leaseDurationMs: LEASE_MS,
@@ -356,9 +362,10 @@ describe("match registry", () => {
 		assert.equal(launcher.launched.length, 1);
 		assert.equal(launcher.launched[0]?.matchId, match.matchId);
 		assert.deepEqual(registrar.registered, [
-			{ matchId: match.matchId, upstreamUrl: `ws://127.0.0.1:${match.port}` },
+			{ matchId: match.matchId, upstreamUrl: `ws://127.0.0.1:${match.port}`, seats: 2 },
 		]);
 		assert.equal(match.upstreamUrl, `ws://127.0.0.1:${match.port}`);
+		assert.equal(match.seats, 2);
 	});
 
 	test("does not register when the process fails to launch", async () => {
@@ -378,6 +385,7 @@ describe("match registry", () => {
 			registrar,
 			listenProbe: new FakeListenProbe(),
 			upstreamHost: "127.0.0.1",
+			seats: 2,
 			portRangeMin: 42000,
 			portRangeMax: 42000,
 			leaseDurationMs: LEASE_MS,
@@ -411,7 +419,7 @@ describe("match registry", () => {
 		release();
 		const match = await pending;
 		assert.deepEqual(registrar.registered, [
-			{ matchId: match.matchId, upstreamUrl: `ws://127.0.0.1:${match.port}` },
+			{ matchId: match.matchId, upstreamUrl: `ws://127.0.0.1:${match.port}`, seats: 2 },
 		]);
 		assert.deepEqual(listenProbe.probed, [match.port]);
 	});
@@ -637,6 +645,7 @@ describe("match host http", () => {
 			registrar,
 			listenProbe,
 			upstreamHost: "127.0.0.1",
+			seats: 2,
 			portRangeMin: 42000,
 			portRangeMax: 42009,
 			leaseDurationMs: LEASE_MS,
@@ -658,10 +667,11 @@ describe("match host http", () => {
 			const created = await app.inject({ method: "POST", url: "/matches" });
 			assert.equal(created.statusCode, 201);
 
-			const body = created.json<{ matchId: string; port: number; state: string; upstreamUrl: string }>();
+			const body = created.json<{ matchId: string; port: number; state: string; upstreamUrl: string; seats: number }>();
 			assert.equal(body.state, "running");
 			assert.ok(body.port >= 42000 && body.port <= 42009);
 			assert.equal(body.upstreamUrl, `ws://127.0.0.1:${body.port}`);
+			assert.equal(body.seats, 2);
 
 			const fetched = await app.inject({ method: "GET", url: `/matches/${body.matchId}` });
 			assert.equal(fetched.statusCode, 200);
@@ -833,12 +843,14 @@ describe("control plane match session registrar", () => {
 			await registrar.register({
 				matchId: "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
 				upstreamUrl: "ws://127.0.0.1:9",
+				seats: 2,
 			});
 			assert.equal(seen.method, "POST");
 			assert.equal(seen.url, "/match-sessions");
 			assert.deepEqual(seen.body, {
 				matchId: "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
 				upstreamUrl: "ws://127.0.0.1:9",
+				seats: 2,
 			});
 		} finally {
 			await stub.close();
@@ -857,6 +869,7 @@ describe("control plane match session registrar", () => {
 					registrar.register({
 						matchId: "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
 						upstreamUrl: "ws://127.0.0.1:9",
+						seats: 2,
 					}),
 				MatchSessionRegisterError,
 			);
@@ -877,6 +890,7 @@ describe("control plane match session registrar", () => {
 					registrar.register({
 						matchId: "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
 						upstreamUrl: "ws://127.0.0.1:9",
+						seats: 2,
 					}),
 				/mismatched match id/,
 			);
@@ -939,6 +953,7 @@ describe("match host registers with a real control plane", () => {
 			registrar: new ControlPlaneMatchSessionRegistrar(httpBase(controlPlane)),
 			listenProbe: new FakeListenProbe(),
 			upstreamHost: "127.0.0.1",
+			seats: 2,
 			portRangeMin: 42000,
 			portRangeMax: 42009,
 			leaseDurationMs: LEASE_MS,
@@ -997,6 +1012,7 @@ describe("match host registers with a real control plane", () => {
 			registrar: new ControlPlaneMatchSessionRegistrar(httpBase(controlPlane)),
 			listenProbe: new FakeListenProbe(),
 			upstreamHost: "127.0.0.1",
+			seats: 2,
 			portRangeMin: 42000,
 			portRangeMax: 42009,
 			leaseDurationMs: LEASE_MS,
@@ -1038,6 +1054,74 @@ describe("match host registers with a real control plane", () => {
 			});
 			assert.equal(verified.statusCode, 401);
 			assert.equal(verified.json<{ reason: string }>().reason, "unknown_ticket");
+		} finally {
+			await app.close();
+			await controlPlane.close();
+			database.close();
+		}
+	});
+
+	test("control-plane matchmaking launches via MatchHost and joins by room code", async () => {
+		const database = new ControlPlaneDatabase(":memory:");
+		database.migrate();
+		const launcherHolder: { current: MatchHostHttpLauncher | undefined } = { current: undefined };
+		const controlPlane = buildServer({
+			database,
+			version: "1.2.3-test",
+			logger: false,
+			matchLauncher: {
+				launch: () => {
+					if (launcherHolder.current === undefined) {
+						throw new Error("match host launcher is not bound");
+					}
+					return launcherHolder.current.launch();
+				},
+			},
+		});
+		await controlPlane.listen({ host: "127.0.0.1", port: 0 });
+
+		const registry = new MatchRegistry({
+			launcher: new FakeLauncher(),
+			registrar: new ControlPlaneMatchSessionRegistrar(httpBase(controlPlane)),
+			listenProbe: new FakeListenProbe(),
+			upstreamHost: "127.0.0.1",
+			seats: 2,
+			portRangeMin: 42000,
+			portRangeMax: 42009,
+			leaseDurationMs: LEASE_MS,
+			idleTimeoutMs: IDLE_MS,
+			maxConcurrentMatches: 2,
+		});
+		const app = buildMatchHost({
+			registry,
+			maxConcurrentMatches: 2,
+			version: "1.2.3-test",
+			logger: false,
+		});
+		await app.listen({ host: "127.0.0.1", port: 0 });
+		launcherHolder.current = new MatchHostHttpLauncher(httpBase(app));
+
+		try {
+			const created = await controlPlane.inject({ method: "POST", url: "/matchmaking/rooms" });
+			assert.equal(created.statusCode, 201);
+			const room = created.json<MatchmakingJoinResponse>();
+			assert.equal(room.seats, 2);
+			assert.equal(room.issued, 1);
+			assert.equal(registry.get(room.matchId)?.state, "running");
+
+			const joined = await controlPlane.inject({
+				method: "POST",
+				url: `/matchmaking/rooms/${room.roomCode.toLowerCase()}/join`,
+			});
+			assert.equal(joined.statusCode, 201);
+			assert.equal(joined.json<MatchmakingJoinResponse>().matchId, room.matchId);
+
+			const full = await controlPlane.inject({
+				method: "POST",
+				url: `/matchmaking/rooms/${room.roomCode}/join`,
+			});
+			assert.equal(full.statusCode, 409);
+			assert.equal(full.json<{ error: string }>().error, "room_full");
 		} finally {
 			await app.close();
 			await controlPlane.close();
