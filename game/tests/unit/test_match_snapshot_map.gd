@@ -1,11 +1,13 @@
 extends GutTest
 
-## MatchSnapshotMap: latest-snapshot player poses → 1 m boxes.
-## No interpolation. Crates have no pose in the v1 snapshot, so they
-## are not drawn. A bad follow or malformed player list keeps the last map.
-## follow_slot aims the camera at that player; default -1 looks at origin.
+## MatchSnapshotMap: latest-snapshot player poses → 1 m boxes with a
+## local -Z facing marker. No interpolation. Crates have no pose in the
+## v1 snapshot, so they are not drawn. A bad follow or malformed player
+## list keeps the last map. follow_slot aims the camera at that player;
+## default -1 looks at origin.
 
 const MatchFrameCodec := preload("res://src/shared/protocol/match_frame_codec.gd")
+const MatchMoveFacing := preload("res://src/client/match_move_facing.gd")
 const MatchSnapshotFollow := preload("res://src/client/match_snapshot_follow.gd")
 const MatchSnapshotMap := preload("res://src/client/match_snapshot_map.gd")
 
@@ -75,6 +77,7 @@ func test_player_count_shrink_drops_stale_nodes() -> void:
 	assert_true(_map.apply_players([_player(0, 0, 0, 0)]))
 	assert_eq(_map.player_count(), 1)
 	assert_null(_map.player_node(1))
+	assert_null(_map.facing_node(1))
 
 
 func test_empty_player_list_clears_markers() -> void:
@@ -83,10 +86,32 @@ func test_empty_player_list_clears_markers() -> void:
 	_map.follow_slot = 0
 	assert_true(_map.apply_players([_player(CELL, 0, 0, 0)]))
 	_assert_camera_at(_map.player_node(0).position)
+	assert_not_null(_map.facing_node(0))
 	assert_true(_map.apply_players([]))
 	assert_eq(_map.player_count(), 0)
 	assert_null(_map.player_node(0))
+	assert_null(_map.facing_node(0))
 	_assert_camera_at(Vector3.ZERO)
+
+
+func test_facing_marker_sits_on_local_neg_z_and_rotates_with_yaw() -> void:
+	_map = MatchSnapshotMap.new()
+	add_child(_map)
+	assert_true(_map.apply_players([_player(0, 0, 0, MatchMoveFacing.YAW_FORWARD)]))
+	var player: MeshInstance3D = _map.player_node(0)
+	var face: MeshInstance3D = _map.facing_node(0)
+	assert_not_null(player)
+	assert_not_null(face)
+	_assert_yaw(player, MatchMoveFacing.YAW_FORWARD)
+	assert_almost_eq(face.position.x, MatchSnapshotMap.FACE_OFFSET.x, EPS)
+	assert_almost_eq(face.position.y, MatchSnapshotMap.FACE_OFFSET.y, EPS)
+	assert_almost_eq(face.position.z, MatchSnapshotMap.FACE_OFFSET.z, EPS)
+	assert_lt(face.global_position.z - player.global_position.z, -0.4)
+	assert_true(_map.apply_players([_player(0, 0, 0, MatchMoveFacing.YAW_RIGHT)]))
+	player = _map.player_node(0)
+	face = _map.facing_node(0)
+	_assert_yaw(player, MatchMoveFacing.YAW_RIGHT)
+	assert_gt(face.global_position.x - player.global_position.x, 0.4)
 
 
 func test_follow_slot_aims_camera_at_that_player() -> void:
@@ -151,6 +176,11 @@ func _player(x: int, y: int, z: int, yaw_bam: int) -> Dictionary:
 		"accepted_count": 0,
 		"finish_tick": -1,
 	}
+
+
+func _assert_yaw(node: Node3D, yaw_bam: int) -> void:
+	var expected: float = MatchSnapshotMap.yaw_radians_from_bam(yaw_bam)
+	assert_almost_eq(angle_difference(node.rotation.y, expected), 0.0, EPS)
 
 
 func _assert_camera_at(target: Vector3) -> void:

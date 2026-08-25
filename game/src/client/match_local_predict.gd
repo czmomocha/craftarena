@@ -3,17 +3,20 @@ extends RefCounted
 
 ## Presentation overlay for the local match seat (CD-21 §8 / CD-43).
 ## Move and Jump add Q48.16 offsets onto the latest authoritative own-slot
-## pose. A newer snapshot tick clears the overlay (hard snap, not smooth
+## pose. WASD Move may also overlay yaw_bam; -1 keeps the latest facing.
+## A newer snapshot tick clears the overlay (hard snap, not smooth
 ## reconciliation). Own slot is not interpolated. Portals, reset, items,
 ## finish, and remote capsules are not predicted. Overflow snaps to latest.
 
 const MAX_SLOT: int = 7
+const YAW_OMITTED: int = -1
 
 var own_slot: int = -1
 var origin_tick: int = -1
 var dx: int = 0
 var dy: int = 0
 var dz: int = 0
+var yaw_bam: int = YAW_OMITTED
 
 
 func bind_slot(slot: int) -> bool:
@@ -34,6 +37,7 @@ func clear_overlay() -> void:
 	dx = 0
 	dy = 0
 	dz = 0
+	yaw_bam = YAW_OMITTED
 
 
 func on_authoritative_tick(tick: int) -> void:
@@ -46,9 +50,10 @@ func on_authoritative_tick(tick: int) -> void:
 	dx = 0
 	dy = 0
 	dz = 0
+	yaw_bam = YAW_OMITTED
 
 
-func try_add_move(move_dx: int, move_dz: int) -> bool:
+func try_add_move(move_dx: int, move_dz: int, move_yaw_bam: int = YAW_OMITTED) -> bool:
 	if own_slot < 0:
 		return false
 	var next_x: FixedResult = Fixed.try_add(dx, move_dx)
@@ -59,6 +64,8 @@ func try_add_move(move_dx: int, move_dz: int) -> bool:
 		return false
 	dx = next_x.value
 	dz = next_z.value
+	if move_yaw_bam != YAW_OMITTED:
+		yaw_bam = move_yaw_bam
 	return true
 
 
@@ -94,6 +101,8 @@ func try_apply(sampled_players: Array, latest_players: Array) -> Dictionary:
 		mixed["x"] = latest_pose["x"]
 		mixed["y"] = latest_pose["y"]
 		mixed["z"] = latest_pose["z"]
+	if yaw_bam != YAW_OMITTED:
+		mixed["yaw_bam"] = yaw_bam
 	copied[own_slot] = mixed
 	return _ok(copied)
 

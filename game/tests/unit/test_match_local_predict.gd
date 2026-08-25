@@ -4,6 +4,7 @@ extends GutTest
 ## Newer tick hard-snaps. Own slot is not interpolated. Overflow snaps.
 
 const MatchLocalPredict := preload("res://src/client/match_local_predict.gd")
+const MatchMoveFacing := preload("res://src/client/match_move_facing.gd")
 
 const CELL: int = 65536
 const HALF: int = 32768
@@ -60,12 +61,41 @@ func test_jump_offsets_y_and_newer_tick_clears_overlay() -> void:
 	assert_eq(predict.dx, 0)
 	assert_eq(predict.dy, 0)
 	assert_eq(predict.dz, 0)
+	assert_eq(predict.yaw_bam, MatchLocalPredict.YAW_OMITTED)
 	var snapped: Dictionary = predict.try_apply(
 		[_player(HALF, 0, 0, 0, 2, -1)],
 		[_player(CELL, HALF, 0, 0, 2, -1)],
 	)
 	assert_eq(_int(_first(snapped), "x"), CELL)
 	assert_eq(_int(_first(snapped), "y"), HALF)
+
+
+func test_move_overlays_yaw_and_omitted_keeps_latest() -> void:
+	var predict: MatchLocalPredict = MatchLocalPredict.new()
+	assert_true(predict.bind_slot(0))
+	predict.on_authoritative_tick(1)
+	assert_true(predict.try_add_move(HALF, 0, MatchMoveFacing.YAW_RIGHT))
+	assert_eq(predict.yaw_bam, MatchMoveFacing.YAW_RIGHT)
+	var overlaid: Dictionary = predict.try_apply(
+		[_player(0, 0, 0, 0, 0, -1)],
+		[_player(HALF, 0, 0, Fixed.BAM_QUARTER, 1, -1)],
+	)
+	assert_eq(_int(_first(overlaid), "x"), HALF + HALF)
+	assert_eq(_int(_first(overlaid), "yaw_bam"), MatchMoveFacing.YAW_RIGHT)
+	assert_true(predict.try_add_move(0, HALF))
+	var kept: Dictionary = predict.try_apply(
+		[_player(0, 0, 0, 0, 0, -1)],
+		[_player(HALF, 0, 0, Fixed.BAM_QUARTER, 1, -1)],
+	)
+	assert_eq(_int(_first(kept), "z"), HALF)
+	assert_eq(_int(_first(kept), "yaw_bam"), MatchMoveFacing.YAW_RIGHT)
+	predict.on_authoritative_tick(2)
+	assert_eq(predict.yaw_bam, MatchLocalPredict.YAW_OMITTED)
+	var snapped: Dictionary = predict.try_apply(
+		[_player(0, 0, 0, 0, 0, -1)],
+		[_player(CELL, 0, 0, Fixed.BAM_QUARTER, 1, -1)],
+	)
+	assert_eq(_int(_first(snapped), "yaw_bam"), Fixed.BAM_QUARTER)
 
 
 func test_remote_slot_keeps_sampled_and_missing_own_slot_is_noop() -> void:
