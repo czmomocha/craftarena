@@ -45,6 +45,23 @@ export interface VerifyMatchTicketRequest {
 export interface VerifyMatchTicketSuccess {
 	readonly ok: true;
 	readonly upstreamUrl: string;
+	/** 本场席位。网关把它接到上游 URL 的 `slot` 查询，MatchServer 占用该槽。 */
+	readonly seat: number;
+}
+
+export const RECONNECT_TICKET_ERRORS = {
+	matchNotFound: "match_not_found",
+	unknownTicket: "unknown_ticket",
+	ticketNotConsumed: "ticket_not_consumed",
+	supersededTicket: "superseded_ticket",
+	matchMismatch: "match_mismatch",
+} as const;
+
+export type ReconnectTicketError =
+	(typeof RECONNECT_TICKET_ERRORS)[keyof typeof RECONNECT_TICKET_ERRORS];
+
+export interface ReconnectMatchTicketRequest {
+	readonly ticket: string;
 }
 
 export interface VerifyMatchTicketFailure {

@@ -75,6 +75,31 @@ func test_gateway_url_rejects_userinfo_and_empty_ticket() -> void:
 	)
 
 
+func test_close_then_reissue_follows_latest_snapshot() -> void:
+	var join: MatchJoinSession = _ready_join()
+	var play: MatchPlaySession = MatchPlaySession.new()
+	assert_true(play.try_begin(join, "ws://127.0.0.1:8090"))
+	assert_true(play.on_open())
+	assert_true(play.on_binary(_one_player_snapshot(2, 8)))
+	assert_eq(play.follow.tick, 2)
+	play.on_close()
+	assert_eq(play.state, MatchPlaySession.STATE_CLOSED)
+	assert_true(join.try_reconnect())
+	assert_true(join.accept_http(201, {
+		"ticket": "ticket-b",
+		"matchId": "match-1",
+		"expiresAt": "2026-08-25T04:11:00.000Z",
+	}))
+	assert_true(play.try_begin(join, "ws://127.0.0.1:8090"))
+	assert_eq(play.websocket_url, "ws://127.0.0.1:8090/ws?ticket=ticket-b")
+	assert_true(play.on_open())
+	assert_true(play.on_binary(_one_player_snapshot(9, 24)))
+	assert_eq(play.follow.tick, 9)
+	var pose: Dictionary = play.follow.players[0]
+	var pose_x: int = pose.get("x", -1)
+	assert_eq(pose_x, 24)
+
+
 func _ready_join() -> MatchJoinSession:
 	var session: MatchJoinSession = MatchJoinSession.create()
 	assert_true(session.try_quick())

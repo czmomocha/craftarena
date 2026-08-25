@@ -6,6 +6,21 @@ export interface TicketVerdict {
 	 * 网关不记账、不查库（宪法第二十一条），票据→对局的解析权在控制面。
 	 */
 	readonly upstreamUrl?: string | undefined;
+	/** 控制面校验成功时携带席位；开发旁路没有席位。 */
+	readonly seat?: number | undefined;
+}
+
+/**
+ * 把席位接到上游 URL 的 `slot` 查询。网关仍不解析帧内容。
+ */
+export function appendSlotQuery(upstreamUrl: string, seat: number): string {
+	const url = new URL(upstreamUrl);
+	url.searchParams.set("slot", String(seat));
+	return url.href;
+}
+
+export function isMatchSeat(value: unknown): value is number {
+	return typeof value === "number" && Number.isInteger(value) && value >= 0 && value <= 7;
 }
 
 /**
@@ -80,27 +95,39 @@ export class ControlPlaneTicketVerifier implements TicketVerifier {
 		if (body === undefined || body.ok !== true) {
 			return { ok: false, reason: body?.reason ?? "rejected" };
 		}
+		if (typeof body.upstreamUrl !== "string" || !isMatchSeat(body.seat)) {
+			return { ok: false, reason: "rejected" };
+		}
 
 		return {
 			ok: true,
-			upstreamUrl: typeof body.upstreamUrl === "string" ? body.upstreamUrl : undefined,
+			upstreamUrl: body.upstreamUrl,
+			seat: body.seat,
 		};
 	}
 }
 
 async function readVerifyBody(
 	response: Response,
-): Promise<{ ok?: unknown; reason?: string | undefined; upstreamUrl?: unknown } | undefined> {
+): Promise<
+	{ ok?: unknown; reason?: string | undefined; upstreamUrl?: unknown; seat?: unknown } | undefined
+> {
 	try {
 		const body: unknown = await response.json();
 		if (typeof body !== "object" || body === null) {
 			return undefined;
 		}
-		const record = body as { ok?: unknown; reason?: unknown; upstreamUrl?: unknown };
+		const record = body as {
+			ok?: unknown;
+			reason?: unknown;
+			upstreamUrl?: unknown;
+			seat?: unknown;
+		};
 		return {
 			ok: record.ok,
 			reason: typeof record.reason === "string" ? record.reason : undefined,
 			upstreamUrl: record.upstreamUrl,
+			seat: record.seat,
 		};
 	} catch {
 		return undefined;

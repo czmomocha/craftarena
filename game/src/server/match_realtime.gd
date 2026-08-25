@@ -4,7 +4,7 @@ extends RefCounted
 ## 对局实时核心：包在 TraprushMatchSession 外的连接槽位与命令队列。
 ## 依据 CD-43 §3：服务器权威快照模型——命令帧里的 tick 只解码不信任，
 ## 意图在服务端自己的 commit_tick 边界按到达顺序应用；快照帧编码全部已配置
-## 槽位（含未占用）与可破坏箱耐久。槽位 0..N-1 按需占用，断开即释放。
+## 槽位（含未占用）与可破坏箱耐久。槽位 0..N-1 按需占用，断开即释放占用（仿真进度保留，同一席位可再占用）。
 ## 每占用槽位每个 commit_tick 至多入队一条命令（先到先得），后到的同槽命令拒绝。
 ## 断开丢弃该槽已排队命令，避免旧意图落到新连接。这是位置伪造门禁：同 tick
 ## 连发多条 Move 不能在一次仿真步里叠成瞬移。墙钟发送速率仍待（CD-63）。
@@ -42,6 +42,48 @@ func add_player() -> int:
 			_occupied[slot] = true
 			return slot
 	return -1
+
+
+## 占用指定席位。已占用则失败。用于网关带上的票据 seat。
+func occupy_slot(slot: int) -> bool:
+	if session == null:
+		return false
+	if slot < 0 or slot >= session.player_count():
+		return false
+	if _occupied.has(slot):
+		return false
+	_occupied[slot] = true
+	return true
+
+
+## 从 WebSocket 请求 URL 读 `slot` 查询。缺席位不算错误；非法值拒绝。
+static func parse_requested_slot(raw: String) -> Dictionary:
+	var text: String = raw.strip_edges()
+	var query: String = text
+	var q_index: int = text.find("?")
+	if q_index >= 0:
+		query = text.substr(q_index + 1)
+	var frag: int = query.find("#")
+	if frag >= 0:
+		query = query.substr(0, frag)
+	var found: bool = false
+	var slot_value: int = -1
+	for part: String in query.split("&"):
+		var eq: int = part.find("=")
+		if eq <= 0:
+			continue
+		if part.substr(0, eq) != "slot":
+			continue
+		var value: String = part.substr(eq + 1).uri_decode().strip_edges()
+		found = true
+		if not value.is_valid_int():
+			return {"present": true, "ok": false}
+		slot_value = value.to_int()
+		if slot_value < 0 or slot_value > 7:
+			return {"present": true, "ok": false}
+	if not found:
+		return {"present": false, "ok": true}
+	return {"present": true, "ok": true, "slot": slot_value}
 
 
 func remove_player(slot: int) -> bool:

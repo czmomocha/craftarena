@@ -5,6 +5,7 @@ extends RefCounted
 ## Commands use MatchFrameCodec; the command tick is 0 because the server
 ## tick is authoritative (CD-43 §3). Shove/Interact stay unencoded.
 ## Sockets stay outside this type. No interpolation or prediction.
+## After a close, a new ticket from reconnect can try_begin again.
 
 const MatchFrameCodec := preload("res://src/shared/protocol/match_frame_codec.gd")
 const MatchJoinSessionGd := preload("res://src/client/match_join_session.gd")

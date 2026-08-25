@@ -105,6 +105,33 @@ func test_open_window_quick_play_ready_begins_play() -> void:
 	assert_false(_shell.allows_online_writes())
 
 
+func test_in_match_close_reconnects_and_follows_new_snapshot() -> void:
+	_shell = _open_shell()
+	assert_true(_shell.try_quick())
+	assert_true(_shell.accept_http(201, _join("ABCD23", "ticket-a")))
+	assert_true(_shell.on_socket_open())
+	assert_true(_shell.on_binary(_snapshot(2, 12)))
+	assert_eq(_shell.play.follow.tick, 2)
+	_shell.on_socket_close()
+	assert_eq(_shell.play.state, MatchPlaySession.STATE_CLOSED)
+	assert_true(_shell.join.has_pending())
+	assert_eq(_shell.join.pending_path(), "/match-sessions/match-1/tickets/reconnect")
+	assert_true(_shell.join.pending_body().contains("ticket-a"))
+	assert_true(_shell.accept_http(201, {
+		"ticket": "ticket-b",
+		"matchId": "match-1",
+		"expiresAt": "2026-08-25T04:11:00.000Z",
+	}))
+	assert_eq(_shell.join.ticket, "ticket-b")
+	assert_eq(_shell.play.state, MatchPlaySession.STATE_CONNECTING)
+	assert_eq(_shell.play.websocket_url, "ws://127.0.0.1:8090/ws?ticket=ticket-b")
+	assert_true(_shell.on_socket_open())
+	assert_true(_shell.on_binary(_snapshot(9, 24)))
+	assert_eq(_shell.play.follow.tick, 9)
+	var marker: MeshInstance3D = _shell.map.player_node(0)
+	assert_almost_eq(marker.position.x, 24.0 / float(Fixed.SCALE), 0.0001)
+
+
 func test_queue_wait_poll_cancel_and_invalid_code() -> void:
 	_shell = _open_shell()
 	assert_true(_shell.try_create_room())

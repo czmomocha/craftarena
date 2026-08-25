@@ -11,6 +11,6 @@ alwaysApply: true
 
 一章 = 同一条链路的一次闭合：要锁的契约 + 实现 + 正反例测试 + 所有者文档落点。
 
-- 做：M3 第二十一章「机关狂奔单局结算写库」——全部配置玩家冲线后，`TraprushMatchSettlement` 从权威 `finish_tick` / `accepted_count` 生成单局名次记录（CD-21 §6.1 第 1、2 条 + 槽位）；`MatchRealtime.allows_settlement` 此时为 true；`match_server` 心跳带上该记录；MatchHost 停止前 `POST /match-sessions/:matchId/settlement` 由控制面写库一次；同场第二次 409；注销会话后记录仍在；离线与客户端不写；不生成 MMR。作为一章。
-- 不做：账号绑定、重连补票、快照插值/预测校正、课程选择 API、可达性叠加 gizmos、走路可达/合法路径距离、检查点到达时间、本机最佳轨迹幽灵、已缓存 UGC/草稿试玩、个人试玩记录落盘、墙钟发送速率、MMR、限时未全员冲线结算、Shove/Interact 线上 id、Tick/快照频率锁定、2 秒云端上传、5 分钟定时、BASTION 面板、批量生成、性能分析、时延自动门禁、重力/下落、二进制签名、产品速度、复活硬直；不开 M4 / M5 新章节；不为了两域并行而各交半章。
+- 做：M3 第二十二章「断线重连补票」——入场票据绑定席位（0..席位-1）；`POST /tickets/verify` 返回 `seat`；网关把 `slot` 接到上游 URL，不解析帧；`MatchRealtime.occupy_slot` 占用该席位，断开丢弃排队但仿真保留，同一席位可再占用；控制面 `POST /match-sessions/:matchId/tickets/reconnect` 用已消费票据补发同席位新票（不占额外席位，旧票作废）；客户端断线后补票再入场并跟从最新快照；注销后不能补票。作为一章。
+- 不做：账号绑定、快照插值/预测校正、课程选择 API、可达性叠加 gizmos、走路可达/合法路径距离、检查点到达时间、本机最佳轨迹幽灵、已缓存 UGC/草稿试玩、个人试玩记录落盘、墙钟发送速率、MMR、限时未全员冲线结算、Shove/Interact 线上 id、Tick/快照频率锁定、2 秒云端上传、5 分钟定时、BASTION 面板、批量生成、性能分析、时延自动门禁、重力/下落、二进制签名、产品速度、复活硬直；不开 M4 / M5 新章节；不为了两域并行而各交半章。
 - 仍不做：把预算数字、走路可达、多人试玩房、Rule VM 真应用和整个 M3 塞进一个 PR。

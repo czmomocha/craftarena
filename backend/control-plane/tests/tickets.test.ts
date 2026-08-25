@@ -101,6 +101,7 @@ describe("control plane match tickets", () => {
 		assert.deepEqual(verified.json<VerifyMatchTicketResponse>(), {
 			ok: true,
 			upstreamUrl: "ws://127.0.0.1:18211",
+			seat: 0,
 		});
 	});
 
@@ -169,6 +170,8 @@ describe("control plane match tickets", () => {
 		assert.equal(verifiedB.statusCode, 200);
 		assert.equal(verifiedA.json<VerifyMatchTicketSuccess>().upstreamUrl, "ws://127.0.0.1:18212");
 		assert.equal(verifiedB.json<VerifyMatchTicketSuccess>().upstreamUrl, "ws://127.0.0.1:18212");
+		assert.equal(verifiedA.json<VerifyMatchTicketSuccess>().seat, 0);
+		assert.equal(verifiedB.json<VerifyMatchTicketSuccess>().seat, 1);
 	});
 
 	test("accepts a caller-supplied match id", async () => {
