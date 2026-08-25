@@ -208,6 +208,7 @@ Undo / Redo 是会话内对成功命令派生的反向 payload（`place`↔`remo
 | 对局大厅名次表现映射 | `game/src/client/match_standing_map.gd` |
 | 对局进程入口 | `game/src/server/match_server.gd` |
 | 对局进程实时回路 | `game/src/server/match_realtime.gd` |
+| 2 人 Headless 冲线夹具 | `game/src/games/traprush/match_headless_acceptance.gd` |
 | 实时网关代理 | `backend/realtime-gateway/src/server.ts` |
 | 对局票据 HTTP 契约 | `backend/contracts/src/match_ticket.ts` |
 | 对局票据签发/校验 | `backend/control-plane/src/server.ts` |

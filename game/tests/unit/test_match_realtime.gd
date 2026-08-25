@@ -2,11 +2,13 @@ extends GutTest
 
 ## Match realtime core: per-connection slot assignment on top of
 ## TraprushMatchSession, binary command frames (MatchFrameCodec) decoded and
-## queued FIFO, applied at the next commit_tick; snapshot frames encode all
-## configured slots plus crate durability. The command tick field is decoded
-## but never trusted for timing: the server tick is authoritative.
-## Sockets are a thin wrapper in match_server.gd; network correctness tests
-## stay manual (CD-91 D.8). No settlement, no online writes.
+## queued FIFO, applied at the next commit_tick; at most one queued command
+## per occupied slot per tick (first wins). Disconnect drops that slot's
+## queue. Snapshot frames encode all configured slots plus crate durability.
+## The command tick field is decoded but never trusted for timing: the
+## server tick is authoritative. Sockets are a thin wrapper in
+## match_server.gd; network correctness tests stay manual (CD-91 D.8).
+## No settlement, no online writes.
 
 const AuthoringDocument := preload("res://src/creator/authoring_document.gd")
 const AuthoringWorld := preload("res://src/creator/authoring_world.gd")
@@ -119,6 +121,68 @@ func test_full_run_finish_over_wire() -> void:
 	assert_eq(finish0, 4)
 	assert_eq(finish1, -1)
 	assert_eq(accepted0, 3)
+
+
+func test_one_command_per_slot_per_tick() -> void:
+	var realtime: MatchRealtime = _two_player_realtime()
+	var slot: int = realtime.add_player()
+	var before: Dictionary = realtime.session.player_pose(slot)
+	var before_x: int = before.get("x", -1)
+	var move: PackedByteArray = MatchFrameCodec.encode_command(0, PlayerIntentNames.MOVE, CELL, 0, -1)
+	assert_true(realtime.accept_command(slot, move))
+	assert_eq(realtime.pending_count(), 1)
+	assert_false(realtime.accept_command(slot, move))
+	assert_false(realtime.accept_command(slot, move))
+	assert_eq(realtime.pending_count(), 1)
+	realtime.commit_tick()
+	var after: Dictionary = realtime.session.player_pose(slot)
+	var after_x: int = after.get("x", -1)
+	assert_eq(after_x, before_x + CELL)
+	assert_eq(realtime.pending_count(), 0)
+	assert_true(realtime.accept_command(slot, move))
+	assert_false(realtime.allows_settlement())
+	assert_false(realtime.allows_online_writes())
+
+
+func test_disconnect_drops_queued_command_before_rejoin() -> void:
+	var realtime: MatchRealtime = _two_player_realtime()
+	var slot: int = realtime.add_player()
+	var move: PackedByteArray = MatchFrameCodec.encode_command(0, PlayerIntentNames.MOVE, CELL, 0, -1)
+	assert_true(realtime.accept_command(slot, move))
+	assert_true(realtime.remove_player(slot))
+	assert_eq(realtime.pending_count(), 0)
+	assert_eq(realtime.add_player(), 0)
+	realtime.commit_tick()
+	var pose: Dictionary = realtime.session.player_pose(0)
+	var pose_x: int = pose.get("x", -1)
+	assert_eq(pose_x, 0)
+
+
+func test_snapshot_frame_is_not_a_command() -> void:
+	var realtime: MatchRealtime = _two_player_realtime()
+	var slot: int = realtime.add_player()
+	var snapshot: PackedByteArray = realtime.snapshot_frame()
+	assert_false(snapshot.is_empty())
+	assert_false(realtime.accept_command(slot, snapshot))
+	assert_eq(realtime.pending_count(), 0)
+
+
+func test_two_slots_each_queue_one_fifo() -> void:
+	var realtime: MatchRealtime = _two_player_realtime()
+	assert_eq(realtime.add_player(), 0)
+	assert_eq(realtime.add_player(), 1)
+	var move: PackedByteArray = MatchFrameCodec.encode_command(0, PlayerIntentNames.MOVE, CELL, 0, -1)
+	assert_true(realtime.accept_command(1, move))
+	assert_true(realtime.accept_command(0, move))
+	assert_false(realtime.accept_command(1, move))
+	assert_eq(realtime.pending_count(), 2)
+	realtime.commit_tick()
+	var p0: Dictionary = realtime.session.player_pose(0)
+	var p1: Dictionary = realtime.session.player_pose(1)
+	var x0: int = p0.get("x", -1)
+	var x1: int = p1.get("x", -1)
+	assert_eq(x0, CELL)
+	assert_eq(x1, CELL)
 
 
 func test_same_command_stream_same_snapshot_bytes() -> void:
