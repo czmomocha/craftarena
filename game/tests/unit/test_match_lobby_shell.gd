@@ -9,6 +9,7 @@ extends GutTest
 ## Own-seat finish_tick tints the finish zone; HUD shows pads/floor/finish/crates/result.
 ## Online all-finished GET writes settled=; Solo never GETs. Client never POSTs.
 ## Reset rising-edge returns to the last accepted pad without dropping progress.
+## Online overlay stays off latest live crates and latest remote capsules.
 
 const MatchFrameCodec := preload("res://src/shared/protocol/match_frame_codec.gd")
 const MatchJoinSession := preload("res://src/client/match_join_session.gd")
@@ -508,6 +509,45 @@ func test_own_slot_move_predicts_until_newer_snapshot() -> void:
 	assert_almost_eq(_shell.map.player_node(0).position.y, 1.0, 0.0001)
 	assert_false(_shell.allows_settlement())
 	assert_false(_shell.allows_online_writes())
+
+
+func test_online_overlay_stops_on_live_crate_then_passes_when_broken() -> void:
+	_shell = _open_shell()
+	assert_true(_shell.try_quick())
+	assert_true(_shell.accept_http(201, _join("ABCD23", "ticket-crate-solid")))
+	assert_true(_shell.on_socket_open())
+	assert_true(_shell.on_binary(_snapshot(1, 0, [_crate(40, 1)])))
+	assert_eq(_shell.crates.crate_count(), 1)
+	assert_eq(_shell.crates.live_solid_boxes().size(), 1)
+	var steps: int = 0
+	while steps < 20:
+		assert_false(_shell.try_sample_play_move(false, true, false, false).is_empty())
+		steps += 1
+	assert_gt(_shell.play.predict.dz, 0)
+	assert_almost_eq(_shell.map.player_node(0).position.z, 0.0, 0.0001)
+	assert_true(_shell.on_binary(_snapshot(2, 0, [_crate(40, 0)])))
+	assert_eq(_shell.crates.crate_count(), 0)
+	assert_eq(_shell.play.predict.dz, 0)
+	steps = 0
+	while steps < 20:
+		assert_false(_shell.try_sample_play_move(false, true, false, false).is_empty())
+		steps += 1
+	assert_gt(_shell.map.player_node(0).position.z, 1.0)
+
+
+func test_online_overlay_stops_on_latest_remote_capsule() -> void:
+	_shell = _open_shell()
+	assert_true(_shell.try_quick())
+	assert_true(_shell.accept_http(201, _join("ABCD23", "ticket-remote-solid")))
+	assert_true(_shell.on_socket_open())
+	assert_true(_shell.on_binary(_two_player_snapshot(1, 0, Fixed.SCALE, [_crate(40, 1)])))
+	var remote_steps: int = 0
+	while remote_steps < 20:
+		assert_false(_shell.try_sample_play_move(false, false, false, true).is_empty())
+		remote_steps += 1
+	assert_gt(_shell.play.predict.dx, 0)
+	assert_almost_eq(_shell.map.player_node(0).position.x, 0.0, 0.0001)
+	assert_almost_eq(_shell.map.player_node(1).position.x, 1.0, 0.0001)
 
 
 func test_offline_solo_does_not_stack_local_predict_overlay() -> void:

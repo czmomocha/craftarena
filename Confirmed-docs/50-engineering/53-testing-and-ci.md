@@ -159,6 +159,7 @@ AI 生成代码必须比普通手写代码有**更强的自动化证据**，因�
 - 人数按场下发：HTTP JSON `seats` 为 1～8；空 body 默认 2；快速游戏只进同课同人数未满房；队列记住 `seats` 且不占邻人数余席；按码加入拒绝 body 并回该房人数；0 / 9 / `players` 别名 400；MatchHost 按场 `--players=` 并登记；大厅选人数；Solo 仍为 1 人；不锁账号绑定、插值/预测；
 - 对局快照插值：tick 前进保留上一份玩家位姿；无上一份贴最新；`t=0` 亚格子显示上一份且进度取最新、`t=SCALE/2` 中点、`t=SCALE` 显示最新；yaw 最短弧；≥1 格立即贴最新；畸形最新拒绝；新槽贴最新；大厅亚格子两步到最新且隐藏不推进；箱子耐久跟最新权威；1 格跳仍贴最新；大厅 Cancel 停 in_match（清盒、后续快照不跟、不补票）；不预测、不锁插值窗口；
 - 对局本席移动预测：入场就绪 JSON 带 `seat`（0 起，须 < `seats`）；补票回同一席且错席拒绝；`MatchLocalPredict` 把 Move/Jump overlay 叠在最新权威本席位姿上，本席不插值、远端仍插值；更新 tick 硬贴并清 overlay；同 tick 不清；溢出贴最新；未绑定/越界席位不叠；畸形最新拒绝；大厅 WASD 立即移动本席盒，下份快照硬贴；Solo 不叠 overlay；箱子/赛道不预测；大厅 Cancel 停 in_match；不锁远端外推碰撞、平滑对账、插值窗口；
+- 对局大厅本席预测避开最新权威固体：空地 overlay 仍生效；预测胶囊与活箱重叠则本席停在最新权威且 overlay 仍累积；耐久 0 / 省略 / 畸形箱不挡；远端最新位姿重叠不叠、远离仍叠；大厅线上向 +Z 活箱走青盒不穿橙箱，打碎后可过；注入 2 人快照撞远端最新位姿则停；Solo 不叠 overlay；人类真机步骤见 [章节真机清单](../../docs/runbooks/chapter-device-check.md) 本刀（人工检查，非 CI 门禁）；
 - 对局进程动作数值占位桩：boot 后 `jump_dy`/`support_dy`/`use_item_reach_dz` = `Fixed.SCALE`、伤害 1、reach dx/dy = 0（与 Preview 对齐，不是产品数值）；官方 `course_01` 出生点 UseItem 打碎 +Z 箱且快照耐久 0；Solo 出生点 UseItem 撤橙盒；官方赛道 Jump 仍为空操作；
 - 对局大厅本席摄像机跟随：`follow_slot` 把 SnapshotCamera 对准该席表现位姿（偏移与 Preview 相同）；缺席/空名单看原点；Solo 跟本地盒、线上跟本席不跟远端；Cancel 回到原点；
 - 对局大厅本席移动朝向：大厅 WASD 把 8 向离散水平 `yaw_bam` 写入已有 Move（W=0 为 -Z；省略哨兵仍是 `-1`）；`MatchLocalPredict` overlay 朝向，更新 tick 硬贴；Solo 走本地权威；玩家盒带 local -Z 面向标记；显式 `try_encode_intent(..., -1)` 仍省略朝向；不发明 atan2、不锁产品转向、不改 Preview WASD；
@@ -166,7 +167,7 @@ AI 生成代码必须比普通手写代码有**更强的自动化证据**，因�
 - 对局大厅本席检查点占用高亮：本席 `accepted_count` 把垫涂成已验收 / 当前目标 / 未到；`accepted_count < 0` 全员原垫色；Solo 出生点已验收第一垫；走到第二垫后当前目标前移；线上跟本席进度不跟远端；Cancel 恢复原垫色；不是走路可达；
 - 对局大厅本席冲线闭环表现：本席 `finish_tick` 把终点涂成未到 / 当前目标 / 已冲线；HUD `pads=n/m` / `finish=n`；Solo 走完 course_01 后 `result=`；线上仅本席垫齐时终点变当前、仅全员冲线才 `result=`；Cancel 恢复原金色且去掉 `pads=` / `result=`；不是结算写库或走路可达；
 - 对局大厅本席复位与楼层/箱子 HUD：开玩 HUD 写 `floor=n`（本席权威 `y / Fixed.SCALE` 向零，不用插值采样）与 `crates=n/m`（活着的箱 / 编译袋总数）；Solo 出生 `floor=0` `crates=1/1`；UseItem 打碎后 `crates=0/1` 且总数不变；进传送门后 `floor=1`；R 回到最近已验收垫且进度不回退、`floor` 回 0；线上楼层跟权威 y；Cancel 去掉 `floor=` / `crates=n/m`；不是长按时长或结算写库；
-- 大厅只读结算面板：MatchHost 对 running 场心跳一旦带 settlement 就 POST（409 已写入），停止前再 POST；大厅线上全员冲线后 GET，200 写 HUD `settled=`；404 不把 join 打成 FAILED；畸形 200 不写面板；Solo 冲线只有 `result=`、不 GET；Cancel 清掉 `settled=`；客户端 `allows_settlement` 仍为 false；人类真机步骤见 [章节真机清单](../../docs/runbooks/chapter-device-check.md) 本刀（人工检查，非 CI 门禁）；
+- 大厅只读结算面板：MatchHost 对 running 场心跳一旦带 settlement 就 POST（409 已写入），停止前再 POST；大厅线上全员冲线后 GET，200 写 HUD `settled=`；404 不把 join 打成 FAILED；畸形 200 不写面板；Solo 冲线只有 `result=`、不 GET；Cancel 清掉 `settled=`；客户端 `allows_settlement` 仍为 false；
 - 内部开发 EditorPlugin：`plugin.cfg` 入库；`project.godot` 启用 GUT + authoring_editor、不含 `godot_ai` / `_mcp_game_helper`；host 打开已有外壳，关闭只隐藏并保持会话，`detach` 释放，不结算；
 - 本地草稿恢复：成功写入落 `latest` 且文件非空；空会话打开恢复；恢复后工具条下一个 Place 使用新 id；编辑器 `plugin.gd` `@tool` 落盘；`world_committed`；失败写入不改草稿；损坏 / 多余键拒绝；拒绝写入 `res://`；检查点最多 30；不结算；
 - 编辑写入自动进 Preview：place / remove / Undo / Redo 都到达已连接 Preview 且两个世界 revision 同步；`set_component` 等级按 Preview 世界算（按编辑世界算会低报被拒）；失败写入不转发且仍跟随；越界补丁与整份 `import_document` 脱同步且不回滚编辑；无 Preview 时不谎报跟随；窗口隐藏仍跟随；状态栏 `follow` 可见；不结算；

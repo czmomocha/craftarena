@@ -18,7 +18,10 @@ extends Node
 ## Player boxes and standing labels sample MatchSnapshotInterp between
 ## the last two snapshots. play_interp_step is a presentation stub, not
 ## an interpolation window. The local seat overlays MatchLocalPredict on
-## the latest authority for Move/Jump; remotes still interpolate.
+## the latest authority for Move/Jump; remotes still interpolate. Overlay
+## that overlaps a latest live crate or latest remote capsule is dropped
+## this frame (authority capsule/crate geometry, not 1 m placeholders).
+## Remotes are not extrapolated.
 ## SnapshotCamera follows the own-seat presentation pose (predicted
 ## online, local authority offline) with the Preview camera offset.
 ## The own-seat box uses OWN_ALBEDO; remotes use REMOTE_ALBEDO. Standing
@@ -1024,8 +1027,17 @@ func _apply_snapshot_map() -> void:
 	if typeof(players_raw) != TYPE_ARRAY:
 		return
 	var players: Array = players_raw
+	if crates != null:
+		crates.apply_follow(follow)
 	if play != null and play.state == MatchPlaySessionGd.STATE_IN_MATCH:
-		var predicted: Dictionary = play.predict.try_apply(players, follow.players)
+		var solid_boxes: Array = []
+		if crates != null:
+			solid_boxes = crates.live_solid_boxes()
+		var predicted: Dictionary = play.predict.try_apply(
+			players,
+			follow.players,
+			solid_boxes
+		)
 		if predicted.get("ok", false):
 			var predicted_raw: Variant = predicted.get("players", [])
 			if typeof(predicted_raw) == TYPE_ARRAY:
@@ -1033,8 +1045,6 @@ func _apply_snapshot_map() -> void:
 	if map != null:
 		map.follow_slot = _camera_follow_slot()
 		map.apply_players(players, follow.crates)
-	if crates != null:
-		crates.apply_follow(follow)
 	if course != null:
 		course.apply_own_progress(
 			_own_accepted_count(follow.players),

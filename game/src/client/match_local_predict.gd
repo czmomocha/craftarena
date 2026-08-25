@@ -5,11 +5,18 @@ extends RefCounted
 ## Move and Jump add Q48.16 offsets onto the latest authoritative own-slot
 ## pose. WASD Move may also overlay yaw_bam; -1 keeps the latest facing.
 ## A newer snapshot tick clears the overlay (hard snap, not smooth
-## reconciliation). Own slot is not interpolated. Portals, reset, items,
-## finish, and remote capsules are not predicted. Overflow snaps to latest.
+## reconciliation). Own slot is not interpolated. If the predicted pose
+## overlaps a latest live crate or a latest remote capsule, this frame
+## keeps the latest own-slot pose (overlay numbers still accumulate).
+## Geometry matches the match_server / Preview occupancy stubs, not the
+## 1 m presentation boxes. Remotes are not extrapolated. Portals, reset,
+## items, finish, pads, and doors are not predicted and are not solids.
+## Overflow snaps to latest.
 
 const MAX_SLOT: int = 7
 const YAW_OMITTED: int = -1
+const CAPSULE_RADIUS: int = 8192
+const CAPSULE_HEIGHT: int = 8192
 
 var own_slot: int = -1
 var origin_tick: int = -1
@@ -79,7 +86,11 @@ func try_add_jump(jump_dy: int) -> bool:
 	return true
 
 
-func try_apply(sampled_players: Array, latest_players: Array) -> Dictionary:
+func try_apply(
+	sampled_players: Array,
+	latest_players: Array,
+	solid_boxes: Array = []
+) -> Dictionary:
 	if not _players_are_mappable(sampled_players):
 		return _fail()
 	if not _players_are_mappable(latest_players):
@@ -97,14 +108,88 @@ func try_apply(sampled_players: Array, latest_players: Array) -> Dictionary:
 	if latest_pose.is_empty():
 		return _fail()
 	var mixed: Dictionary = latest_body.duplicate(true)
-	if not _offset_pose(mixed):
+	var offset_ok: bool = _offset_pose(mixed)
+	if not offset_ok:
 		mixed["x"] = latest_pose["x"]
 		mixed["y"] = latest_pose["y"]
 		mixed["z"] = latest_pose["z"]
-	if yaw_bam != YAW_OMITTED:
+	if offset_ok and yaw_bam != YAW_OMITTED:
 		mixed["yaw_bam"] = yaw_bam
+	if _pose_blocked(mixed, latest_players, solid_boxes):
+		mixed["x"] = latest_pose["x"]
+		mixed["y"] = latest_pose["y"]
+		mixed["z"] = latest_pose["z"]
+		mixed["yaw_bam"] = latest_pose["yaw_bam"]
 	copied[own_slot] = mixed
 	return _ok(copied)
+
+
+func _pose_blocked(body: Dictionary, latest_players: Array, solid_boxes: Array) -> bool:
+	var pose: Dictionary = _pose_from_player(body)
+	if pose.is_empty():
+		return false
+	var own: KinematicCapsule = KinematicCapsule.new()
+	own.x = pose["x"]
+	own.y = pose["y"]
+	own.z = pose["z"]
+	own.radius = CAPSULE_RADIUS
+	own.cylinder_height = CAPSULE_HEIGHT
+	for raw: Variant in solid_boxes:
+		if typeof(raw) != TYPE_DICTIONARY:
+			continue
+		var bag: Dictionary = raw
+		var box: StaticAabb = _aabb_from_bag(bag)
+		if box == null:
+			continue
+		if box.overlaps_capsule(own):
+			return true
+	for index: int in range(latest_players.size()):
+		if index == own_slot:
+			continue
+		var remote_raw: Variant = latest_players[index]
+		if typeof(remote_raw) != TYPE_DICTIONARY:
+			continue
+		var remote_body: Dictionary = remote_raw
+		var remote_pose: Dictionary = _pose_from_player(remote_body)
+		if remote_pose.is_empty():
+			continue
+		var other: KinematicCapsule = KinematicCapsule.new()
+		other.x = remote_pose["x"]
+		other.y = remote_pose["y"]
+		other.z = remote_pose["z"]
+		other.radius = CAPSULE_RADIUS
+		other.cylinder_height = CAPSULE_HEIGHT
+		if own.overlaps(other):
+			return true
+	return false
+
+
+func _aabb_from_bag(bag: Dictionary) -> StaticAabb:
+	if not bag.has("x") or typeof(bag["x"]) != TYPE_INT:
+		return null
+	if not bag.has("y") or typeof(bag["y"]) != TYPE_INT:
+		return null
+	if not bag.has("z") or typeof(bag["z"]) != TYPE_INT:
+		return null
+	if not bag.has("hx") or typeof(bag["hx"]) != TYPE_INT:
+		return null
+	if not bag.has("hy") or typeof(bag["hy"]) != TYPE_INT:
+		return null
+	if not bag.has("hz") or typeof(bag["hz"]) != TYPE_INT:
+		return null
+	var half_x: int = bag["hx"]
+	var half_y: int = bag["hy"]
+	var half_z: int = bag["hz"]
+	if half_x < 0 or half_y < 0 or half_z < 0:
+		return null
+	var box: StaticAabb = StaticAabb.new()
+	box.x = bag["x"]
+	box.y = bag["y"]
+	box.z = bag["z"]
+	box.half_x = half_x
+	box.half_y = half_y
+	box.half_z = half_z
+	return box
 
 
 func _offset_pose(body: Dictionary) -> bool:
