@@ -7,7 +7,8 @@ extends Node
 ## 实时回路：在本场内网端口监听 WebSocket（--bind 占位 0.0.0.0，公网暴露由部署层
 ## 与网关拓扑阻止），二进制命令帧经 MatchRealtime 排队、在 commit_tick 边界按到达
 ## 顺序应用；每 SNAPSHOT_EVERY_TICKS 个 tick 广播一帧二进制快照。命令帧 tick 只
-## 解码不信任，服务端 tick 权威（CD-43 §3）。防伪造门禁是后续章节。
+## 解码不信任，服务端 tick 权威（CD-43 §3）。每槽每 tick 至多一条命令（先到先得），
+## 断开丢弃排队；墙钟发送速率仍待（CD-63）。
 ## 心跳：每 HEARTBEAT_EVERY_TICKS 个 tick 打印一行结构化 JSON（含状态哈希），
 ## 供 MatchHost 的 recentOutput 留存与跨进程确定性核对；心跳不续租（CD-44 §3）。
 ## --max-ticks 到达后打印最终心跳并 exit 0；配置非法打印错误事件并 exit 1。

@@ -5,9 +5,11 @@ extends RefCounted
 ## 依据 CD-43 §3：服务器权威快照模型——命令帧里的 tick 只解码不信任，
 ## 意图在服务端自己的 commit_tick 边界按到达顺序应用；快照帧编码全部已配置
 ## 槽位（含未占用）与可破坏箱耐久。槽位 0..N-1 按需占用，断开即释放。
+## 每占用槽位每个 commit_tick 至多入队一条命令（先到先得），后到的同槽命令拒绝。
+## 断开丢弃该槽已排队命令，避免旧意图落到新连接。这是位置伪造门禁：同 tick
+## 连发多条 Move 不能在一次仿真步里叠成瞬移。墙钟发送速率仍待（CD-63）。
 ## 本类不碰 socket：传输是 match_server.gd 的薄层；网络正确性测试保持手动
 ## （CD-91 D.8 manual_network_tests）。无结算、不在线写入。
-## 防伪造校验（速率/合法性门禁）是后续章节，本类只保证帧可解码、槽位已占用。
 
 const MatchFrameCodec := preload("res://src/shared/protocol/match_frame_codec.gd")
 const PlayerIntentNames := preload("res://src/shared/commands/player_intent_names.gd")
@@ -44,6 +46,7 @@ func remove_player(slot: int) -> bool:
 	if not _occupied.has(slot):
 		return false
 	_occupied.erase(slot)
+	_drop_queued(slot)
 	return true
 
 
@@ -55,12 +58,18 @@ func is_occupied(slot: int) -> bool:
 	return _occupied.has(slot)
 
 
+func pending_count() -> int:
+	return _queue.size()
+
+
 ## 解码二进制命令帧并入队（FIFO），下一 commit_tick 才应用。
-## 拒绝：槽位未占用、帧不可解码。
+## 拒绝：槽位未占用、该槽本 tick 已有排队、帧不可解码（含快照帧）。
 func accept_command(slot: int, bytes: PackedByteArray) -> bool:
 	if session == null:
 		return false
 	if not _occupied.has(slot):
+		return false
+	if _queue_has_slot(slot):
 		return false
 	var decoded: Dictionary = MatchFrameCodec.decode_command(bytes)
 	var decoded_ok: bool = decoded.get("ok", false)
@@ -105,6 +114,31 @@ func snapshot_frame() -> PackedByteArray:
 		players,
 		session.destructible_states()
 	)
+
+
+func allows_settlement() -> bool:
+	return false
+
+
+func allows_online_writes() -> bool:
+	return false
+
+
+func _queue_has_slot(slot: int) -> bool:
+	for item: Dictionary in _queue:
+		var queued_slot: int = item["slot"]
+		if queued_slot == slot:
+			return true
+	return false
+
+
+func _drop_queued(slot: int) -> void:
+	var kept: Array[Dictionary] = []
+	for item: Dictionary in _queue:
+		var queued_slot: int = item["slot"]
+		if queued_slot != slot:
+			kept.append(item)
+	_queue = kept
 
 
 static func _payload_from(decoded: Dictionary) -> Dictionary:
