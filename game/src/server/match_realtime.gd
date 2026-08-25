@@ -8,6 +8,10 @@ extends RefCounted
 ## 每占用槽位每个 commit_tick 至多入队一条命令（先到先得），后到的同槽命令拒绝。
 ## 断开丢弃该槽已排队命令，避免旧意图落到新连接。这是位置伪造门禁：同 tick
 ## 连发多条 Move 不能在一次仿真步里叠成瞬移。墙钟发送速率仍待（CD-63）。
+## 最近一次「已入队、apply 成功、且应用后权威标记相对应用前变化」的权威 tick 记在
+## `last_valid_input_tick`（从未发生为 -1），供心跳上报；MatchHost 只在该值前进
+## 时续租。权威标记 = 会话 `hash_state`（位姿/进度/门闩）+ 箱耐久。心跳、被拒
+## 命令、未改变权威状态的命令不更新它（CD-44 §3）。
 ## 本类不碰 socket：传输是 match_server.gd 的薄层；网络正确性测试保持手动
 ## （CD-91 D.8 manual_network_tests）。全员冲线后允许生成结算 payload；
 ## 不在线写入、不 HTTP。
@@ -23,6 +27,7 @@ var session: TraprushMatchSession = null
 
 var _occupied: Dictionary = {}
 var _queue: Array[Dictionary] = []
+var _last_valid_input_tick: int = -1
 
 
 static func create(match_session: TraprushMatchSession) -> MatchRealtime:
@@ -106,6 +111,11 @@ func pending_count() -> int:
 	return _queue.size()
 
 
+## 最近一次通过校验且改变权威哈希的真人命令所在 tick。从未发生为 -1。
+func last_valid_input_tick() -> int:
+	return _last_valid_input_tick
+
+
 ## 解码二进制命令帧并入队（FIFO），下一 commit_tick 才应用。
 ## 拒绝：槽位未占用、该槽本 tick 已有排队、帧不可解码（含快照帧）。
 func accept_command(slot: int, bytes: PackedByteArray) -> bool:
@@ -124,9 +134,14 @@ func accept_command(slot: int, bytes: PackedByteArray) -> bool:
 
 
 ## 按到达顺序应用已排队命令，然后推进会话 tick（含占用扫描）。
+## 只在至少一条命令 apply 成功且应用后权威标记相对应用前变化时更新续租 tick。
+## 比较发生在 `session.commit_tick`（世界步进）之前，避免周期机关单独续租。
+## 会话 `hash_state` 不含箱耐久，故标记另拼 `destructible_states`。
 func commit_tick() -> void:
 	if session == null:
 		return
+	var before_mark: String = _lease_state_mark()
+	var applied_ok: bool = false
 	var pending: Array[Dictionary] = _queue
 	_queue = []
 	for item: Dictionary in pending:
@@ -134,8 +149,12 @@ func commit_tick() -> void:
 		if not _occupied.has(slot):
 			continue
 		var payload: Dictionary = item["payload"]
-		session.apply_player_intent(slot, payload)
+		if session.apply_player_intent(slot, payload):
+			applied_ok = true
+	var changed: bool = applied_ok and _lease_state_mark() != before_mark
 	session.commit_tick()
+	if changed:
+		_last_valid_input_tick = session.tick_index()
 
 
 ## 当前状态的快照帧：全部已配置槽位（含未占用）+ 可破坏箱耐久。
@@ -166,6 +185,18 @@ func allows_settlement() -> bool:
 
 func allows_online_writes() -> bool:
 	return false
+
+
+## 续租用的权威标记：会话哈希（位姿/进度/门闩）+ 箱耐久。
+func _lease_state_mark() -> String:
+	if session == null:
+		return ""
+	var mark: String = session.hash_state()
+	for crate: Dictionary in session.destructible_states():
+		var entity_id: int = crate.get("entity_id", 0)
+		var durability: int = crate.get("durability", 0)
+		mark += "|%d:%d" % [entity_id, durability]
+	return mark
 
 
 func _queue_has_slot(slot: int) -> bool:

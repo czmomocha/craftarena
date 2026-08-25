@@ -6,9 +6,11 @@ extends GutTest
 ## per occupied slot per tick (first wins). Disconnect drops that slot's
 ## queue. Snapshot frames encode all configured slots plus crate durability.
 ## The command tick field is decoded but never trusted for timing: the
-## server tick is authoritative. Sockets are a thin wrapper in
-## match_server.gd; network correctness tests stay manual (CD-91 D.8).
-## No settlement, no online writes.
+## server tick is authoritative. Applied commands that change authority
+## state (session hash or crate durability) update last_valid_input_tick
+## for MatchHost lease renew (CD-44 §3).
+## Sockets are a thin wrapper in match_server.gd; network correctness tests
+## stay manual (CD-91 D.8). No settlement, no online writes.
 
 const AuthoringDocument := preload("res://src/creator/authoring_document.gd")
 const AuthoringWorld := preload("res://src/creator/authoring_world.gd")
@@ -239,6 +241,62 @@ func test_same_command_stream_same_snapshot_bytes() -> void:
 		first.commit_tick()
 		second.commit_tick()
 		assert_eq(first.snapshot_frame(), second.snapshot_frame())
+
+
+func test_empty_ticks_do_not_count_as_valid_input() -> void:
+	var realtime: MatchRealtime = _two_player_realtime()
+	realtime.add_player()
+	assert_eq(realtime.last_valid_input_tick(), -1)
+	realtime.commit_tick()
+	realtime.commit_tick()
+	assert_eq(realtime.last_valid_input_tick(), -1)
+
+
+func test_applied_move_that_changes_hash_sets_valid_input_tick() -> void:
+	var realtime: MatchRealtime = _two_player_realtime()
+	var slot: int = realtime.add_player()
+	assert_true(realtime.accept_command(slot, MatchFrameCodec.encode_command(0, PlayerIntentNames.MOVE, CELL, 0, -1)))
+	realtime.commit_tick()
+	assert_eq(realtime.last_valid_input_tick(), 1)
+	realtime.commit_tick()
+	assert_eq(realtime.last_valid_input_tick(), 1)
+	assert_true(realtime.accept_command(slot, MatchFrameCodec.encode_command(0, PlayerIntentNames.MOVE, CELL, 0, -1)))
+	realtime.commit_tick()
+	assert_eq(realtime.last_valid_input_tick(), 3)
+
+
+func test_rejected_and_unchanged_commands_do_not_renew_tick() -> void:
+	var realtime: MatchRealtime = _two_player_realtime()
+	var slot: int = realtime.add_player()
+	var snapshot: PackedByteArray = realtime.snapshot_frame()
+	assert_false(realtime.accept_command(slot, snapshot))
+	realtime.commit_tick()
+	assert_eq(realtime.last_valid_input_tick(), -1)
+	assert_false(realtime.accept_command(1, MatchFrameCodec.encode_command(0, PlayerIntentNames.MOVE, CELL, 0, -1)))
+	realtime.commit_tick()
+	assert_eq(realtime.last_valid_input_tick(), -1)
+	var move: PackedByteArray = MatchFrameCodec.encode_command(0, PlayerIntentNames.MOVE, CELL, 0, -1)
+	assert_true(realtime.accept_command(slot, move))
+	assert_false(realtime.accept_command(slot, move))
+	realtime.commit_tick()
+	assert_eq(realtime.last_valid_input_tick(), 3)
+	assert_true(realtime.accept_command(slot, MatchFrameCodec.encode_command(0, PlayerIntentNames.MOVE, 0, 0, -1)))
+	realtime.commit_tick()
+	assert_eq(realtime.last_valid_input_tick(), 3)
+	assert_true(realtime.accept_command(slot, MatchFrameCodec.encode_command(0, PlayerIntentNames.JUMP, 0, 0, 0)))
+	realtime.commit_tick()
+	assert_eq(realtime.last_valid_input_tick(), 3)
+
+
+func test_use_item_that_breaks_crate_counts_as_valid_input() -> void:
+	var realtime: MatchRealtime = _two_player_realtime()
+	realtime.session.use_item_damage = 1
+	realtime.session.use_item_reach_dz = CELL
+	var slot: int = realtime.add_player()
+	assert_true(realtime.accept_command(slot, MatchFrameCodec.encode_command(0, PlayerIntentNames.USE_ITEM, 0, 0, 0)))
+	realtime.commit_tick()
+	assert_eq(realtime.last_valid_input_tick(), 1)
+	assert_eq(realtime.session.destructible_alive_count(), 0)
 
 
 func _two_player_realtime() -> MatchRealtime:

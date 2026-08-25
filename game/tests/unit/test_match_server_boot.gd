@@ -155,6 +155,22 @@ func test_heartbeat_line_is_structured_json() -> void:
 	var state_hash: String = event.get("hash", "")
 	assert_eq(state_hash, session.hash_state())
 	assert_false(event.has("settlement"))
+	var valid_input_tick: int = event.get("valid_input_tick", 99)
+	assert_eq(valid_input_tick, -1)
+
+
+func test_heartbeat_line_reports_valid_input_tick() -> void:
+	var config: Dictionary = MatchServer._boot_config({
+		"match-id": "m1", "port": "42000", "course": COURSE_01_PATH, "players": "2",
+	})
+	var session: TraprushMatchSession = MatchServer.boot_session(config)
+	session.commit_tick()
+	var line: String = MatchServer._heartbeat_line("m1", session, 4)
+	var parsed: Variant = JSON.parse_string(line)
+	assert_eq(typeof(parsed), TYPE_DICTIONARY)
+	var event: Dictionary = parsed
+	var valid_input_tick: int = event.get("valid_input_tick", -1)
+	assert_eq(valid_input_tick, 4)
 
 
 func test_same_boot_same_hash_after_ticks() -> void:

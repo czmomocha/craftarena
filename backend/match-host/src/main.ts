@@ -68,21 +68,26 @@ app = buildMatchHost({
 const server = app;
 
 const reclaimTimer = setInterval(() => {
-	void registry
-		.flushSettlements()
-		.catch((error: unknown) => {
+	void (async () => {
+		try {
+			await registry.flushSettlements();
+		} catch (error: unknown) {
 			server.log.error({ error }, "failed to flush live settlements");
-		});
-	void registry
-		.reclaimExpired()
-		.then((reclaimed) => {
+		}
+		try {
+			registry.renewFromValidInput();
+		} catch (error: unknown) {
+			server.log.error({ error }, "failed to renew from valid input");
+		}
+		try {
+			const reclaimed = await registry.reclaimExpired();
 			if (reclaimed.length > 0) {
 				server.log.info({ count: reclaimed.length }, "reclaimed expired matches");
 			}
-		})
-		.catch((error: unknown) => {
+		} catch (error: unknown) {
 			server.log.error({ error }, "failed to reclaim expired matches");
-		});
+		}
+	})();
 }, config.reclaimIntervalMs);
 
 let shuttingDown = false;

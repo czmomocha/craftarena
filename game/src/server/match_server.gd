@@ -10,9 +10,10 @@ extends Node
 ## 解码不信任，服务端 tick 权威（CD-43 §3）。每槽每 tick 至多一条命令（先到先得），
 ## 断开丢弃排队；握手后按上游 URL 的 slot 占用席位，缺席位则占用最小空槽。
 ## 墙钟发送速率仍待（CD-63）。
-## 心跳：每 HEARTBEAT_EVERY_TICKS 个 tick 打印一行结构化 JSON（含状态哈希），
-## 全员冲线后另含 settlement；供 MatchHost 活场 flush / 停止前写库与跨进程核对。
-## 心跳不续租（CD-44 §3）。
+## 心跳：每 HEARTBEAT_EVERY_TICKS 个 tick 打印一行结构化 JSON（含状态哈希与
+## `valid_input_tick`），全员冲线后另含 settlement；供 MatchHost 活场 flush /
+## 停止前写库、跨进程核对，以及仅在 `valid_input_tick` 前进时续租。
+## 心跳本身不续租（CD-44 §3）。
 ## --max-ticks 到达后打印最终心跳并 exit 0；配置非法打印错误事件并 exit 1。
 ## 出生偏移、胶囊尺寸、心跳/快照节奏与动作数值（跳跃/支撑/道具伤害与触达）
 ## 均为进程内占位桩，不锁产品出生布局或数值。与大厅 Solo 占位桩同值。
@@ -156,7 +157,7 @@ func _physics_process(_delta: float) -> void:
 		_broadcast_snapshot()
 	var at_max: bool = _max_ticks > 0 and tick >= _max_ticks
 	if tick % HEARTBEAT_EVERY_TICKS == 0 or at_max:
-		print(_heartbeat_line(_match_id, _session))
+		print(_heartbeat_line(_match_id, _session, _realtime.last_valid_input_tick()))
 	if at_max:
 		get_tree().quit(0)
 
@@ -270,13 +271,18 @@ static func _spawn_offsets(players: int) -> Array[Dictionary]:
 	return offsets
 
 
-static func _heartbeat_line(match_id: String, session: TraprushMatchSession) -> String:
+static func _heartbeat_line(
+	match_id: String,
+	session: TraprushMatchSession,
+	valid_input_tick: int = -1
+) -> String:
 	var body: Dictionary = {
 		"event": TICK_EVENT,
 		"match_id": match_id,
 		"tick": session.tick_index(),
 		"players": session.player_count(),
 		"hash": session.hash_state(),
+		"valid_input_tick": valid_input_tick,
 	}
 	var built: Dictionary = TraprushMatchSettlement.try_build(session)
 	if built.get("ok", false):
