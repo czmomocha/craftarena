@@ -2,12 +2,14 @@ extends GutTest
 
 ## MatchLobbyShell: TRAPRUSH quick play / room code / queue / latest snapshot.
 ## Injected HTTP and socket events. Close only hides. Never settlement.
+## Own-seat SnapshotCamera follows the presentation pose; remotes do not.
 
 const MatchFrameCodec := preload("res://src/shared/protocol/match_frame_codec.gd")
 const MatchJoinSession := preload("res://src/client/match_join_session.gd")
 const MatchLobbyShell := preload("res://src/client/match_lobby_shell.gd")
 const MatchOfflineSession := preload("res://src/client/match_offline_session.gd")
 const MatchPlaySession := preload("res://src/client/match_play_session.gd")
+const MatchSnapshotMap := preload("res://src/client/match_snapshot_map.gd")
 const PlayerIntentNames := preload("res://src/shared/commands/player_intent_names.gd")
 
 var _shell: MatchLobbyShell = null
@@ -513,6 +515,47 @@ func test_offline_solo_does_not_stack_local_predict_overlay() -> void:
 	assert_almost_eq(moved_x - origin_x, step, 0.0001)
 
 
+func test_solo_camera_follows_local_player_and_cancel_resets() -> void:
+	_shell = _open_shell()
+	_assert_lobby_camera_at(Vector3.ZERO)
+	assert_true(_shell.try_solo())
+	_assert_lobby_camera_on(_shell.map.player_node(0))
+	assert_false(_shell.try_sample_play_move(false, false, false, true).is_empty())
+	_assert_lobby_camera_on(_shell.map.player_node(0))
+	assert_true(_shell.try_cancel())
+	assert_eq(_shell.map.follow_slot, -1)
+	_assert_lobby_camera_at(Vector3.ZERO)
+
+
+func test_online_camera_follows_own_slot_not_remote() -> void:
+	_shell = _open_shell()
+	assert_true(_shell.try_quick())
+	assert_true(_shell.accept_http(201, _join("ABCD23", "ticket-cam")))
+	assert_true(_shell.on_socket_open())
+	assert_true(_shell.on_binary(_two_player_snapshot(1, 0, 2 * Fixed.SCALE)))
+	_assert_lobby_camera_on(_shell.map.player_node(0))
+	var remote_expected: Vector3 = _shell.map.player_node(1).position + MatchSnapshotMap.CAMERA_OFFSET
+	assert_gt(
+		_shell.map.camera_node().position.distance_to(remote_expected),
+		0.5
+	)
+	assert_false(_shell.try_sample_play_move(false, false, false, true).is_empty())
+	_assert_lobby_camera_on(_shell.map.player_node(0))
+
+
+func test_online_camera_follows_seat_one() -> void:
+	_shell = _open_shell()
+	assert_true(_shell.try_quick())
+	assert_true(_shell.accept_http(201, _join("ABCD23", "ticket-seat1", "course_01", 2, 1)))
+	assert_eq(_shell.play.predict.own_slot, 1)
+	assert_true(_shell.on_socket_open())
+	assert_true(_shell.on_binary(_two_player_snapshot(1, 0, 2 * Fixed.SCALE)))
+	_assert_lobby_camera_on(_shell.map.player_node(1))
+	assert_true(_shell.try_cancel())
+	assert_eq(_shell.map.follow_slot, -1)
+	_assert_lobby_camera_at(Vector3.ZERO)
+
+
 func test_solo_use_item_from_spawn_breaks_course_01_crate() -> void:
 	_shell = _open_shell()
 	assert_true(_shell.try_solo())
@@ -534,7 +577,13 @@ func _open_shell() -> MatchLobbyShell:
 	return shell
 
 
-func _join(room_code: String, ticket: String, course: String = "course_01", seats: int = 2) -> Dictionary:
+func _join(
+	room_code: String,
+	ticket: String,
+	course: String = "course_01",
+	seats: int = 2,
+	seat: int = 0
+) -> Dictionary:
 	return {
 		"roomCode": room_code,
 		"ticket": ticket,
@@ -542,7 +591,7 @@ func _join(room_code: String, ticket: String, course: String = "course_01", seat
 		"expiresAt": "2026-08-25T03:00:00.000Z",
 		"seats": seats,
 		"issued": 1,
-		"seat": 0,
+		"seat": seat,
 		"course": course,
 	}
 
@@ -586,3 +635,17 @@ func _ranked_player(x: int, accepted_count: int, finish_tick: int) -> Dictionary
 func _ranked_snapshot(tick: int, players: Array[Dictionary]) -> PackedByteArray:
 	var crates: Array[Dictionary] = []
 	return MatchFrameCodec.encode_snapshot(tick, players, crates)
+
+
+func _assert_lobby_camera_on(node: MeshInstance3D) -> void:
+	assert_not_null(node)
+	_assert_lobby_camera_at(node.position)
+
+
+func _assert_lobby_camera_at(target: Vector3) -> void:
+	var camera: Camera3D = _shell.map.camera_node()
+	assert_not_null(camera)
+	var expected: Vector3 = target + MatchSnapshotMap.CAMERA_OFFSET
+	assert_almost_eq(camera.position.x, expected.x, 0.0001)
+	assert_almost_eq(camera.position.y, expected.y, 0.0001)
+	assert_almost_eq(camera.position.z, expected.z, 0.0001)

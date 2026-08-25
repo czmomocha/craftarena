@@ -3,6 +3,7 @@ extends GutTest
 ## MatchSnapshotMap: latest-snapshot player poses → 1 m boxes.
 ## No interpolation. Crates have no pose in the v1 snapshot, so they
 ## are not drawn. A bad follow or malformed player list keeps the last map.
+## follow_slot aims the camera at that player; default -1 looks at origin.
 
 const MatchFrameCodec := preload("res://src/shared/protocol/match_frame_codec.gd")
 const MatchSnapshotFollow := preload("res://src/client/match_snapshot_follow.gd")
@@ -49,9 +50,10 @@ func test_rebuild_maps_player_poses_and_skips_crates() -> void:
 	var box: BoxMesh = first.mesh as BoxMesh
 	assert_not_null(box)
 	assert_almost_eq(box.size.x, 1.0, EPS)
-	var camera: Camera3D = _map.get_node_or_null(MatchSnapshotMap.CAMERA_NAME) as Camera3D
+	var camera: Camera3D = _map.camera_node()
 	assert_not_null(camera)
 	assert_true(camera.current)
+	_assert_camera_at(Vector3.ZERO)
 	assert_false(_map.allows_settlement())
 	assert_false(_map.allows_online_writes())
 
@@ -78,10 +80,38 @@ func test_player_count_shrink_drops_stale_nodes() -> void:
 func test_empty_player_list_clears_markers() -> void:
 	_map = MatchSnapshotMap.new()
 	add_child(_map)
+	_map.follow_slot = 0
 	assert_true(_map.apply_players([_player(CELL, 0, 0, 0)]))
+	_assert_camera_at(_map.player_node(0).position)
 	assert_true(_map.apply_players([]))
 	assert_eq(_map.player_count(), 0)
 	assert_null(_map.player_node(0))
+	_assert_camera_at(Vector3.ZERO)
+
+
+func test_follow_slot_aims_camera_at_that_player() -> void:
+	_map = MatchSnapshotMap.new()
+	add_child(_map)
+	_map.follow_slot = 1
+	assert_true(_map.apply_players([
+		_player(0, 0, 0, 0),
+		_player(2 * CELL, CELL, 0, 0),
+	]))
+	_assert_camera_at(_map.player_node(1).position)
+	_map.follow_slot = 0
+	assert_true(_map.apply_players([
+		_player(CELL, 0, 0, 0),
+		_player(2 * CELL, CELL, 0, 0),
+	]))
+	_assert_camera_at(_map.player_node(0).position)
+
+
+func test_missing_follow_slot_looks_at_origin() -> void:
+	_map = MatchSnapshotMap.new()
+	add_child(_map)
+	_map.follow_slot = 3
+	assert_true(_map.apply_players([_player(CELL, 0, 0, 0)]))
+	_assert_camera_at(Vector3.ZERO)
 
 
 func test_malformed_list_keeps_previous_map() -> void:
@@ -121,6 +151,15 @@ func _player(x: int, y: int, z: int, yaw_bam: int) -> Dictionary:
 		"accepted_count": 0,
 		"finish_tick": -1,
 	}
+
+
+func _assert_camera_at(target: Vector3) -> void:
+	var camera: Camera3D = _map.camera_node()
+	assert_not_null(camera)
+	var expected: Vector3 = target + MatchSnapshotMap.CAMERA_OFFSET
+	assert_almost_eq(camera.position.x, expected.x, EPS)
+	assert_almost_eq(camera.position.y, expected.y, EPS)
+	assert_almost_eq(camera.position.z, expected.z, EPS)
 
 
 func _crate(entity_id: int, durability: int) -> Dictionary:

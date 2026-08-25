@@ -12,6 +12,10 @@ extends Node3D
 ## draws them. This node does not interpolate; the lobby may pass
 ## sampled poses from MatchSnapshotInterp. The lobby may then overlay
 ## MatchLocalPredict on the local seat. This node does not predict.
+## follow_slot aims SnapshotCamera at that player's presentation pose
+## with the same offset as AuthoringPreviewMap; < 0 or a missing slot
+## looks at the origin. The offset is a presentation stub, not a
+## product camera rig.
 
 const MatchSnapshotFollowGd := preload("res://src/client/match_snapshot_follow.gd")
 
@@ -19,10 +23,11 @@ const CAMERA_NAME: String = "SnapshotCamera"
 const LIGHT_NAME: String = "SnapshotLight"
 const PLAYER_PREFIX: String = "player_"
 const PLACEHOLDER_SIZE: Vector3 = Vector3(1.0, 1.0, 1.0)
-const _CAMERA_POS: Vector3 = Vector3(6.0, 8.0, 6.0)
+const CAMERA_OFFSET: Vector3 = Vector3(6.0, 8.0, 6.0)
 const _LIGHT_ROT_DEG: Vector3 = Vector3(-50.0, -30.0, 0.0)
 const _PLAYER_ALBEDO: Color = Color(0.2, 0.45, 0.95)
 
+var follow_slot: int = -1
 var _player_count: int = 0
 
 
@@ -57,6 +62,7 @@ func apply_players(players: Array, crates: Array = []) -> bool:
 		_spawn_player(index, body)
 		index += 1
 	_player_count = players.size()
+	_aim_camera()
 	return true
 
 
@@ -84,16 +90,19 @@ func player_node(slot: int) -> MeshInstance3D:
 	return get_node_or_null(player_name(slot)) as MeshInstance3D
 
 
+func camera_node() -> Camera3D:
+	return get_node_or_null(CAMERA_NAME) as Camera3D
+
+
 func ensure_rig() -> void:
 	var camera: Camera3D = get_node_or_null(CAMERA_NAME) as Camera3D
 	if camera == null:
 		camera = Camera3D.new()
 		camera.name = CAMERA_NAME
-		camera.position = _CAMERA_POS
+		camera.position = CAMERA_OFFSET
 		camera.current = true
 		add_child(camera)
-		if is_inside_tree():
-			camera.look_at(Vector3.ZERO)
+		_look_at_target(camera, Vector3.ZERO)
 	var light: DirectionalLight3D = get_node_or_null(LIGHT_NAME) as DirectionalLight3D
 	if light == null:
 		light = DirectionalLight3D.new()
@@ -169,6 +178,30 @@ func _clear_players() -> void:
 		remove_child(node)
 		node.free()
 	_player_count = 0
+
+
+func _aim_camera() -> void:
+	var target: Vector3 = Vector3.ZERO
+	var followed: MeshInstance3D = player_node(follow_slot)
+	if followed != null:
+		target = followed.position
+	var camera: Camera3D = camera_node()
+	if camera == null:
+		return
+	camera.position = target + CAMERA_OFFSET
+	_look_at_target(camera, target)
+
+
+func _look_at_target(camera: Camera3D, target: Vector3) -> void:
+	if camera == null or not camera.is_inside_tree():
+		return
+	var look: Vector3 = target - camera.position
+	if look.length_squared() < 0.0000001:
+		return
+	var up: Vector3 = Vector3.UP
+	if absf(look.normalized().dot(Vector3.UP)) > 0.999:
+		up = Vector3.FORWARD
+	camera.look_at(target, up)
 
 
 func _unshaded(color: Color) -> StandardMaterial3D:
