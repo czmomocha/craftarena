@@ -4,7 +4,7 @@ Godot 4 + UGC 双玩法（TRAPRUSH / BASTION）项目 Monorepo。代码与仓库
 
 - 工程规则入口：[AGENTS.md](AGENTS.md)
 - 规范唯一事实源：[Confirmed-docs](Confirmed-docs/README.md)
-- 当前阶段：M3 进行中（2026-08-24 启动）。已落地对局多人仿真循环、二进制协议 v1、对局进程仿真入口、实时回路、网关代理、控制面真票据、MatchHost 自动登记、等待 listen 后登记、停止后注销、真匹配/房间码与 FIFO 等待队列；本刀为客户端匹配入场与权威快照跟从。进度见 [CD-61](Confirmed-docs/60-plan/61-milestones.md)。
+- 当前阶段：M3 进行中（2026-08-24 启动）。已落地对局多人仿真循环、二进制协议 v1、对局进程仿真入口、实时回路、网关代理、控制面真票据、MatchHost 自动登记、等待 listen 后登记、停止后注销、真匹配/房间码、FIFO 等待队列与客户端匹配入场；本刀为权威快照表现映射。进度见 [CD-61](Confirmed-docs/60-plan/61-milestones.md)。
 
 ## 目录
 
@@ -58,7 +58,7 @@ export GODOT_AI_DISABLE_TELEMETRY=true
 - 类型相关警告全局设为 Error，`res://addons` 例外（宪法第二十三条，理由见 [ADR-0001](docs/adr/0001-strict-gdscript-typing-gate.md)）；
 - CD-51 §5 要求的 17 个输入动作，移动类绑定 physical keycode；
 - 脚本与场景文件名 `snake_case`；
-- 启动场景 `res://src/client/main.tscn`，打印一行结构化启动日志并打开机关狂奔匹配大厅（代码创建 Window；Headless 不发起 live HTTP/WS）。
+- 启动场景 `res://src/client/main.tscn`，打印一行结构化启动日志并打开机关狂奔匹配大厅（代码创建 Window，最新快照玩家映射为 1 米占位盒；Headless 不发起 live HTTP/WS）。
 
 这些设置由 `game/tests/unit/test_project_contract.gd` 断言守护，改坏了跑测试就会红。
 

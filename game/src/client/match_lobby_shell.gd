@@ -4,13 +4,15 @@ extends Node
 ## TRAPRUSH channel lobby (CD-12): quick play, room code, FIFO wait.
 ## Code-created Window; close only hides. Injected HTTP/WS in tests;
 ## live_io uses HTTPRequest + WebSocketPeer. Follows the latest snapshot
-## with no interpolation. WASD / Jump / Reset / Use item encode existing
-## intents. play_move_step is a presentation stub, not a product speed.
-## No BASTION, accounts, reconnect tickets, settlement, or offline writes.
+## and maps player poses to 1 m boxes. No interpolation. WASD / Jump /
+## Reset / Use item encode existing intents. play_move_step is a
+## presentation stub, not a product speed. No BASTION, accounts,
+## reconnect tickets, settlement, or offline writes.
 
 const MatchFrameCodec := preload("res://src/shared/protocol/match_frame_codec.gd")
 const MatchJoinSessionGd := preload("res://src/client/match_join_session.gd")
 const MatchPlaySessionGd := preload("res://src/client/match_play_session.gd")
+const MatchSnapshotMapGd := preload("res://src/client/match_snapshot_map.gd")
 const PlayerIntentNames := preload("res://src/shared/commands/player_intent_names.gd")
 
 const TITLE: String = "Traprush"
@@ -24,6 +26,7 @@ const CANCEL_NAME: String = "Cancel"
 const POLL_NAME: String = "Poll"
 const ROOM_NAME: String = "RoomCode"
 const _STATUS_NAME: String = "Status"
+const _MAP_NAME: String = "SnapshotMap"
 const _MOVE_FORWARD: String = "move_forward"
 const _MOVE_BACK: String = "move_back"
 const _MOVE_LEFT: String = "move_left"
@@ -33,6 +36,7 @@ const _JUMP: String = "jump"
 
 var join: MatchJoinSessionGd = null
 var play: MatchPlaySessionGd = null
+var map: MatchSnapshotMapGd = null
 var window: Window = null
 var live_io: bool = false
 var control_plane_base: String = DEFAULT_CONTROL_PLANE
@@ -200,6 +204,8 @@ func on_binary(bytes: PackedByteArray) -> bool:
 	if play == null:
 		return false
 	var ok: bool = play.on_binary(bytes)
+	if ok:
+		_apply_snapshot_map()
 	_refresh_status()
 	return ok
 
@@ -249,6 +255,9 @@ func status_view() -> Dictionary:
 		join_view = join.status_view()
 	if play != null:
 		play_view = play.status_view()
+	var mapped_players: int = 0
+	if map != null:
+		mapped_players = map.player_count()
 	return {
 		"join_state": join_view.get("state", ""),
 		"error": join_view.get("error", ""),
@@ -261,6 +270,7 @@ func status_view() -> Dictionary:
 		"tick": play_view.get("tick", -1),
 		"player_count": play_view.get("player_count", 0),
 		"crate_count": play_view.get("crate_count", 0),
+		"mapped_players": mapped_players,
 		"window_visible": is_window_visible(),
 	}
 
@@ -305,17 +315,17 @@ func _ensure_window() -> void:
 			host_viewport.gui_embed_subwindows = true
 	window = Window.new()
 	window.title = TITLE
-	window.size = Vector2i(520, 240)
+	window.size = Vector2i(640, 360)
 	window.exclusive = false
 	window.transient = false
+	window.own_world_3d = true
 	window.close_requested.connect(_on_close_requested)
 	var root: VBoxContainer = VBoxContainer.new()
 	root.name = "VBoxContainer"
-	root.set_anchors_preset(Control.PRESET_FULL_RECT)
+	root.set_anchors_preset(Control.PRESET_TOP_WIDE)
 	root.offset_left = 8
 	root.offset_top = 8
 	root.offset_right = -8
-	root.offset_bottom = -8
 	window.add_child(root)
 	_status = Label.new()
 	_status.name = _STATUS_NAME
@@ -334,7 +344,11 @@ func _ensure_window() -> void:
 	_room_edit.placeholder_text = "Room code"
 	_room_edit.max_length = 6
 	root.add_child(_room_edit)
+	map = MatchSnapshotMapGd.new()
+	map.name = _MAP_NAME
+	window.add_child(map)
 	add_child(window)
+	map.ensure_rig()
 
 
 func _ensure_http() -> void:
@@ -479,7 +493,15 @@ func _refresh_status() -> void:
 		parts.append("tick=%d" % tick)
 		parts.append("players=%d" % player_count)
 		parts.append("crates=%d" % crate_count)
+		var mapped_players: int = view.get("mapped_players", 0)
+		parts.append("mapped=%d" % mapped_players)
 	_status.text = " ".join(parts)
+
+
+func _apply_snapshot_map() -> void:
+	if map == null or play == null:
+		return
+	map.apply_follow(play.follow)
 
 
 func _on_close_requested() -> void:

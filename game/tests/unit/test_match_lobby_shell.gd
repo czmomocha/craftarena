@@ -23,6 +23,9 @@ func test_open_window_quick_play_ready_begins_play() -> void:
 	assert_eq(_shell.window.title, MatchLobbyShell.TITLE)
 	assert_false(_shell.window.exclusive)
 	assert_false(_shell.window.transient)
+	assert_true(_shell.window.own_world_3d)
+	assert_not_null(_shell.map)
+	assert_eq(_shell.map.player_count(), 0)
 	assert_true(_shell.try_quick())
 	assert_true(_shell.status_label_text().contains("pending=1"))
 	assert_true(_shell.accept_http(201, _join("ABCD23", "ticket-a")))
@@ -32,7 +35,13 @@ func test_open_window_quick_play_ready_begins_play() -> void:
 	assert_true(_shell.on_socket_open())
 	assert_true(_shell.on_binary(_snapshot(2, 12)))
 	assert_eq(_shell.play.follow.tick, 2)
+	assert_eq(_shell.map.player_count(), 1)
+	var marker: MeshInstance3D = _shell.map.player_node(0)
+	assert_not_null(marker)
+	assert_almost_eq(marker.position.x, 12.0 / float(Fixed.SCALE), 0.0001)
+	assert_eq(_shell.map.crate_node_count(), 0)
 	assert_true(_shell.status_label_text().contains("tick=2"))
+	assert_true(_shell.status_label_text().contains("mapped=1"))
 	assert_true(_shell.status_label_text().contains("room=ABCD23"))
 	assert_false(_shell.allows_settlement())
 	assert_false(_shell.allows_online_writes())
@@ -97,6 +106,21 @@ func test_visible_window_encodes_intents_hidden_does_not() -> void:
 	assert_true(_shell.try_sample_play_move(true, false, false, false).is_empty())
 	assert_true(_shell.show_window())
 	assert_true(_shell.is_window_visible())
+
+
+func test_stale_or_bad_snapshot_keeps_mapped_pose() -> void:
+	_shell = _open_shell()
+	assert_true(_shell.try_quick())
+	assert_true(_shell.accept_http(201, _join("ABCD23", "ticket-c")))
+	assert_true(_shell.on_socket_open())
+	assert_true(_shell.on_binary(_snapshot(5, Fixed.SCALE)))
+	assert_almost_eq(_shell.map.player_node(0).position.x, 1.0, 0.0001)
+	assert_false(_shell.on_binary(_snapshot(4, 8 * Fixed.SCALE)))
+	assert_almost_eq(_shell.map.player_node(0).position.x, 1.0, 0.0001)
+	assert_false(_shell.on_binary(PackedByteArray([1, 2, 3])))
+	assert_almost_eq(_shell.map.player_node(0).position.x, 1.0, 0.0001)
+	assert_true(_shell.on_binary(_snapshot(6, 2 * Fixed.SCALE)))
+	assert_almost_eq(_shell.map.player_node(0).position.x, 2.0, 0.0001)
 
 
 func test_buttons_exist_and_live_io_stays_off_in_tests() -> void:
