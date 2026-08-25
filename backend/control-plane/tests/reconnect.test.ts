@@ -67,6 +67,8 @@ describe("control plane ticket reconnect", () => {
 		assert.equal(next.matchId, matchId);
 		assert.notEqual(next.ticket, original);
 		assert.equal(next.expiresAt, "2026-08-25T04:11:00.000Z");
+		assert.equal(next.seat, 0);
+		assert.equal(first.json<IssueMatchTicketResponse>().seat, 0);
 
 		const overflow = await app.inject({
 			method: "POST",

@@ -17,7 +17,9 @@ extends Node
 ## "离线试玩，成绩不上传" while it runs. Web is refused.
 ## Player boxes and standing labels sample MatchSnapshotInterp between
 ## the last two snapshots. play_interp_step is a presentation stub, not
-## an interpolation window. WASD / Jump / Reset / Use item encode existing
+## an interpolation window. The local seat overlays MatchLocalPredict on
+## the latest authority for Move/Jump; remotes still interpolate.
+## WASD / Jump / Reset / Use item encode existing
 ## intents. play_move_step is a presentation stub, not a product speed.
 ## Unexpected socket close while connecting or in-match reissues the
 ## consumed ticket and follows the latest snapshot again.
@@ -405,6 +407,8 @@ func try_sample_play_move(forward: bool, back: bool, left: bool, right: bool) ->
 		return PackedByteArray()
 	var bytes: PackedByteArray = play.try_encode_move_axes(forward, back, left, right, play_move_step)
 	_note_command(bytes)
+	if not bytes.is_empty():
+		_apply_snapshot_map()
 	return bytes
 
 
@@ -459,6 +463,8 @@ func try_sample_play_jump(pressed: bool) -> PackedByteArray:
 		return PackedByteArray()
 	var bytes: PackedByteArray = play.try_encode_intent(PlayerIntentNames.JUMP, 0, 0, 0)
 	_note_command(bytes)
+	if not bytes.is_empty():
+		_apply_snapshot_map()
 	return bytes
 
 
@@ -515,6 +521,7 @@ func status_view() -> Dictionary:
 		"course_id": selected_course_id(),
 		"seats": join_view.get("seats", 0),
 		"selected_seats": selected_seats(),
+		"seat": join_view.get("seat", -1),
 		"play_state": play_view.get("state", ""),
 		"offline_state": offline_view.get("state", ""),
 		"offline_banner": offline_view.get("banner", ""),
@@ -847,6 +854,12 @@ func _refresh_status() -> void:
 		shown_seats = view.get("selected_seats", 0)
 	if shown_seats >= 1:
 		parts.append("seats=%d" % shown_seats)
+	var own_seat: int = view.get("seat", -1)
+	if own_seat >= 0 and (
+		play_state == MatchPlaySessionGd.STATE_IN_MATCH
+		or play_state == MatchPlaySessionGd.STATE_CONNECTING
+	):
+		parts.append("seat=%d" % own_seat)
 	var error_text: String = str(view.get("error", ""))
 	if error_text != "":
 		parts.append("error=%s" % error_text)
@@ -905,6 +918,12 @@ func _apply_snapshot_map() -> void:
 	if typeof(players_raw) != TYPE_ARRAY:
 		return
 	var players: Array = players_raw
+	if play != null and play.state == MatchPlaySessionGd.STATE_IN_MATCH:
+		var predicted: Dictionary = play.predict.try_apply(players, follow.players)
+		if predicted.get("ok", false):
+			var predicted_raw: Variant = predicted.get("players", [])
+			if typeof(predicted_raw) == TYPE_ARRAY:
+				players = predicted_raw
 	if map != null:
 		map.apply_players(players, follow.crates)
 	if crates != null:

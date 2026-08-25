@@ -5,12 +5,14 @@ extends RefCounted
 ## Commands use MatchFrameCodec; the command tick is 0 because the server
 ## tick is authoritative (CD-43 §3). Shove/Interact stay unencoded.
 ## Sockets stay outside this type. Interpolation is sampled by the lobby
-## from the follower's previous/latest poses. No prediction.
+## from the follower's previous/latest poses. Own-slot Move/Jump add a
+## local overlay via MatchLocalPredict; a newer snapshot tick hard-snaps.
 ## After a close, a new ticket from reconnect can try_begin again.
 ## try_leave returns the session to idle and drops followed snapshots.
 
 const MatchFrameCodec := preload("res://src/shared/protocol/match_frame_codec.gd")
 const MatchJoinSessionGd := preload("res://src/client/match_join_session.gd")
+const MatchLocalPredictGd := preload("res://src/client/match_local_predict.gd")
 const MatchSnapshotFollowGd := preload("res://src/client/match_snapshot_follow.gd")
 const PlayerIntentNames := preload("res://src/shared/commands/player_intent_names.gd")
 
@@ -23,7 +25,10 @@ const _YAW_OMITTED: int = -1
 var state: String = STATE_IDLE
 var websocket_url: String = ""
 var follow: MatchSnapshotFollowGd = MatchSnapshotFollowGd.new()
+var predict: MatchLocalPredictGd = MatchLocalPredictGd.new()
 var last_command: PackedByteArray = PackedByteArray()
+## Presentation jump stub; match-server jump_dy is still 0. Not a product height.
+var play_jump_dy: int = 0
 
 
 static func gateway_ws_url(gateway_base: String, ticket: String) -> String:
@@ -74,6 +79,10 @@ func try_begin(join: MatchJoinSessionGd, gateway_base: String) -> bool:
 		return false
 	websocket_url = url
 	follow = MatchSnapshotFollowGd.new()
+	predict = MatchLocalPredictGd.new()
+	if not predict.bind_slot(join.seat):
+		websocket_url = ""
+		return false
 	last_command = PackedByteArray()
 	state = STATE_CONNECTING
 	return true
@@ -97,6 +106,7 @@ func try_leave() -> bool:
 	state = STATE_IDLE
 	websocket_url = ""
 	follow = MatchSnapshotFollowGd.new()
+	predict = MatchLocalPredictGd.new()
 	last_command = PackedByteArray()
 	return true
 
@@ -104,7 +114,10 @@ func try_leave() -> bool:
 func on_binary(bytes: PackedByteArray) -> bool:
 	if state != STATE_IN_MATCH:
 		return false
-	return follow.apply_frame(bytes)
+	if not follow.apply_frame(bytes):
+		return false
+	predict.on_authoritative_tick(follow.tick)
+	return true
 
 
 func try_encode_intent(intent_name: String, dx: int, dz: int, yaw_bam: int) -> PackedByteArray:
@@ -123,6 +136,10 @@ func try_encode_intent(intent_name: String, dx: int, dz: int, yaw_bam: int) -> P
 	if bytes.is_empty():
 		return PackedByteArray()
 	last_command = bytes
+	if intent_name == PlayerIntentNames.MOVE:
+		predict.try_add_move(dx, dz)
+	elif intent_name == PlayerIntentNames.JUMP:
+		predict.try_add_jump(play_jump_dy)
 	return bytes
 
 
@@ -144,6 +161,7 @@ func status_view() -> Dictionary:
 		"tick": follow_view.get("tick", -1),
 		"player_count": follow_view.get("player_count", 0),
 		"crate_count": follow_view.get("crate_count", 0),
+		"own_slot": predict.own_slot,
 	}
 
 

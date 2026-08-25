@@ -125,6 +125,7 @@ func test_in_match_close_reconnects_and_follows_new_snapshot() -> void:
 		"ticket": "ticket-b",
 		"matchId": "match-1",
 		"expiresAt": "2026-08-25T04:11:00.000Z",
+		"seat": 0,
 	}))
 	assert_eq(_shell.join.ticket, "ticket-b")
 	assert_eq(_shell.play.state, MatchPlaySession.STATE_CONNECTING)
@@ -179,6 +180,7 @@ func test_reconnect_pending_cancel_does_not_reissue() -> void:
 		"ticket": "ticket-b",
 		"matchId": "match-1",
 		"expiresAt": "2026-08-25T04:11:00.000Z",
+		"seat": 0,
 	}))
 	assert_eq(_shell.play.state, MatchPlaySession.STATE_IDLE)
 	assert_eq(_shell.map.player_count(), 0)
@@ -435,34 +437,80 @@ func test_solo_uses_selected_official_course() -> void:
 	assert_true(_shell.status_label_text().contains("course=4/3/1"))
 
 
-func test_sub_cell_snapshot_interpolates_and_hidden_window_does_not_advance() -> void:
+func test_sub_cell_snapshot_interpolates_remote_and_own_slot_stays_on_latest() -> void:
 	_shell = _open_shell()
 	assert_true(_shell.try_quick())
 	assert_true(_shell.accept_http(201, _join("ABCD23", "ticket-interp")))
 	assert_true(_shell.on_socket_open())
-	assert_true(_shell.on_binary(_snapshot(1, 0, [_crate(40, 1)])))
+	assert_true(_shell.status_label_text().contains("seat=0"))
+	assert_true(_shell.on_binary(_two_player_snapshot(1, 0, 0, [_crate(40, 1)])))
 	assert_almost_eq(_shell.map.player_node(0).position.x, 0.0, 0.0001)
+	assert_almost_eq(_shell.map.player_node(1).position.x, 0.0, 0.0001)
 	assert_eq(_shell.interp_progress(), Fixed.SCALE)
 	assert_eq(_shell.crates.crate_count(), 1)
-	assert_true(_shell.on_binary(_snapshot(2, Fixed.SCALE / 2, [_crate(40, 0)])))
+	assert_true(_shell.on_binary(_two_player_snapshot(2, Fixed.SCALE / 2, Fixed.SCALE / 2, [_crate(40, 0)])))
 	assert_eq(_shell.interp_progress(), 0)
-	assert_almost_eq(_shell.map.player_node(0).position.x, 0.0, 0.0001)
-	assert_almost_eq(_shell.standings.standing_node(0).position.x, 0.0, 0.0001)
+	assert_almost_eq(_shell.map.player_node(0).position.x, 0.5, 0.0001)
+	assert_almost_eq(_shell.map.player_node(1).position.x, 0.0, 0.0001)
+	assert_almost_eq(_shell.standings.standing_node(0).position.x, 0.5, 0.0001)
+	assert_almost_eq(_shell.standings.standing_node(1).position.x, 0.0, 0.0001)
 	assert_eq(_shell.crates.crate_count(), 0)
 	_shell.play_interp_step = Fixed.SCALE / 2
 	assert_true(_shell.try_advance_interp())
-	assert_almost_eq(_shell.map.player_node(0).position.x, 0.25, 0.0001)
-	assert_almost_eq(_shell.standings.standing_node(0).position.x, 0.25, 0.0001)
+	assert_almost_eq(_shell.map.player_node(0).position.x, 0.5, 0.0001)
+	assert_almost_eq(_shell.map.player_node(1).position.x, 0.25, 0.0001)
 	assert_eq(_shell.crates.crate_count(), 0)
 	assert_true(_shell.try_advance_interp())
-	assert_almost_eq(_shell.map.player_node(0).position.x, 0.5, 0.0001)
+	assert_almost_eq(_shell.map.player_node(1).position.x, 0.5, 0.0001)
 	assert_eq(_shell.interp_progress(), Fixed.SCALE)
 	assert_false(_shell.try_advance_interp())
 	_shell.hide_window()
 	assert_false(_shell.try_advance_interp())
-	assert_almost_eq(_shell.map.player_node(0).position.x, 0.5, 0.0001)
+	assert_almost_eq(_shell.map.player_node(1).position.x, 0.5, 0.0001)
 	assert_false(_shell.allows_settlement())
 	assert_false(_shell.allows_online_writes())
+
+
+func test_own_slot_move_predicts_until_newer_snapshot() -> void:
+	_shell = _open_shell()
+	assert_true(_shell.try_quick())
+	assert_true(_shell.accept_http(201, _join("ABCD23", "ticket-predict")))
+	assert_true(_shell.on_socket_open())
+	assert_true(_shell.on_binary(_snapshot(1, 0, [_crate(40, 1)])))
+	assert_almost_eq(_shell.map.player_node(0).position.x, 0.0, 0.0001)
+	var step: float = float(_shell.play_move_step) / float(Fixed.SCALE)
+	var move: PackedByteArray = _shell.try_sample_play_move(false, false, false, true)
+	assert_false(move.is_empty())
+	assert_almost_eq(_shell.map.player_node(0).position.x, step, 0.0001)
+	assert_almost_eq(_shell.standings.standing_node(0).position.x, step, 0.0001)
+	assert_eq(_shell.crates.crate_count(), 1)
+	assert_true(_shell.on_binary(_snapshot(2, 0, [_crate(40, 1)])))
+	assert_almost_eq(_shell.map.player_node(0).position.x, 0.0, 0.0001)
+	assert_eq(_shell.play.predict.dx, 0)
+	assert_false(_shell.try_sample_play_move(false, false, false, true).is_empty())
+	assert_almost_eq(_shell.map.player_node(0).position.x, step, 0.0001)
+	assert_true(_shell.on_binary(_snapshot(3, _shell.play_move_step, [_crate(40, 1)])))
+	assert_almost_eq(_shell.map.player_node(0).position.x, step, 0.0001)
+	assert_eq(_shell.play.predict.dx, 0)
+	_shell.play.play_jump_dy = Fixed.SCALE
+	assert_false(_shell.try_sample_play_jump(true).is_empty())
+	assert_almost_eq(_shell.map.player_node(0).position.y, 1.0, 0.0001)
+	assert_false(_shell.allows_settlement())
+	assert_false(_shell.allows_online_writes())
+
+
+func test_offline_solo_does_not_stack_local_predict_overlay() -> void:
+	_shell = _open_shell()
+	assert_true(_shell.try_solo())
+	assert_eq(_shell.play.state, MatchPlaySession.STATE_IDLE)
+	assert_eq(_shell.play.predict.own_slot, -1)
+	var origin_x: float = _shell.map.player_node(0).position.x
+	var move: PackedByteArray = _shell.try_sample_play_move(false, false, false, true)
+	assert_false(move.is_empty())
+	assert_eq(_shell.play.predict.dx, 0)
+	var moved_x: float = _shell.map.player_node(0).position.x
+	var step: float = float(_shell.play_move_step) / float(Fixed.SCALE)
+	assert_almost_eq(moved_x - origin_x, step, 0.0001)
 
 
 func _open_shell() -> MatchLobbyShell:
@@ -481,6 +529,7 @@ func _join(room_code: String, ticket: String, course: String = "course_01", seat
 		"expiresAt": "2026-08-25T03:00:00.000Z",
 		"seats": seats,
 		"issued": 1,
+		"seat": 0,
 		"course": course,
 	}
 
@@ -494,6 +543,19 @@ func _crate(entity_id: int, durability: int) -> Dictionary:
 
 func _snapshot(tick: int, x: int, crates: Array[Dictionary] = []) -> PackedByteArray:
 	var players: Array[Dictionary] = [_ranked_player(x, 0, -1)]
+	return MatchFrameCodec.encode_snapshot(tick, players, crates)
+
+
+func _two_player_snapshot(
+	tick: int,
+	own_x: int,
+	remote_x: int,
+	crates: Array[Dictionary] = []
+) -> PackedByteArray:
+	var players: Array[Dictionary] = [
+		_ranked_player(own_x, 0, -1),
+		_ranked_player(remote_x, 0, -1),
+	]
 	return MatchFrameCodec.encode_snapshot(tick, players, crates)
 
 
