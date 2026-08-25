@@ -2,6 +2,7 @@ extends GutTest
 
 ## MatchLocalPredict: own-slot Move/Jump overlay on latest authority.
 ## Newer tick hard-snaps. Own slot is not interpolated. Overflow snaps.
+## Latest live crates and latest remote capsules drop the overlay this frame.
 
 const MatchLocalPredict := preload("res://src/client/match_local_predict.gd")
 const MatchMoveFacing := preload("res://src/client/match_move_facing.gd")
@@ -105,7 +106,7 @@ func test_remote_slot_keeps_sampled_and_missing_own_slot_is_noop() -> void:
 	assert_true(predict.try_add_move(HALF, 0))
 	var applied: Dictionary = predict.try_apply(
 		[_player(0, 0, 0, 0, 0, -1), _player(CELL, 0, 0, 0, 1, -1)],
-		[_player(HALF, 0, 0, 0, 0, -1), _player(CELL, 0, 0, 0, 1, -1)],
+		[_player(HALF, 0, 0, 0, 0, -1), _player(4 * CELL, 0, 0, 0, 1, -1)],
 	)
 	var players: Array = _players(applied)
 	assert_eq(players.size(), 2)
@@ -144,6 +145,100 @@ func test_malformed_latest_fails_and_overflow_snaps_to_latest() -> void:
 	assert_eq(_int(_first(snapped), "accepted_count"), 0)
 
 
+func test_open_ground_overlay_still_applies() -> void:
+	var predict: MatchLocalPredict = MatchLocalPredict.new()
+	assert_true(predict.bind_slot(0))
+	predict.on_authoritative_tick(1)
+	assert_true(predict.try_add_move(HALF, HALF / 2))
+	var applied: Dictionary = predict.try_apply(
+		[_player(0, 0, 0, 0, 0, -1)],
+		[_player(0, 0, 0, 0, 0, -1)],
+		[_solid_box(0, 0, CELL, HALF, HALF, HALF)],
+	)
+	assert_true(_ok(applied))
+	assert_eq(_int(_first(applied), "x"), HALF)
+	assert_eq(_int(_first(applied), "z"), HALF / 2)
+	assert_eq(predict.dx, HALF)
+	assert_eq(predict.dz, HALF / 2)
+
+
+func test_predicted_capsule_stops_on_live_crate() -> void:
+	var predict: MatchLocalPredict = MatchLocalPredict.new()
+	assert_true(predict.bind_slot(0))
+	predict.on_authoritative_tick(1)
+	assert_true(predict.try_add_move(0, CELL))
+	var blocked: Dictionary = predict.try_apply(
+		[_player(0, 0, 0, 0, 0, -1)],
+		[_player(0, 0, 0, 0, 0, -1)],
+		[_solid_box(0, 0, CELL, HALF, HALF, HALF)],
+	)
+	assert_true(_ok(blocked))
+	assert_eq(_int(_first(blocked), "z"), 0)
+	assert_eq(predict.dz, CELL)
+	var clear: Dictionary = predict.try_apply(
+		[_player(0, 0, 0, 0, 0, -1)],
+		[_player(0, 0, 0, 0, 0, -1)],
+		[],
+	)
+	assert_eq(_int(_first(clear), "z"), CELL)
+
+
+func test_broken_or_omitted_crate_does_not_block() -> void:
+	var predict: MatchLocalPredict = MatchLocalPredict.new()
+	assert_true(predict.bind_slot(0))
+	predict.on_authoritative_tick(1)
+	assert_true(predict.try_add_move(0, CELL))
+	var omitted: Dictionary = predict.try_apply(
+		[_player(0, 0, 0, 0, 0, -1)],
+		[_player(0, 0, 0, 0, 0, -1)],
+		[],
+	)
+	assert_eq(_int(_first(omitted), "z"), CELL)
+	assert_true(predict.bind_slot(0))
+	predict.on_authoritative_tick(2)
+	assert_true(predict.try_add_move(0, CELL, MatchMoveFacing.YAW_BACK))
+	var malformed: Dictionary = predict.try_apply(
+		[_player(0, 0, 0, 0, 0, -1)],
+		[_player(0, 0, 0, Fixed.BAM_QUARTER, 0, -1)],
+		[{"x": 0, "z": CELL}],
+	)
+	assert_eq(_int(_first(malformed), "z"), CELL)
+	assert_eq(_int(_first(malformed), "yaw_bam"), MatchMoveFacing.YAW_BACK)
+
+
+func test_latest_remote_capsule_blocks_and_far_remote_does_not() -> void:
+	var predict: MatchLocalPredict = MatchLocalPredict.new()
+	assert_true(predict.bind_slot(0))
+	predict.on_authoritative_tick(1)
+	assert_true(predict.try_add_move(CELL, 0, MatchMoveFacing.YAW_RIGHT))
+	var blocked: Dictionary = predict.try_apply(
+		[_player(0, 0, 0, 0, 0, -1), _player(CELL, 0, 0, 0, 1, -1)],
+		[_player(0, 0, 0, 0, 0, -1), _player(CELL, 0, 0, 0, 1, -1)],
+	)
+	var blocked_players: Array = _players(blocked)
+	var blocked_own_raw: Variant = blocked_players[0]
+	var blocked_remote_raw: Variant = blocked_players[1]
+	assert_eq(typeof(blocked_own_raw), TYPE_DICTIONARY)
+	assert_eq(typeof(blocked_remote_raw), TYPE_DICTIONARY)
+	var blocked_own: Dictionary = blocked_own_raw
+	var blocked_remote: Dictionary = blocked_remote_raw
+	assert_eq(_int(blocked_own, "x"), 0)
+	assert_eq(_int(blocked_own, "yaw_bam"), 0)
+	assert_eq(_int(blocked_remote, "x"), CELL)
+	assert_eq(predict.dx, CELL)
+	assert_eq(predict.yaw_bam, MatchMoveFacing.YAW_RIGHT)
+	var far: Dictionary = predict.try_apply(
+		[_player(0, 0, 0, 0, 0, -1), _player(4 * CELL, 0, 0, 0, 1, -1)],
+		[_player(0, 0, 0, 0, 0, -1), _player(4 * CELL, 0, 0, 0, 1, -1)],
+	)
+	var far_players: Array = _players(far)
+	var far_own_raw: Variant = far_players[0]
+	assert_eq(typeof(far_own_raw), TYPE_DICTIONARY)
+	var far_own: Dictionary = far_own_raw
+	assert_eq(_int(far_own, "x"), CELL)
+	assert_eq(_int(far_own, "yaw_bam"), MatchMoveFacing.YAW_RIGHT)
+
+
 func _player(
 	x: int,
 	y: int,
@@ -159,6 +254,17 @@ func _player(
 		"yaw_bam": yaw_bam,
 		"accepted_count": accepted_count,
 		"finish_tick": finish_tick,
+	}
+
+
+func _solid_box(x: int, y: int, z: int, hx: int, hy: int, hz: int) -> Dictionary:
+	return {
+		"x": x,
+		"y": y,
+		"z": z,
+		"hx": hx,
+		"hy": hy,
+		"hz": hz,
 	}
 
 

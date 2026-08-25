@@ -44,6 +44,17 @@ func test_official_course_01_maps_alive_crate() -> void:
 	assert_almost_eq(box.size.x, 1.0, EPS)
 	assert_false(_map.allows_settlement())
 	assert_false(_map.allows_online_writes())
+	var solids: Array = _map.live_solid_boxes()
+	assert_eq(solids.size(), 1)
+	var solid_raw: Variant = solids[0]
+	assert_eq(typeof(solid_raw), TYPE_DICTIONARY)
+	var solid: Dictionary = solid_raw
+	assert_eq(_int(solid, "x"), 0)
+	assert_eq(_int(solid, "y"), 0)
+	assert_eq(_int(solid, "z"), CELL)
+	assert_eq(_int(solid, "hx"), CELL / 2)
+	assert_eq(_int(solid, "hy"), CELL / 2)
+	assert_eq(_int(solid, "hz"), CELL / 2)
 
 
 func test_official_courses_map_distinct_crate_layouts() -> void:
@@ -69,6 +80,7 @@ func test_empty_bundle_clears_crates() -> void:
 	assert_true(_map.apply_bundle(bundle))
 	assert_eq(_map.crate_count(), 0)
 	assert_eq(_map.crate_total(), 0)
+	assert_eq(_map.live_solid_boxes().size(), 0)
 	assert_null(_map.crate_node(40))
 
 
@@ -102,6 +114,7 @@ func test_snapshot_durability_hides_and_restores_without_moving() -> void:
 	assert_true(_map.apply_crates([_crate(40, 0)]))
 	assert_eq(_map.crate_count(), 0)
 	assert_eq(_map.crate_total(), 1)
+	assert_eq(_map.live_solid_boxes().size(), 0)
 	assert_null(_map.crate_node(40))
 	assert_true(_map.apply_crates([_crate(40, 1)]))
 	assert_eq(_map.crate_total(), 1)
@@ -117,6 +130,7 @@ func test_empty_or_unlisted_snapshot_hides_topology_crates() -> void:
 	assert_true(_map.apply_path(COURSE_01_PATH))
 	assert_true(_map.apply_crates([]))
 	assert_eq(_map.crate_count(), 0)
+	assert_eq(_map.live_solid_boxes().size(), 0)
 	assert_true(_map.apply_crates([_crate(99, 1)]))
 	assert_eq(_map.crate_count(), 0)
 	assert_null(_map.crate_node(40))
@@ -166,3 +180,10 @@ func _snapshot(tick: int, crates: Array[Dictionary]) -> PackedByteArray:
 		"finish_tick": -1,
 	}]
 	return MatchFrameCodec.encode_snapshot(tick, players, crates)
+
+
+func _int(body: Dictionary, key: String) -> int:
+	var raw: Variant = body.get(key, -1)
+	if typeof(raw) != TYPE_INT:
+		return -1
+	return raw

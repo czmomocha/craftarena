@@ -6,7 +6,9 @@ extends Node3D
 ## durability. Float conversion happens only here. Placeholders are not
 ## hitboxes. Durability <= 0 or a crate omitted from the snapshot removes
 ## the box. crate_count is live boxes; crate_total stays the compiled bag
-## count. Snapshots never move a crate. Portal source→dest bars stay
+## count. live_solid_boxes() returns compiled Q48.16 centers plus cell/2
+## half-extents for durability > 0 crates (authoring lattice, not the 1 m
+## placeholder). Snapshots never move a crate. Portal source→dest bars stay
 ## undrawn here; MatchPortalLinkMap draws them. Checkpoint-order gizmos
 ## stay undrawn here; MatchCheckpointOrderMap draws them. Standing labels
 ## stay undrawn here; MatchStandingMap draws them. No interpolation,
@@ -21,7 +23,9 @@ const PLACEHOLDER_SIZE: Vector3 = Vector3(1.0, 1.0, 1.0)
 const _CRATE_ALBEDO: Color = Color(0.85, 0.4, 0.25)
 
 var _has_course: bool = false
+var _cell: int = 0
 var _poses: Array[Dictionary] = []
+var _live_solids: Array[Dictionary] = []
 var _crate_count: int = 0
 
 
@@ -52,6 +56,7 @@ func apply_bundle(bundle: SimulationBundle) -> bool:
 	if not _bags_are_mappable(bundle.destructibles):
 		return false
 	_has_course = true
+	_cell = bundle.cell
 	_poses = _copy_poses(bundle.destructibles)
 	_rebuild(_durability_from_bags(bundle.destructibles))
 	return true
@@ -82,6 +87,23 @@ func crate_total() -> int:
 
 func crate_node(entity_id: int) -> MeshInstance3D:
 	return get_node_or_null(crate_name(entity_id)) as MeshInstance3D
+
+
+func live_solid_boxes() -> Array:
+	var boxes: Array = []
+	if _cell < 1:
+		return boxes
+	var half: int = _cell / 2
+	for pose: Dictionary in _live_solids:
+		boxes.append({
+			"x": pose["x"],
+			"y": pose["y"],
+			"z": pose["z"],
+			"hx": half,
+			"hy": half,
+			"hz": half,
+		})
+	return boxes
 
 
 func link_node_count() -> int:
@@ -189,6 +211,7 @@ func _durability_from_snapshot(crates: Array) -> Dictionary:
 
 func _rebuild(lookup: Dictionary) -> void:
 	_clear_crates()
+	_live_solids = []
 	for pose: Dictionary in _poses:
 		var entity_id: int = pose["entity_id"]
 		if not lookup.has(entity_id):
@@ -196,6 +219,11 @@ func _rebuild(lookup: Dictionary) -> void:
 		var durability: int = lookup[entity_id]
 		if durability <= 0:
 			continue
+		_live_solids.append({
+			"x": pose["x"],
+			"y": pose["y"],
+			"z": pose["z"],
+		})
 		_spawn_box(crate_name(entity_id), pose)
 	_crate_count = _visible_count()
 
