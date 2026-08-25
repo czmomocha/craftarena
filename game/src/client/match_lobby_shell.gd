@@ -4,18 +4,21 @@ extends Node
 ## TRAPRUSH channel lobby (CD-12): quick play, room code, FIFO wait.
 ## Code-created Window; close only hides. Injected HTTP/WS in tests;
 ## live_io uses HTTPRequest + WebSocketPeer. Follows the latest snapshot
-## and maps player poses to 1 m boxes. No interpolation. WASD / Jump /
-## Reset / Use item encode existing intents. play_move_step is a
-## presentation stub, not a product speed. No BASTION, accounts,
-## reconnect tickets, settlement, or offline writes.
+## and maps player poses to 1 m boxes. Maps compiled course occupancy
+## (pads / portals / finish) to 1 m boxes. Destructibles stay undrawn.
+## No interpolation. WASD / Jump / Reset / Use item encode existing
+## intents. play_move_step is a presentation stub, not a product speed.
+## No BASTION, accounts, reconnect tickets, settlement, or offline writes.
 
 const MatchFrameCodec := preload("res://src/shared/protocol/match_frame_codec.gd")
 const MatchJoinSessionGd := preload("res://src/client/match_join_session.gd")
 const MatchPlaySessionGd := preload("res://src/client/match_play_session.gd")
+const MatchCourseMapGd := preload("res://src/client/match_course_map.gd")
 const MatchSnapshotMapGd := preload("res://src/client/match_snapshot_map.gd")
 const PlayerIntentNames := preload("res://src/shared/commands/player_intent_names.gd")
 
 const TITLE: String = "Traprush"
+const DEFAULT_COURSE: String = "res://content/official/traprush/course_01.json"
 const DEFAULT_CONTROL_PLANE: String = "http://127.0.0.1:8080"
 const DEFAULT_GATEWAY: String = "ws://127.0.0.1:8090"
 const DEFAULT_QUEUE_POLL_S: float = 1.0
@@ -27,6 +30,7 @@ const POLL_NAME: String = "Poll"
 const ROOM_NAME: String = "RoomCode"
 const _STATUS_NAME: String = "Status"
 const _MAP_NAME: String = "SnapshotMap"
+const _COURSE_NAME: String = "CourseMap"
 const _MOVE_FORWARD: String = "move_forward"
 const _MOVE_BACK: String = "move_back"
 const _MOVE_LEFT: String = "move_left"
@@ -37,10 +41,12 @@ const _JUMP: String = "jump"
 var join: MatchJoinSessionGd = null
 var play: MatchPlaySessionGd = null
 var map: MatchSnapshotMapGd = null
+var course: MatchCourseMapGd = null
 var window: Window = null
 var live_io: bool = false
 var control_plane_base: String = DEFAULT_CONTROL_PLANE
 var gateway_base: String = DEFAULT_GATEWAY
+var course_path: String = DEFAULT_COURSE
 var play_move_step: int = Fixed.SCALE / 16
 var queue_poll_s: float = DEFAULT_QUEUE_POLL_S
 var last_sent_command: PackedByteArray = PackedByteArray()
@@ -256,8 +262,15 @@ func status_view() -> Dictionary:
 	if play != null:
 		play_view = play.status_view()
 	var mapped_players: int = 0
+	var mapped_pads: int = 0
+	var mapped_portals: int = 0
+	var mapped_finish: int = 0
 	if map != null:
 		mapped_players = map.player_count()
+	if course != null:
+		mapped_pads = course.pad_count()
+		mapped_portals = course.portal_count()
+		mapped_finish = course.finish_count()
 	return {
 		"join_state": join_view.get("state", ""),
 		"error": join_view.get("error", ""),
@@ -271,6 +284,9 @@ func status_view() -> Dictionary:
 		"player_count": play_view.get("player_count", 0),
 		"crate_count": play_view.get("crate_count", 0),
 		"mapped_players": mapped_players,
+		"mapped_pads": mapped_pads,
+		"mapped_portals": mapped_portals,
+		"mapped_finish": mapped_finish,
 		"window_visible": is_window_visible(),
 	}
 
@@ -347,8 +363,12 @@ func _ensure_window() -> void:
 	map = MatchSnapshotMapGd.new()
 	map.name = _MAP_NAME
 	window.add_child(map)
+	course = MatchCourseMapGd.new()
+	course.name = _COURSE_NAME
+	map.add_child(course)
 	add_child(window)
 	map.ensure_rig()
+	course.apply_path(course_path)
 
 
 func _ensure_http() -> void:
@@ -495,6 +515,10 @@ func _refresh_status() -> void:
 		parts.append("crates=%d" % crate_count)
 		var mapped_players: int = view.get("mapped_players", 0)
 		parts.append("mapped=%d" % mapped_players)
+	var mapped_pads: int = view.get("mapped_pads", 0)
+	var mapped_portals: int = view.get("mapped_portals", 0)
+	var mapped_finish: int = view.get("mapped_finish", 0)
+	parts.append("course=%d/%d/%d" % [mapped_pads, mapped_portals, mapped_finish])
 	_status.text = " ".join(parts)
 
 
