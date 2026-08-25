@@ -5,12 +5,17 @@ extends GutTest
 ## --max-ticks, boots a TraprushMatchSession from the course, ticks with the
 ## engine physics loop (not a locked product tick rate), prints structured
 ## heartbeat JSON and exits 0 at --max-ticks or 1 on bad config.
-## No sockets yet: the port is reserved by MatchHost bookkeeping; the WebSocket
-## listener is a later chapter.
+## Boot applies Solo-matching action stubs (jump/support/use-item). Official
+## course_01 crate is in reach from spawn. Jump remains an airborne no-op on
+## official courses (no solid footing). These stubs are not product numbers.
 
 const AuthoringDocument := preload("res://src/creator/authoring_document.gd")
 const AuthoringWorld := preload("res://src/creator/authoring_world.gd")
+const Fixed := preload("res://src/shared/fixed/fixed.gd")
+const MatchFrameCodec := preload("res://src/shared/protocol/match_frame_codec.gd")
+const MatchRealtime := preload("res://src/server/match_realtime.gd")
 const MatchServer := preload("res://src/server/match_server.gd")
+const PlayerIntentNames := preload("res://src/shared/commands/player_intent_names.gd")
 const SimulationBundle := preload("res://src/ugc/simulation_bundle.gd")
 const TraprushMatchSession := preload("res://src/games/traprush/match_session.gd")
 const TraprushTopologyCompiler := preload("res://src/ugc/traprush_topology_compiler.gd")
@@ -91,6 +96,37 @@ func test_boot_session_from_config() -> void:
 	var x1: int = pose1.get("x", 0)
 	var z1: int = pose1.get("z", 0)
 	assert_ne(Vector3i(x0, 0, z0), Vector3i(x1, 0, z1))
+	assert_eq(session.jump_dy, Fixed.SCALE)
+	assert_eq(session.support_dy, Fixed.SCALE)
+	assert_eq(session.use_item_damage, 1)
+	assert_eq(session.use_item_reach_dx, 0)
+	assert_eq(session.use_item_reach_dy, 0)
+	assert_eq(session.use_item_reach_dz, Fixed.SCALE)
+
+
+func test_boot_session_use_item_breaks_course_01_crate() -> void:
+	var config: Dictionary = MatchServer._boot_config({
+		"match-id": "m1", "port": "42000", "course": COURSE_01_PATH, "players": "1",
+	})
+	var session: TraprushMatchSession = MatchServer.boot_session(config)
+	assert_not_null(session)
+	assert_eq(session.destructible_alive_count(), 1)
+	var realtime: MatchRealtime = MatchRealtime.create(session)
+	assert_eq(realtime.add_player(), 0)
+	assert_true(realtime.accept_command(
+		0,
+		MatchFrameCodec.encode_command(0, PlayerIntentNames.USE_ITEM, 0, 0, 0)
+	))
+	realtime.commit_tick()
+	assert_eq(session.destructible_alive_count(), 0)
+	var snapshot: Dictionary = MatchFrameCodec.decode_snapshot(realtime.snapshot_frame())
+	var snapshot_ok: bool = snapshot.get("ok", false)
+	assert_true(snapshot_ok)
+	var crates: Array = snapshot.get("crates", [])
+	assert_eq(crates.size(), 1)
+	var crate: Dictionary = crates[0]
+	var durability: int = crate.get("durability", -1)
+	assert_eq(durability, 0)
 
 
 func test_boot_session_rejects_bad_config() -> void:
