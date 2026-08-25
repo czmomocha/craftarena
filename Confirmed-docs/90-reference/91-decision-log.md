@@ -213,6 +213,7 @@
 - `match_own_slot_tint = follow_slot_albedo`（2026-08-25）：大厅 `follow_slot` 把本席玩家盒涂成 `OWN_ALBEDO`（青），远端仍 `REMOTE_ALBEDO`（海军蓝）；名次标本席前缀 `*`。`follow_slot < 0` 时全员远端色。不是产品皮肤或槽位色盘。不锁账号绑定、远端外推碰撞、平滑对账、离开对局 HTTP。口径见 [CD-12 §1](../10-product/12-product-structure.md#1-入口结构)。
 - `match_pad_progress = own_accepted_count_tint`（2026-08-25）：大厅本席 `accepted_count` 把编译拓扑检查点垫涂成已验收 / 当前目标 / 未到；`accepted_count < 0` 保持原垫色。不是走路可达或合法路径距离。不锁账号绑定、远端外推碰撞、平滑对账、离开对局 HTTP。口径见 [CD-12 §1](../10-product/12-product-structure.md#1-入口结构)。
 - `match_finish_loop = own_finish_hud_result`（2026-08-25）：大厅本席 `finish_tick` 把终点涂成未到 / 当前目标 / 已冲线；HUD 写 `pads=n/m` 与 `finish=n`；快照全员 `finish_tick>=0` 时加 `result=`。本地表现，不是结算写库或 GET 结算面板。不锁账号绑定、远端外推碰撞、平滑对账、离开对局 HTTP。口径见 [CD-12 §1](../10-product/12-product-structure.md#1-入口结构)。
+- `match_lobby_reset_hud = floor_crates_reset`（2026-08-25）：大厅开玩 HUD 写 `floor=n`（本席权威 `y / Fixed.SCALE` 向零，不用插值采样）与 `crates=n/m`（活着的箱 / 编译袋总数）；R 上升沿把已有 ResetToCheckpointIntent 接到可见复位，进度不回退。不是长按时长、走路可达或结算写库。不锁离开对局 HTTP。口径见 [CD-12 §1](../10-product/12-product-structure.md#1-入口结构)。
 
 ## D.9 明确延期或跳过
 

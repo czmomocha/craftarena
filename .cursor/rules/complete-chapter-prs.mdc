@@ -13,6 +13,6 @@ alwaysApply: true
 
 真机：PR Test plan 与 [章节真机清单](docs/runbooks/chapter-device-check.md) 本刀必须是编号步骤（怎么开、点什么、期望 / 失败）；禁止只写「真机再看一眼」。无 GUI 的章写「无」加原因。人工检查，不是 CI 门禁。口径见 [CD-52 §3.2](Confirmed-docs/50-engineering/52-ai-workflow.md)。
 
-- 做：M3 「对局大厅本席冲线闭环表现」——终点按本席 `finish_tick` 分未到 / 当前 / 已冲线；HUD `pads=n/m` / `finish=n`；全员冲线后 `result=`；不是结算写库，作为一章。
+- 做：M3 「对局大厅本席复位与楼层/箱子 HUD」——开玩 HUD `floor=n` / `crates=n/m`；R 把已有 ResetToCheckpointIntent 接到可见复位；不是长按时长或结算写库，作为一章。
 - 不做：账号绑定、远端外推碰撞、平滑对账、可达性叠加 gizmos、走路可达/合法路径距离、检查点到达时间、本机最佳轨迹幽灵、已缓存 UGC/草稿试玩、个人试玩记录落盘、墙钟发送速率、MMR、限时未全员冲线结算、Shove/Interact 线上 id、Tick/快照频率锁定、2 秒云端上传、5 分钟定时、BASTION 面板、批量生成、性能分析、时延自动门禁、重力/下落、二进制签名、产品速度、复活硬直、产品镜头/FOV、离开对局 HTTP；不开 M4 / M5 新章节；不为了两域并行而各交半章。
 - 仍不做：把预算数字、走路可达、多人试玩房、Rule VM 真应用和整个 M3 塞进一个 PR。

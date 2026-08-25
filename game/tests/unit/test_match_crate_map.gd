@@ -31,6 +31,7 @@ func test_official_course_01_maps_alive_crate() -> void:
 	add_child(_map)
 	assert_true(_map.apply_path(COURSE_01_PATH))
 	assert_eq(_map.crate_count(), 1)
+	assert_eq(_map.crate_total(), 1)
 	assert_eq(_map.checkpoint_node_count(), 0)
 	assert_eq(_map.standing_node_count(), 0)
 	var crate: MeshInstance3D = _map.crate_node(40)
@@ -67,6 +68,7 @@ func test_empty_bundle_clears_crates() -> void:
 	assert_not_null(bundle)
 	assert_true(_map.apply_bundle(bundle))
 	assert_eq(_map.crate_count(), 0)
+	assert_eq(_map.crate_total(), 0)
 	assert_null(_map.crate_node(40))
 
 
@@ -99,8 +101,10 @@ func test_snapshot_durability_hides_and_restores_without_moving() -> void:
 	assert_true(_map.apply_path(COURSE_01_PATH))
 	assert_true(_map.apply_crates([_crate(40, 0)]))
 	assert_eq(_map.crate_count(), 0)
+	assert_eq(_map.crate_total(), 1)
 	assert_null(_map.crate_node(40))
 	assert_true(_map.apply_crates([_crate(40, 1)]))
+	assert_eq(_map.crate_total(), 1)
 	var crate: MeshInstance3D = _map.crate_node(40)
 	assert_not_null(crate)
 	assert_almost_eq(crate.position.x, 0.0, EPS)
