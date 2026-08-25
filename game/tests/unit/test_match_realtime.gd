@@ -8,8 +8,9 @@ extends GutTest
 ## The command tick field is decoded but never trusted for timing: the
 ## server tick is authoritative. Applied commands that change authority
 ## state (session hash or crate durability) update last_valid_input_tick
-## for MatchHost lease renew (CD-44 §3).
-## Sockets are a thin wrapper in match_server.gd; network correctness tests
+## for MatchHost lease renew (CD-44 §3). Oversize Move (|dx| or |dz| above
+## MOVE_STEP_MAX) still queues but apply fails, so the tick is spent and
+## pose / renew tick stay put. Sockets are a thin wrapper in match_server.gd; network correctness tests
 ## stay manual (CD-91 D.8). No settlement, no online writes.
 
 const AuthoringDocument := preload("res://src/creator/authoring_document.gd")
@@ -297,6 +298,22 @@ func test_use_item_that_breaks_crate_counts_as_valid_input() -> void:
 	realtime.commit_tick()
 	assert_eq(realtime.last_valid_input_tick(), 1)
 	assert_eq(realtime.session.destructible_alive_count(), 0)
+
+
+func test_oversize_move_frame_does_not_teleport_or_renew() -> void:
+	var realtime: MatchRealtime = _two_player_realtime()
+	var slot: int = realtime.add_player()
+	var before: Dictionary = realtime.session.player_pose(slot)
+	var before_x: int = before.get("x", -1)
+	assert_true(realtime.accept_command(
+		slot,
+		MatchFrameCodec.encode_command(0, PlayerIntentNames.MOVE, CELL + 1, 0, -1)
+	))
+	realtime.commit_tick()
+	var after: Dictionary = realtime.session.player_pose(slot)
+	var after_x: int = after.get("x", -2)
+	assert_eq(after_x, before_x)
+	assert_eq(realtime.last_valid_input_tick(), -1)
 
 
 func _two_player_realtime() -> MatchRealtime:

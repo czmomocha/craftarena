@@ -53,27 +53,19 @@ Worktree 端口偏移见 README「并行工作区」；本文件不复述端口�
 
 ---
 
-## 本刀：网关进程内 TLS
+## 本刀：权威 Move 位移门禁
 
-对应：当前完整章节 PR。锁的是 **网关可在进程内终结 TLS**：成对设置 `GATEWAY_TLS_CERT` / `GATEWAY_TLS_KEY` 后客户端走 `wss`；都不设则仍明文 `ws`（本机开发）。对局进程上游仍是内网明文 `ws`。默认 `npm run dev` 不启用 TLS。生产 CA、控制面 HTTPS、MatchHost 子进程 TLS 仍待。
+对应：当前完整章节 PR。锁的是 **对局权威拒绝超一格 Move**：|dx| 或 |dz| 大于 `Fixed.SCALE` 的命令整条不应用（不裁剪）。诚实大厅 WASD 仍是每拍 `SCALE/16`。超限伪造由 GUT 覆盖。不是产品速度。
 
-### 1. 默认明文仍能玩
+### 1. Quick play 后 WASD 仍能走
 
 前置：共用启动 0.1（`npm run dev`）与 0.2。
 
-预期：状态行含 `tls=off`、`join=idle`、`play=idle`。失败：没有 `tls=`，或显示 `tls=on`。
+操作：点 **Quick play**，等到 `play=connecting` 或 `in_match`（或 Solo play 开玩），点窗口内部一次，按 **W**。
 
-### 2. Quick play 仍走明文网关
-
-操作：点 **Quick play**。
-
-预期：状态行仍含 `tls=off`；`join` 离开 idle（出现 `pending=1`，或 `play=connecting` / `in_match`）。失败：进不去、或变成 `tls=on`。
-
-### 3. wss 不在本窗口手测
-
-自签夹具与未信任证书拒绝握手由 `npm test` 覆盖。不要改 `npm run dev` 去挂证书；DevLauncher 的 `/readyz` 仍走 http。
+预期：青色本席盒向前移动；状态行 `tls=off`（默认明文）。失败：进不去、或 WASD 完全无位移。
 
 ### 本刀不测
 
-- 生产 CA 信任链、控制面 HTTPS、MatchHost 子进程 TLS；
-- 离开对局 HTTP、账号绑定、平滑对账、远端外推。
+- 在窗口里手造超大位移帧（GUT / 线上夹具已覆盖）；
+- 产品速度、墙钟发送速率、平滑对账、离开对局 HTTP。

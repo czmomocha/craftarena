@@ -6,6 +6,8 @@ extends RefCounted
 ## 客户端不得发送完成断言。每玩家独立 CheckpointTrack / finish_tick /
 ## 传送门闩；可破坏箱全员共享（一人破坏，全员可走）。
 ## 出生偏移、跳跃/支撑/道具伤害与触达数值由调用方传入，不锁产品数值。
+## Move |dx|/|dz| 不得超过 MOVE_STEP_MAX（Fixed.SCALE，每命令一格）：超限整条
+## 拒绝，不裁剪。这是防瞬移门禁，不是产品速度。Preview IntentStepper 不经此门。
 ## 语义与 AuthoringPreview 试玩逐字对齐：同一 IntentStepper、同一占用扫描
 ## 顺序（垫→门→垫→终点）。无网络、无结算、不在线写入。
 ## 直播名次由 TraprushStanding 从 accepted_count / finish_tick 派生。
@@ -27,6 +29,8 @@ const TraprushDestructible := preload("res://src/games/traprush/destructible.gd"
 const UseItemIntent := preload("res://src/games/traprush/use_item_intent.gd")
 
 const MAX_PLAYERS: int = 8
+## 每条 Move 命令每轴上限。等于 Fixed.SCALE（1 格）。不是产品速度。
+const MOVE_STEP_MAX: int = Fixed.SCALE
 
 var jump_dy: int = 0
 var support_dy: int = 0
@@ -210,6 +214,11 @@ func apply_player_intent(slot: int, payload: Dictionary) -> bool:
 		return _try_use_item(player, payload)
 	var move_decoded: Dictionary = MoveIntent.decode(payload)
 	var move_ok: bool = move_decoded.get("ok", false)
+	if move_ok:
+		var move_dx: int = move_decoded.get("dx", 0)
+		var move_dz: int = move_decoded.get("dz", 0)
+		if not move_step_allowed(move_dx, move_dz):
+			return false
 	var jump_decoded: Dictionary = JumpIntent.decode(payload)
 	var jump_ok: bool = jump_decoded.get("ok", false)
 	var reset_ok: bool = CheckpointSpawn.is_reset_intent(payload)
@@ -249,6 +258,14 @@ func commit_tick() -> void:
 		_resolve_player_portals(player)
 		_accept_player_pads(player)
 		_accept_player_finish(player)
+
+
+static func move_step_allowed(dx: int, dz: int) -> bool:
+	if dx > MOVE_STEP_MAX or dx < -MOVE_STEP_MAX:
+		return false
+	if dz > MOVE_STEP_MAX or dz < -MOVE_STEP_MAX:
+		return false
+	return true
 
 
 func hash_state() -> String:

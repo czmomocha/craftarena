@@ -133,6 +133,26 @@ func test_finish_tick_is_per_player() -> void:
 	assert_eq(mvp_slot, 0)
 
 
+func test_oversize_move_is_rejected_without_teleport() -> void:
+	assert_eq(TraprushMatchSession.MOVE_STEP_MAX, CELL)
+	assert_true(TraprushMatchSession.move_step_allowed(CELL, 0))
+	assert_true(TraprushMatchSession.move_step_allowed(0, -CELL))
+	assert_true(TraprushMatchSession.move_step_allowed(CELL, CELL))
+	assert_false(TraprushMatchSession.move_step_allowed(CELL + 1, 0))
+	assert_false(TraprushMatchSession.move_step_allowed(0, -CELL - 1))
+	var session: TraprushMatchSession = _two_player_session()
+	var before: Dictionary = session.player_pose(0)
+	var before_x: int = before.get("x", -1)
+	assert_false(session.apply_player_intent(0, _move(CELL + 1, 0)))
+	var blocked: Dictionary = session.player_pose(0)
+	var blocked_x: int = blocked.get("x", -2)
+	assert_eq(blocked_x, before_x)
+	assert_true(session.apply_player_intent(0, _move(CELL, 0)))
+	var moved: Dictionary = session.player_pose(0)
+	var moved_x: int = moved.get("x", -3)
+	assert_eq(moved_x, before_x + CELL)
+
+
 func test_commit_tick_advances_and_intents_do_not() -> void:
 	var session: TraprushMatchSession = _two_player_session()
 	assert_eq(session.tick_index(), 0)
