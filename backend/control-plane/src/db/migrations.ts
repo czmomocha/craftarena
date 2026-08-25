@@ -53,4 +53,14 @@ export const MIGRATIONS: readonly Migration[] = [
 			`CREATE INDEX match_tickets_match_id ON match_tickets (match_id)`,
 		],
 	},
+	{
+		id: "0003_match_rooms_and_seats",
+		statements: [
+			// 房间码只给匹配入口用。MatchHost 登记时可以没有码，控制面创建/快速游戏后再写。
+			`ALTER TABLE match_sessions ADD COLUMN room_code TEXT`,
+			// 未传 seats 的旧登记按 TRAPRUSH 上限 8 记，不是默认开局人数。
+			`ALTER TABLE match_sessions ADD COLUMN seats INTEGER NOT NULL DEFAULT 8`,
+			`CREATE UNIQUE INDEX match_sessions_room_code ON match_sessions (room_code) WHERE room_code IS NOT NULL`,
+		],
+	},
 ];

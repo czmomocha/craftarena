@@ -27,6 +27,7 @@ describe("worktree port slots", () => {
 		assert.equal(ports.GATEWAY_PORT, BASE_PORTS.gateway + 100);
 		assert.equal(ports.MATCH_HOST_PORT, BASE_PORTS.matchHost + 100);
 		assert.equal(ports.CONTROL_PLANE_URL, "http://127.0.0.1:8180");
+		assert.equal(ports.MATCH_HOST_URL, "http://127.0.0.1:8200");
 		assert.notEqual(ports.CONTROL_PLANE_PORT, BASE_PORTS.gateway);
 	});
 });
@@ -94,6 +95,7 @@ describe("setupWorktree", () => {
 		const env = parseDotEnv(readFileSync(join(cwd, ".env"), "utf8"));
 		assert.equal(env["KEEP_ME"], "yes");
 		assert.equal(env["CONTROL_PLANE_PORT"], String(result.ports.CONTROL_PLANE_PORT));
+		assert.equal(env["MATCH_HOST_URL"], result.ports.MATCH_HOST_URL);
 		assert.ok(commands.some((command) => command[0] === "npm" && command[1] === "install"));
 		assert.ok(commands.some((command) => command.includes("--import")));
 	});

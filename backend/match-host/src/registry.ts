@@ -24,6 +24,7 @@ export interface MatchRecord {
 	readonly lease: Lease;
 	/** 已交给控制面的对局 WebSocket 上游。listen 或登记失败的场次不会出现在注册表里。 */
 	readonly upstreamUrl: string;
+	readonly seats: number;
 	readonly stopReason?: MatchStopReason | undefined;
 	readonly exit?: MatchExit | undefined;
 }
@@ -35,6 +36,8 @@ export interface MatchRegistryOptions {
 	readonly listenProbe: MatchListenProbe;
 	/** 拼 `ws://{host}:{port}` 用的广告主机名，默认由调用方从配置传入。 */
 	readonly upstreamHost: string;
+	/** 本场席位，随登记交给控制面。来自 MatchHost 配置，不是产品锁定开局人数。 */
+	readonly seats: number;
 	readonly portRangeMin: number;
 	readonly portRangeMax: number;
 	readonly leaseDurationMs: number;
@@ -107,7 +110,11 @@ export class MatchRegistry {
 			upstreamUrl = buildMatchUpstreamUrl(this.#options.upstreamHost, port);
 			process = this.#options.launcher.launch({ matchId, port });
 			await this.#waitUntilListening(process, port);
-			await this.#options.registrar.register({ matchId, upstreamUrl });
+			await this.#options.registrar.register({
+				matchId,
+				upstreamUrl,
+				seats: this.#options.seats,
+			});
 		} catch (error) {
 			process?.kill();
 			this.#ports.release(port);
@@ -130,6 +137,7 @@ export class MatchRegistry {
 			startedAt: now,
 			lease: createLease(now, this.#options.leaseDurationMs),
 			upstreamUrl,
+			seats: this.#options.seats,
 		};
 
 		this.#entries.set(matchId, { record, process });

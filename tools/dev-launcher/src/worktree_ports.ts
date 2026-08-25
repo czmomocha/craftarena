@@ -21,6 +21,7 @@ export type WorktreePorts = {
 	readonly MATCH_HOST_PORT_RANGE_MIN: number;
 	readonly MATCH_HOST_PORT_RANGE_MAX: number;
 	readonly CONTROL_PLANE_URL: string;
+	readonly MATCH_HOST_URL: string;
 };
 
 /** Slot 0 is the primary checkout. Worktrees land in 1–9. */
@@ -57,12 +58,14 @@ export function portsForSlot(slot: number): WorktreePorts {
 	}
 	const delta = slot * PORT_STRIDE;
 	const controlPlane = BASE_PORTS.controlPlane + delta;
+	const matchHost = BASE_PORTS.matchHost + delta;
 	return {
 		CONTROL_PLANE_PORT: controlPlane,
 		GATEWAY_PORT: BASE_PORTS.gateway + delta,
-		MATCH_HOST_PORT: BASE_PORTS.matchHost + delta,
+		MATCH_HOST_PORT: matchHost,
 		MATCH_HOST_PORT_RANGE_MIN: BASE_PORTS.matchRangeMin + delta,
 		MATCH_HOST_PORT_RANGE_MAX: BASE_PORTS.matchRangeMax + delta,
 		CONTROL_PLANE_URL: `http://127.0.0.1:${controlPlane}`,
+		MATCH_HOST_URL: `http://127.0.0.1:${matchHost}`,
 	};
 }

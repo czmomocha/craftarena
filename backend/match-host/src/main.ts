@@ -28,6 +28,7 @@ const registry = new MatchRegistry({
 		host: config.listenProbeHost,
 	}),
 	upstreamHost: config.upstreamHost,
+	seats: config.matchPlayers,
 	portRangeMin: config.portRangeMin,
 	portRangeMax: config.portRangeMax,
 	leaseDurationMs: config.leaseDurationMs,

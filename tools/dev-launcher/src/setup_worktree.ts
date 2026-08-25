@@ -81,6 +81,7 @@ function writePortEnv(cwd: string, slot: number, ports: WorktreePorts): boolean 
 		MATCH_HOST_PORT_RANGE_MIN: String(ports.MATCH_HOST_PORT_RANGE_MIN),
 		MATCH_HOST_PORT_RANGE_MAX: String(ports.MATCH_HOST_PORT_RANGE_MAX),
 		CONTROL_PLANE_URL: ports.CONTROL_PLANE_URL,
+		MATCH_HOST_URL: ports.MATCH_HOST_URL,
 	});
 	writeFileSync(envPath, next);
 	return true;

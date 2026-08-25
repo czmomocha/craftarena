@@ -7,10 +7,16 @@ import { TICKET_REJECT_REASONS, type TicketRejectReason } from "../../../contrac
 import { generateTicket, hashTicket } from "../tickets.ts";
 import { MIGRATIONS, SCHEMA_MIGRATIONS_TABLE } from "./migrations.ts";
 
+export const DEFAULT_MATCH_SEATS = 8;
+export const MIN_MATCH_SEATS = 1;
+export const MAX_MATCH_SEATS = 8;
+
 export interface MatchSessionRecord {
 	readonly matchId: string;
 	readonly upstreamUrl: string;
 	readonly createdAt: string;
+	readonly roomCode: string | undefined;
+	readonly seats: number;
 }
 
 export interface IssuedTicket {
@@ -34,6 +40,20 @@ export class MatchSessionNotFoundError extends Error {
 	constructor(matchId: string) {
 		super(`match session not found: ${matchId}`);
 		this.name = "MatchSessionNotFoundError";
+	}
+}
+
+export class MatchSessionFullError extends Error {
+	constructor(matchId: string) {
+		super(`match session is full: ${matchId}`);
+		this.name = "MatchSessionFullError";
+	}
+}
+
+export class RoomCodeConflictError extends Error {
+	constructor(roomCode: string) {
+		super(`room code already exists: ${roomCode}`);
+		this.name = "RoomCodeConflictError";
 	}
 }
 
@@ -120,14 +140,18 @@ export class ControlPlaneDatabase {
 		readonly matchId?: string | undefined;
 		readonly upstreamUrl: string;
 		readonly now: Date;
+		readonly seats?: number | undefined;
 	}): MatchSessionRecord {
 		const matchId = input.matchId ?? randomUUID();
 		const createdAt = input.now.toISOString();
+		const seats = input.seats ?? DEFAULT_MATCH_SEATS;
 
 		try {
 			this.#db
-				.prepare("INSERT INTO match_sessions (match_id, upstream_url, created_at) VALUES (?, ?, ?)")
-				.run(matchId, input.upstreamUrl, createdAt);
+				.prepare(
+					"INSERT INTO match_sessions (match_id, upstream_url, created_at, room_code, seats) VALUES (?, ?, ?, NULL, ?)",
+				)
+				.run(matchId, input.upstreamUrl, createdAt, seats);
 		} catch (error) {
 			if (isUniqueConstraint(error)) {
 				throw new MatchSessionExistsError(matchId);
@@ -135,7 +159,7 @@ export class ControlPlaneDatabase {
 			throw error;
 		}
 
-		return { matchId, upstreamUrl: input.upstreamUrl, createdAt };
+		return { matchId, upstreamUrl: input.upstreamUrl, createdAt, roomCode: undefined, seats };
 	}
 
 	deleteMatchSession(matchId: string): MatchSessionRecord {
@@ -159,35 +183,114 @@ export class ControlPlaneDatabase {
 
 	getMatchSession(matchId: string): MatchSessionRecord | undefined {
 		const row = this.#db
-			.prepare("SELECT match_id, upstream_url, created_at FROM match_sessions WHERE match_id = ?")
+			.prepare(
+				"SELECT match_id, upstream_url, created_at, room_code, seats FROM match_sessions WHERE match_id = ?",
+			)
 			.get(matchId);
-		if (row === undefined) {
-			return undefined;
+		return row === undefined ? undefined : sessionFromRow(row);
+	}
+
+	getMatchSessionByRoomCode(roomCode: string): MatchSessionRecord | undefined {
+		const row = this.#db
+			.prepare(
+				"SELECT match_id, upstream_url, created_at, room_code, seats FROM match_sessions WHERE room_code = ?",
+			)
+			.get(roomCode);
+		return row === undefined ? undefined : sessionFromRow(row);
+	}
+
+	/**
+	 * 最旧的未满公开房。没有房间码的登记（只走 MatchHost 运维入口）不进快速游戏。
+	 */
+	findOldestOpenRoom(): MatchSessionRecord | undefined {
+		const row = this.#db
+			.prepare(
+				`SELECT s.match_id, s.upstream_url, s.created_at, s.room_code, s.seats
+				 FROM match_sessions s
+				 WHERE s.room_code IS NOT NULL
+				 AND (SELECT COUNT(*) FROM match_tickets t WHERE t.match_id = s.match_id) < s.seats
+				 ORDER BY s.created_at ASC
+				 LIMIT 1`,
+			)
+			.get();
+		return row === undefined ? undefined : sessionFromRow(row);
+	}
+
+	assignRoomCode(matchId: string, roomCode: string): string {
+		try {
+			const updated = this.#db
+				.prepare("UPDATE match_sessions SET room_code = ? WHERE match_id = ? AND room_code IS NULL")
+				.run(roomCode, matchId);
+			if (updated.changes !== 1) {
+				if (this.getMatchSession(matchId) === undefined) {
+					throw new MatchSessionNotFoundError(matchId);
+				}
+				throw new MatchSessionExistsError(matchId);
+			}
+		} catch (error) {
+			if (error instanceof MatchSessionNotFoundError || error instanceof MatchSessionExistsError) {
+				throw error;
+			}
+			if (isUniqueConstraint(error)) {
+				throw new RoomCodeConflictError(roomCode);
+			}
+			throw error;
 		}
 
-		return {
-			matchId: String(row["match_id"]),
-			upstreamUrl: String(row["upstream_url"]),
-			createdAt: String(row["created_at"]),
-		};
+		return roomCode;
+	}
+
+	assignGeneratedRoomCode(matchId: string, generate: () => string, attempts = 8): string {
+		for (let attempt = 0; attempt < attempts; attempt += 1) {
+			try {
+				return this.assignRoomCode(matchId, generate());
+			} catch (error) {
+				if (error instanceof RoomCodeConflictError) {
+					continue;
+				}
+				throw error;
+			}
+		}
+
+		throw new RoomCodeConflictError("exhausted");
+	}
+
+	countTickets(matchId: string): number {
+		const row = this.#db
+			.prepare("SELECT COUNT(*) AS ticket_count FROM match_tickets WHERE match_id = ?")
+			.get(matchId);
+		return row === undefined ? 0 : Number(row["ticket_count"]);
 	}
 
 	issueTicket(matchId: string, now: Date, ttlMs: number): IssuedTicket {
-		if (this.getMatchSession(matchId) === undefined) {
-			throw new MatchSessionNotFoundError(matchId);
+		this.#db.exec("BEGIN");
+		try {
+			const session = this.getMatchSession(matchId);
+			if (session === undefined) {
+				throw new MatchSessionNotFoundError(matchId);
+			}
+
+			const issued = this.countTickets(matchId);
+			if (issued >= session.seats) {
+				throw new MatchSessionFullError(matchId);
+			}
+
+			const ticket = generateTicket();
+			const createdAt = now.toISOString();
+			const expiresAt = new Date(now.getTime() + ttlMs).toISOString();
+
+			this.#db
+				.prepare(
+					"INSERT INTO match_tickets (ticket_hash, match_id, expires_at, consumed_at, created_at) VALUES (?, ?, ?, NULL, ?)",
+				)
+				.run(hashTicket(ticket), matchId, expiresAt, createdAt);
+
+			this.#db.exec("COMMIT");
+			return { ticket, matchId, expiresAt };
+		} catch (error) {
+			this.#db.exec("ROLLBACK");
+			throw error;
 		}
-
-		const ticket = generateTicket();
-		const createdAt = now.toISOString();
-		const expiresAt = new Date(now.getTime() + ttlMs).toISOString();
-
-		this.#db
-			.prepare(
-				"INSERT INTO match_tickets (ticket_hash, match_id, expires_at, consumed_at, created_at) VALUES (?, ?, ?, NULL, ?)",
-			)
-			.run(hashTicket(ticket), matchId, expiresAt, createdAt);
-
-		return { ticket, matchId, expiresAt };
 	}
 
 	/**
@@ -245,6 +348,21 @@ export class ControlPlaneDatabase {
 	}
 }
 
+function sessionFromRow(row: Record<string, unknown>): MatchSessionRecord {
+	const roomCode = row["room_code"];
+	return {
+		matchId: String(row["match_id"]),
+		upstreamUrl: String(row["upstream_url"]),
+		createdAt: String(row["created_at"]),
+		roomCode: roomCode === null || roomCode === undefined ? undefined : String(roomCode),
+		seats: Number(row["seats"]),
+	};
+}
+
 function isUniqueConstraint(error: unknown): boolean {
 	return error instanceof Error && error.message.includes("UNIQUE constraint failed");
+}
+
+export function isValidSeatCount(value: unknown): value is number {
+	return typeof value === "number" && Number.isInteger(value) && value >= MIN_MATCH_SEATS && value <= MAX_MATCH_SEATS;
 }

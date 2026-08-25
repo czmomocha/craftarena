@@ -18,11 +18,14 @@ export type TicketRejectReason = (typeof TICKET_REJECT_REASONS)[keyof typeof TIC
 export interface RegisterMatchSessionRequest {
 	readonly matchId?: string;
 	readonly upstreamUrl: string;
+	/** 本场席位。省略时控制面按 TRAPRUSH 上限 8 记，不是默认开局人数。 */
+	readonly seats?: number;
 }
 
 export interface RegisterMatchSessionResponse {
 	readonly matchId: string;
 	readonly upstreamUrl: string;
+	readonly seats: number;
 }
 
 export interface UnregisterMatchSessionResponse {
@@ -58,6 +61,7 @@ export const registerMatchSessionBodySchema = {
 	properties: {
 		matchId: { type: "string", minLength: 1, maxLength: 64 },
 		upstreamUrl: { type: "string", minLength: 1, maxLength: 512 },
+		seats: { type: "integer", minimum: 1, maximum: 8 },
 	},
 } as const;
 

@@ -1,5 +1,6 @@
 import { loadConfig } from "./config.ts";
 import { ControlPlaneDatabase } from "./db/database.ts";
+import { MatchHostHttpLauncher } from "./match_host.ts";
 import { buildServer } from "./server.ts";
 
 const config = loadConfig();
@@ -11,6 +12,7 @@ const app = buildServer({
 	version: config.version,
 	logger: { level: config.logLevel },
 	ticketTtlMs: config.ticketTtlMs,
+	matchLauncher: new MatchHostHttpLauncher(config.matchHostUrl, config.matchHostLaunchTimeoutMs),
 });
 
 if (applied.length > 0) {
