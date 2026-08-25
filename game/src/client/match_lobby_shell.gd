@@ -24,6 +24,9 @@ extends Node
 ## The own-seat box uses OWN_ALBEDO; remotes use REMOTE_ALBEDO. Standing
 ## labels prefix the own seat with "*". Remotes do not pull the camera.
 ## Own-seat accepted_count tints course pads: done / current / pending.
+## Own-seat finish_tick tints the finish zone: pending / current / done.
+## HUD shows pads=n/m and finish=n; result= appears when every snapshot
+## seat has finished. That line is local presentation, not a settlement write.
 ## WASD encodes Move plus discrete 8-way yaw_bam; Jump / Reset / Use item
 ## encode existing intents.
 ## play_move_step is a presentation stub, not a product speed.
@@ -34,7 +37,7 @@ extends Node
 ## Quick play / create room send an official course id and seats;
 ## join-by-code follows the room's course and remounts maps from that response.
 ## Solo play reuses the course selector only (always one local player).
-## No BASTION, accounts, settlement, ghosts, or offline writes.
+## No BASTION, accounts, settlement writes, ghosts, or offline writes.
 
 const MatchFrameCodec := preload("res://src/shared/protocol/match_frame_codec.gd")
 const MatchJoinSessionGd := preload("res://src/client/match_join_session.gd")
@@ -503,6 +506,9 @@ func status_view() -> Dictionary:
 	var mapped_standings: int = 0
 	var mvp_slot: int = -1
 	var standing_line: String = ""
+	var own_accepted_count: int = -1
+	var own_finish_tick: int = -1
+	var match_finished: bool = false
 	if map != null:
 		mapped_players = map.player_count()
 	if course != null:
@@ -523,6 +529,11 @@ func status_view() -> Dictionary:
 	var source: Dictionary = play_view
 	if _offline_playing():
 		source = offline_view
+	var follow: MatchSnapshotFollowGd = _active_follow()
+	if follow != null and follow.has_snapshot:
+		own_accepted_count = _own_accepted_count(follow.players)
+		own_finish_tick = _own_finish_tick(follow.players)
+		match_finished = _all_players_finished(follow.players)
 	return {
 		"join_state": join_view.get("state", ""),
 		"error": join_view.get("error", ""),
@@ -554,6 +565,9 @@ func status_view() -> Dictionary:
 		"mapped_standings": mapped_standings,
 		"mvp_slot": mvp_slot,
 		"standing_line": standing_line,
+		"own_accepted_count": own_accepted_count,
+		"own_finish_tick": own_finish_tick,
+		"match_finished": match_finished,
 		"window_visible": is_window_visible(),
 	}
 
@@ -887,6 +901,9 @@ func _refresh_status() -> void:
 	var offline_error: String = str(view.get("offline_error", ""))
 	if offline_error != "":
 		parts.append("offline_error=%s" % offline_error)
+	var mapped_pads: int = view.get("mapped_pads", 0)
+	var mapped_portals: int = view.get("mapped_portals", 0)
+	var mapped_finish: int = view.get("mapped_finish", 0)
 	if play_state == MatchPlaySessionGd.STATE_IN_MATCH or offline_state == MatchOfflineSessionGd.STATE_PLAYING:
 		var tick: int = view.get("tick", -1)
 		var player_count: int = view.get("player_count", 0)
@@ -896,9 +913,14 @@ func _refresh_status() -> void:
 		parts.append("crates=%d" % crate_count)
 		var mapped_players: int = view.get("mapped_players", 0)
 		parts.append("mapped=%d" % mapped_players)
-	var mapped_pads: int = view.get("mapped_pads", 0)
-	var mapped_portals: int = view.get("mapped_portals", 0)
-	var mapped_finish: int = view.get("mapped_finish", 0)
+		var own_accepted_count: int = view.get("own_accepted_count", -1)
+		var own_finish_tick: int = view.get("own_finish_tick", -1)
+		parts.append("pads=%d/%d" % [own_accepted_count, mapped_pads])
+		parts.append("finish=%d" % own_finish_tick)
+		if view.get("match_finished", false):
+			var result_line: String = str(view.get("standing_line", ""))
+			if result_line != "":
+				parts.append("result=%s" % result_line)
 	parts.append("course=%d/%d/%d" % [mapped_pads, mapped_portals, mapped_finish])
 	var mapped_crates: int = view.get("mapped_crates", 0)
 	parts.append("crates_mapped=%d" % mapped_crates)
@@ -944,13 +966,17 @@ func _apply_snapshot_map() -> void:
 	if crates != null:
 		crates.apply_follow(follow)
 	if course != null:
-		course.apply_own_progress(_own_accepted_count(follow.players))
+		course.apply_own_progress(
+			_own_accepted_count(follow.players),
+			_own_finish_tick(follow.players)
+		)
 	if standings != null:
 		var pad_total: int = 0
 		if course != null:
 			pad_total = course.pad_count()
 		standings.follow_slot = _camera_follow_slot()
 		standings.apply_players(players, pad_total)
+	_refresh_status()
 
 
 func _active_follow() -> MatchSnapshotFollowGd:
@@ -970,6 +996,14 @@ func _camera_follow_slot() -> int:
 
 
 func _own_accepted_count(players: Array) -> int:
+	return _own_player_int(players, "accepted_count", true)
+
+
+func _own_finish_tick(players: Array) -> int:
+	return _own_player_int(players, "finish_tick", false)
+
+
+func _own_player_int(players: Array, key: String, reject_negative: bool) -> int:
 	var slot: int = _camera_follow_slot()
 	if slot < 0 or slot >= players.size():
 		return -1
@@ -977,13 +1011,29 @@ func _own_accepted_count(players: Array) -> int:
 	if typeof(raw) != TYPE_DICTIONARY:
 		return -1
 	var body: Dictionary = raw
-	var count_raw: Variant = body.get("accepted_count", -1)
-	if typeof(count_raw) != TYPE_INT:
+	var value_raw: Variant = body.get(key, -1)
+	if typeof(value_raw) != TYPE_INT:
 		return -1
-	var accepted_count: int = count_raw
-	if accepted_count < 0:
+	var value: int = value_raw
+	if reject_negative and value < 0:
 		return -1
-	return accepted_count
+	return value
+
+
+func _all_players_finished(players: Array) -> bool:
+	if players.is_empty():
+		return false
+	for raw: Variant in players:
+		if typeof(raw) != TYPE_DICTIONARY:
+			return false
+		var body: Dictionary = raw
+		var tick_raw: Variant = body.get("finish_tick", -1)
+		if typeof(tick_raw) != TYPE_INT:
+			return false
+		var finish_tick: int = tick_raw
+		if finish_tick < 0:
+			return false
+	return true
 
 
 func _sync_interp_t(follow: MatchSnapshotFollowGd) -> void:

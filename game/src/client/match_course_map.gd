@@ -10,8 +10,10 @@ extends Node3D
 ## Checkpoint-order labels and sequence bars stay undrawn here;
 ## MatchCheckpointOrderMap draws them. Standing labels stay undrawn
 ## here; MatchStandingMap draws them. apply_own_progress tints pads from
-## the own-seat accepted_count: done / current / pending. Idle (-1)
-## keeps PENDING_ALBEDO. Not walk-reachability or product cosmetics.
+## the own-seat accepted_count: done / current / pending. It also tints
+## the finish zone: pending gold, current gold when every pad is done,
+## accepted dark-gold after finish_tick. Idle (-1) keeps PENDING_ALBEDO
+## and FINISH_PENDING_ALBEDO. Not walk-reachability or product cosmetics.
 ## No interpolation, prediction, or course-selection API.
 
 const AuthoringDocumentGd := preload("res://src/creator/authoring_document.gd")
@@ -24,15 +26,19 @@ const PLACEHOLDER_SIZE: Vector3 = Vector3(1.0, 1.0, 1.0)
 const PENDING_ALBEDO: Color = Color(0.35, 0.9, 0.4)
 const ACCEPTED_ALBEDO: Color = Color(0.16, 0.38, 0.22)
 const CURRENT_ALBEDO: Color = Color(0.55, 1.0, 0.45)
+const FINISH_PENDING_ALBEDO: Color = Color(0.95, 0.82, 0.2)
+const FINISH_CURRENT_ALBEDO: Color = Color(1.0, 0.92, 0.35)
+const FINISH_ACCEPTED_ALBEDO: Color = Color(0.42, 0.32, 0.08)
 const _TWO_WAY_ALBEDO: Color = Color(0.2, 0.75, 0.95)
 const _ONE_WAY_ALBEDO: Color = Color(0.95, 0.55, 0.15)
-const _FINISH_ALBEDO: Color = Color(0.95, 0.82, 0.2)
 
 var _pad_count: int = 0
 var _portal_count: int = 0
 var _finish_count: int = 0
 var _accepted_count: int = -1
+var _finish_tick: int = -1
 var _pad_orders: Dictionary = {}
+var _finish_ids: Array[int] = []
 
 
 static func meters_from_fixed(value: int) -> float:
@@ -59,6 +65,16 @@ static func pad_albedo(order: int, accepted_count: int) -> Color:
 	if order == accepted_count:
 		return CURRENT_ALBEDO
 	return PENDING_ALBEDO
+
+
+static func finish_albedo(accepted_count: int, pad_count: int, finish_tick: int) -> Color:
+	if accepted_count < 0:
+		return FINISH_PENDING_ALBEDO
+	if finish_tick >= 0:
+		return FINISH_ACCEPTED_ALBEDO
+	if pad_count > 0 and accepted_count >= pad_count:
+		return FINISH_CURRENT_ALBEDO
+	return FINISH_PENDING_ALBEDO
 
 
 static func compile_path(path: String) -> SimulationBundle:
@@ -97,20 +113,31 @@ func apply_bundle(bundle: SimulationBundle) -> bool:
 		_spawn_box(portal_name(portal_id), portal, _portal_color(portal))
 	for finish: Dictionary in bundle.finish:
 		var finish_id: int = finish["entity_id"]
-		_spawn_box(finish_name(finish_id), finish, _FINISH_ALBEDO)
+		_remember_finish_id(finish_id)
+		_spawn_box(
+			finish_name(finish_id),
+			finish,
+			finish_albedo(_accepted_count, bundle.pads.size(), _finish_tick)
+		)
 	_pad_count = bundle.pads.size()
 	_portal_count = bundle.portals.size()
 	_finish_count = bundle.finish.size()
 	return true
 
 
-func apply_own_progress(accepted_count: int) -> void:
+func apply_own_progress(accepted_count: int, finish_tick: int = -1) -> void:
 	_accepted_count = accepted_count
+	_finish_tick = finish_tick
 	_retint_pads()
+	_retint_finish()
 
 
 func own_accepted_count() -> int:
 	return _accepted_count
+
+
+func own_finish_tick() -> int:
+	return _finish_tick
 
 
 func pad_count() -> int:
@@ -242,6 +269,7 @@ func _clear_course() -> void:
 	_portal_count = 0
 	_finish_count = 0
 	_pad_orders.clear()
+	_finish_ids.clear()
 
 
 func _remember_pad_order(pad: Dictionary) -> void:
@@ -266,21 +294,38 @@ func _order_of(entity_id: int) -> int:
 	return order
 
 
+func _remember_finish_id(entity_id: int) -> void:
+	if entity_id < 1:
+		return
+	if _finish_ids.has(entity_id):
+		return
+	_finish_ids.append(entity_id)
+
+
 func _retint_pads() -> void:
 	for entity_raw: Variant in _pad_orders.keys():
 		if typeof(entity_raw) != TYPE_INT:
 			continue
 		var entity_id: int = entity_raw
-		var node: MeshInstance3D = pad_node(entity_id)
-		if node == null:
-			continue
-		var box: BoxMesh = node.mesh as BoxMesh
-		if box == null:
-			continue
-		var material: StandardMaterial3D = box.material as StandardMaterial3D
-		if material == null:
-			continue
-		material.albedo_color = pad_albedo(_order_of(entity_id), _accepted_count)
+		_tint_node(pad_node(entity_id), pad_albedo(_order_of(entity_id), _accepted_count))
+
+
+func _retint_finish() -> void:
+	var color: Color = finish_albedo(_accepted_count, _pad_count, _finish_tick)
+	for entity_id: int in _finish_ids:
+		_tint_node(finish_node(entity_id), color)
+
+
+func _tint_node(node: MeshInstance3D, color: Color) -> void:
+	if node == null:
+		return
+	var box: BoxMesh = node.mesh as BoxMesh
+	if box == null:
+		return
+	var material: StandardMaterial3D = box.material as StandardMaterial3D
+	if material == null:
+		return
+	material.albedo_color = color
 
 
 func _unshaded(color: Color) -> StandardMaterial3D:
