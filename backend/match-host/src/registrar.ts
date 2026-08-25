@@ -12,6 +12,7 @@ export interface MatchSessionRegisterSpec {
 	readonly matchId: string;
 	readonly upstreamUrl: string;
 	readonly seats: number;
+	readonly course: string;
 }
 
 export interface MatchSessionRegistrar {
@@ -88,6 +89,7 @@ export class ControlPlaneMatchSessionRegistrar implements MatchSessionRegistrar 
 					matchId: spec.matchId,
 					upstreamUrl: spec.upstreamUrl,
 					seats: spec.seats,
+					course: spec.course,
 				}),
 				signal: AbortSignal.timeout(this.#timeoutMs),
 			});

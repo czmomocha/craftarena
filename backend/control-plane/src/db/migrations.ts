@@ -107,4 +107,12 @@ export const MIGRATIONS: readonly Migration[] = [
 			`ALTER TABLE match_tickets ADD COLUMN superseded_at TEXT`,
 		],
 	},
+	{
+		id: "0007_match_official_course",
+		statements: [
+			// 官方赛道 id，不是 res:// 路径。旧行按默认 course_01 补。
+			`ALTER TABLE match_sessions ADD COLUMN course TEXT NOT NULL DEFAULT 'course_01'`,
+			`ALTER TABLE match_queue ADD COLUMN course TEXT NOT NULL DEFAULT 'course_01'`,
+		],
+	},
 ];

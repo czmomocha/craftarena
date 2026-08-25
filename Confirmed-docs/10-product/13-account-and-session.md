@@ -47,7 +47,7 @@
 - TRAPRUSH 可记录本机最佳命令轨迹并播放无碰撞幽灵，不下载他人幽灵；
 - BASTION 使用模板机器人按预算布障并以规则化策略建塔。
 
-实现落点（2026-08-25）：机关狂奔大厅 `Solo play` 启动 `MatchOfflineSession`：把默认官方 `course_01` 编进与线上相同的 `TraprushMatchSession`，命令帧 tick 为 0，快照只跟从本地最新帧。HUD 在离线进行中持续写出「离线试玩，成绩不上传」。`allows_settlement` / `allows_online_writes` 恒为 false，不发匹配 HTTP 或网关 WS。`OS.has_feature("web")` 或注入 `web_platform` 时拒绝开玩。本机最佳轨迹幽灵、已缓存签名 UGC / 本地草稿试玩、个人试玩记录落盘仍待。落点见 [CD-12 §1](12-product-structure.md#1-入口结构) 与 [CD-42 §3.4](../40-technical/42-contracts-and-rulevm.md#34-实现落点)。
+实现落点（2026-08-25）：机关狂奔大厅 `Solo play` 启动 `MatchOfflineSession`：把所选官方赛道（空则 `course_01`）编进与线上相同的 `TraprushMatchSession`，命令帧 tick 为 0，快照只跟从本地最新帧。HUD 在离线进行中持续写出「离线试玩，成绩不上传」。`allows_settlement` / `allows_online_writes` 恒为 false，不发匹配 HTTP 或网关 WS。`OS.has_feature("web")` 或注入 `web_platform` 时拒绝开玩。本机最佳轨迹幽灵、已缓存签名 UGC / 本地草稿试玩、个人试玩记录落盘仍待。落点见 [CD-12 §1](12-product-structure.md#1-入口结构) 与 [CD-42 §3.4](../40-technical/42-contracts-and-rulevm.md#34-实现落点)。
 
 ## 4. 单局排名
 

@@ -1,5 +1,9 @@
 import type { FastifyInstance } from "fastify";
 
+import {
+	DEFAULT_OFFICIAL_TRAPRUSH_COURSE,
+	officialTraprushCourseIdFromPath,
+} from "../../contracts/src/official_courses.ts";
 import { loadConfig } from "./config.ts";
 import { GodotProcessLauncher } from "./launcher.ts";
 import { TcpMatchListenProbe } from "./listen_probe.ts";
@@ -29,6 +33,8 @@ const registry = new MatchRegistry({
 	}),
 	upstreamHost: config.upstreamHost,
 	seats: config.matchPlayers,
+	defaultCourse:
+		officialTraprushCourseIdFromPath(config.matchCourse) ?? DEFAULT_OFFICIAL_TRAPRUSH_COURSE,
 	portRangeMin: config.portRangeMin,
 	portRangeMax: config.portRangeMax,
 	leaseDurationMs: config.leaseDurationMs,

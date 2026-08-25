@@ -1,11 +1,19 @@
 import { isMatchId } from "./tickets.ts";
+import {
+	DEFAULT_OFFICIAL_TRAPRUSH_COURSE,
+	type OfficialTraprushCourseId,
+} from "../../contracts/src/official_courses.ts";
 
 export interface MatchLaunchResult {
 	readonly matchId: string;
 }
 
+export interface MatchLaunchRequest {
+	readonly course?: OfficialTraprushCourseId;
+}
+
 export interface MatchLauncher {
-	launch(): Promise<MatchLaunchResult>;
+	launch(request?: MatchLaunchRequest): Promise<MatchLaunchResult>;
 }
 
 export class MatchHostCapacityError extends Error {
@@ -37,11 +45,14 @@ export class MatchHostHttpLauncher implements MatchLauncher {
 		this.#timeoutMs = timeoutMs;
 	}
 
-	async launch(): Promise<MatchLaunchResult> {
+	async launch(request: MatchLaunchRequest = {}): Promise<MatchLaunchResult> {
+		const course = request.course ?? DEFAULT_OFFICIAL_TRAPRUSH_COURSE;
 		let response: Response;
 		try {
 			response = await fetch(`${this.#baseUrl}/matches`, {
 				method: "POST",
+				headers: { "content-type": "application/json" },
+				body: JSON.stringify({ course }),
 				signal: AbortSignal.timeout(this.#timeoutMs),
 			});
 		} catch (error) {

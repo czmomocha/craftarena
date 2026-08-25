@@ -3,6 +3,8 @@ import { spawn } from "node:child_process";
 export interface MatchLaunchSpec {
 	readonly matchId: string;
 	readonly port: number;
+	/** Godot `--course=` 路径。省略时用启动器默认。 */
+	readonly course?: string;
 }
 
 export interface MatchExit {
@@ -33,8 +35,8 @@ export interface GodotLauncherOptions {
 	readonly projectPath: string;
 	readonly scene: string;
 	/**
-	 * 本机所有对局共用的课程与人数。开发期占位：真源是控制面下发的对局配置，
-	 * 按场指定是后续章节；数值归 CD-44 §3 与 CD-63 管，这里只是可覆盖的默认。
+	 * 本机默认课程路径。控制面按场下发官方 id 后，MatchHost 把它映射成这条
+	 * `res://` 路径再传给对局进程。人数仍是启动器级占位。
 	 */
 	readonly course: string;
 	readonly players: number;
@@ -63,7 +65,7 @@ export class GodotProcessLauncher implements ProcessLauncher {
 			"--",
 			`--match-id=${spec.matchId}`,
 			`--port=${spec.port}`,
-			`--course=${this.#options.course}`,
+			`--course=${spec.course ?? this.#options.course}`,
 			`--players=${this.#options.players}`,
 		];
 	}

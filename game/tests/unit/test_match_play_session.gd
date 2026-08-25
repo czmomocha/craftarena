@@ -110,6 +110,7 @@ func _ready_join() -> MatchJoinSession:
 		"expiresAt": "2026-08-25T03:00:00.000Z",
 		"seats": 2,
 		"issued": 1,
+		"course": "course_01",
 	}))
 	return session
 

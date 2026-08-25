@@ -5,6 +5,11 @@ import { DatabaseSync } from "node:sqlite";
 
 import type { MatchQueueKind } from "../../../contracts/src/match_room.ts";
 import {
+	DEFAULT_OFFICIAL_TRAPRUSH_COURSE,
+	isOfficialTraprushCourseId,
+	type OfficialTraprushCourseId,
+} from "../../../contracts/src/official_courses.ts";
+import {
 	RECONNECT_TICKET_ERRORS,
 	TICKET_REJECT_REASONS,
 	type ReconnectTicketError,
@@ -24,6 +29,7 @@ export interface MatchSessionRecord {
 	readonly createdAt: string;
 	readonly roomCode: string | undefined;
 	readonly seats: number;
+	readonly course: OfficialTraprushCourseId;
 }
 
 export interface IssuedTicket {
@@ -108,6 +114,7 @@ export interface MatchQueueRecord {
 	readonly ticket: string | undefined;
 	readonly ticketExpiresAt: string | undefined;
 	readonly error: string | undefined;
+	readonly course: OfficialTraprushCourseId;
 }
 
 export interface EnqueuedMatch {
@@ -202,17 +209,19 @@ export class ControlPlaneDatabase {
 		readonly upstreamUrl: string;
 		readonly now: Date;
 		readonly seats?: number | undefined;
+		readonly course?: OfficialTraprushCourseId | undefined;
 	}): MatchSessionRecord {
 		const matchId = input.matchId ?? randomUUID();
 		const createdAt = input.now.toISOString();
 		const seats = input.seats ?? DEFAULT_MATCH_SEATS;
+		const course = input.course ?? DEFAULT_OFFICIAL_TRAPRUSH_COURSE;
 
 		try {
 			this.#db
 				.prepare(
-					"INSERT INTO match_sessions (match_id, upstream_url, created_at, room_code, seats) VALUES (?, ?, ?, NULL, ?)",
+					"INSERT INTO match_sessions (match_id, upstream_url, created_at, room_code, seats, course) VALUES (?, ?, ?, NULL, ?, ?)",
 				)
-				.run(matchId, input.upstreamUrl, createdAt, seats);
+				.run(matchId, input.upstreamUrl, createdAt, seats, course);
 		} catch (error) {
 			if (isUniqueConstraint(error)) {
 				throw new MatchSessionExistsError(matchId);
@@ -220,7 +229,7 @@ export class ControlPlaneDatabase {
 			throw error;
 		}
 
-		return { matchId, upstreamUrl: input.upstreamUrl, createdAt, roomCode: undefined, seats };
+		return { matchId, upstreamUrl: input.upstreamUrl, createdAt, roomCode: undefined, seats, course };
 	}
 
 	deleteMatchSession(matchId: string): MatchSessionRecord {
@@ -308,7 +317,7 @@ export class ControlPlaneDatabase {
 	getMatchSession(matchId: string): MatchSessionRecord | undefined {
 		const row = this.#db
 			.prepare(
-				"SELECT match_id, upstream_url, created_at, room_code, seats FROM match_sessions WHERE match_id = ?",
+				"SELECT match_id, upstream_url, created_at, room_code, seats, course FROM match_sessions WHERE match_id = ?",
 			)
 			.get(matchId);
 		return row === undefined ? undefined : sessionFromRow(row);
@@ -317,7 +326,7 @@ export class ControlPlaneDatabase {
 	getMatchSessionByRoomCode(roomCode: string): MatchSessionRecord | undefined {
 		const row = this.#db
 			.prepare(
-				"SELECT match_id, upstream_url, created_at, room_code, seats FROM match_sessions WHERE room_code = ?",
+				"SELECT match_id, upstream_url, created_at, room_code, seats, course FROM match_sessions WHERE room_code = ?",
 			)
 			.get(roomCode);
 		return row === undefined ? undefined : sessionFromRow(row);
@@ -325,13 +334,15 @@ export class ControlPlaneDatabase {
 
 	/**
 	 * 最旧的未满公开房。没有房间码的登记（只走 MatchHost 运维入口）不进快速游戏。
+	 * 快速游戏只进同一官方赛道的房。
 	 */
-	findOldestOpenRoom(): MatchSessionRecord | undefined {
+	findOldestOpenRoom(course: OfficialTraprushCourseId = DEFAULT_OFFICIAL_TRAPRUSH_COURSE): MatchSessionRecord | undefined {
 		const row = this.#db
 			.prepare(
-				`SELECT s.match_id, s.upstream_url, s.created_at, s.room_code, s.seats
+				`SELECT s.match_id, s.upstream_url, s.created_at, s.room_code, s.seats, s.course
 				 FROM match_sessions s
 				 WHERE s.room_code IS NOT NULL
+				 AND s.course = ?
 				 AND (
 					SELECT COUNT(DISTINCT t.seat) FROM match_tickets t
 					WHERE t.match_id = s.match_id AND t.superseded_at IS NULL
@@ -339,7 +350,7 @@ export class ControlPlaneDatabase {
 				 ORDER BY s.created_at ASC
 				 LIMIT 1`,
 			)
-			.get();
+			.get(course);
 		return row === undefined ? undefined : sessionFromRow(row);
 	}
 
@@ -405,24 +416,24 @@ export class ControlPlaneDatabase {
 		}
 	}
 
-	enqueue(kind: MatchQueueKind, now: Date, ttlMs: number): EnqueuedMatch {
+	enqueue(kind: MatchQueueKind, now: Date, ttlMs: number, course: OfficialTraprushCourseId = DEFAULT_OFFICIAL_TRAPRUSH_COURSE): EnqueuedMatch {
 		const token = generateQueueToken();
 		const createdAt = now.toISOString();
 		const expiresAt = new Date(now.getTime() + ttlMs).toISOString();
 		this.#db
 			.prepare(
 				`INSERT INTO match_queue (
-					token_hash, kind, status, created_at, expires_at, match_id, ticket, ticket_expires_at, error
-				) VALUES (?, ?, 'waiting', ?, ?, NULL, NULL, NULL, NULL)`,
+					token_hash, kind, status, created_at, expires_at, match_id, ticket, ticket_expires_at, error, course
+				) VALUES (?, ?, 'waiting', ?, ?, NULL, NULL, NULL, NULL, ?)`,
 			)
-			.run(hashQueueToken(token), kind, createdAt, expiresAt);
+			.run(hashQueueToken(token), kind, createdAt, expiresAt, course);
 		return { token, createdAt, expiresAt };
 	}
 
 	getQueueByToken(token: string, now: Date): MatchQueueRecord | undefined {
 		const row = this.#db
 			.prepare(
-				`SELECT rowid, token_hash, kind, status, created_at, expires_at, match_id, ticket, ticket_expires_at, error
+				`SELECT rowid, token_hash, kind, status, created_at, expires_at, match_id, ticket, ticket_expires_at, error, course
 				 FROM match_queue WHERE token_hash = ?`,
 			)
 			.get(hashQueueToken(token));
@@ -444,7 +455,7 @@ export class ControlPlaneDatabase {
 		const nowIso = now.toISOString();
 		return this.#db
 			.prepare(
-				`SELECT rowid, token_hash, kind, status, created_at, expires_at, match_id, ticket, ticket_expires_at, error
+				`SELECT rowid, token_hash, kind, status, created_at, expires_at, match_id, ticket, ticket_expires_at, error, course
 				 FROM match_queue
 				 WHERE status = 'waiting' AND expires_at > ?
 				 ORDER BY rowid ASC`,
@@ -478,7 +489,7 @@ export class ControlPlaneDatabase {
 		try {
 			const row = this.#db
 				.prepare(
-					`SELECT rowid, token_hash, kind, status, created_at, expires_at, match_id, ticket, ticket_expires_at, error
+					`SELECT rowid, token_hash, kind, status, created_at, expires_at, match_id, ticket, ticket_expires_at, error, course
 					 FROM match_queue WHERE token_hash = ?`,
 				)
 				.get(tokenHash);
@@ -488,6 +499,10 @@ export class ControlPlaneDatabase {
 			const record = queueFromRow(row);
 			if (record.status !== "waiting" || record.expiresAt <= now.toISOString()) {
 				throw new MatchQueueNotWaitingError(tokenHash);
+			}
+			const session = this.getMatchSession(matchId);
+			if (session === undefined || session.course !== record.course) {
+				throw new MatchSessionFullError(matchId);
 			}
 
 			const issued = this.#issueTicketUnlocked(matchId, now, ticketTtlMs);
@@ -719,6 +734,7 @@ function queueFromRow(row: Record<string, unknown>): MatchQueueRecord {
 		ticketExpiresAt:
 			ticketExpiresAt === null || ticketExpiresAt === undefined ? undefined : String(ticketExpiresAt),
 		error: error === null || error === undefined ? undefined : String(error),
+		course: officialCourseFromRow(row["course"]),
 	};
 }
 
@@ -749,7 +765,12 @@ function sessionFromRow(row: Record<string, unknown>): MatchSessionRecord {
 		createdAt: String(row["created_at"]),
 		roomCode: roomCode === null || roomCode === undefined ? undefined : String(roomCode),
 		seats: Number(row["seats"]),
+		course: officialCourseFromRow(row["course"]),
 	};
+}
+
+function officialCourseFromRow(value: unknown): OfficialTraprushCourseId {
+	return isOfficialTraprushCourseId(value) ? value : DEFAULT_OFFICIAL_TRAPRUSH_COURSE;
 }
 
 function isUniqueConstraint(error: unknown): boolean {

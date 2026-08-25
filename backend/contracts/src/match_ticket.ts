@@ -20,12 +20,15 @@ export interface RegisterMatchSessionRequest {
 	readonly upstreamUrl: string;
 	/** 本场席位。省略时控制面按 TRAPRUSH 上限 8 记，不是默认开局人数。 */
 	readonly seats?: number;
+	/** 官方赛道 id。省略时 `course_01`。不接受 `res://` 路径或 UGC 课。 */
+	readonly course?: string;
 }
 
 export interface RegisterMatchSessionResponse {
 	readonly matchId: string;
 	readonly upstreamUrl: string;
 	readonly seats: number;
+	readonly course: string;
 }
 
 export interface UnregisterMatchSessionResponse {
@@ -79,6 +82,7 @@ export const registerMatchSessionBodySchema = {
 		matchId: { type: "string", minLength: 1, maxLength: 64 },
 		upstreamUrl: { type: "string", minLength: 1, maxLength: 512 },
 		seats: { type: "integer", minimum: 1, maximum: 8 },
+		course: { type: "string", minLength: 1, maxLength: 32 },
 	},
 } as const;
 
