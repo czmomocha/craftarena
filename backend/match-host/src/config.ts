@@ -57,9 +57,9 @@ const DEFAULT_LISTEN_TIMEOUT_MS = 15 * 1000;
 const DEFAULT_LISTEN_POLL_MS = 50;
 
 /**
- * 开发期默认对局内容：控制面按场下发官方赛道 id 后，本机把它映射成
- * `res://content/official/traprush/{id}.json`。空 POST /matches 仍用这个默认。
- * 人数上限 8 与 CD-21 §3 的 TRAPRUSH 房间规模一致。
+ * 开发期默认对局内容：控制面按场下发官方赛道 id 与人数后，本机把 id
+ * 映射成 `res://content/official/traprush/{id}.json`，并把人数交给 `--players=`。
+ * 空 POST /matches 仍用这些默认。人数上限 8 与 CD-21 的 TRAPRUSH 房间规模一致。
  */
 const DEFAULT_MATCH_COURSE = "res://content/official/traprush/course_01.json";
 const DEFAULT_MATCH_PLAYERS = 2;

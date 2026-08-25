@@ -115,4 +115,11 @@ export const MIGRATIONS: readonly Migration[] = [
 			`ALTER TABLE match_queue ADD COLUMN course TEXT NOT NULL DEFAULT 'course_01'`,
 		],
 	},
+	{
+		id: "0008_match_queue_seats",
+		statements: [
+			// 队列记住请求人数。旧行按匹配 HTTP 默认 2 补，与 MatchHost 开发期占位一致。
+			`ALTER TABLE match_queue ADD COLUMN seats INTEGER NOT NULL DEFAULT 2`,
+		],
+	},
 ];

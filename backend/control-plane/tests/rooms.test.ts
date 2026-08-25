@@ -35,7 +35,7 @@ class FakeMatchLauncher implements MatchLauncher {
 		this.#app = app;
 	}
 
-	async launch(request: { course?: string } = {}): Promise<{ matchId: string }> {
+	async launch(request: { course?: string; seats?: number } = {}): Promise<{ matchId: string }> {
 		if (this.failWith !== undefined) {
 			throw this.failWith;
 		}
@@ -44,6 +44,7 @@ class FakeMatchLauncher implements MatchLauncher {
 		}
 
 		const course = request.course ?? "course_01";
+		const seats = request.seats ?? this.seats;
 		const matchId = randomUUID();
 		const registered = await this.#app.inject({
 			method: "POST",
@@ -51,7 +52,7 @@ class FakeMatchLauncher implements MatchLauncher {
 			payload: {
 				matchId,
 				upstreamUrl: `ws://127.0.0.1:${this.#nextPort}`,
-				seats: this.seats,
+				seats,
 				course,
 			},
 		});

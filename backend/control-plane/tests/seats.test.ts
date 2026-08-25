@@ -18,7 +18,7 @@ class FakeMatchLauncher implements MatchLauncher {
 	seats = 2;
 	remainingCapacity = 100;
 	#app: FastifyInstance | undefined;
-	#nextPort = 22000;
+	#nextPort = 23000;
 
 	bind(app: FastifyInstance): void {
 		this.#app = app;
@@ -55,7 +55,7 @@ class FakeMatchLauncher implements MatchLauncher {
 	}
 }
 
-describe("control plane official course select", () => {
+describe("control plane seats per match", () => {
 	async function withApp(run: (app: FastifyInstance, launcher: FakeMatchLauncher) => Promise<void>): Promise<void> {
 		const database = new ControlPlaneDatabase(":memory:");
 		database.migrate();
@@ -64,7 +64,7 @@ describe("control plane official course select", () => {
 			database,
 			version: "1.2.3-test",
 			logger: false,
-			now: () => new Date("2026-08-25T05:00:00.000Z"),
+			now: () => new Date("2026-08-25T06:00:00.000Z"),
 			matchLauncher: launcher,
 		});
 		launcher.bind(app);
@@ -77,152 +77,115 @@ describe("control plane official course select", () => {
 		}
 	}
 
-	test("empty body defaults to course_01 and echoes it on join", async () => {
+	test("empty body defaults to 2 seats and echoes them on join", async () => {
 		await withApp(async (app, launcher) => {
 			const created = await app.inject({ method: "POST", url: "/matchmaking/rooms" });
 			assert.equal(created.statusCode, 201);
 			const room = created.json<MatchmakingJoinResponse>();
+			assert.equal(room.seats, 2);
 			assert.equal(room.course, "course_01");
-			assert.deepEqual(launcher.launchedCourses, ["course_01"]);
+			assert.deepEqual(launcher.launchedSeats, [2]);
 		});
 	});
 
-	test("create room with course_02 does not join a course_01 quick-play room", async () => {
+	test("quick play with seats 8 does not join a 2-seat room on the same course", async () => {
 		await withApp(async (app, launcher) => {
-			const first = await app.inject({
+			const two = await app.inject({
 				method: "POST",
 				url: "/matchmaking/rooms",
-				payload: { course: "course_01" },
+				payload: { course: "course_01", seats: 2 },
 			});
-			const second = await app.inject({
+			const eight = await app.inject({
 				method: "POST",
 				url: "/matchmaking/rooms",
-				payload: { course: "course_02" },
+				payload: { course: "course_01", seats: 8 },
 			});
-			assert.equal(first.statusCode, 201);
-			assert.equal(second.statusCode, 201);
-			const course01 = first.json<MatchmakingJoinResponse>();
-			const course02 = second.json<MatchmakingJoinResponse>();
-			assert.equal(course01.course, "course_01");
-			assert.equal(course02.course, "course_02");
-			assert.notEqual(course01.matchId, course02.matchId);
-			assert.deepEqual(launcher.launchedCourses, ["course_01", "course_02"]);
+			assert.equal(two.statusCode, 201);
+			assert.equal(eight.statusCode, 201);
+			const twoRoom = two.json<MatchmakingJoinResponse>();
+			const eightRoom = eight.json<MatchmakingJoinResponse>();
+			assert.equal(twoRoom.seats, 2);
+			assert.equal(eightRoom.seats, 8);
+			assert.notEqual(twoRoom.matchId, eightRoom.matchId);
+			assert.deepEqual(launcher.launchedSeats, [2, 8]);
 
 			const quick = await app.inject({
 				method: "POST",
 				url: "/matchmaking/quick",
-				payload: { course: "course_02" },
+				payload: { course: "course_01", seats: 8 },
 			});
 			assert.equal(quick.statusCode, 201);
 			const joined = quick.json<MatchmakingJoinResponse>();
-			assert.equal(joined.matchId, course02.matchId);
-			assert.equal(joined.course, "course_02");
+			assert.equal(joined.matchId, eightRoom.matchId);
+			assert.equal(joined.seats, 8);
 			assert.equal(joined.issued, 2);
 		});
 	});
 
-	test("join by room code returns that room's course", async () => {
+	test("join by room code returns that room's seats and rejects a body", async () => {
 		await withApp(async (app) => {
 			const created = await app.inject({
 				method: "POST",
 				url: "/matchmaking/rooms",
-				payload: { course: "course_03" },
+				payload: { seats: 4 },
 			});
 			const room = created.json<MatchmakingJoinResponse>();
+			assert.equal(room.seats, 4);
 			const joined = await app.inject({
 				method: "POST",
 				url: `/matchmaking/rooms/${room.roomCode}/join`,
 			});
 			assert.equal(joined.statusCode, 201);
-			assert.equal(joined.json<MatchmakingJoinResponse>().course, "course_03");
-		});
-	});
+			assert.equal(joined.json<MatchmakingJoinResponse>().seats, 4);
 
-	test("queue remembers the requested course and does not take leftover seats of another course", async () => {
-		await withApp(async (app, launcher) => {
-			launcher.seats = 2;
-			launcher.remainingCapacity = 1;
-			const occupying = await app.inject({
-				method: "POST",
-				url: "/matchmaking/rooms",
-				payload: { course: "course_01" },
-			});
-			const room = occupying.json<MatchmakingJoinResponse>();
-
-			const queued = await app.inject({
-				method: "POST",
-				url: "/matchmaking/quick",
-				payload: { course: "course_02" },
-			});
-			assert.equal(queued.statusCode, 202);
-			const waiting = queued.json<MatchmakingQueueWaitingResponse>();
-			assert.equal(waiting.course, "course_02");
-
-			const stillWaiting = await app.inject({
-				method: "GET",
-				url: `/matchmaking/queue/${waiting.queueToken}`,
-			});
-			assert.equal(stillWaiting.json<MatchmakingQueueWaitingResponse>().status, "waiting");
-			assert.equal(stillWaiting.json<MatchmakingQueueWaitingResponse>().course, "course_02");
-			assert.deepEqual(launcher.launchedCourses, ["course_01"]);
-			assert.equal(room.issued, 1);
-		});
-	});
-
-	test("rejects unknown courses, res:// paths, and extra fields", async () => {
-		await withApp(async (app) => {
-			const unknown = await app.inject({
-				method: "POST",
-				url: "/matchmaking/quick",
-				payload: { course: "course_99" },
-			});
-			assert.equal(unknown.statusCode, 400);
-			assert.equal(unknown.json<{ error: string }>().error, "invalid_course");
-
-			const path = await app.inject({
-				method: "POST",
-				url: "/matchmaking/rooms",
-				payload: { course: "res://content/official/traprush/course_01.json" },
-			});
-			assert.equal(path.statusCode, 400);
-			assert.equal(path.json<{ error: string }>().error, "invalid_course");
-
-			const extra = await app.inject({
-				method: "POST",
-				url: "/matchmaking/quick",
-				payload: { course: "course_01", players: 8 },
-			});
-			assert.equal(extra.statusCode, 400);
-			assert.equal(extra.json<{ error: string }>().error, "unexpected_request_body");
-		});
-	});
-
-	test("join by room code rejects a body so callers cannot swap the locked course", async () => {
-		await withApp(async (app) => {
-			const created = await app.inject({
-				method: "POST",
-				url: "/matchmaking/rooms",
-				payload: { course: "course_02" },
-			});
-			const room = created.json<MatchmakingJoinResponse>();
 			const swapped = await app.inject({
 				method: "POST",
 				url: `/matchmaking/rooms/${room.roomCode}/join`,
-				payload: { course: "course_03" },
+				payload: { seats: 8 },
 			});
 			assert.equal(swapped.statusCode, 400);
 			assert.equal(swapped.json<{ error: string }>().error, "unexpected_request_body");
 		});
 	});
 
-	test("queue drain launches the waiter's course when capacity returns", async () => {
+	test("queue remembers seats and does not take leftover seats of another size", async () => {
 		await withApp(async (app, launcher) => {
-			launcher.seats = 2;
 			launcher.remainingCapacity = 1;
 			const occupying = await app.inject({
 				method: "POST",
 				url: "/matchmaking/rooms",
-				payload: { course: "course_01" },
+				payload: { seats: 2 },
+			});
+			const room = occupying.json<MatchmakingJoinResponse>();
+
+			const queued = await app.inject({
+				method: "POST",
+				url: "/matchmaking/quick",
+				payload: { seats: 8 },
+			});
+			assert.equal(queued.statusCode, 202);
+			const waiting = queued.json<MatchmakingQueueWaitingResponse>();
+			assert.equal(waiting.seats, 8);
+			assert.equal(waiting.course, "course_01");
+
+			const stillWaiting = await app.inject({
+				method: "GET",
+				url: `/matchmaking/queue/${waiting.queueToken}`,
+			});
+			assert.equal(stillWaiting.json<MatchmakingQueueWaitingResponse>().status, "waiting");
+			assert.equal(stillWaiting.json<MatchmakingQueueWaitingResponse>().seats, 8);
+			assert.deepEqual(launcher.launchedSeats, [2]);
+			assert.equal(room.issued, 1);
+		});
+	});
+
+	test("queue drain launches the waiter's seats when capacity returns", async () => {
+		await withApp(async (app, launcher) => {
+			launcher.remainingCapacity = 1;
+			const occupying = await app.inject({
+				method: "POST",
+				url: "/matchmaking/rooms",
+				payload: { seats: 2 },
 			});
 			assert.equal(occupying.statusCode, 201);
 			const occupied = occupying.json<MatchmakingJoinResponse>();
@@ -230,10 +193,9 @@ describe("control plane official course select", () => {
 			const queued = await app.inject({
 				method: "POST",
 				url: "/matchmaking/quick",
-				payload: { course: "course_02" },
+				payload: { seats: 8 },
 			});
 			assert.equal(queued.statusCode, 202);
-			const waiting = queued.json<MatchmakingQueueWaitingResponse>();
 
 			launcher.remainingCapacity = 1;
 			assert.equal(
@@ -241,43 +203,43 @@ describe("control plane official course select", () => {
 				200,
 			);
 
+			const waiting = queued.json<MatchmakingQueueWaitingResponse>();
 			const ready = await app.inject({
 				method: "GET",
 				url: `/matchmaking/queue/${waiting.queueToken}`,
 			});
 			assert.equal(ready.statusCode, 200);
 			assert.equal(ready.json<{ status: string }>().status, "ready");
-			assert.equal(ready.json<{ course: string }>().course, "course_02");
-			assert.notEqual(ready.json<{ matchId: string }>().matchId, occupied.matchId);
-			assert.deepEqual(launcher.launchedCourses, ["course_01", "course_02"]);
+			assert.equal(ready.json<{ seats: number }>().seats, 8);
+			assert.deepEqual(launcher.launchedSeats, [2, 8]);
 		});
 	});
 
-	test("match-sessions defaults to course_01 and rejects unknown ids", async () => {
+	test("rejects out-of-range seats, aliases, and extra fields", async () => {
 		await withApp(async (app) => {
-			const created = await app.inject({
+			const zero = await app.inject({
 				method: "POST",
-				url: "/match-sessions",
-				payload: { upstreamUrl: "ws://127.0.0.1:19110" },
+				url: "/matchmaking/quick",
+				payload: { seats: 0 },
 			});
-			assert.equal(created.statusCode, 201);
-			assert.equal(created.json<{ course: string }>().course, "course_01");
+			assert.equal(zero.statusCode, 400);
+			assert.equal(zero.json<{ error: string }>().error, "invalid_seats");
 
-			const requested = await app.inject({
+			const nine = await app.inject({
 				method: "POST",
-				url: "/match-sessions",
-				payload: { upstreamUrl: "ws://127.0.0.1:19111", course: "course_02" },
+				url: "/matchmaking/rooms",
+				payload: { seats: 9 },
 			});
-			assert.equal(requested.statusCode, 201);
-			assert.equal(requested.json<{ course: string }>().course, "course_02");
+			assert.equal(nine.statusCode, 400);
+			assert.equal(nine.json<{ error: string }>().error, "invalid_seats");
 
-			const invalid = await app.inject({
+			const alias = await app.inject({
 				method: "POST",
-				url: "/match-sessions",
-				payload: { upstreamUrl: "ws://127.0.0.1:19112", course: "course_99" },
+				url: "/matchmaking/quick",
+				payload: { players: 2 },
 			});
-			assert.equal(invalid.statusCode, 400);
-			assert.equal(invalid.json<{ error: string }>().error, "invalid_course");
+			assert.equal(alias.statusCode, 400);
+			assert.equal(alias.json<{ error: string }>().error, "unexpected_request_body");
 		});
 	});
 });

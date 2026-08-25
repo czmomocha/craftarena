@@ -19,10 +19,10 @@ extends Node
 ## intents. play_move_step is a presentation stub, not a product speed.
 ## Unexpected socket close while connecting or in-match reissues the
 ## consumed ticket and follows the latest snapshot again.
-## Quick play / create room send an official course id; join-by-code
-## follows the room's course and remounts maps from that response.
-## Solo play reuses the same selector. No BASTION, accounts, settlement,
-## ghosts, or offline writes.
+## Quick play / create room send an official course id and seats;
+## join-by-code follows the room's course and remounts maps from that response.
+## Solo play reuses the course selector only (always one local player).
+## No BASTION, accounts, settlement, ghosts, or offline writes.
 
 const MatchFrameCodec := preload("res://src/shared/protocol/match_frame_codec.gd")
 const MatchJoinSessionGd := preload("res://src/client/match_join_session.gd")
@@ -51,6 +51,7 @@ const SOLO_NAME: String = "SoloPlay"
 const POLL_NAME: String = "Poll"
 const ROOM_NAME: String = "RoomCode"
 const COURSE_ID_NAME: String = "CourseId"
+const SEATS_NAME: String = "Seats"
 const _STATUS_NAME: String = "Status"
 const _MAP_NAME: String = "SnapshotMap"
 const _COURSE_NAME: String = "CourseMap"
@@ -88,6 +89,7 @@ var last_sent_command: PackedByteArray = PackedByteArray()
 var _status: Label = null
 var _room_edit: LineEdit
 var _course_edit: LineEdit = null
+var _seats_edit: LineEdit = null
 var _http: HTTPRequest = null
 var _http_busy: bool = false
 var _peer: WebSocketPeer = null
@@ -170,13 +172,34 @@ func selected_course_id() -> String:
 	return OfficialTraprushCoursesGd.normalize_id(trimmed)
 
 
+func seats_text() -> String:
+	if _seats_edit == null:
+		return str(OfficialTraprushCoursesGd.DEFAULT_SEATS)
+	return _seats_edit.text
+
+
+func set_seats_text(text: String) -> void:
+	if _seats_edit != null:
+		_seats_edit.text = text
+
+
+func selected_seats() -> int:
+	var raw: String = seats_text().strip_edges()
+	if raw == "":
+		return OfficialTraprushCoursesGd.DEFAULT_SEATS
+	if not raw.is_valid_int():
+		return 0
+	return OfficialTraprushCoursesGd.normalize_seats(raw.to_int())
+
+
 func try_quick() -> bool:
 	if join == null or _offline_playing():
 		return false
 	var id: String = selected_course_id()
-	if id == "":
+	var seat_count: int = selected_seats()
+	if id == "" or seat_count == 0:
 		return false
-	if not join.try_quick(id):
+	if not join.try_quick(id, seat_count):
 		return false
 	_dispatch_pending()
 	_refresh_status()
@@ -187,9 +210,10 @@ func try_create_room() -> bool:
 	if join == null or _offline_playing():
 		return false
 	var id: String = selected_course_id()
-	if id == "":
+	var seat_count: int = selected_seats()
+	if id == "" or seat_count == 0:
 		return false
-	if not join.try_create_room(id):
+	if not join.try_create_room(id, seat_count):
 		return false
 	_dispatch_pending()
 	_refresh_status()
@@ -455,6 +479,8 @@ func status_view() -> Dictionary:
 		"ticket": join_view.get("ticket", ""),
 		"course": join_view.get("course", ""),
 		"course_id": selected_course_id(),
+		"seats": join_view.get("seats", 0),
+		"selected_seats": selected_seats(),
 		"play_state": play_view.get("state", ""),
 		"offline_state": offline_view.get("state", ""),
 		"offline_banner": offline_view.get("banner", ""),
@@ -557,6 +583,12 @@ func _ensure_window() -> void:
 	_course_edit.text = OfficialTraprushCoursesGd.DEFAULT_ID
 	_course_edit.max_length = 32
 	root.add_child(_course_edit)
+	_seats_edit = LineEdit.new()
+	_seats_edit.name = SEATS_NAME
+	_seats_edit.placeholder_text = str(OfficialTraprushCoursesGd.DEFAULT_SEATS)
+	_seats_edit.text = str(OfficialTraprushCoursesGd.DEFAULT_SEATS)
+	_seats_edit.max_length = 1
+	root.add_child(_seats_edit)
 	map = MatchSnapshotMapGd.new()
 	map.name = _MAP_NAME
 	window.add_child(map)
@@ -743,6 +775,11 @@ func _refresh_status() -> void:
 		shown_course = str(view.get("course_id", ""))
 	if shown_course != "":
 		parts.append("course_id=%s" % shown_course)
+	var shown_seats: int = view.get("seats", 0)
+	if shown_seats < 1:
+		shown_seats = view.get("selected_seats", 0)
+	if shown_seats >= 1:
+		parts.append("seats=%d" % shown_seats)
 	var error_text: String = str(view.get("error", ""))
 	if error_text != "":
 		parts.append("error=%s" % error_text)

@@ -8,6 +8,9 @@ const DEFAULT_ID: String = "course_01"
 const COURSE_01: String = "course_01"
 const COURSE_02: String = "course_02"
 const COURSE_03: String = "course_03"
+const DEFAULT_SEATS: int = 2
+const MIN_SEATS: int = 1
+const MAX_SEATS: int = 8
 const _DOCUMENT_DIR: String = "res://content/official/traprush"
 
 
@@ -27,3 +30,9 @@ static func document_path(course_id: String) -> String:
 	if id == "":
 		return ""
 	return "%s/%s.json" % [_DOCUMENT_DIR, id]
+
+
+static func normalize_seats(value: int) -> int:
+	if value < MIN_SEATS or value > MAX_SEATS:
+		return 0
+	return value
