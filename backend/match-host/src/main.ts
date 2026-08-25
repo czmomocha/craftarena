@@ -2,6 +2,7 @@ import type { FastifyInstance } from "fastify";
 
 import { loadConfig } from "./config.ts";
 import { GodotProcessLauncher } from "./launcher.ts";
+import { TcpMatchListenProbe } from "./listen_probe.ts";
 import { ControlPlaneMatchSessionRegistrar } from "./registrar.ts";
 import { MatchRegistry } from "./registry.ts";
 import { buildMatchHost } from "./server.ts";
@@ -21,6 +22,11 @@ const registry = new MatchRegistry({
 		players: config.matchPlayers,
 	}),
 	registrar: new ControlPlaneMatchSessionRegistrar(config.controlPlaneUrl),
+	listenProbe: new TcpMatchListenProbe({
+		timeoutMs: config.listenTimeoutMs,
+		intervalMs: config.listenPollMs,
+		host: config.listenProbeHost,
+	}),
 	upstreamHost: config.upstreamHost,
 	portRangeMin: config.portRangeMin,
 	portRangeMax: config.portRangeMax,

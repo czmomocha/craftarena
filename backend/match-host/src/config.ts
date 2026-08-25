@@ -1,5 +1,6 @@
 import { resolve } from "node:path";
 
+import { MATCH_LISTEN_PROBE_HOST } from "./listen_probe.ts";
 import { buildMatchUpstreamUrl } from "./registrar.ts";
 
 export interface MatchHostConfig {
@@ -23,6 +24,13 @@ export interface MatchHostConfig {
 	 * 不在同一台机器时用 MATCH_HOST_UPSTREAM_HOST 覆盖。不是产品锁定值。
 	 */
 	readonly upstreamHost: string;
+	/**
+	 * 等待本场端口 TCP listen 的超时。实现默认，不是产品锁定值。
+	 * 探测永远打 127.0.0.1，与广告主机无关。
+	 */
+	readonly listenTimeoutMs: number;
+	readonly listenPollMs: number;
+	readonly listenProbeHost: string;
 	readonly version: string;
 	readonly logLevel: string;
 }
@@ -43,6 +51,10 @@ const DEFAULT_PORT_RANGE_MIN = 42000;
 const DEFAULT_PORT_RANGE_MAX = 42099;
 
 const DEFAULT_RECLAIM_INTERVAL_MS = 15 * 1000;
+
+/** 等 Godot 对本场端口 listen 的实现默认超时，不是产品 Tick / 启动时限。 */
+const DEFAULT_LISTEN_TIMEOUT_MS = 15 * 1000;
+const DEFAULT_LISTEN_POLL_MS = 50;
 
 /**
  * 开发期占位对局内容：控制面按场下发课程与人数是后续章节，本机先全场共用一份。
@@ -78,6 +90,17 @@ export function loadConfig(
 		matchPlayers: parsePlayers(env["MATCH_HOST_PLAYERS"]),
 		controlPlaneUrl: (env["CONTROL_PLANE_URL"] ?? "http://127.0.0.1:8080").replace(/\/+$/, ""),
 		upstreamHost: parseUpstreamHost(env["MATCH_HOST_UPSTREAM_HOST"]),
+		listenTimeoutMs: parsePositiveInteger(
+			env["MATCH_HOST_LISTEN_TIMEOUT_MS"],
+			DEFAULT_LISTEN_TIMEOUT_MS,
+			"MATCH_HOST_LISTEN_TIMEOUT_MS",
+		),
+		listenPollMs: parsePositiveInteger(
+			env["MATCH_HOST_LISTEN_POLL_MS"],
+			DEFAULT_LISTEN_POLL_MS,
+			"MATCH_HOST_LISTEN_POLL_MS",
+		),
+		listenProbeHost: MATCH_LISTEN_PROBE_HOST,
 		version: env["CRAFTARENA_VERSION"] ?? "0.0.0-dev",
 		logLevel: env["MATCH_HOST_LOG_LEVEL"] ?? "info",
 	};
@@ -131,5 +154,13 @@ function parseInteger(raw: string | undefined, fallback: number, name: string): 
 		throw new Error(`${name} must be a non-negative integer, received: ${raw}`);
 	}
 
+	return parsed;
+}
+
+function parsePositiveInteger(raw: string | undefined, fallback: number, name: string): number {
+	const parsed = parseInteger(raw, fallback, name);
+	if (parsed < 1) {
+		throw new Error(`${name} must be a positive integer, received: ${raw ?? String(fallback)}`);
+	}
 	return parsed;
 }

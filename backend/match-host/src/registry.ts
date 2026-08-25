@@ -3,6 +3,7 @@ import { randomUUID } from "node:crypto";
 import { createLease, evaluateLease, renewLease, type Lease, type LeaseExpiryReason } from "./lease.ts";
 import { PortAllocator } from "./ports.ts";
 import type { LaunchedProcess, MatchExit, ProcessLauncher } from "./launcher.ts";
+import { MatchListenError, type MatchListenProbe } from "./listen_probe.ts";
 import {
 	MatchSessionRegisterError,
 	buildMatchUpstreamUrl,
@@ -20,7 +21,7 @@ export interface MatchRecord {
 	readonly state: MatchState;
 	readonly startedAt: number;
 	readonly lease: Lease;
-	/** 已交给控制面的对局 WebSocket 上游。登记失败的场次不会出现在注册表里。 */
+	/** 已交给控制面的对局 WebSocket 上游。listen 或登记失败的场次不会出现在注册表里。 */
 	readonly upstreamUrl: string;
 	readonly stopReason?: MatchStopReason | undefined;
 	readonly exit?: MatchExit | undefined;
@@ -29,6 +30,8 @@ export interface MatchRecord {
 export interface MatchRegistryOptions {
 	readonly launcher: ProcessLauncher;
 	readonly registrar: MatchSessionRegistrar;
+	/** 登记前确认本场端口已经在听。探测连回环，不查库。 */
+	readonly listenProbe: MatchListenProbe;
 	/** 拼 `ws://{host}:{port}` 用的广告主机名，默认由调用方从配置传入。 */
 	readonly upstreamHost: string;
 	readonly portRangeMin: number;
@@ -63,7 +66,7 @@ interface MatchEntry {
 /**
  * 对局注册表：一场对局一个 Godot Headless 进程（CD-44 §3）。
  *
- * 这里管进程生命周期、端口、租约，以及拉起后经控制面 API 登记上游。
+ * 这里管进程生命周期、端口、租约，以及 listen 可连后再经控制面 API 登记上游。
  * 它**不碰数据库**——宪法第二十一条规定只有控制面能直接读写 SQLite。
  */
 export class MatchRegistry {
@@ -71,7 +74,7 @@ export class MatchRegistry {
 	readonly #ports: PortAllocator;
 	readonly #entries = new Map<string, MatchEntry>();
 	readonly #now: () => number;
-	/** 正在登记、尚未写入注册表的场次。占容量，避免并发 POST 挤爆上限。 */
+	/** 正在拉起、等待 listen 或登记、尚未写入注册表的场次。占容量，避免并发 POST 挤爆上限。 */
 	#reservations = 0;
 
 	constructor(options: MatchRegistryOptions) {
@@ -101,11 +104,12 @@ export class MatchRegistry {
 		try {
 			upstreamUrl = buildMatchUpstreamUrl(this.#options.upstreamHost, port);
 			process = this.#options.launcher.launch({ matchId, port });
+			await this.#waitUntilListening(process, port);
 			await this.#options.registrar.register({ matchId, upstreamUrl });
 		} catch (error) {
 			process?.kill();
 			this.#ports.release(port);
-			if (error instanceof MatchSessionRegisterError) {
+			if (error instanceof MatchListenError || error instanceof MatchSessionRegisterError) {
 				throw error;
 			}
 			if (process === undefined) {
@@ -135,6 +139,53 @@ export class MatchRegistry {
 		});
 
 		return record;
+	}
+
+	async #waitUntilListening(process: LaunchedProcess, port: number): Promise<void> {
+		const abort = new AbortController();
+		let settled = false;
+		let processExit: MatchExit | undefined;
+
+		type ListenRace =
+			| { readonly kind: "listening" }
+			| { readonly kind: "listen_failed"; readonly error: unknown }
+			| { readonly kind: "exited"; readonly exit: MatchExit };
+
+		const listenAttempt: Promise<ListenRace> = this.#options.listenProbe
+			.waitUntilListening({ port, signal: abort.signal })
+			.then(() => ({ kind: "listening" as const }))
+			.catch((error: unknown) => ({ kind: "listen_failed" as const, error }));
+
+		const exitAttempt: Promise<ListenRace> = process.exited.then((exit) => {
+			if (!settled) {
+				processExit = exit;
+				abort.abort();
+			}
+			return { kind: "exited" as const, exit };
+		});
+
+		const outcome = await Promise.race([listenAttempt, exitAttempt]);
+		settled = true;
+		if (processExit !== undefined) {
+			throw new MatchListenError(
+				`match process exited before listen (code=${processExit.code}, signal=${processExit.signal})`,
+			);
+		}
+		if (outcome.kind === "listening") {
+			return;
+		}
+
+		if (outcome.kind === "listen_failed" && outcome.error instanceof MatchListenError) {
+			throw outcome.error;
+		}
+		if (outcome.kind === "listen_failed") {
+			throw new MatchListenError(
+				outcome.error instanceof Error ? outcome.error.message : String(outcome.error),
+			);
+		}
+		throw new MatchListenError(
+			`match process exited before listen (code=${outcome.exit.code}, signal=${outcome.exit.signal})`,
+		);
 	}
 
 	get(matchId: string): MatchRecord | undefined {
