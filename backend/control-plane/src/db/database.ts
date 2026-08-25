@@ -138,6 +138,25 @@ export class ControlPlaneDatabase {
 		return { matchId, upstreamUrl: input.upstreamUrl, createdAt };
 	}
 
+	deleteMatchSession(matchId: string): MatchSessionRecord {
+		const existing = this.getMatchSession(matchId);
+		if (existing === undefined) {
+			throw new MatchSessionNotFoundError(matchId);
+		}
+
+		this.#db.exec("BEGIN");
+		try {
+			this.#db.prepare("DELETE FROM match_tickets WHERE match_id = ?").run(matchId);
+			this.#db.prepare("DELETE FROM match_sessions WHERE match_id = ?").run(matchId);
+			this.#db.exec("COMMIT");
+		} catch (error) {
+			this.#db.exec("ROLLBACK");
+			throw error;
+		}
+
+		return existing;
+	}
+
 	getMatchSession(matchId: string): MatchSessionRecord | undefined {
 		const row = this.#db
 			.prepare("SELECT match_id, upstream_url, created_at FROM match_sessions WHERE match_id = ?")

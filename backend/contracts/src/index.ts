@@ -15,6 +15,7 @@ export {
 	type RegisterMatchSessionRequest,
 	type RegisterMatchSessionResponse,
 	type TicketRejectReason,
+	type UnregisterMatchSessionResponse,
 	type VerifyMatchTicketFailure,
 	type VerifyMatchTicketRequest,
 	type VerifyMatchTicketResponse,

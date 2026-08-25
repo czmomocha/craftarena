@@ -5,6 +5,7 @@ import {
 	TICKET_REJECT_REASONS,
 	type IssueMatchTicketResponse,
 	type RegisterMatchSessionResponse,
+	type UnregisterMatchSessionResponse,
 	type VerifyMatchTicketResponse,
 	type VerifyMatchTicketSuccess,
 } from "../../contracts/src/index.ts";
@@ -282,5 +283,131 @@ describe("control plane match tickets", () => {
 			ok: false,
 			reason: TICKET_REJECT_REASONS.expiredTicket,
 		});
+	});
+
+	test("unregisters a session so leftover tickets and new issues fail", async () => {
+		const matchId = "aaaaaaaa-bbbb-cccc-dddd-ffffffffffff";
+		const created = await app.inject({
+			method: "POST",
+			url: "/match-sessions",
+			payload: { matchId, upstreamUrl: "ws://127.0.0.1:18220" },
+		});
+		assert.equal(created.statusCode, 201);
+		const leftover = await app.inject({
+			method: "POST",
+			url: `/match-sessions/${matchId}/tickets`,
+		});
+		assert.equal(leftover.statusCode, 201);
+		const leftoverTicket = leftover.json<IssueMatchTicketResponse>().ticket;
+
+		const deleted = await app.inject({
+			method: "DELETE",
+			url: `/match-sessions/${matchId}`,
+		});
+		assert.equal(deleted.statusCode, 200);
+		assert.deepEqual(deleted.json<UnregisterMatchSessionResponse>(), { matchId });
+
+		const issued = await app.inject({
+			method: "POST",
+			url: `/match-sessions/${matchId}/tickets`,
+		});
+		assert.equal(issued.statusCode, 404);
+		assert.equal(issued.json<{ error: string }>().error, "match_not_found");
+
+		const verified = await app.inject({
+			method: "POST",
+			url: "/tickets/verify",
+			payload: { ticket: leftoverTicket },
+		});
+		assert.equal(verified.statusCode, 401);
+		assert.deepEqual(verified.json<VerifyMatchTicketResponse>(), {
+			ok: false,
+			reason: TICKET_REJECT_REASONS.unknownTicket,
+		});
+	});
+
+	test("allows the same match id to register again after unregister", async () => {
+		const matchId = "bbbbbbbb-cccc-dddd-eeee-ffffffffffff";
+		const first = await app.inject({
+			method: "POST",
+			url: "/match-sessions",
+			payload: { matchId, upstreamUrl: "ws://127.0.0.1:18221" },
+		});
+		assert.equal(first.statusCode, 201);
+		const deleted = await app.inject({
+			method: "DELETE",
+			url: `/match-sessions/${matchId}`,
+		});
+		assert.equal(deleted.statusCode, 200);
+
+		const second = await app.inject({
+			method: "POST",
+			url: "/match-sessions",
+			payload: { matchId, upstreamUrl: "ws://10.0.0.8:9101" },
+		});
+		assert.equal(second.statusCode, 201);
+		assert.equal(second.json<RegisterMatchSessionResponse>().upstreamUrl, "ws://10.0.0.8:9101");
+	});
+
+	test("does not unregister a neighbor session", async () => {
+		const keepId = "cccccccc-dddd-eeee-ffff-000000000000";
+		const dropId = "dddddddd-eeee-ffff-0000-111111111111";
+		await app.inject({
+			method: "POST",
+			url: "/match-sessions",
+			payload: { matchId: keepId, upstreamUrl: "ws://127.0.0.1:18222" },
+		});
+		await app.inject({
+			method: "POST",
+			url: "/match-sessions",
+			payload: { matchId: dropId, upstreamUrl: "ws://127.0.0.1:18223" },
+		});
+
+		const deleted = await app.inject({
+			method: "DELETE",
+			url: `/match-sessions/${dropId}`,
+		});
+		assert.equal(deleted.statusCode, 200);
+
+		const kept = await app.inject({
+			method: "POST",
+			url: `/match-sessions/${keepId}/tickets`,
+		});
+		assert.equal(kept.statusCode, 201);
+	});
+
+	test("rejects an unknown match when unregistering", async () => {
+		const response = await app.inject({
+			method: "DELETE",
+			url: "/match-sessions/99999999-9999-9999-9999-999999999999",
+		});
+		assert.equal(response.statusCode, 404);
+		assert.equal(response.json<{ error: string }>().error, "match_not_found");
+	});
+
+	test("rejects an invalid match id when unregistering", async () => {
+		const response = await app.inject({
+			method: "DELETE",
+			url: "/match-sessions/not-a-uuid",
+		});
+		assert.equal(response.statusCode, 400);
+		assert.equal(response.json<{ error: string }>().error, "invalid_match_id");
+	});
+
+	test("rejects an unregister body so later fields cannot be silently ignored", async () => {
+		const created = await app.inject({
+			method: "POST",
+			url: "/match-sessions",
+			payload: { upstreamUrl: "ws://127.0.0.1:18224" },
+		});
+		const matchId = created.json<RegisterMatchSessionResponse>().matchId;
+
+		const response = await app.inject({
+			method: "DELETE",
+			url: `/match-sessions/${matchId}`,
+			payload: { force: true },
+		});
+		assert.equal(response.statusCode, 400);
+		assert.equal(response.json<{ error: string }>().error, "unexpected_request_body");
 	});
 });

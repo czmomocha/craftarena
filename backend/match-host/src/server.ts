@@ -9,7 +9,7 @@ import {
 } from "../../contracts/src/index.ts";
 import { MatchCapacityError, type MatchRecord, type MatchRegistry } from "./registry.ts";
 import { MatchListenError } from "./listen_probe.ts";
-import { MatchSessionRegisterError } from "./registrar.ts";
+import { MatchSessionRegisterError, MatchSessionUnregisterError } from "./registrar.ts";
 
 export interface BuildMatchHostOptions {
 	readonly registry: MatchRegistry;
@@ -155,12 +155,20 @@ export function buildMatchHost(options: BuildMatchHostOptions): FastifyInstance 
 	});
 
 	app.delete<{ Params: MatchIdParams }>("/matches/:id", async (request, reply) => {
-		const record = options.registry.stop(request.params.id);
-		if (record === undefined) {
-			reply.code(404);
-			return { error: "match_not_found" };
+		try {
+			const record = await options.registry.stop(request.params.id);
+			if (record === undefined) {
+				reply.code(404);
+				return { error: "match_not_found" };
+			}
+			return toWire(record);
+		} catch (error) {
+			if (error instanceof MatchSessionUnregisterError) {
+				reply.code(502);
+				return { error: "session_unregister_failed", message: error.message };
+			}
+			throw error;
 		}
-		return toWire(record);
 	});
 
 	return app;

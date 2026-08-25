@@ -21,6 +21,7 @@ import { PortAllocator } from "../src/ports.ts";
 import {
 	ControlPlaneMatchSessionRegistrar,
 	MatchSessionRegisterError,
+	MatchSessionUnregisterError,
 	buildMatchUpstreamUrl,
 	type MatchSessionRegisterSpec,
 	type MatchSessionRegistrar,
@@ -147,8 +148,11 @@ describe("godot process launcher args", () => {
 /** 假的控制面登记：让租约测试不必起 HTTP，也证明 MatchHost 只依赖接口、不查库。 */
 class FakeRegistrar implements MatchSessionRegistrar {
 	readonly registered: MatchSessionRegisterSpec[] = [];
+	readonly unregistered: string[] = [];
 	failWith: Error | undefined;
+	unregisterFailWith: Error | undefined;
 	gate: Promise<void> | undefined;
+	unregisterGate: Promise<void> | undefined;
 
 	async register(spec: MatchSessionRegisterSpec): Promise<void> {
 		if (this.gate !== undefined) {
@@ -158,6 +162,16 @@ class FakeRegistrar implements MatchSessionRegistrar {
 			throw this.failWith;
 		}
 		this.registered.push(spec);
+	}
+
+	async unregister(matchId: string): Promise<void> {
+		if (this.unregisterGate !== undefined) {
+			await this.unregisterGate;
+		}
+		if (this.unregisterFailWith !== undefined) {
+			throw this.unregisterFailWith;
+		}
+		this.unregistered.push(matchId);
 	}
 }
 
@@ -202,6 +216,7 @@ class FakeLauncher implements ProcessLauncher {
 	readonly killed: string[] = [];
 	exitOnLaunch = false;
 	#nextPid = 1000;
+	readonly #settle = new Map<string, (exit: MatchExit) => void>();
 
 	launch(spec: MatchLaunchSpec): LaunchedProcess {
 		this.launched.push(spec);
@@ -210,6 +225,7 @@ class FakeLauncher implements ProcessLauncher {
 		const exited = new Promise<MatchExit>((resolvePromise) => {
 			settle = resolvePromise;
 		});
+		this.#settle.set(spec.matchId, settle);
 
 		const launched: LaunchedProcess = {
 			pid,
@@ -226,6 +242,14 @@ class FakeLauncher implements ProcessLauncher {
 			});
 		}
 		return launched;
+	}
+
+	crash(matchId: string): void {
+		const settle = this.#settle.get(matchId);
+		if (settle === undefined) {
+			throw new Error(`no launched process for ${matchId}`);
+		}
+		settle({ code: 1, signal: null });
 	}
 }
 
@@ -488,7 +512,7 @@ describe("match registry", () => {
 		const match = await registry.start();
 		await assert.rejects(() => registry.start(), MatchCapacityError);
 
-		const stopped = registry.stop(match.matchId);
+		const stopped = await registry.stop(match.matchId);
 		assert.equal(stopped?.state, "stopped");
 		assert.equal(stopped?.stopReason, "requested");
 		assert.deepEqual(launcher.killed, [match.matchId]);
@@ -497,20 +521,59 @@ describe("match registry", () => {
 		await assert.doesNotReject(() => registry.start());
 	});
 
+	test("stopping a match unregisters the control-plane session once", async () => {
+		const { registrar, registry } = makeRegistry();
+		const match = await registry.start();
+
+		await registry.stop(match.matchId);
+		await new Promise((resolvePromise) => setTimeout(resolvePromise, 10));
+
+		assert.deepEqual(registrar.unregistered, [match.matchId]);
+	});
+
+	test("does not unregister when listen or register never succeeded", async () => {
+		const listenProbe = new FakeListenProbe();
+		listenProbe.failWith = new MatchListenError("timed out waiting for TCP listen on 127.0.0.1:42000");
+		const registrar = new FakeRegistrar();
+		const { registry } = makeRegistry({ listenProbe, registrar });
+
+		await assert.rejects(() => registry.start(), MatchListenError);
+		assert.deepEqual(registrar.unregistered, []);
+
+		listenProbe.failWith = undefined;
+		registrar.failWith = new MatchSessionRegisterError("control plane register returned HTTP 503");
+		await assert.rejects(() => registry.start(), MatchSessionRegisterError);
+		assert.deepEqual(registrar.unregistered, []);
+	});
+
+	test("unregisters when the match process exits on its own", async () => {
+		const launcher = new FakeLauncher();
+		const { registrar, registry } = makeRegistry({ launcher });
+		const match = await registry.start();
+
+		launcher.crash(match.matchId);
+		await waitFor(() => registrar.unregistered.includes(match.matchId));
+
+		assert.equal(registry.get(match.matchId)?.state, "stopped");
+		assert.equal(registry.get(match.matchId)?.stopReason, "process_exited");
+		assert.deepEqual(registrar.unregistered, [match.matchId]);
+	});
+
 	test("reclaims matches whose lease went idle", async () => {
 		let now = 0;
-		const { registry } = makeRegistry({ now: () => now });
+		const { registrar, registry } = makeRegistry({ now: () => now });
 
 		const match = await registry.start();
 		now = IDLE_MS - 1;
-		assert.deepEqual(registry.reclaimExpired(), []);
+		assert.deepEqual(await registry.reclaimExpired(), []);
 
 		now = IDLE_MS;
-		const reclaimed = registry.reclaimExpired();
+		const reclaimed = await registry.reclaimExpired();
 		assert.equal(reclaimed.length, 1);
 		assert.equal(reclaimed[0]?.matchId, match.matchId);
 		assert.equal(reclaimed[0]?.stopReason, "idle_timeout");
 		assert.equal(registry.runningCount(), 0);
+		assert.deepEqual(registrar.unregistered, [match.matchId]);
 	});
 
 	test("renewing keeps a match alive past the idle deadline", async () => {
@@ -522,28 +585,44 @@ describe("match registry", () => {
 		registry.renew(match.matchId);
 
 		now = IDLE_MS;
-		assert.deepEqual(registry.reclaimExpired(), []);
+		assert.deepEqual(await registry.reclaimExpired(), []);
 		assert.equal(registry.runningCount(), 1);
 	});
 
 	test("renewing an unknown or stopped match returns undefined", async () => {
 		const { registry } = makeRegistry();
 		const match = await registry.start();
-		registry.stop(match.matchId);
+		await registry.stop(match.matchId);
 
 		assert.equal(registry.renew(match.matchId), undefined);
 		assert.equal(registry.renew("does-not-exist"), undefined);
 	});
 
-	test("shutdown kills every running match", async () => {
-		const { launcher, registry } = makeRegistry();
-		await registry.start();
-		await registry.start();
+	test("shutdown kills and unregisters every running match", async () => {
+		const { launcher, registrar, registry } = makeRegistry();
+		const first = await registry.start();
+		const second = await registry.start();
 
-		registry.shutdown();
+		await registry.shutdown();
 
 		assert.equal(launcher.killed.length, 2);
 		assert.equal(registry.runningCount(), 0);
+		assert.deepEqual(new Set(registrar.unregistered), new Set([first.matchId, second.matchId]));
+	});
+
+	test("still stops locally when unregister fails", async () => {
+		const registrar = new FakeRegistrar();
+		const { launcher, registry } = makeRegistry({ registrar, maxConcurrentMatches: 1 });
+		const match = await registry.start();
+		registrar.unregisterFailWith = new MatchSessionUnregisterError(
+			"control plane unregister returned HTTP 503",
+		);
+
+		await assert.rejects(() => registry.stop(match.matchId), MatchSessionUnregisterError);
+		assert.equal(registry.get(match.matchId)?.state, "stopped");
+		assert.deepEqual(launcher.killed, [match.matchId]);
+		assert.equal(registry.runningCount(), 0);
+		await assert.doesNotReject(() => registry.start());
 	});
 });
 
@@ -593,7 +672,7 @@ describe("match host http", () => {
 	});
 
 	test("DELETE /matches/:id stops the match", async () => {
-		const { app } = makeApp();
+		const { app, registrar } = makeApp();
 		try {
 			const created = await app.inject({ method: "POST", url: "/matches" });
 			const { matchId } = created.json<{ matchId: string }>();
@@ -601,6 +680,27 @@ describe("match host http", () => {
 			const deleted = await app.inject({ method: "DELETE", url: `/matches/${matchId}` });
 			assert.equal(deleted.statusCode, 200);
 			assert.equal(deleted.json<{ state: string }>().state, "stopped");
+			assert.deepEqual(registrar.unregistered, [matchId]);
+		} finally {
+			await app.close();
+		}
+	});
+
+	test("DELETE /matches/:id returns 502 when unregister fails after local stop", async () => {
+		const registrar = new FakeRegistrar();
+		const { app, registry } = makeApp(1, registrar);
+		try {
+			const created = await app.inject({ method: "POST", url: "/matches" });
+			const { matchId } = created.json<{ matchId: string }>();
+			registrar.unregisterFailWith = new MatchSessionUnregisterError(
+				"control plane unregister returned HTTP 503",
+			);
+
+			const deleted = await app.inject({ method: "DELETE", url: `/matches/${matchId}` });
+			assert.equal(deleted.statusCode, 502);
+			assert.equal(deleted.json<{ error: string }>().error, "session_unregister_failed");
+			assert.equal(registry.get(matchId)?.state, "stopped");
+			assert.equal(registry.runningCount(), 0);
 		} finally {
 			await app.close();
 		}
@@ -784,6 +884,47 @@ describe("control plane match session registrar", () => {
 			await stub.close();
 		}
 	});
+
+	test("DELETEs the match session and accepts HTTP 200 or 404", async () => {
+		const seen: { method: string; url: string }[] = [];
+		const stub = await listenJson((req, res) => {
+			seen.push({ method: req.method ?? "", url: req.url ?? "" });
+			if (seen.length === 1) {
+				res.writeHead(200, { "content-type": "application/json" });
+				res.end(JSON.stringify({ matchId: "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee" }));
+				return;
+			}
+			res.writeHead(404, { "content-type": "application/json" });
+			res.end(JSON.stringify({ error: "match_not_found" }));
+		});
+		try {
+			const registrar = new ControlPlaneMatchSessionRegistrar(stub.url);
+			await registrar.unregister("aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee");
+			await registrar.unregister("aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee");
+			assert.deepEqual(seen, [
+				{ method: "DELETE", url: "/match-sessions/aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee" },
+				{ method: "DELETE", url: "/match-sessions/aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee" },
+			]);
+		} finally {
+			await stub.close();
+		}
+	});
+
+	test("throws when unregister is not a success or already-gone response", async () => {
+		const stub = await listenJson((_req, res) => {
+			res.writeHead(503, { "content-type": "application/json" });
+			res.end(JSON.stringify({ status: "not_ready" }));
+		});
+		try {
+			const registrar = new ControlPlaneMatchSessionRegistrar(stub.url);
+			await assert.rejects(
+				() => registrar.unregister("aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee"),
+				MatchSessionUnregisterError,
+			);
+		} finally {
+			await stub.close();
+		}
+	});
 });
 
 describe("match host registers with a real control plane", () => {
@@ -838,6 +979,65 @@ describe("match host registers with a real control plane", () => {
 				payload: { matchId: match.matchId, upstreamUrl: match.upstreamUrl },
 			});
 			assert.equal(echoed.statusCode, 409);
+		} finally {
+			await app.close();
+			await controlPlane.close();
+			database.close();
+		}
+	});
+
+	test("DELETE /matches drops the session so leftover tickets cannot verify", async () => {
+		const database = new ControlPlaneDatabase(":memory:");
+		database.migrate();
+		const controlPlane = buildServer({ database, version: "1.2.3-test", logger: false });
+		await controlPlane.listen({ host: "127.0.0.1", port: 0 });
+
+		const registry = new MatchRegistry({
+			launcher: new FakeLauncher(),
+			registrar: new ControlPlaneMatchSessionRegistrar(httpBase(controlPlane)),
+			listenProbe: new FakeListenProbe(),
+			upstreamHost: "127.0.0.1",
+			portRangeMin: 42000,
+			portRangeMax: 42009,
+			leaseDurationMs: LEASE_MS,
+			idleTimeoutMs: IDLE_MS,
+			maxConcurrentMatches: 2,
+		});
+		const app = buildMatchHost({
+			registry,
+			maxConcurrentMatches: 2,
+			version: "1.2.3-test",
+			logger: false,
+		});
+
+		try {
+			const created = await app.inject({ method: "POST", url: "/matches" });
+			assert.equal(created.statusCode, 201);
+			const match = created.json<{ matchId: string; upstreamUrl: string }>();
+
+			const leftover = await controlPlane.inject({
+				method: "POST",
+				url: `/match-sessions/${match.matchId}/tickets`,
+			});
+			assert.equal(leftover.statusCode, 201);
+			const leftoverTicket = leftover.json<IssueMatchTicketResponse>().ticket;
+
+			const deleted = await app.inject({ method: "DELETE", url: `/matches/${match.matchId}` });
+			assert.equal(deleted.statusCode, 200);
+
+			const issued = await controlPlane.inject({
+				method: "POST",
+				url: `/match-sessions/${match.matchId}/tickets`,
+			});
+			assert.equal(issued.statusCode, 404);
+
+			const verified = await controlPlane.inject({
+				method: "POST",
+				url: "/tickets/verify",
+				payload: { ticket: leftoverTicket },
+			});
+			assert.equal(verified.statusCode, 401);
+			assert.equal(verified.json<{ reason: string }>().reason, "unknown_ticket");
 		} finally {
 			await app.close();
 			await controlPlane.close();
