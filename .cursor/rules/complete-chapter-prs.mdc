@@ -13,6 +13,6 @@ alwaysApply: true
 
 真机：PR Test plan 与 [章节真机清单](docs/runbooks/chapter-device-check.md) 本刀必须是编号步骤（怎么开、点什么、期望 / 失败）；禁止只写「真机再看一眼」。无 GUI 的章写「无」加原因。人工检查，不是 CI 门禁。口径见 [CD-52 §3.2](Confirmed-docs/50-engineering/52-ai-workflow.md)。
 
-- 做：M3 「网关进程内 TLS」——`GATEWAY_TLS_CERT` 与 `GATEWAY_TLS_KEY` 成对则 Fastify 在本进程终结 TLS，客户端走 `wss`；只设一个拒绝启动；都不设仍明文 `ws`（仅本机开发）。对局上游仍内网明文 `ws`。Godot `wss://` 用 `TLSOptions.client_unsafe()`；大厅 HUD 常驻 `tls=on|off`。作为一章。
+- 做：M3 「权威 Move 位移门禁」——`TraprushMatchSession` 拒绝 |dx| 或 |dz| 超过 `MOVE_STEP_MAX`（`Fixed.SCALE`，每命令一格）的 Move，整条不应用、不裁剪。这是防瞬移，不是产品速度。线上排队后 apply 失败则本 tick 作废且不续租。Preview IntentStepper 不经此门。作为一章。
 - 不做：账号绑定、远端外推碰撞、平滑对账、可达性叠加 gizmos、走路可达/合法路径距离、检查点到达时间、本机最佳轨迹幽灵、已缓存 UGC/草稿试玩、个人试玩记录落盘、墙钟发送速率、MMR、限时未全员冲线结算、Shove/Interact 线上 id、Tick/快照频率锁定、2 秒云端上传、5 分钟定时、BASTION 面板、批量生成、性能分析、时延自动门禁、重力/下落、二进制签名、产品速度、复活硬直、产品镜头/FOV、离开对局 HTTP、生产 CA 信任链、控制面 HTTPS、MatchHost 子进程 TLS；不开 M4 / M5 新章节；不为了两域并行而各交半章。
 - 仍不做：把预算数字、走路可达、多人试玩房、Rule VM 真应用和整个 M3 塞进一个 PR。
