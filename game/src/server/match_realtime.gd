@@ -9,11 +9,13 @@ extends RefCounted
 ## 断开丢弃该槽已排队命令，避免旧意图落到新连接。这是位置伪造门禁：同 tick
 ## 连发多条 Move 不能在一次仿真步里叠成瞬移。墙钟发送速率仍待（CD-63）。
 ## 本类不碰 socket：传输是 match_server.gd 的薄层；网络正确性测试保持手动
-## （CD-91 D.8 manual_network_tests）。无结算、不在线写入。
+## （CD-91 D.8 manual_network_tests）。全员冲线后允许生成结算 payload；
+## 不在线写入、不 HTTP。
 
 const MatchFrameCodec := preload("res://src/shared/protocol/match_frame_codec.gd")
 const PlayerIntentNames := preload("res://src/shared/commands/player_intent_names.gd")
 const TraprushMatchSession := preload("res://src/games/traprush/match_session.gd")
+const TraprushMatchSettlement := preload("res://src/games/traprush/match_settlement.gd")
 
 const _YAW_BAM_OMITTED: int = -1
 
@@ -117,7 +119,7 @@ func snapshot_frame() -> PackedByteArray:
 
 
 func allows_settlement() -> bool:
-	return false
+	return TraprushMatchSettlement.all_finished(session)
 
 
 func allows_online_writes() -> bool:

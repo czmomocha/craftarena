@@ -6,6 +6,8 @@
  * 在 MatchHost 里加一句 SQL。
  */
 
+import type { MatchSettlementResponse, RecordMatchSettlementRequest } from "../../contracts/src/match_settlement.ts";
+
 export interface MatchSessionRegisterSpec {
 	readonly matchId: string;
 	readonly upstreamUrl: string;
@@ -14,6 +16,7 @@ export interface MatchSessionRegisterSpec {
 
 export interface MatchSessionRegistrar {
 	register(spec: MatchSessionRegisterSpec): Promise<void>;
+	recordSettlement(matchId: string, payload: RecordMatchSettlementRequest): Promise<void>;
 	unregister(matchId: string): Promise<void>;
 }
 
@@ -28,6 +31,13 @@ export class MatchSessionUnregisterError extends Error {
 	constructor(message: string) {
 		super(message);
 		this.name = "MatchSessionUnregisterError";
+	}
+}
+
+export class MatchSessionSettlementError extends Error {
+	constructor(message: string) {
+		super(message);
+		this.name = "MatchSessionSettlementError";
 	}
 }
 
@@ -143,6 +153,44 @@ export class ControlPlaneMatchSessionRegistrar implements MatchSessionRegistrar 
 		const echoed = (body as { matchId?: unknown }).matchId;
 		if (echoed !== matchId) {
 			throw new MatchSessionUnregisterError("control plane unregister returned a mismatched match id");
+		}
+	}
+
+	async recordSettlement(matchId: string, payload: RecordMatchSettlementRequest): Promise<void> {
+		let response: Response;
+		try {
+			response = await fetch(`${this.#baseUrl}/match-sessions/${encodeURIComponent(matchId)}/settlement`, {
+				method: "POST",
+				headers: { "content-type": "application/json" },
+				body: JSON.stringify(payload),
+				signal: AbortSignal.timeout(this.#timeoutMs),
+			});
+		} catch (error) {
+			throw new MatchSessionSettlementError(error instanceof Error ? error.message : String(error));
+		}
+
+		// 409 = 已经写过，停止路径上视为成功。
+		if (response.status === 409) {
+			return;
+		}
+		if (response.status !== 201) {
+			throw new MatchSessionSettlementError(`control plane settlement returned HTTP ${response.status}`);
+		}
+
+		let body: unknown;
+		try {
+			body = await response.json();
+		} catch {
+			throw new MatchSessionSettlementError("control plane settlement returned a non-JSON body");
+		}
+
+		if (typeof body !== "object" || body === null) {
+			throw new MatchSessionSettlementError("control plane settlement returned an invalid body");
+		}
+
+		const echoed = (body as MatchSettlementResponse).matchId;
+		if (echoed !== matchId) {
+			throw new MatchSessionSettlementError("control plane settlement returned a mismatched match id");
 		}
 	}
 }

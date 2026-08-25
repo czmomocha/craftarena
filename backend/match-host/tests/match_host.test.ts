@@ -6,6 +6,8 @@ import { describe, test } from "node:test";
 import type {
 	IssueMatchTicketResponse,
 	MatchmakingJoinResponse,
+	MatchSettlementResponse,
+	RecordMatchSettlementRequest,
 	VerifyMatchTicketSuccess,
 } from "../../contracts/src/index.ts";
 import { ControlPlaneDatabase } from "../../control-plane/src/db/database.ts";
@@ -26,11 +28,13 @@ import { PortAllocator } from "../src/ports.ts";
 import {
 	ControlPlaneMatchSessionRegistrar,
 	MatchSessionRegisterError,
+	MatchSessionSettlementError,
 	MatchSessionUnregisterError,
 	buildMatchUpstreamUrl,
 	type MatchSessionRegisterSpec,
 	type MatchSessionRegistrar,
 } from "../src/registrar.ts";
+import { parseMatchTickSettlement } from "../src/settlement.ts";
 import { MatchCapacityError, MatchRegistry } from "../src/registry.ts";
 import { buildMatchHost } from "../src/server.ts";
 
@@ -154,8 +158,10 @@ describe("godot process launcher args", () => {
 class FakeRegistrar implements MatchSessionRegistrar {
 	readonly registered: MatchSessionRegisterSpec[] = [];
 	readonly unregistered: string[] = [];
+	readonly settlements: { matchId: string; payload: RecordMatchSettlementRequest }[] = [];
 	failWith: Error | undefined;
 	unregisterFailWith: Error | undefined;
+	settlementFailWith: Error | undefined;
 	gate: Promise<void> | undefined;
 	unregisterGate: Promise<void> | undefined;
 
@@ -167,6 +173,13 @@ class FakeRegistrar implements MatchSessionRegistrar {
 			throw this.failWith;
 		}
 		this.registered.push(spec);
+	}
+
+	async recordSettlement(matchId: string, payload: RecordMatchSettlementRequest): Promise<void> {
+		if (this.settlementFailWith !== undefined) {
+			throw this.settlementFailWith;
+		}
+		this.settlements.push({ matchId, payload });
 	}
 
 	async unregister(matchId: string): Promise<void> {
@@ -220,6 +233,7 @@ class FakeLauncher implements ProcessLauncher {
 	readonly launched: MatchLaunchSpec[] = [];
 	readonly killed: string[] = [];
 	exitOnLaunch = false;
+	recentOutputLines: string[] | undefined;
 	#nextPid = 1000;
 	readonly #settle = new Map<string, (exit: MatchExit) => void>();
 
@@ -231,11 +245,12 @@ class FakeLauncher implements ProcessLauncher {
 			settle = resolvePromise;
 		});
 		this.#settle.set(spec.matchId, settle);
+		const lines = this.recentOutputLines ?? [`fake process ${pid} output`];
 
 		const launched: LaunchedProcess = {
 			pid,
 			exited,
-			recentOutput: () => [`fake process ${pid} output`],
+			recentOutput: () => [...lines],
 			kill: () => {
 				this.killed.push(spec.matchId);
 				settle({ code: 0, signal: "SIGTERM" });
@@ -257,6 +272,53 @@ class FakeLauncher implements ProcessLauncher {
 		settle({ code: 1, signal: null });
 	}
 }
+
+describe("match tick settlement parse", () => {
+	test("returns the last valid heartbeat settlement and skips junk", () => {
+		const payload = parseMatchTickSettlement([
+			"not json",
+			JSON.stringify({ event: "match_tick", tick: 1, players: 2, hash: "early" }),
+			JSON.stringify({
+				event: "match_tick",
+				tick: 5,
+				settlement: {
+					tick: 5,
+					state_hash: "abc123",
+					pad_total: 3,
+					mvp_slot: 0,
+					rows: [{ slot: 0, place: 1, finish_tick: 4, accepted_count: 3 }],
+				},
+			}),
+		]);
+		assert.deepEqual(payload, {
+			tick: 5,
+			stateHash: "abc123",
+			padTotal: 3,
+			mvpSlot: 0,
+			rows: [{ slot: 0, place: 1, finishTick: 4, acceptedCount: 3 }],
+		});
+	});
+
+	test("ignores unfinished rows and missing settlement", () => {
+		assert.equal(
+			parseMatchTickSettlement([
+				JSON.stringify({
+					event: "match_tick",
+					tick: 5,
+					settlement: {
+						tick: 5,
+						state_hash: "abc",
+						pad_total: 3,
+						mvp_slot: 0,
+						rows: [{ slot: 0, place: 1, finish_tick: -1, accepted_count: 1 }],
+					},
+				}),
+			]),
+			undefined,
+		);
+		assert.equal(parseMatchTickSettlement([JSON.stringify({ event: "match_tick", tick: 1 })]), undefined);
+	});
+});
 
 describe("port allocator", () => {
 	test("hands out distinct ports and reuses them only after cycling the range", () => {
@@ -537,6 +599,73 @@ describe("match registry", () => {
 		await new Promise((resolvePromise) => setTimeout(resolvePromise, 10));
 
 		assert.deepEqual(registrar.unregistered, [match.matchId]);
+		assert.deepEqual(registrar.settlements, []);
+	});
+
+	test("posts settlement from the last heartbeat before unregistering", async () => {
+		const launcher = new FakeLauncher();
+		launcher.recentOutputLines = [
+			"noise",
+			JSON.stringify({
+				event: "match_tick",
+				match_id: "ignored",
+				tick: 5,
+				players: 2,
+				hash: "abc123",
+				settlement: {
+					tick: 5,
+					state_hash: "abc123",
+					pad_total: 3,
+					mvp_slot: 0,
+					rows: [
+						{ slot: 0, place: 1, finish_tick: 4, accepted_count: 3 },
+						{ slot: 1, place: 2, finish_tick: 4, accepted_count: 3 },
+					],
+				},
+			}),
+		];
+		const { registrar, registry } = makeRegistry({ launcher });
+		const match = await registry.start();
+		await registry.stop(match.matchId);
+		assert.equal(registrar.settlements.length, 1);
+		assert.equal(registrar.settlements[0]?.matchId, match.matchId);
+		assert.deepEqual(registrar.settlements[0]?.payload, {
+			tick: 5,
+			stateHash: "abc123",
+			padTotal: 3,
+			mvpSlot: 0,
+			rows: [
+				{ slot: 0, place: 1, finishTick: 4, acceptedCount: 3 },
+				{ slot: 1, place: 2, finishTick: 4, acceptedCount: 3 },
+			],
+		});
+		assert.deepEqual(registrar.unregistered, [match.matchId]);
+	});
+
+	test("does not unregister when settlement write fails", async () => {
+		const launcher = new FakeLauncher();
+		launcher.recentOutputLines = [
+			JSON.stringify({
+				event: "match_tick",
+				tick: 5,
+				settlement: {
+					tick: 5,
+					state_hash: "abc123",
+					pad_total: 3,
+					mvp_slot: 0,
+					rows: [{ slot: 0, place: 1, finish_tick: 4, accepted_count: 3 }],
+				},
+			}),
+		];
+		const registrar = new FakeRegistrar();
+		registrar.settlementFailWith = new MatchSessionSettlementError(
+			"control plane settlement returned HTTP 503",
+		);
+		const { registry } = makeRegistry({ launcher, registrar });
+		const match = await registry.start();
+		await assert.rejects(() => registry.stop(match.matchId), MatchSessionSettlementError);
+		assert.deepEqual(registrar.unregistered, []);
+		assert.equal(registry.get(match.matchId)?.state, "stopped");
 	});
 
 	test("does not unregister when listen or register never succeeded", async () => {
@@ -939,6 +1068,54 @@ describe("control plane match session registrar", () => {
 			await stub.close();
 		}
 	});
+
+	test("POSTs settlement once and treats 409 as already written", async () => {
+		const seen: { method: string; url: string; status: number }[] = [];
+		const stub = await listenJson((req, res) => {
+			let raw = "";
+			req.on("data", (chunk: Buffer) => {
+				raw += chunk.toString();
+			});
+			req.on("end", () => {
+				const status = seen.length === 0 ? 201 : 409;
+				seen.push({ method: req.method ?? "", url: req.url ?? "", status });
+				res.writeHead(status, { "content-type": "application/json" });
+				res.end(
+					JSON.stringify(
+						status === 201
+							? { matchId: "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee", tick: 5 }
+							: { error: "already_settled" },
+					),
+				);
+			});
+		});
+		try {
+			const registrar = new ControlPlaneMatchSessionRegistrar(stub.url);
+			const payload: RecordMatchSettlementRequest = {
+				tick: 5,
+				stateHash: "abc123",
+				padTotal: 3,
+				mvpSlot: 0,
+				rows: [{ slot: 0, place: 1, finishTick: 4, acceptedCount: 3 }],
+			};
+			await registrar.recordSettlement("aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee", payload);
+			await registrar.recordSettlement("aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee", payload);
+			assert.deepEqual(seen, [
+				{
+					method: "POST",
+					url: "/match-sessions/aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee/settlement",
+					status: 201,
+				},
+				{
+					method: "POST",
+					url: "/match-sessions/aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee/settlement",
+					status: 409,
+				},
+			]);
+		} finally {
+			await stub.close();
+		}
+	});
 });
 
 describe("match host registers with a real control plane", () => {
@@ -1054,6 +1231,70 @@ describe("match host registers with a real control plane", () => {
 			});
 			assert.equal(verified.statusCode, 401);
 			assert.equal(verified.json<{ reason: string }>().reason, "unknown_ticket");
+		} finally {
+			await app.close();
+			await controlPlane.close();
+			database.close();
+		}
+	});
+
+	test("stopping a finished match writes settlement that survives unregister", async () => {
+		const database = new ControlPlaneDatabase(":memory:");
+		database.migrate();
+		const controlPlane = buildServer({ database, version: "1.2.3-test", logger: false });
+		await controlPlane.listen({ host: "127.0.0.1", port: 0 });
+
+		const launcher = new FakeLauncher();
+		launcher.recentOutputLines = [
+			JSON.stringify({
+				event: "match_tick",
+				tick: 5,
+				players: 2,
+				hash: "abc123",
+				settlement: {
+					tick: 5,
+					state_hash: "abc123",
+					pad_total: 3,
+					mvp_slot: 0,
+					rows: [
+						{ slot: 0, place: 1, finish_tick: 4, accepted_count: 3 },
+						{ slot: 1, place: 2, finish_tick: 4, accepted_count: 3 },
+					],
+				},
+			}),
+		];
+		const registry = new MatchRegistry({
+			launcher,
+			registrar: new ControlPlaneMatchSessionRegistrar(httpBase(controlPlane)),
+			listenProbe: new FakeListenProbe(),
+			upstreamHost: "127.0.0.1",
+			seats: 2,
+			portRangeMin: 42000,
+			portRangeMax: 42009,
+			leaseDurationMs: LEASE_MS,
+			idleTimeoutMs: IDLE_MS,
+			maxConcurrentMatches: 2,
+		});
+		const app = buildMatchHost({
+			registry,
+			maxConcurrentMatches: 2,
+			version: "1.2.3-test",
+			logger: false,
+		});
+
+		try {
+			const created = await app.inject({ method: "POST", url: "/matches" });
+			assert.equal(created.statusCode, 201);
+			const match = created.json<{ matchId: string }>();
+			const deleted = await app.inject({ method: "DELETE", url: `/matches/${match.matchId}` });
+			assert.equal(deleted.statusCode, 200);
+			const read = await controlPlane.inject({
+				method: "GET",
+				url: `/match-sessions/${match.matchId}/settlement`,
+			});
+			assert.equal(read.statusCode, 200);
+			assert.equal(read.json<MatchSettlementResponse>().mvpSlot, 0);
+			assert.equal(read.json<MatchSettlementResponse>().stateHash, "abc123");
 		} finally {
 			await app.close();
 			await controlPlane.close();

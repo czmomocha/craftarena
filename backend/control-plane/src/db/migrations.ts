@@ -83,4 +83,20 @@ export const MIGRATIONS: readonly Migration[] = [
 			`CREATE INDEX match_queue_match_id ON match_queue (match_id)`,
 		],
 	},
+	{
+		id: "0005_match_settlements",
+		statements: [
+			// 单局名次记录。不挂 FK：注销对局会话后记录仍在（CD-13 / CD-14）。
+			// 不写 MMR。未全员冲线的限时结算仍待。
+			`CREATE TABLE match_settlements (
+				match_id TEXT PRIMARY KEY,
+				tick INTEGER NOT NULL,
+				state_hash TEXT NOT NULL,
+				pad_total INTEGER NOT NULL,
+				mvp_slot INTEGER NOT NULL,
+				rows_json TEXT NOT NULL,
+				created_at TEXT NOT NULL
+			) STRICT`,
+		],
+	},
 ];

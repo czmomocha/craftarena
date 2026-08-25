@@ -6,10 +6,12 @@ import type { LaunchedProcess, MatchExit, ProcessLauncher } from "./launcher.ts"
 import { MatchListenError, type MatchListenProbe } from "./listen_probe.ts";
 import {
 	MatchSessionRegisterError,
+	MatchSessionSettlementError,
 	MatchSessionUnregisterError,
 	buildMatchUpstreamUrl,
 	type MatchSessionRegistrar,
 } from "./registrar.ts";
+import { parseMatchTickSettlement } from "./settlement.ts";
 
 export type MatchState = "running" | "stopped";
 
@@ -317,6 +319,18 @@ export class MatchRegistry {
 			reason,
 			recentOutput: entry.process.recentOutput(),
 		});
+
+		try {
+			const settlement = parseMatchTickSettlement(entry.process.recentOutput());
+			if (settlement !== undefined) {
+				await this.#options.registrar.recordSettlement(matchId, settlement);
+			}
+		} catch (error) {
+			if (error instanceof MatchSessionSettlementError) {
+				throw error;
+			}
+			throw new MatchSessionSettlementError(error instanceof Error ? error.message : String(error));
+		}
 
 		try {
 			await this.#options.registrar.unregister(matchId);

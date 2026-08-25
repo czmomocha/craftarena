@@ -10,7 +10,8 @@ extends Node
 ## 解码不信任，服务端 tick 权威（CD-43 §3）。每槽每 tick 至多一条命令（先到先得），
 ## 断开丢弃排队；墙钟发送速率仍待（CD-63）。
 ## 心跳：每 HEARTBEAT_EVERY_TICKS 个 tick 打印一行结构化 JSON（含状态哈希），
-## 供 MatchHost 的 recentOutput 留存与跨进程确定性核对；心跳不续租（CD-44 §3）。
+## 全员冲线后另含 settlement；供 MatchHost 停止前写库与跨进程确定性核对。
+## 心跳不续租（CD-44 §3）。
 ## --max-ticks 到达后打印最终心跳并 exit 0；配置非法打印错误事件并 exit 1。
 ## 出生偏移、胶囊尺寸与心跳/快照节奏均为进程内占位桩，不锁产品出生布局或数值。
 
@@ -19,6 +20,7 @@ const AuthoringWorld := preload("res://src/creator/authoring_world.gd")
 const MatchRealtime := preload("res://src/server/match_realtime.gd")
 const SimulationBundle := preload("res://src/ugc/simulation_bundle.gd")
 const TraprushMatchSession := preload("res://src/games/traprush/match_session.gd")
+const TraprushMatchSettlement := preload("res://src/games/traprush/match_settlement.gd")
 const TraprushTopologyCompiler := preload("res://src/ugc/traprush_topology_compiler.gd")
 
 const BOOT_EVENT: String = "match_server_boot"
@@ -232,13 +234,17 @@ static func _spawn_offsets(players: int) -> Array[Dictionary]:
 
 
 static func _heartbeat_line(match_id: String, session: TraprushMatchSession) -> String:
-	return JSON.stringify({
+	var body: Dictionary = {
 		"event": TICK_EVENT,
 		"match_id": match_id,
 		"tick": session.tick_index(),
 		"players": session.player_count(),
 		"hash": session.hash_state(),
-	})
+	}
+	var built: Dictionary = TraprushMatchSettlement.try_build(session)
+	if built.get("ok", false):
+		body["settlement"] = TraprushMatchSettlement.to_heartbeat(built)
+	return JSON.stringify(body)
 
 
 static func _parse_int(raw: String, fallback: int) -> int:

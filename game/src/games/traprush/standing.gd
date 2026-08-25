@@ -5,7 +5,8 @@ extends RefCounted
 ## Finished players rank by finish_tick, then slot. Unfinished players
 ## follow, ranked by accepted_count descending, then slot. Path distance
 ## and pad-arrival time are not in the v1 snapshot and stay deferred.
-## This is a presentation board, not settlement and not an online write.
+## This is the live board. Settlement write reuses the same ranking when
+## every configured player has finished. Not MMR and not an online write.
 
 const UNFINISHED_TICK: int = -1
 

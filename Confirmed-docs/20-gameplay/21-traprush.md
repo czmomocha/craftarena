@@ -161,7 +161,7 @@ UGC 权威碰撞形状约束见 [CD-42](../40-technical/42-contracts-and-rulevm.
 4. 仍相同时按更早到达当前检查点者优先；
 5. 离线试玩只显示本地结算，不上传。
 
-实现落点（2026-08-25）：`TraprushStanding` 用最新快照的 `finish_tick` / `accepted_count` 做直播名次板（第 1、2 条 + 槽位次序作为稳定键）。第 3、4 条（合法路径距离、到达当前检查点时间）v1 快照没有字段，走路可达仍待，本刀不锁。第 5 条：大厅离线单人试玩只显示本地直播名次，HUD 持续「离线试玩，成绩不上传」，不上传、不结算写。名次板是表现，不是结算写。落点见 [CD-13 §3](../10-product/13-account-and-session.md#3-离线单人模式)、[CD-42 §3.4](../40-technical/42-contracts-and-rulevm.md#34-实现落点) 与 [CD-43 §2](../40-technical/43-networking-and-replay.md#2-传输)。
+实现落点（2026-08-25）：`TraprushStanding` 用最新快照的 `finish_tick` / `accepted_count` 做直播名次板（第 1、2 条 + 槽位次序作为稳定键）。第 3、4 条（合法路径距离、到达当前检查点时间）v1 快照没有字段，走路可达仍待，本刀不锁。第 5 条：大厅离线单人试玩只显示本地直播名次，HUD 持续「离线试玩，成绩不上传」，不上传、不结算写。全部配置玩家冲线后，`TraprushMatchSettlement` 用同一套第 1、2 条排序生成写库 payload；控制面 `POST /match-sessions/:matchId/settlement` 写一次。名次板仍是表现。落点见 [CD-13 §3](../10-product/13-account-and-session.md#3-离线单人模式)、[CD-13 §4](../10-product/13-account-and-session.md#4-单局排名)、[CD-42 §3.4](../40-technical/42-contracts-and-rulevm.md#34-实现落点) 与 [CD-43 §2](../40-technical/43-networking-and-replay.md#2-传输)。
 
 默认结束规则是到达终点。创作者可以使用白名单事件、变量和有界计数组合自定义结束条件，但规则图必须至少存在一个可触发终止分支。机器人在验证预算内未触发结束时只标记"未验证可完成"，不阻止自动公开。
 

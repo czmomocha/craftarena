@@ -4,7 +4,8 @@ extends RefCounted
 ## CD-61 §4.1 的 2 人 Headless 对局夹具：官方 course_01 编进 TraprushMatchSession，
 ## 经 MatchRealtime 占用两个槽位，每槽每 tick 一条 Move 跑完冲线。
 ## 同磁带同快照字节；同 tick 连发 Move 只应用第一条。名次由 TraprushStanding
-## 从快照派生。无结算写、无在线写、不锁 Tick Hz / 插值 / 路径距离。
+## 从快照派生。全员冲线后生成结算 payload（不 HTTP）。无在线写、不锁 Tick Hz /
+## 插值 / 路径距离。
 
 const AuthoringDocument := preload("res://src/creator/authoring_document.gd")
 const AuthoringWorld := preload("res://src/creator/authoring_world.gd")
@@ -13,6 +14,7 @@ const MatchRealtime := preload("res://src/server/match_realtime.gd")
 const PlayerIntentNames := preload("res://src/shared/commands/player_intent_names.gd")
 const SimulationBundle := preload("res://src/ugc/simulation_bundle.gd")
 const TraprushMatchSession := preload("res://src/games/traprush/match_session.gd")
+const TraprushMatchSettlement := preload("res://src/games/traprush/match_settlement.gd")
 const TraprushStanding := preload("res://src/games/traprush/standing.gd")
 const TraprushTopologyCompiler := preload("res://src/ugc/traprush_topology_compiler.gd")
 
@@ -40,7 +42,8 @@ static func try_run() -> Dictionary:
 		"finish1": race.get("finish1", -1),
 		"mvp_slot": race.get("mvp_slot", -1),
 		"replay_match": true,
-		"allows_settlement": false,
+		"allows_settlement": race.get("allows_settlement", false),
+		"settlement_hash": race.get("settlement_hash", ""),
 		"allows_online_writes": false,
 	}
 
@@ -109,11 +112,21 @@ static func _run_two_player_finish() -> Dictionary:
 	var mvp_slot: int = standing.get("mvp_slot", -2)
 	if mvp_slot != 0:
 		return {"ok": false}
+	if not realtime.allows_settlement():
+		return {"ok": false}
+	var built: Dictionary = TraprushMatchSettlement.try_build(realtime.session)
+	if not built.get("ok", false):
+		return {"ok": false}
+	var settlement_hash: String = built.get("state_hash", "")
+	if settlement_hash.is_empty():
+		return {"ok": false}
 	return {
 		"ok": true,
 		"finish0": finish0,
 		"finish1": finish1,
 		"mvp_slot": mvp_slot,
+		"allows_settlement": true,
+		"settlement_hash": settlement_hash,
 	}
 
 
