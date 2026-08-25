@@ -17,7 +17,7 @@ import {
 	buildMatchUpstreamUrl,
 	type MatchSessionRegistrar,
 } from "./registrar.ts";
-import { parseMatchTickSettlement } from "./settlement.ts";
+import { parseMatchTickSettlement, parseMatchTickValidInputTick } from "./settlement.ts";
 
 export type MatchState = "running" | "stopped";
 
@@ -77,6 +77,8 @@ interface MatchEntry {
 	record: MatchRecord;
 	readonly process: LaunchedProcess;
 	settlementPosted: boolean;
+	/** 该场上次已用来续租的 valid_input_tick。同一 tick 不重复续。 */
+	lastRenewedValidInputTick: number;
 }
 
 /**
@@ -168,7 +170,12 @@ export class MatchRegistry {
 			course,
 		};
 
-		this.#entries.set(matchId, { record, process, settlementPosted: false });
+		this.#entries.set(matchId, {
+			record,
+			process,
+			settlementPosted: false,
+			lastRenewedValidInputTick: -1,
+		});
 		this.#options.onEvent?.({ type: "started", matchId, port });
 
 		// 进程自己退出（崩溃或正常结束）时同步状态并注销，不然注册表会一直显示 running，
@@ -274,6 +281,24 @@ export class MatchRegistry {
 
 		entry.process.kill();
 		return this.#finalize(matchId, reason);
+	}
+
+	/**
+	 * 扫描最近一条 match_tick：`valid_input_tick` 相对该场上次续租前进才 renew。
+	 * 心跳本身、缺字段、负数、垃圾行都不续（CD-44 §3）。
+	 */
+	renewFromValidInput(): void {
+		for (const [matchId, entry] of this.#entries) {
+			if (entry.record.state !== "running") {
+				continue;
+			}
+			const tick = parseMatchTickValidInputTick(entry.process.recentOutput());
+			if (tick === undefined || tick <= entry.lastRenewedValidInputTick) {
+				continue;
+			}
+			this.renew(matchId);
+			entry.lastRenewedValidInputTick = tick;
+		}
 	}
 
 	/**

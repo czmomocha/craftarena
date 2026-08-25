@@ -34,7 +34,7 @@ import {
 	type MatchSessionRegisterSpec,
 	type MatchSessionRegistrar,
 } from "../src/registrar.ts";
-import { parseMatchTickSettlement } from "../src/settlement.ts";
+import { parseMatchTickSettlement, parseMatchTickValidInputTick } from "../src/settlement.ts";
 import { MatchCapacityError, MatchRegistry } from "../src/registry.ts";
 import { buildMatchHost } from "../src/server.ts";
 
@@ -326,6 +326,48 @@ describe("match tick settlement parse", () => {
 			undefined,
 		);
 		assert.equal(parseMatchTickSettlement([JSON.stringify({ event: "match_tick", tick: 1 })]), undefined);
+	});
+});
+
+describe("match tick valid input parse", () => {
+	test("returns the last match_tick valid_input_tick and skips junk", () => {
+		assert.equal(
+			parseMatchTickValidInputTick([
+				"not json",
+				JSON.stringify({ event: "match_tick", tick: 2, valid_input_tick: 1 }),
+				JSON.stringify({ event: "match_boot" }),
+				JSON.stringify({ event: "match_tick", tick: 8, valid_input_tick: 4 }),
+			]),
+			4,
+		);
+	});
+
+	test("rejects missing, negative, non-integer, and non-heartbeat lines", () => {
+		assert.equal(parseMatchTickValidInputTick([JSON.stringify({ event: "match_tick", tick: 1 })]), undefined);
+		assert.equal(
+			parseMatchTickValidInputTick([JSON.stringify({ event: "match_tick", tick: 1, valid_input_tick: -1 })]),
+			undefined,
+		);
+		assert.equal(
+			parseMatchTickValidInputTick([JSON.stringify({ event: "match_tick", tick: 1, valid_input_tick: 1.5 })]),
+			undefined,
+		);
+		assert.equal(
+			parseMatchTickValidInputTick([JSON.stringify({ event: "match_tick", tick: 1, valid_input_tick: true })]),
+			undefined,
+		);
+		assert.equal(
+			parseMatchTickValidInputTick([JSON.stringify({ event: "match_tick", tick: 1, valid_input_tick: "4" })]),
+			undefined,
+		);
+		assert.equal(parseMatchTickValidInputTick(["nope", JSON.stringify({ event: "match_boot" })]), undefined);
+		assert.equal(
+			parseMatchTickValidInputTick([
+				JSON.stringify({ event: "match_tick", tick: 2, valid_input_tick: 7 }),
+				JSON.stringify({ event: "match_tick", tick: 3, valid_input_tick: -1 }),
+			]),
+			undefined,
+		);
 	});
 });
 
@@ -798,6 +840,103 @@ describe("match registry", () => {
 		now = IDLE_MS;
 		assert.deepEqual(await registry.reclaimExpired(), []);
 		assert.equal(registry.runningCount(), 1);
+	});
+
+	test("heartbeat valid_input_tick renews idle and does not re-renew the same tick", async () => {
+		let now = 0;
+		const lines = [
+			JSON.stringify({ event: "match_tick", tick: 4, hash: "abc", valid_input_tick: 3 }),
+		];
+		const launcher = new FakeLauncher();
+		launcher.recentOutputLines = lines;
+		const { registry } = makeRegistry({ now: () => now, launcher });
+		const match = await registry.start();
+
+		now = IDLE_MS - 1;
+		registry.renewFromValidInput();
+		now = IDLE_MS;
+		assert.deepEqual(await registry.reclaimExpired(), []);
+		assert.equal(registry.get(match.matchId)?.lease.lastValidInputAt, IDLE_MS - 1);
+
+		now = IDLE_MS * 2 - 2;
+		registry.renewFromValidInput();
+		now = IDLE_MS * 2 - 1;
+		const reclaimed = await registry.reclaimExpired();
+		assert.equal(reclaimed.length, 1);
+		assert.equal(reclaimed[0]?.matchId, match.matchId);
+		assert.equal(reclaimed[0]?.stopReason, "idle_timeout");
+	});
+
+	test("later valid_input_tick advances the idle clock", async () => {
+		let now = 0;
+		const lines = [
+			JSON.stringify({ event: "match_tick", tick: 4, hash: "abc", valid_input_tick: 3 }),
+		];
+		const launcher = new FakeLauncher();
+		launcher.recentOutputLines = lines;
+		const { registry } = makeRegistry({ now: () => now, launcher });
+		const match = await registry.start();
+
+		now = IDLE_MS - 1;
+		registry.renewFromValidInput();
+		lines[0] = JSON.stringify({ event: "match_tick", tick: 20, hash: "def", valid_input_tick: 18 });
+		now = IDLE_MS * 2 - 2;
+		registry.renewFromValidInput();
+		now = IDLE_MS * 2 - 1;
+		assert.deepEqual(await registry.reclaimExpired(), []);
+		assert.equal(registry.get(match.matchId)?.lease.lastValidInputAt, IDLE_MS * 2 - 2);
+		assert.equal(registry.get(match.matchId)?.state, "running");
+	});
+
+	test("heartbeat without a new valid_input_tick does not renew", async () => {
+		let now = 0;
+		const launcher = new FakeLauncher();
+		launcher.recentOutputLines = [
+			"noise",
+			JSON.stringify({ event: "match_tick", tick: 4, hash: "abc" }),
+		];
+		const { registry } = makeRegistry({ now: () => now, launcher });
+		const match = await registry.start();
+		now = IDLE_MS - 1;
+		registry.renewFromValidInput();
+		now = IDLE_MS;
+		const reclaimed = await registry.reclaimExpired();
+		assert.equal(reclaimed.length, 1);
+		assert.equal(reclaimed[0]?.matchId, match.matchId);
+		assert.equal(reclaimed[0]?.stopReason, "idle_timeout");
+	});
+
+	test("settlement heartbeat without valid_input_tick still flushes and does not renew", async () => {
+		let now = 0;
+		const launcher = new FakeLauncher();
+		launcher.recentOutputLines = [
+			JSON.stringify({
+				event: "match_tick",
+				tick: 5,
+				hash: "abc123",
+				valid_input_tick: -1,
+				settlement: {
+					tick: 5,
+					state_hash: "abc123",
+					pad_total: 3,
+					mvp_slot: 0,
+					rows: [
+						{ slot: 0, place: 1, finish_tick: 4, accepted_count: 3 },
+						{ slot: 1, place: 2, finish_tick: 4, accepted_count: 3 },
+					],
+				},
+			}),
+		];
+		const { registrar, registry } = makeRegistry({ now: () => now, launcher });
+		const match = await registry.start();
+		await registry.flushSettlements();
+		assert.equal(registrar.settlements.length, 1);
+		registry.renewFromValidInput();
+		now = IDLE_MS;
+		const reclaimed = await registry.reclaimExpired();
+		assert.equal(reclaimed.length, 1);
+		assert.equal(reclaimed[0]?.matchId, match.matchId);
+		assert.equal(reclaimed[0]?.stopReason, "idle_timeout");
 	});
 
 	test("renewing an unknown or stopped match returns undefined", async () => {

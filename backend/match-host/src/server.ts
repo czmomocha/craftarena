@@ -143,11 +143,10 @@ export function buildMatchHost(options: BuildMatchHostOptions): FastifyInstance 
 	});
 
 	/**
-	 * 续租入口。
+	 * 续租入口（测试 / 运维）。
 	 *
-	 * M0 只提供骨架：真正的续租应当由权威侧在确认"通过校验且改变权威状态的真人命令"
-	 * 之后触发（CD-44 §3），而不是由任何客户端直接调用。等 M3 接入权威对局后，
-	 * 这个端点必须收敛到内网并加上调用方身份校验。
+	 * 活场主路径是扫描对局心跳 `valid_input_tick`（`MatchRegistry.renewFromValidInput`）。
+	 * 客户端不得直接打这个端点。内网身份校验仍待。
 	 */
 	app.post<{ Params: MatchIdParams }>("/matches/:id/renew", async (request, reply) => {
 		const record = options.registry.renew(request.params.id);

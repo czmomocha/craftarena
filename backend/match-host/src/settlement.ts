@@ -99,3 +99,33 @@ export function parseMatchTickSettlement(lines: readonly string[]): MatchHeartbe
 	}
 	return undefined;
 }
+
+/**
+ * 从 recentOutput 取最后一条 match_tick 的 `valid_input_tick`。
+ * 只认 ≥0 的整数。缺字段、负数、非整数、没有 match_tick：不续租。
+ * 以最后一条 match_tick 为准，不回看更早的心跳。
+ */
+export function parseMatchTickValidInputTick(lines: readonly string[]): number | undefined {
+	for (let index = lines.length - 1; index >= 0; index -= 1) {
+		const line = lines[index]?.trim() ?? "";
+		if (line === "") {
+			continue;
+		}
+		let parsed: unknown;
+		try {
+			parsed = JSON.parse(line);
+		} catch {
+			continue;
+		}
+		const body = asRecord(parsed);
+		if (body === undefined || body["event"] !== "match_tick") {
+			continue;
+		}
+		const tick = asInt(body["valid_input_tick"]);
+		if (tick === undefined || tick < 0) {
+			return undefined;
+		}
+		return tick;
+	}
+	return undefined;
+}
