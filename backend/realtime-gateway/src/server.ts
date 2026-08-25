@@ -23,6 +23,8 @@ export interface BuildGatewayOptions {
 	readonly controlPlaneProbe: ControlPlaneProbe;
 	readonly version: string;
 	readonly logger: boolean | { readonly level: string };
+	/** 设置后 Fastify 用 https / 客户端走 wss。省略则明文 ws。 */
+	readonly https?: { readonly key: string; readonly cert: string } | undefined;
 }
 
 export interface Gateway {
@@ -35,8 +37,9 @@ export interface Gateway {
 /**
  * 实时网关。
  *
- * 宪法第二十二条要求客户端只能连 TLS WebSocket 网关。本进程只讲明文 ws，
- * **TLS 由部署层反向代理终结**——直接把这个进程暴露到公网就违反了那一条。
+ * 宪法第二十二条要求客户端只能连 TLS WebSocket 网关。设置 `https` 后本进程
+ * 在入口终结 TLS（wss）；未设置时仍明文 ws，只许本机开发，不得把明文端口
+ * 暴露到公网。对局进程上游始终是内网明文 WebSocket。
  *
  * 代理语义：票据裁决携带上游地址（对局进程的内网 WebSocket），网关把升级后的
  * 连接与上游一对一绑定，双向原样转发帧（二进制/文本标志保留），任一侧关闭或
@@ -46,7 +49,10 @@ export interface Gateway {
  */
 export function buildGateway(options: BuildGatewayOptions): Gateway {
 	const startedAt = Date.now();
-	const app = Fastify({ logger: options.logger });
+	const app = Fastify({
+		logger: options.logger,
+		...(options.https === undefined ? {} : { https: options.https }),
+	});
 	const wss = new WebSocketServer({ noServer: true });
 	const connections = new Set<WebSocket>();
 	const upstreams = new Map<WebSocket, WebSocket>();

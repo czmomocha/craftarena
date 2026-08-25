@@ -45,7 +45,8 @@ export class MatchSessionSettlementError extends Error {
 const DEFAULT_TIMEOUT_MS = 2000;
 
 /**
- * 把本场对局端口拼成控制面要的 `ws` 上游。TLS 在网关侧终结，对局进程讲明文 ws。
+ * 把本场对局端口拼成控制面要的 `ws` 上游。TLS 在网关进程内终结（可选 PEM），
+ * 对局进程始终讲明文 ws（宪法第二十二条：MatchServer 不暴露公网）。
  * host 只接受主机名或 IPv4，拒绝 scheme / userinfo / 端口混写。
  */
 export function buildMatchUpstreamUrl(host: string, port: number): string {

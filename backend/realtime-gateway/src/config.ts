@@ -1,3 +1,15 @@
+import { readFileSync } from "node:fs";
+
+export interface GatewayTlsFiles {
+	readonly certPath: string;
+	readonly keyPath: string;
+}
+
+export interface GatewayTlsCredentials {
+	readonly key: string;
+	readonly cert: string;
+}
+
 export interface GatewayConfig {
 	readonly host: string;
 	readonly port: number;
@@ -10,6 +22,11 @@ export interface GatewayConfig {
 	readonly devUpstreamUrl?: string | undefined;
 	readonly version: string;
 	readonly logLevel: string;
+	/**
+	 * 进程内 TLS。两个路径必须成对出现；未设置时仍明文 ws（仅本机开发）。
+	 * 对局进程上游始终是内网明文 ws（宪法第二十二条：MatchServer 不暴露公网）。
+	 */
+	readonly tls?: GatewayTlsFiles | undefined;
 }
 
 const DEFAULT_PORT = 8090;
@@ -22,7 +39,30 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): GatewayConfig 
 		devUpstreamUrl: emptyToUndefined(env["GATEWAY_DEV_UPSTREAM"]),
 		version: env["CRAFTARENA_VERSION"] ?? "0.0.0-dev",
 		logLevel: env["GATEWAY_LOG_LEVEL"] ?? "info",
+		tls: parseTls(env),
 	};
+}
+
+/**
+ * 读 PEM。调用方必须已经通过 `loadConfig` 确认两条路径成对。
+ */
+export function readTlsCredentials(tls: GatewayTlsFiles): GatewayTlsCredentials {
+	return {
+		cert: readFileSync(tls.certPath, "utf8"),
+		key: readFileSync(tls.keyPath, "utf8"),
+	};
+}
+
+function parseTls(env: NodeJS.ProcessEnv): GatewayTlsFiles | undefined {
+	const certPath = emptyToUndefined(env["GATEWAY_TLS_CERT"]);
+	const keyPath = emptyToUndefined(env["GATEWAY_TLS_KEY"]);
+	if (certPath === undefined && keyPath === undefined) {
+		return undefined;
+	}
+	if (certPath === undefined || keyPath === undefined) {
+		throw new Error("GATEWAY_TLS_CERT and GATEWAY_TLS_KEY must be set together");
+	}
+	return { certPath, keyPath };
 }
 
 function emptyToUndefined(raw: string | undefined): string | undefined {

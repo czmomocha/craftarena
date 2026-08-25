@@ -1,8 +1,10 @@
-import { loadConfig } from "./config.ts";
+import { loadConfig, readTlsCredentials } from "./config.ts";
 import { HttpControlPlaneProbe, buildGateway } from "./server.ts";
 import { ControlPlaneTicketVerifier, DevTicketVerifier } from "./ticket.ts";
 
 const config = loadConfig();
+const https =
+	config.tls === undefined ? undefined : readTlsCredentials(config.tls);
 
 const ticketVerifier =
 	config.devUpstreamUrl === undefined
@@ -14,6 +16,7 @@ const gateway = buildGateway({
 	controlPlaneProbe: new HttpControlPlaneProbe(config.controlPlaneUrl),
 	version: config.version,
 	logger: { level: config.logLevel },
+	https,
 });
 
 let shuttingDown = false;
@@ -37,10 +40,17 @@ for (const signal of ["SIGINT", "SIGTERM"] as const) {
 
 try {
 	await gateway.app.listen({ host: config.host, port: config.port });
-	gateway.app.log.warn(
-		{ controlPlaneUrl: config.controlPlaneUrl },
-		"gateway listening over plaintext ws; TLS must be terminated by the deployment layer (constitution rule 22)",
-	);
+	if (https === undefined) {
+		gateway.app.log.warn(
+			{ controlPlaneUrl: config.controlPlaneUrl },
+			"gateway listening over plaintext ws; set GATEWAY_TLS_CERT and GATEWAY_TLS_KEY for in-process wss (constitution rule 22)",
+		);
+	} else {
+		gateway.app.log.info(
+			{ controlPlaneUrl: config.controlPlaneUrl },
+			"gateway listening over wss; match-process upstream remains plaintext ws on the loopback",
+		);
+	}
 } catch (error) {
 	gateway.app.log.error({ error }, "gateway failed to start");
 	process.exit(1);

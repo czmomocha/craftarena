@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
+import https from "node:https";
 import { after, before, describe, test } from "node:test";
+import { fileURLToPath } from "node:url";
 
 import { WebSocket, WebSocketServer } from "ws";
 
@@ -12,7 +14,7 @@ import type {
 } from "../../contracts/src/index.ts";
 import { ControlPlaneDatabase } from "../../control-plane/src/db/database.ts";
 import { buildServer } from "../../control-plane/src/server.ts";
-import { loadConfig } from "../src/config.ts";
+import { loadConfig, readTlsCredentials } from "../src/config.ts";
 import {
 	WEBSOCKET_PATH,
 	buildGateway,
@@ -75,11 +77,42 @@ describe("dev ticket verifier", () => {
 	});
 });
 
+const TLS_FIXTURE_FILES = {
+	certPath: fileURLToPath(new URL("./fixtures/tls-cert.pem", import.meta.url)),
+	keyPath: fileURLToPath(new URL("./fixtures/tls-key.pem", import.meta.url)),
+};
+
 describe("gateway config", () => {
 	test("treats a blank GATEWAY_DEV_UPSTREAM as unset so the control-plane path is used", () => {
 		assert.equal(loadConfig({}).devUpstreamUrl, undefined);
 		assert.equal(loadConfig({ GATEWAY_DEV_UPSTREAM: "  " }).devUpstreamUrl, undefined);
 		assert.equal(loadConfig({ GATEWAY_DEV_UPSTREAM: "ws://127.0.0.1:9" }).devUpstreamUrl, "ws://127.0.0.1:9");
+	});
+
+	test("leaves tls unset when both PEM paths are absent", () => {
+		assert.equal(loadConfig({}).tls, undefined);
+		assert.equal(loadConfig({ GATEWAY_TLS_CERT: "  ", GATEWAY_TLS_KEY: "" }).tls, undefined);
+	});
+
+	test("requires GATEWAY_TLS_CERT and GATEWAY_TLS_KEY together", () => {
+		assert.deepEqual(loadConfig({
+			GATEWAY_TLS_CERT: TLS_FIXTURE_FILES.certPath,
+			GATEWAY_TLS_KEY: TLS_FIXTURE_FILES.keyPath,
+		}).tls, TLS_FIXTURE_FILES);
+		assert.throws(
+			() => loadConfig({ GATEWAY_TLS_CERT: TLS_FIXTURE_FILES.certPath }),
+			/GATEWAY_TLS_CERT and GATEWAY_TLS_KEY must be set together/,
+		);
+		assert.throws(
+			() => loadConfig({ GATEWAY_TLS_KEY: TLS_FIXTURE_FILES.keyPath }),
+			/GATEWAY_TLS_CERT and GATEWAY_TLS_KEY must be set together/,
+		);
+	});
+
+	test("reads the fixture PEM pair", () => {
+		const credentials = readTlsCredentials(TLS_FIXTURE_FILES);
+		assert.match(credentials.cert, /BEGIN CERTIFICATE/);
+		assert.match(credentials.key, /BEGIN (?:RSA )?PRIVATE KEY/);
 	});
 });
 
@@ -418,6 +451,71 @@ describe("gateway websocket proxy", () => {
 	});
 });
 
+describe("gateway in-process TLS", () => {
+	let upstream: WebSocketServer;
+	let upstreamUrl: string;
+	let gateway: Gateway;
+	let port: number;
+	const upstreamInbox: Buffer[] = [];
+
+	before(async () => {
+		upstream = new WebSocketServer({ host: "127.0.0.1", port: 0 });
+		upstream.on("connection", (socket) => {
+			socket.send(Buffer.from([1, 2, 3]), { binary: true });
+			socket.on("message", (data: Buffer) => {
+				upstreamInbox.push(Buffer.from(data));
+			});
+		});
+		await new Promise<void>((resolvePromise) => upstream.on("listening", resolvePromise));
+		upstreamUrl = `ws://127.0.0.1:${socketPort(upstream.address())}`;
+
+		gateway = buildGateway({
+			ticketVerifier: new DevTicketVerifier(upstreamUrl),
+			controlPlaneProbe: new StubProbe(),
+			version: "1.2.3-test",
+			logger: false,
+			https: readTlsCredentials(TLS_FIXTURE_FILES),
+		});
+		await gateway.app.listen({ host: "127.0.0.1", port: 0 });
+		port = addressPort(gateway);
+	});
+
+	after(async () => {
+		await gateway.close();
+		await new Promise<void>((resolvePromise) => upstream.close(() => resolvePromise()));
+	});
+
+	test("proxies binary frames over wss while the match-process upstream stays plaintext ws", async () => {
+		assert.equal(new URL(upstreamUrl).protocol, "ws:");
+		const socket = new WebSocket(
+			`wss://127.0.0.1:${port}${WEBSOCKET_PATH}?ticket=dev`,
+			{ rejectUnauthorized: false },
+		);
+		try {
+			const greeting = await nextRawMessage(socket);
+			assert.equal(greeting.isBinary, true);
+			assert.deepEqual([...greeting.data], [1, 2, 3]);
+			socket.send(Buffer.from([9, 8, 7]), { binary: true });
+			await waitFor(() => upstreamInbox.length >= 1);
+			assert.deepEqual([...upstreamInbox[0]!], [9, 8, 7]);
+		} finally {
+			socket.close();
+		}
+	});
+
+	test("serves /healthz on the same TLS port", async () => {
+		const response = await httpsGet("127.0.0.1", port, "/healthz");
+		assert.equal(response.statusCode, 200);
+		assert.equal(JSON.parse(response.body).status, "ok");
+	});
+
+	test("rejects a wss client that requires a trusted certificate", async () => {
+		const socket = new WebSocket(`wss://127.0.0.1:${port}${WEBSOCKET_PATH}?ticket=dev`);
+		const error = await nextError(socket);
+		assert.match(error.message, /certificate|UNABLE_TO_VERIFY|self.signed/i);
+	});
+});
+
 function httpBase(app: { server: { address(): string | { port: number } | null } }): string {
 	return `http://127.0.0.1:${socketPort(app.server.address())}`;
 }
@@ -481,6 +579,29 @@ function nextError(socket: WebSocket): Promise<Error> {
 			socket.close();
 			rejectPromise(new Error("expected the upgrade to be rejected, but it succeeded"));
 		});
+	});
+}
+
+function httpsGet(
+	hostname: string,
+	port: number,
+	path: string,
+): Promise<{ statusCode: number; body: string }> {
+	return new Promise((resolvePromise, rejectPromise) => {
+		https
+			.get({ hostname, port, path, rejectUnauthorized: false }, (response) => {
+				const chunks: Buffer[] = [];
+				response.on("data", (chunk: Buffer) => {
+					chunks.push(chunk);
+				});
+				response.on("end", () => {
+					resolvePromise({
+						statusCode: response.statusCode ?? 0,
+						body: Buffer.concat(chunks).toString("utf8"),
+					});
+				});
+			})
+			.on("error", rejectPromise);
 	});
 }
 

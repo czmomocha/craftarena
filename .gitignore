@@ -39,6 +39,7 @@ coverage/
 .env.*
 !.env.example
 *.pem
+!backend/realtime-gateway/tests/fixtures/*.pem
 *.key
 *.p12
 *.keystore

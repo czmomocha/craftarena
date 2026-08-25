@@ -77,7 +77,10 @@ func test_open_window_quick_play_ready_begins_play() -> void:
 	assert_almost_eq(_shell.orders.checkpoint_node(1).position.y, 1.15, 0.0001)
 	assert_almost_eq(_shell.orders.sequence_node(1, 2).position.x, 1.0, 0.0001)
 	assert_true(_shell.status_label_text().contains("course=3/2/1"))
+	assert_true(_shell.status_label_text().contains("tls=off"))
 	assert_true(_shell.status_label_text().contains("course_id=course_01"))
+	var idle_tls: bool = _shell.status_view().get("tls", true)
+	assert_false(idle_tls)
 	assert_true(_shell.status_label_text().contains("crates_mapped=1"))
 	assert_true(_shell.status_label_text().contains("links_mapped=2"))
 	assert_true(_shell.status_label_text().contains("orders_mapped=3/2"))
@@ -119,6 +122,17 @@ func test_open_window_quick_play_ready_begins_play() -> void:
 	assert_true(_shell.status_label_text().contains("room=ABCD23"))
 	assert_false(_shell.allows_settlement())
 	assert_false(_shell.allows_online_writes())
+
+
+func test_wss_gateway_base_shows_tls_on() -> void:
+	_shell = _open_shell()
+	assert_true(_shell.status_label_text().contains("tls=off"))
+	_shell.gateway_base = "wss://127.0.0.1:8090"
+	var wss_tls: bool = _shell.status_view().get("tls", false)
+	assert_true(wss_tls)
+	assert_true(_shell.try_quick())
+	assert_true(_shell.status_label_text().contains("tls=on"))
+	assert_false(_shell.status_label_text().contains("tls=off"))
 
 
 func test_in_match_close_reconnects_and_follows_new_snapshot() -> void:

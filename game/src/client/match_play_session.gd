@@ -51,6 +51,17 @@ static func gateway_ws_url(gateway_base: String, ticket: String) -> String:
 	return "%s/ws?ticket=%s" % [base, token.uri_encode()]
 
 
+## wss 才走 TLS。开发期自签用 client_unsafe；生产 CA 信任链仍待。
+static func uses_tls(url: String) -> bool:
+	return url.begins_with("wss://")
+
+
+static func tls_client_options(url: String) -> TLSOptions:
+	if not uses_tls(url):
+		return null
+	return TLSOptions.client_unsafe()
+
+
 static func move_axes(forward: bool, back: bool, left: bool, right: bool, step: int) -> Dictionary:
 	return MatchMoveFacingGd.move_axes(forward, back, left, right, step)
 
@@ -142,6 +153,7 @@ func status_view() -> Dictionary:
 	return {
 		"state": state,
 		"websocket_url": websocket_url,
+		"tls": uses_tls(websocket_url),
 		"has_snapshot": follow_view.get("has_snapshot", false),
 		"tick": follow_view.get("tick", -1),
 		"player_count": follow_view.get("player_count", 0),
