@@ -332,6 +332,7 @@ export function buildServer(options: BuildServerOptions): FastifyInstance {
 					ticket: issued.ticket,
 					matchId: issued.matchId,
 					expiresAt: issued.expiresAt,
+					seat: issued.seat,
 				};
 				return body;
 			} catch (error) {
@@ -383,6 +384,7 @@ export function buildServer(options: BuildServerOptions): FastifyInstance {
 				ticket: result.ticket,
 				matchId: result.matchId,
 				expiresAt: result.expiresAt,
+				seat: result.seat,
 			};
 			return body;
 		},
@@ -744,6 +746,10 @@ function viewQueue(
 		if (session === undefined || session.roomCode === undefined) {
 			return { status: "failed", error: "session_unregistered" };
 		}
+		const seat = options.database.readSeatByTicket(record.ticket);
+		if (seat === undefined) {
+			return { status: "failed", error: "session_unregistered" };
+		}
 		return {
 			status: "ready",
 			roomCode: session.roomCode,
@@ -752,6 +758,7 @@ function viewQueue(
 			expiresAt: record.ticketExpiresAt,
 			seats: session.seats,
 			issued: options.database.countTickets(record.matchId),
+			seat,
 			course: session.course,
 		};
 	}
@@ -778,6 +785,7 @@ function readyToJoin(
 		expiresAt: view.expiresAt,
 		seats: view.seats,
 		issued: view.issued,
+		seat: view.seat,
 		course: view.course,
 	};
 }
@@ -801,6 +809,7 @@ function admitToRoom(
 		expiresAt: issued.expiresAt,
 		seats: session.seats,
 		issued: options.database.countTickets(matchId),
+		seat: issued.seat,
 		course: session.course,
 	};
 }

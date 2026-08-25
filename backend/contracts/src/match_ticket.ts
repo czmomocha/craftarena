@@ -39,6 +39,8 @@ export interface IssueMatchTicketResponse {
 	readonly ticket: string;
 	readonly matchId: string;
 	readonly expiresAt: string;
+	/** 本张票占用的席位（0 起）。补票回同一席。 */
+	readonly seat: number;
 }
 
 export interface VerifyMatchTicketRequest {

@@ -129,6 +129,7 @@ describe("control plane matchmaking", () => {
 			assert.ok(isMatchId(room.matchId));
 			assert.equal(room.seats, 2);
 			assert.equal(room.issued, 1);
+			assert.equal(room.seat, 0);
 			assert.equal(room.course, "course_01");
 			assert.equal(room.expiresAt, "2026-08-25T01:01:00.000Z");
 			assert.ok(room.ticket.length >= 32);
@@ -142,6 +143,7 @@ describe("control plane matchmaking", () => {
 			assert.equal(second.matchId, room.matchId);
 			assert.equal(second.roomCode, room.roomCode);
 			assert.equal(second.issued, 2);
+			assert.equal(second.seat, 1);
 			assert.notEqual(second.ticket, room.ticket);
 
 			const verified = await app.inject({

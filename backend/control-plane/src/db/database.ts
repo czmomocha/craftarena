@@ -414,6 +414,17 @@ export class ControlPlaneDatabase {
 		return row === undefined ? 0 : Number(row["ticket_count"]);
 	}
 
+	readSeatByTicket(ticket: string): number | undefined {
+		const row = this.#db
+			.prepare(
+				`SELECT seat AS seat
+				 FROM match_tickets
+				 WHERE ticket_hash = ? AND superseded_at IS NULL`,
+			)
+			.get(hashTicket(ticket));
+		return row === undefined ? undefined : Number(row["seat"]);
+	}
+
 	issueTicket(matchId: string, now: Date, ttlMs: number): IssuedTicket {
 		this.#db.exec("BEGIN");
 		try {

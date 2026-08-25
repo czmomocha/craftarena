@@ -1,7 +1,8 @@
 extends GutTest
 
 ## Play session: ready ticket → gateway URL, open, follow snapshots,
-## encode existing command frames. Tick field is 0. No prediction.
+## encode existing command frames. Tick field is 0. Own-slot Move/Jump
+## overlay via MatchLocalPredict; a newer snapshot tick hard-snaps.
 
 const MatchFrameCodec := preload("res://src/shared/protocol/match_frame_codec.gd")
 const MatchJoinSession := preload("res://src/client/match_join_session.gd")
@@ -33,6 +34,8 @@ func test_open_then_snapshot_then_commands() -> void:
 	assert_eq(pose_x, 8)
 	var move: PackedByteArray = play.try_encode_intent(PlayerIntentNames.MOVE, 65536, 0, -1)
 	assert_false(move.is_empty())
+	assert_eq(play.predict.own_slot, 0)
+	assert_eq(play.predict.dx, 65536)
 	var decoded: Dictionary = MatchFrameCodec.decode_command(move)
 	var decoded_ok: bool = decoded.get("ok", false)
 	var decoded_tick: int = decoded.get("tick", -1)
@@ -44,6 +47,7 @@ func test_open_then_snapshot_then_commands() -> void:
 	assert_eq(decoded_dx, 65536)
 	var jump: PackedByteArray = play.try_encode_intent(PlayerIntentNames.JUMP, 0, 0, 0)
 	assert_false(jump.is_empty())
+	assert_eq(play.predict.dy, 0)
 	assert_true(play.try_encode_intent(PlayerIntentNames.SHOVE, 0, 0, 0).is_empty())
 	assert_true(play.try_encode_intent(PlayerIntentNames.INTERACT, 0, 0, 0).is_empty())
 	play.on_close()
@@ -94,6 +98,7 @@ func test_close_then_reissue_follows_latest_snapshot() -> void:
 		"ticket": "ticket-b",
 		"matchId": "match-1",
 		"expiresAt": "2026-08-25T04:11:00.000Z",
+		"seat": 0,
 	}))
 	assert_true(play.try_begin(join, "ws://127.0.0.1:8090"))
 	assert_eq(play.websocket_url, "ws://127.0.0.1:8090/ws?ticket=ticket-b")
@@ -115,6 +120,7 @@ func _ready_join() -> MatchJoinSession:
 		"expiresAt": "2026-08-25T03:00:00.000Z",
 		"seats": 2,
 		"issued": 1,
+		"seat": 0,
 		"course": "course_01",
 	}))
 	return session

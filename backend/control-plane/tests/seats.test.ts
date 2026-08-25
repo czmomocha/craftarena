@@ -119,6 +119,7 @@ describe("control plane seats per match", () => {
 			assert.equal(joined.matchId, eightRoom.matchId);
 			assert.equal(joined.seats, 8);
 			assert.equal(joined.issued, 2);
+			assert.equal(joined.seat, 1);
 		});
 	});
 

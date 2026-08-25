@@ -20,6 +20,7 @@ func test_quick_play_201_becomes_ready_with_ticket() -> void:
 	assert_eq(session.match_id, "match-1")
 	assert_eq(session.seats, 2)
 	assert_eq(session.issued, 1)
+	assert_eq(session.seat, 0)
 	assert_eq(session.course, "course_01")
 	assert_false(session.has_pending())
 	assert_false(session.allows_settlement())
@@ -42,6 +43,7 @@ func test_create_room_202_then_poll_ready() -> void:
 	assert_true(session.accept_http(200, _ready_view("ABCD23", "ticket-b")))
 	assert_eq(session.state, MatchJoinSession.STATE_READY)
 	assert_eq(session.ticket, "ticket-b")
+	assert_eq(session.seat, 0)
 	assert_eq(session.queue_token, "")
 
 
@@ -158,6 +160,16 @@ func test_rejects_extra_or_missing_fields() -> void:
 	assert_true(missing.try_quick())
 	assert_true(missing.accept_http(201, {"ticket": "only"}))
 	assert_eq(missing.error, "parse_error")
+	var no_seat: MatchJoinSession = MatchJoinSession.create()
+	assert_true(no_seat.try_quick())
+	var without_seat: Dictionary = _join("ABCD23", "ticket-seat")
+	without_seat.erase("seat")
+	assert_true(no_seat.accept_http(201, without_seat))
+	assert_eq(no_seat.error, "parse_error")
+	var bad_seat: MatchJoinSession = MatchJoinSession.create()
+	assert_true(bad_seat.try_quick())
+	assert_true(bad_seat.accept_http(201, _join("ABCD23", "ticket-bad-seat", "course_01", 2)))
+	assert_eq(bad_seat.error, "parse_error")
 	var cancel_extra: MatchJoinSession = _waiting_session()
 	assert_true(cancel_extra.try_cancel())
 	assert_true(cancel_extra.accept_http(200, {"ok": true, "extra": 1}))
@@ -225,12 +237,28 @@ func test_reconnect_from_ready_replaces_ticket() -> void:
 		"ticket": "ticket-b",
 		"matchId": "match-1",
 		"expiresAt": "2026-08-25T04:11:00.000Z",
+		"seat": 0,
 	}))
 	assert_eq(session.state, MatchJoinSession.STATE_READY)
 	assert_eq(session.ticket, "ticket-b")
+	assert_eq(session.seat, 0)
 	assert_eq(session.room_code, "ABCD23")
 	assert_eq(session.match_id, "match-1")
 	assert_false(session.has_pending())
+
+
+func test_reconnect_rejects_a_different_seat() -> void:
+	var session: MatchJoinSession = MatchJoinSession.create()
+	assert_true(session.try_quick())
+	assert_true(session.accept_http(201, _join("ABCD23", "ticket-a")))
+	assert_true(session.try_reconnect())
+	assert_true(session.accept_http(201, {
+		"ticket": "ticket-b",
+		"matchId": "match-1",
+		"expiresAt": "2026-08-25T04:11:00.000Z",
+		"seat": 1,
+	}))
+	assert_eq(session.error, "parse_error")
 
 
 func test_quick_and_create_send_official_course_and_reject_paths() -> void:
@@ -289,6 +317,7 @@ func test_reconnect_rejects_unconsumed_path_errors_and_idle() -> void:
 		"ticket": "ticket-d",
 		"matchId": "match-1",
 		"expiresAt": "2026-08-25T04:11:00.000Z",
+		"seat": 0,
 		"extra": true,
 	}))
 	assert_eq(extra.error, "parse_error")
@@ -307,7 +336,12 @@ func _waiting_session() -> MatchJoinSession:
 	return session
 
 
-func _join(room_code: String, ticket: String, course: String = "course_01") -> Dictionary:
+func _join(
+	room_code: String,
+	ticket: String,
+	course: String = "course_01",
+	seat: int = 0
+) -> Dictionary:
 	return {
 		"roomCode": room_code,
 		"ticket": ticket,
@@ -315,6 +349,7 @@ func _join(room_code: String, ticket: String, course: String = "course_01") -> D
 		"expiresAt": "2026-08-25T03:00:00.000Z",
 		"seats": 2,
 		"issued": 1,
+		"seat": seat,
 		"course": course,
 	}
 

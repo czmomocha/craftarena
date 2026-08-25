@@ -90,6 +90,7 @@ describe("control plane match tickets", () => {
 		const ticketBody = issued.json<IssueMatchTicketResponse>();
 		assert.equal(ticketBody.matchId, session.matchId);
 		assert.equal(ticketBody.expiresAt, "2026-08-25T00:01:00.000Z");
+		assert.equal(ticketBody.seat, 0);
 		assert.ok(ticketBody.ticket.length >= 32);
 		assert.notEqual(ticketBody.ticket, hashTicket(ticketBody.ticket));
 

@@ -180,6 +180,7 @@ describe("control plane matchmaking queue", () => {
 			assert.ok(isMatchId(admitted.matchId));
 			assert.notEqual(admitted.matchId, room.matchId);
 			assert.equal(admitted.issued, 1);
+			assert.equal(admitted.seat, 0);
 			assert.equal(admitted.expiresAt, "2026-08-25T02:01:00.000Z");
 
 			const verified = await app.inject({

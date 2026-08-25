@@ -10,7 +10,8 @@ extends Node3D
 ## Checkpoint-order gizmos stay undrawn here; MatchCheckpointOrderMap
 ## draws them. Standing labels stay undrawn here; MatchStandingMap
 ## draws them. This node does not interpolate; the lobby may pass
-## sampled poses from MatchSnapshotInterp. No prediction.
+## sampled poses from MatchSnapshotInterp. The lobby may then overlay
+## MatchLocalPredict on the local seat. This node does not predict.
 
 const MatchSnapshotFollowGd := preload("res://src/client/match_snapshot_follow.gd")
 

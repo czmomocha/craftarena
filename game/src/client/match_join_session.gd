@@ -11,7 +11,7 @@ extends RefCounted
 ## ready/failed ticket without a leave-match HTTP API. Queue cancel
 ## (DELETE) still requires WAITING. Quick play / create room
 ## send an official course id and seats; join-by-code uses the room's
-## course and seats.
+## course and seats. Ready JSON includes the ticket `seat` (0-based).
 
 const OfficialTraprushCoursesGd := preload("res://src/shared/official_traprush_courses.gd")
 
@@ -29,6 +29,7 @@ const _JOIN_KEYS: PackedStringArray = [
 	"expiresAt",
 	"seats",
 	"issued",
+	"seat",
 	"course",
 ]
 const _WAITING_KEYS: PackedStringArray = [
@@ -48,6 +49,7 @@ const _READY_KEYS: PackedStringArray = [
 	"expiresAt",
 	"seats",
 	"issued",
+	"seat",
 	"course",
 ]
 const _QUEUE_FAILED_KEYS: PackedStringArray = ["status", "error"]
@@ -58,6 +60,7 @@ const _REISSUE_KEYS: PackedStringArray = [
 	"ticket",
 	"matchId",
 	"expiresAt",
+	"seat",
 ]
 
 var state: String = STATE_IDLE
@@ -72,6 +75,7 @@ var room_code: String = ""
 var expires_at: String = ""
 var seats: int = 0
 var issued: int = 0
+var seat: int = -1
 var course: String = ""
 
 var _pending_method: String = ""
@@ -263,6 +267,7 @@ func status_view() -> Dictionary:
 		"expires_at": expires_at,
 		"seats": seats,
 		"issued": issued,
+		"seat": seat,
 		"course": course,
 	}
 
@@ -315,6 +320,13 @@ func _accept_reissue(body: Dictionary) -> bool:
 	if next_ticket == "" or next_match == "" or next_expires == "":
 		return _fail("parse_error")
 	if next_match != match_id:
+		return _fail("parse_error")
+	var next_seat: Dictionary = _read_int(body, "seat")
+	var seat_ok: bool = next_seat.get("ok", false)
+	if not seat_ok:
+		return _fail("parse_error")
+	var seat_value: int = next_seat.get("value", -1)
+	if seat_value != seat:
 		return _fail("parse_error")
 	ticket = next_ticket
 	expires_at = next_expires
@@ -388,6 +400,13 @@ func _copy_join_fields(body: Dictionary) -> bool:
 	var issued_value: int = next_issued.get("value", 0)
 	if seats_value < 1 or issued_value < 1:
 		return false
+	var next_seat: Dictionary = _read_int(body, "seat")
+	var seat_ok: bool = next_seat.get("ok", false)
+	if not seat_ok:
+		return false
+	var seat_value: int = next_seat.get("value", -1)
+	if seat_value < 0 or seat_value > 7 or seat_value >= seats_value:
+		return false
 	var next_course: String = OfficialTraprushCoursesGd.normalize_id(str(body.get("course", "")))
 	if next_course == "":
 		return false
@@ -397,6 +416,7 @@ func _copy_join_fields(body: Dictionary) -> bool:
 	expires_at = next_expires
 	seats = seats_value
 	issued = issued_value
+	seat = seat_value
 	course = next_course
 	return true
 
@@ -490,6 +510,7 @@ func _clear_ready_fields() -> void:
 	room_code = ""
 	expires_at = ""
 	issued = 0
+	seat = -1
 
 
 func _match_body(course_id: String, seat_count: int) -> String:
