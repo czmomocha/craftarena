@@ -10,6 +10,7 @@ const app = buildServer({
 	database,
 	version: config.version,
 	logger: { level: config.logLevel },
+	ticketTtlMs: config.ticketTtlMs,
 });
 
 if (applied.length > 0) {

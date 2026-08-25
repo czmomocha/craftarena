@@ -95,7 +95,7 @@
 
 ### M3：权威联机与进程隔离
 
-状态：**进行中**（2026-08-24 启动，人类选定 M3 先于 M5）。已合入：对局进程多人仿真循环（无网络，`TraprushMatchSession`）、对局二进制协议 v1（`MatchFrameCodec`）、对局进程仿真入口（`match_server.gd` 真仿真 + MatchHost 传参）、对局进程实时回路（WebSocket 监听 + `MatchRealtime` 槽位/命令队列/快照广播）。本刀锁：实时网关代理——票据裁决携带上游对局地址（网关不记账不查库），升级后连接与上游一对一绑定、双向原样转发帧（二进制/文本标志保留）、任一侧关闭即关闭另一侧；开发期 `DevTicketVerifier` 用 `GATEWAY_DEV_UPSTREAM` 固定上游，M0 的 `gateway_hello`/`gateway_not_implemented` 占位退役。不锁：真票据签发/校验（控制面接口）、名次排序、快照/插值/校正、防伪造门禁、离线模式（均为后续章节）。
+状态：**进行中**（2026-08-24 启动，人类选定 M3 先于 M5）。已合入：对局进程多人仿真循环（无网络，`TraprushMatchSession`）、对局二进制协议 v1（`MatchFrameCodec`）、对局进程仿真入口（`match_server.gd` 真仿真 + MatchHost 传参）、对局进程实时回路（WebSocket 监听 + `MatchRealtime` 槽位/命令队列/快照广播）、实时网关代理（[PR #119](https://github.com/czmomocha/craftarena/pull/119)）。本刀锁：控制面真票据签发/校验——`POST /match-sessions` 登记对局上游、`POST /match-sessions/:matchId/tickets` 签发一次性票据、`POST /tickets/verify` 消费并返回上游；网关默认 `ControlPlaneTicketVerifier` 只调控制面（不查库）；`GATEWAY_DEV_UPSTREAM` 仍是显式开发旁路。不锁：MatchHost 自动登记、真匹配/房间码、账号绑定、重连补票、名次排序、快照/插值/校正、防伪造门禁、离线模式（均为后续章节）。
 
 产出：
 

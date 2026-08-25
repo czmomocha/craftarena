@@ -1,16 +1,30 @@
 import assert from "node:assert/strict";
+import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import { after, before, describe, test } from "node:test";
 
 import { WebSocket, WebSocketServer } from "ws";
 
-import type { ReadinessCheck, ReadinessPayload } from "../../contracts/src/index.ts";
+import type {
+	IssueMatchTicketResponse,
+	ReadinessCheck,
+	ReadinessPayload,
+	RegisterMatchSessionResponse,
+} from "../../contracts/src/index.ts";
+import { ControlPlaneDatabase } from "../../control-plane/src/db/database.ts";
+import { buildServer } from "../../control-plane/src/server.ts";
+import { loadConfig } from "../src/config.ts";
 import {
 	WEBSOCKET_PATH,
 	buildGateway,
 	type ControlPlaneProbe,
 	type Gateway,
 } from "../src/server.ts";
-import { DevTicketVerifier, type TicketVerdict, type TicketVerifier } from "../src/ticket.ts";
+import {
+	ControlPlaneTicketVerifier,
+	DevTicketVerifier,
+	type TicketVerdict,
+	type TicketVerifier,
+} from "../src/ticket.ts";
 
 class StubProbe implements ControlPlaneProbe {
 	ok = true;
@@ -47,6 +61,126 @@ describe("dev ticket verifier", () => {
 		const verdict = await verifier.verify("anything");
 		assert.equal(verdict.ok, true);
 		assert.equal(verdict.upstreamUrl, undefined);
+	});
+});
+
+describe("gateway config", () => {
+	test("treats a blank GATEWAY_DEV_UPSTREAM as unset so the control-plane path is used", () => {
+		assert.equal(loadConfig({}).devUpstreamUrl, undefined);
+		assert.equal(loadConfig({ GATEWAY_DEV_UPSTREAM: "  " }).devUpstreamUrl, undefined);
+		assert.equal(loadConfig({ GATEWAY_DEV_UPSTREAM: "ws://127.0.0.1:9" }).devUpstreamUrl, "ws://127.0.0.1:9");
+	});
+});
+
+describe("control plane ticket verifier", () => {
+	test("maps a 401 from the control plane to a rejected verdict", async () => {
+		const stub = await listenJson((_req, res) => {
+			res.writeHead(401, { "content-type": "application/json" });
+			res.end(JSON.stringify({ ok: false, reason: "unknown_ticket" }));
+		});
+		try {
+			const verifier = new ControlPlaneTicketVerifier(stub.url);
+			const verdict = await verifier.verify("missing");
+			assert.equal(verdict.ok, false);
+			assert.equal(verdict.reason, "unknown_ticket");
+		} finally {
+			await stub.close();
+		}
+	});
+
+	test("maps a successful verify to the returned upstream", async () => {
+		const stub = await listenJson((_req, res) => {
+			res.writeHead(200, { "content-type": "application/json" });
+			res.end(JSON.stringify({ ok: true, upstreamUrl: "ws://10.0.0.8:9100" }));
+		});
+		try {
+			const verifier = new ControlPlaneTicketVerifier(stub.url);
+			const verdict = await verifier.verify("issued-ticket");
+			assert.equal(verdict.ok, true);
+			assert.equal(verdict.upstreamUrl, "ws://10.0.0.8:9100");
+		} finally {
+			await stub.close();
+		}
+	});
+
+	test("throws when the control plane is not a ticket authority response", async () => {
+		const stub = await listenJson((_req, res) => {
+			res.writeHead(503, { "content-type": "application/json" });
+			res.end(JSON.stringify({ status: "not_ready" }));
+		});
+		try {
+			const verifier = new ControlPlaneTicketVerifier(stub.url);
+			await assert.rejects(verifier.verify("issued-ticket"), /HTTP 503/);
+		} finally {
+			await stub.close();
+		}
+	});
+});
+
+describe("gateway uses control plane tickets", () => {
+	test("proxies after a real issued ticket and rejects the same ticket the second time", async () => {
+		const database = new ControlPlaneDatabase(":memory:");
+		database.migrate();
+		const controlPlane = buildServer({ database, version: "1.2.3-test", logger: false });
+		await controlPlane.listen({ host: "127.0.0.1", port: 0 });
+
+		const upstreamInbox: Buffer[] = [];
+		const upstream = new WebSocketServer({ host: "127.0.0.1", port: 0 });
+		upstream.on("connection", (socket) => {
+			socket.send(Buffer.from([1, 2, 3]), { binary: true });
+			socket.on("message", (data: Buffer) => {
+				upstreamInbox.push(Buffer.from(data));
+			});
+		});
+		await new Promise<void>((resolvePromise) => upstream.on("listening", resolvePromise));
+
+		const gateway = buildGateway({
+			ticketVerifier: new ControlPlaneTicketVerifier(httpBase(controlPlane)),
+			controlPlaneProbe: new StubProbe(),
+			version: "1.2.3-test",
+			logger: false,
+		});
+		await gateway.app.listen({ host: "127.0.0.1", port: 0 });
+
+		try {
+			const created = await controlPlane.inject({
+				method: "POST",
+				url: "/match-sessions",
+				payload: { upstreamUrl: `ws://127.0.0.1:${socketPort(upstream.address())}` },
+			});
+			assert.equal(created.statusCode, 201);
+			const matchId = created.json<RegisterMatchSessionResponse>().matchId;
+			const issued = await controlPlane.inject({
+				method: "POST",
+				url: `/match-sessions/${matchId}/tickets`,
+			});
+			assert.equal(issued.statusCode, 201);
+			const ticket = issued.json<IssueMatchTicketResponse>().ticket;
+
+			const socket = new WebSocket(
+				`ws://127.0.0.1:${addressPort(gateway)}${WEBSOCKET_PATH}?ticket=${encodeURIComponent(ticket)}`,
+			);
+			try {
+				const greeting = await nextRawMessage(socket);
+				assert.deepEqual([...greeting.data], [1, 2, 3]);
+				socket.send(Buffer.from([9, 8, 7]), { binary: true });
+				await waitFor(() => upstreamInbox.length >= 1);
+				assert.deepEqual([...upstreamInbox[0]!], [9, 8, 7]);
+			} finally {
+				socket.close();
+			}
+
+			const reused = new WebSocket(
+				`ws://127.0.0.1:${addressPort(gateway)}${WEBSOCKET_PATH}?ticket=${encodeURIComponent(ticket)}`,
+			);
+			const error = await nextError(reused);
+			assert.match(error.message, /401/);
+		} finally {
+			await gateway.close();
+			await new Promise<void>((resolvePromise) => upstream.close(() => resolvePromise()));
+			await controlPlane.close();
+			database.close();
+		}
 	});
 });
 
@@ -254,6 +388,40 @@ describe("gateway websocket proxy", () => {
 		assert.equal(upstreamConnections, before);
 	});
 });
+
+function httpBase(app: { server: { address(): string | { port: number } | null } }): string {
+	return `http://127.0.0.1:${socketPort(app.server.address())}`;
+}
+
+function socketPort(address: string | { port: number } | null): number {
+	if (address === null || typeof address === "string") {
+		throw new Error("expected a TCP listen address");
+	}
+	return address.port;
+}
+
+async function listenJson(
+	handler: (request: IncomingMessage, response: ServerResponse) => void,
+): Promise<{ url: string; close: () => Promise<void> }> {
+	const server = createServer(handler);
+	await new Promise<void>((resolvePromise, rejectPromise) => {
+		server.once("error", rejectPromise);
+		server.listen(0, "127.0.0.1", () => resolvePromise());
+	});
+	return {
+		url: `http://127.0.0.1:${socketPort(server.address())}`,
+		close: () =>
+			new Promise<void>((resolvePromise, rejectPromise) => {
+				server.close((error) => {
+					if (error) {
+						rejectPromise(error);
+						return;
+					}
+					resolvePromise();
+				});
+			}),
+	};
+}
 
 function addressPort(gateway: Gateway): number {
 	const address = gateway.app.server.address();

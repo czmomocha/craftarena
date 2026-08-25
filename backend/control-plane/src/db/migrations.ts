@@ -31,4 +31,26 @@ export const MIGRATIONS: readonly Migration[] = [
 			`INSERT OR IGNORE INTO readiness_probe (id, last_checked_at) VALUES (1, '')`,
 		],
 	},
+	{
+		id: "0002_match_sessions_and_tickets",
+		statements: [
+			// 对局会话只存「这场对局的上游地址」。MatchHost 拉起进程后登记到这里；
+			// 网关不读这张表（宪法第二十一条）。
+			`CREATE TABLE match_sessions (
+				match_id TEXT PRIMARY KEY,
+				upstream_url TEXT NOT NULL,
+				created_at TEXT NOT NULL
+			) STRICT`,
+			// 明文票据只在签发响应里出现一次。库里只留 sha256，校验时先哈希再查。
+			`CREATE TABLE match_tickets (
+				ticket_hash TEXT PRIMARY KEY,
+				match_id TEXT NOT NULL,
+				expires_at TEXT NOT NULL,
+				consumed_at TEXT,
+				created_at TEXT NOT NULL,
+				FOREIGN KEY (match_id) REFERENCES match_sessions (match_id)
+			) STRICT`,
+			`CREATE INDEX match_tickets_match_id ON match_tickets (match_id)`,
+		],
+	},
 ];

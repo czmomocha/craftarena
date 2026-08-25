@@ -24,7 +24,9 @@
 - WebSocket 的可靠有序语义是一期共同基线；
 - 实测确认队头阻塞影响后，再立项其他传输（ENet / WebRTC），不提前维护两套传输。
 
-实现落点（2026-08-24）：网关（`backend/realtime-gateway/`）把 `/ws?ticket=` 升级请求交给 `TicketVerifier` 裁决，裁决携带上游对局地址；升级后连接与上游一对一绑定，双向原样转发帧（二进制/文本标志保留），任一侧关闭/出错即关闭另一侧。网关不解析帧内容。开发期上游由 `GATEWAY_DEV_UPSTREAM` 固定；真票据签发/校验的控制面接口仍待。
+实现落点（2026-08-24）：网关（`backend/realtime-gateway/`）把 `/ws?ticket=` 升级请求交给 `TicketVerifier` 裁决，裁决携带上游对局地址；升级后连接与上游一对一绑定，双向原样转发帧（二进制/文本标志保留），任一侧关闭/出错即关闭另一侧。网关不解析帧内容。
+
+实现落点（2026-08-25）：控制面是票据权威。`POST /match-sessions` 登记一场对局的 `ws`/`wss` 上游；`POST /match-sessions/:matchId/tickets` 签发一次性不透明票据（库内只存 SHA-256）；`POST /tickets/verify` 消费校验并返回上游。网关默认 `ControlPlaneTicketVerifier` 只调校验接口，不查库（宪法第二十一条）。未设置 `GATEWAY_DEV_UPSTREAM` 时不再把任意非空字符串当合法票据。过期窗口是开发期占位（`CONTROL_PLANE_TICKET_TTL_MS`），不锁产品值。不锁账号绑定、重连补票、MatchHost 自动登记。
 
 ## 3. 回放与确定性
 
