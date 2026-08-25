@@ -7,7 +7,10 @@ extends RefCounted
 ## the status + object. No SceneTree, no sockets. Room-code alphabet and
 ## length match the current development placeholder (not a product lock).
 ## Does not bind accounts or write settlement. Reconnect reissues a
-## consumed ticket for the same match seat.
+## consumed ticket for the same match seat. Quick play / create room
+## send an official course id; join-by-code uses the room's course.
+
+const OfficialTraprushCoursesGd := preload("res://src/shared/official_traprush_courses.gd")
 
 const STATE_IDLE: String = "idle"
 const STATE_WAITING: String = "waiting"
@@ -23,6 +26,7 @@ const _JOIN_KEYS: PackedStringArray = [
 	"expiresAt",
 	"seats",
 	"issued",
+	"course",
 ]
 const _WAITING_KEYS: PackedStringArray = [
 	"status",
@@ -30,6 +34,7 @@ const _WAITING_KEYS: PackedStringArray = [
 	"position",
 	"estimatedWaitMs",
 	"expiresAt",
+	"course",
 ]
 const _READY_KEYS: PackedStringArray = [
 	"status",
@@ -39,6 +44,7 @@ const _READY_KEYS: PackedStringArray = [
 	"expiresAt",
 	"seats",
 	"issued",
+	"course",
 ]
 const _QUEUE_FAILED_KEYS: PackedStringArray = ["status", "error"]
 const _ERROR_KEYS: PackedStringArray = ["error", "message"]
@@ -62,6 +68,7 @@ var room_code: String = ""
 var expires_at: String = ""
 var seats: int = 0
 var issued: int = 0
+var course: String = ""
 
 var _pending_method: String = ""
 var _pending_path: String = ""
@@ -121,12 +128,18 @@ func pending_body() -> String:
 	return _pending_body
 
 
-func try_quick() -> bool:
-	return _begin_request("POST", "/matchmaking/quick")
+func try_quick(course_id: String = OfficialTraprushCoursesGd.DEFAULT_ID) -> bool:
+	var payload: String = _course_body(course_id)
+	if payload == "":
+		return false
+	return _begin_request("POST", "/matchmaking/quick", payload)
 
 
-func try_create_room() -> bool:
-	return _begin_request("POST", "/matchmaking/rooms")
+func try_create_room(course_id: String = OfficialTraprushCoursesGd.DEFAULT_ID) -> bool:
+	var payload: String = _course_body(course_id)
+	if payload == "":
+		return false
+	return _begin_request("POST", "/matchmaking/rooms", payload)
 
 
 func try_join_room(raw_code: String) -> bool:
@@ -230,6 +243,7 @@ func status_view() -> Dictionary:
 		"expires_at": expires_at,
 		"seats": seats,
 		"issued": issued,
+		"course": course,
 	}
 
 
@@ -354,12 +368,16 @@ func _copy_join_fields(body: Dictionary) -> bool:
 	var issued_value: int = next_issued.get("value", 0)
 	if seats_value < 1 or issued_value < 1:
 		return false
+	var next_course: String = OfficialTraprushCoursesGd.normalize_id(str(body.get("course", "")))
+	if next_course == "":
+		return false
 	room_code = next_room
 	ticket = next_ticket
 	match_id = next_match
 	expires_at = next_expires
 	seats = seats_value
 	issued = issued_value
+	course = next_course
 	return true
 
 
@@ -376,10 +394,14 @@ func _copy_waiting_fields(body: Dictionary) -> bool:
 	var wait_value: int = next_wait.get("value", -1)
 	if position_value < 1 or wait_value < 0:
 		return false
+	var next_course: String = OfficialTraprushCoursesGd.normalize_id(str(body.get("course", "")))
+	if next_course == "":
+		return false
 	queue_token = next_token
 	queue_expires_at = next_expires
 	position = position_value
 	estimated_wait_ms = wait_value
+	course = next_course
 	return true
 
 
@@ -423,6 +445,7 @@ func _fail(reason: String) -> bool:
 func _reset_match_fields() -> void:
 	_clear_queue_fields()
 	_clear_ready_fields()
+	course = ""
 
 
 func _clear_queue_fields() -> void:
@@ -439,6 +462,13 @@ func _clear_ready_fields() -> void:
 	expires_at = ""
 	seats = 0
 	issued = 0
+
+
+func _course_body(course_id: String) -> String:
+	var id: String = OfficialTraprushCoursesGd.normalize_id(course_id)
+	if id == "":
+		return ""
+	return JSON.stringify({"course": id})
 
 
 func _clear_pending() -> void:

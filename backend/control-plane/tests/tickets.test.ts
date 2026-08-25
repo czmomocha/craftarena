@@ -80,6 +80,7 @@ describe("control plane match tickets", () => {
 		const session = created.json<RegisterMatchSessionResponse>();
 		assert.ok(isMatchId(session.matchId));
 		assert.equal(session.upstreamUrl, "ws://127.0.0.1:18211");
+		assert.equal(session.course, "course_01");
 
 		const issued = await app.inject({
 			method: "POST",

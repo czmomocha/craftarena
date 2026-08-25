@@ -3,8 +3,11 @@
  *
  * 玩家入口在控制面：快速游戏与按码加入都只换一张一次性票据。
  * 容量满时入 FIFO，轮询换同一张票。MatchHost 不查库（宪法第二十一条）。
+ * 快速游戏 / 建房可带官方赛道 `course`；按码加入走房内已锁课程。
  * OpenAPI 仍未生成。
  */
+
+import type { OfficialTraprushCourseId } from "./official_courses.ts";
 
 export interface MatchmakingJoinResponse {
 	readonly roomCode: string;
@@ -13,6 +16,7 @@ export interface MatchmakingJoinResponse {
 	readonly expiresAt: string;
 	readonly seats: number;
 	readonly issued: number;
+	readonly course: OfficialTraprushCourseId;
 }
 
 export type MatchQueueKind = "quick" | "create_room";
@@ -23,6 +27,7 @@ export interface MatchmakingQueueWaitingResponse {
 	readonly position: number;
 	readonly estimatedWaitMs: number;
 	readonly expiresAt: string;
+	readonly course: OfficialTraprushCourseId;
 }
 
 export interface MatchmakingQueueReadyResponse extends MatchmakingJoinResponse {

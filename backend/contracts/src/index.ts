@@ -34,6 +34,19 @@ export {
 	type MatchmakingQueueWaitingResponse,
 } from "./match_room.ts";
 export {
+	DEFAULT_OFFICIAL_TRAPRUSH_COURSE,
+	OFFICIAL_TRAPRUSH_COURSE_IDS,
+	isOfficialTraprushCourseId,
+	matchCourseBodySchema,
+	officialTraprushCourseIdFromPath,
+	officialTraprushCourseIdSchema,
+	officialTraprushCoursePath,
+	readOfficialCourseBody,
+	type OfficialCourseBodyError,
+	type OfficialCourseBodyResult,
+	type OfficialTraprushCourseId,
+} from "./official_courses.ts";
+export {
 	recordMatchSettlementBodySchema,
 	type MatchSettlementResponse,
 	type MatchSettlementRow,

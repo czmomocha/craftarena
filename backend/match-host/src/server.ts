@@ -3,6 +3,7 @@ import Fastify, { type FastifyInstance } from "fastify";
 import {
 	SERVICE_IDS,
 	isReady,
+	readOfficialCourseBody,
 	type HealthPayload,
 	type ReadinessCheck,
 	type ReadinessPayload,
@@ -22,25 +23,8 @@ interface MatchIdParams {
 	readonly id: string;
 }
 
-/** 兜底解析器用它标记"收到了非空 body"，由路由决定怎么回。 */
+/** 兜底解析器用它标记无法解析的非 JSON body。 */
 const UNEXPECTED_BODY = Symbol("unexpected_body");
-
-function hasRequestBody(body: unknown): boolean {
-	if (body === UNEXPECTED_BODY) {
-		return true;
-	}
-	if (body === undefined || body === null) {
-		return false;
-	}
-	if (typeof body === "string") {
-		return body.trim() !== "";
-	}
-	// 空对象按"没传"处理：客户端发 `{}` 太常见，为它报错只是噪音。
-	if (typeof body === "object") {
-		return Object.keys(body).length > 0;
-	}
-	return true;
-}
 
 export function buildMatchHost(options: BuildMatchHostOptions): FastifyInstance {
 	const startedAt = Date.now();
@@ -48,16 +32,24 @@ export function buildMatchHost(options: BuildMatchHostOptions): FastifyInstance 
 
 	const uptimeSeconds = (): number => Math.max(0, Math.floor((Date.now() - startedAt) / 1000));
 
-	// 本服务的 POST 端点目前都不接受请求体。Fastify 默认对未注册的 Content-Type 直接回 415，
-	// 于是 `curl -X POST`（会带上默认 Content-Type）这种最常见的调用方式会失败。
-	// 这里兜底接受空 body；带内容的请求交给路由统一拒绝，避免悄悄吞掉调用方以为已生效的参数。
+	// POST /matches 接受可选 `{ course }` JSON；空 body 视为默认官方赛道。
+	// 未注册的 Content-Type 若走 Fastify 默认会 415，这里兜底读成 JSON 或拒绝。
 	app.addContentTypeParser("*", (_request, payload, done) => {
-		let size = 0;
+		const chunks: Buffer[] = [];
 		payload.on("data", (chunk: Buffer) => {
-			size += chunk.length;
+			chunks.push(chunk);
 		});
 		payload.on("end", () => {
-			done(null, size === 0 ? {} : UNEXPECTED_BODY);
+			const raw = Buffer.concat(chunks);
+			if (raw.length === 0) {
+				done(null, {});
+				return;
+			}
+			try {
+				done(null, JSON.parse(raw.toString("utf8")));
+			} catch {
+				done(null, UNEXPECTED_BODY);
+			}
 		});
 		payload.on("error", done);
 	});
@@ -96,18 +88,27 @@ export function buildMatchHost(options: BuildMatchHostOptions): FastifyInstance 
 	app.get("/matches", async () => ({ matches: options.registry.list().map(toWire) }));
 
 	app.post("/matches", async (request, reply) => {
-		// M0 的创建接口还没有参数。与其静默忽略调用方传来的内容，不如明确拒绝——
-		// 否则等这个端点将来真的接受玩法与内容版本时，早期调用方会以为自己一直传对了。
-		if (hasRequestBody(request.body)) {
+		if (request.body === UNEXPECTED_BODY) {
 			reply.code(400);
 			return {
 				error: "unexpected_request_body",
-				message: "POST /matches does not accept a request body yet",
+				message: "POST /matches rejected a non-JSON body",
+			};
+		}
+		const courseResult = readOfficialCourseBody(request.body);
+		if (!courseResult.ok) {
+			reply.code(400);
+			return {
+				error: courseResult.error,
+				message:
+					courseResult.error === "invalid_course"
+						? "POST /matches only accepts official TRAPRUSH course ids"
+						: "POST /matches rejected unexpected fields",
 			};
 		}
 
 		try {
-			const record = await options.registry.start();
+			const record = await options.registry.start(courseResult.course);
 			reply.code(201);
 			return toWire(record);
 		} catch (error) {
@@ -186,6 +187,7 @@ function toWire(record: MatchRecord): Record<string, unknown> {
 		state: record.state,
 		upstreamUrl: record.upstreamUrl,
 		seats: record.seats,
+		course: record.course,
 		startedAt: new Date(record.startedAt).toISOString(),
 		leaseExpiresAt: new Date(record.lease.expiresAt).toISOString(),
 		lastValidInputAt: new Date(record.lease.lastValidInputAt).toISOString(),

@@ -142,6 +142,13 @@ describe("godot process launcher args", () => {
 		});
 
 		const args = launcher.buildArgs({ matchId: "m-1", port: 42000 });
+		assert.ok(args.includes("--course=res://content/official/traprush/course_02.json"));
+		const overridden = launcher.buildArgs({
+			matchId: "m-1",
+			port: 42000,
+			course: "res://content/official/traprush/course_03.json",
+		});
+		assert.ok(overridden.includes("--course=res://content/official/traprush/course_03.json"));
 
 		assert.ok(args.includes("--match-id=m-1"));
 		assert.ok(args.includes("--port=42000"));
@@ -424,7 +431,7 @@ describe("match registry", () => {
 		assert.equal(launcher.launched.length, 1);
 		assert.equal(launcher.launched[0]?.matchId, match.matchId);
 		assert.deepEqual(registrar.registered, [
-			{ matchId: match.matchId, upstreamUrl: `ws://127.0.0.1:${match.port}`, seats: 2 },
+			{ matchId: match.matchId, upstreamUrl: `ws://127.0.0.1:${match.port}`, seats: 2, course: "course_01" },
 		]);
 		assert.equal(match.upstreamUrl, `ws://127.0.0.1:${match.port}`);
 		assert.equal(match.seats, 2);
@@ -481,7 +488,7 @@ describe("match registry", () => {
 		release();
 		const match = await pending;
 		assert.deepEqual(registrar.registered, [
-			{ matchId: match.matchId, upstreamUrl: `ws://127.0.0.1:${match.port}`, seats: 2 },
+			{ matchId: match.matchId, upstreamUrl: `ws://127.0.0.1:${match.port}`, seats: 2, course: "course_01" },
 		]);
 		assert.deepEqual(listenProbe.probed, [match.port]);
 	});
@@ -796,15 +803,56 @@ describe("match host http", () => {
 			const created = await app.inject({ method: "POST", url: "/matches" });
 			assert.equal(created.statusCode, 201);
 
-			const body = created.json<{ matchId: string; port: number; state: string; upstreamUrl: string; seats: number }>();
+			const body = created.json<{
+				matchId: string;
+				port: number;
+				state: string;
+				upstreamUrl: string;
+				seats: number;
+				course: string;
+			}>();
 			assert.equal(body.state, "running");
 			assert.ok(body.port >= 42000 && body.port <= 42009);
 			assert.equal(body.upstreamUrl, `ws://127.0.0.1:${body.port}`);
 			assert.equal(body.seats, 2);
+			assert.equal(body.course, "course_01");
 
 			const fetched = await app.inject({ method: "GET", url: `/matches/${body.matchId}` });
 			assert.equal(fetched.statusCode, 200);
 			assert.equal(fetched.json<{ matchId: string }>().matchId, body.matchId);
+		} finally {
+			await app.close();
+		}
+	});
+
+	test("POST /matches launches the requested official course", async () => {
+		const { app, registrar } = makeApp();
+		try {
+			const created = await app.inject({
+				method: "POST",
+				url: "/matches",
+				headers: { "content-type": "application/json" },
+				payload: { course: "course_02" },
+			});
+			assert.equal(created.statusCode, 201);
+			assert.equal(created.json<{ course: string }>().course, "course_02");
+			assert.equal(registrar.registered[0]?.course, "course_02");
+		} finally {
+			await app.close();
+		}
+	});
+
+	test("POST /matches rejects unknown course ids", async () => {
+		const { app } = makeApp();
+		try {
+			const response = await app.inject({
+				method: "POST",
+				url: "/matches",
+				headers: { "content-type": "application/json" },
+				payload: { course: "res://content/official/traprush/course_01.json" },
+			});
+			assert.equal(response.statusCode, 400);
+			assert.equal(response.json<{ error: string }>().error, "invalid_course");
 		} finally {
 			await app.close();
 		}
@@ -973,6 +1021,7 @@ describe("control plane match session registrar", () => {
 				matchId: "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
 				upstreamUrl: "ws://127.0.0.1:9",
 				seats: 2,
+				course: "course_01",
 			});
 			assert.equal(seen.method, "POST");
 			assert.equal(seen.url, "/match-sessions");
@@ -980,6 +1029,7 @@ describe("control plane match session registrar", () => {
 				matchId: "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
 				upstreamUrl: "ws://127.0.0.1:9",
 				seats: 2,
+				course: "course_01",
 			});
 		} finally {
 			await stub.close();
@@ -999,6 +1049,7 @@ describe("control plane match session registrar", () => {
 						matchId: "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
 						upstreamUrl: "ws://127.0.0.1:9",
 						seats: 2,
+						course: "course_01",
 					}),
 				MatchSessionRegisterError,
 			);
@@ -1020,6 +1071,7 @@ describe("control plane match session registrar", () => {
 						matchId: "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
 						upstreamUrl: "ws://127.0.0.1:9",
 						seats: 2,
+						course: "course_01",
 					}),
 				/mismatched match id/,
 			);

@@ -65,10 +65,12 @@ func test_open_window_quick_play_ready_begins_play() -> void:
 	assert_almost_eq(_shell.orders.checkpoint_node(1).position.y, 1.15, 0.0001)
 	assert_almost_eq(_shell.orders.sequence_node(1, 2).position.x, 1.0, 0.0001)
 	assert_true(_shell.status_label_text().contains("course=3/2/1"))
+	assert_true(_shell.status_label_text().contains("course_id=course_01"))
 	assert_true(_shell.status_label_text().contains("crates_mapped=1"))
 	assert_true(_shell.status_label_text().contains("links_mapped=2"))
 	assert_true(_shell.status_label_text().contains("orders_mapped=3/2"))
 	assert_true(_shell.try_quick())
+	assert_true(_shell.join.pending_body().contains("course_01"))
 	assert_true(_shell.status_label_text().contains("pending=1"))
 	assert_true(_shell.accept_http(201, _join("ABCD23", "ticket-a")))
 	assert_eq(_shell.join.state, MatchJoinSession.STATE_READY)
@@ -141,6 +143,7 @@ func test_queue_wait_poll_cancel_and_invalid_code() -> void:
 		"position": 1,
 		"estimatedWaitMs": 30000,
 		"expiresAt": "2026-08-25T02:10:00.000Z",
+		"course": "course_01",
 	}))
 	assert_eq(_shell.join.state, MatchJoinSession.STATE_WAITING)
 	assert_true(_shell.status_label_text().contains("pos=1"))
@@ -152,6 +155,7 @@ func test_queue_wait_poll_cancel_and_invalid_code() -> void:
 		"position": 1,
 		"estimatedWaitMs": 30000,
 		"expiresAt": "2026-08-25T02:10:00.000Z",
+		"course": "course_01",
 	}))
 	assert_true(_shell.try_cancel())
 	assert_true(_shell.accept_http(200, {"ok": true}))
@@ -328,6 +332,39 @@ func test_snapshot_standings_rank_finished_first_without_settlement() -> void:
 	assert_false(_shell.allows_online_writes())
 
 
+func test_selected_course_is_sent_and_join_response_remounts_maps() -> void:
+	_shell = _open_shell()
+	assert_eq(_shell.course_id_text(), "course_01")
+	_shell.set_course_id_text("res://content/official/traprush/course_01.json")
+	assert_false(_shell.try_quick())
+	assert_false(_shell.join.has_pending())
+	_shell.set_course_id_text("course_02")
+	assert_true(_shell.try_quick())
+	assert_true(_shell.join.pending_body().contains("course_02"))
+	assert_true(_shell.accept_http(201, _join("ABCD23", "ticket-course", "course_03")))
+	assert_eq(_shell.join.course, "course_03")
+	assert_eq(_shell.course.pad_count(), 4)
+	assert_eq(_shell.course.portal_count(), 3)
+	assert_eq(_shell.course.finish_count(), 1)
+	assert_eq(_shell.orders.checkpoint_count(), 4)
+	assert_eq(_shell.orders.sequence_count(), 3)
+	assert_eq(_shell.links.link_count(), 3)
+	assert_true(_shell.status_label_text().contains("course_id=course_03"))
+	assert_true(_shell.status_label_text().contains("course=4/3/1"))
+	assert_true(_shell.status_label_text().contains("orders_mapped=4/3"))
+
+
+func test_solo_uses_selected_official_course() -> void:
+	_shell = _open_shell()
+	_shell.set_course_id_text("course_03")
+	assert_true(_shell.try_solo())
+	assert_eq(_shell.offline.state, MatchOfflineSession.STATE_PLAYING)
+	assert_eq(_shell.course.pad_count(), 4)
+	assert_eq(_shell.orders.checkpoint_count(), 4)
+	assert_true(_shell.offline.course_path.ends_with("course_03.json"))
+	assert_true(_shell.status_label_text().contains("course=4/3/1"))
+
+
 func _open_shell() -> MatchLobbyShell:
 	var shell: MatchLobbyShell = MatchLobbyShell.create()
 	add_child(shell)
@@ -336,7 +373,7 @@ func _open_shell() -> MatchLobbyShell:
 	return shell
 
 
-func _join(room_code: String, ticket: String) -> Dictionary:
+func _join(room_code: String, ticket: String, course: String = "course_01") -> Dictionary:
 	return {
 		"roomCode": room_code,
 		"ticket": ticket,
@@ -344,6 +381,7 @@ func _join(room_code: String, ticket: String) -> Dictionary:
 		"expiresAt": "2026-08-25T03:00:00.000Z",
 		"seats": 2,
 		"issued": 1,
+		"course": course,
 	}
 
 

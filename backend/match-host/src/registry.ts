@@ -1,5 +1,11 @@
 import { randomUUID } from "node:crypto";
 
+import {
+	DEFAULT_OFFICIAL_TRAPRUSH_COURSE,
+	isOfficialTraprushCourseId,
+	officialTraprushCoursePath,
+	type OfficialTraprushCourseId,
+} from "../../contracts/src/official_courses.ts";
 import { createLease, evaluateLease, renewLease, type Lease, type LeaseExpiryReason } from "./lease.ts";
 import { PortAllocator } from "./ports.ts";
 import type { LaunchedProcess, MatchExit, ProcessLauncher } from "./launcher.ts";
@@ -27,6 +33,7 @@ export interface MatchRecord {
 	/** 已交给控制面的对局 WebSocket 上游。listen 或登记失败的场次不会出现在注册表里。 */
 	readonly upstreamUrl: string;
 	readonly seats: number;
+	readonly course: string;
 	readonly stopReason?: MatchStopReason | undefined;
 	readonly exit?: MatchExit | undefined;
 }
@@ -40,6 +47,8 @@ export interface MatchRegistryOptions {
 	readonly upstreamHost: string;
 	/** 本场席位，随登记交给控制面。来自 MatchHost 配置，不是产品锁定开局人数。 */
 	readonly seats: number;
+	/** 空 POST /matches 时使用的官方赛道。省略时 `course_01`。 */
+	readonly defaultCourse?: string;
 	readonly portRangeMin: number;
 	readonly portRangeMax: number;
 	readonly leaseDurationMs: number;
@@ -90,32 +99,43 @@ export class MatchRegistry {
 		this.#now = options.now ?? (() => Date.now());
 	}
 
-	async start(): Promise<MatchRecord> {
+	async start(course: OfficialTraprushCourseId = this.#defaultCourse()): Promise<MatchRecord> {
 		if (this.occupiedCount() >= this.#options.maxConcurrentMatches) {
 			throw new MatchCapacityError(this.#options.maxConcurrentMatches);
 		}
 
 		this.#reservations += 1;
 		try {
-			return await this.#launchAndRegister();
+			return await this.#launchAndRegister(course);
 		} finally {
 			this.#reservations -= 1;
 		}
 	}
 
-	async #launchAndRegister(): Promise<MatchRecord> {
+	#defaultCourse(): OfficialTraprushCourseId {
+		return isOfficialTraprushCourseId(this.#options.defaultCourse)
+			? this.#options.defaultCourse
+			: DEFAULT_OFFICIAL_TRAPRUSH_COURSE;
+	}
+
+	async #launchAndRegister(course: OfficialTraprushCourseId): Promise<MatchRecord> {
 		const matchId = randomUUID();
 		const port = this.#ports.allocate();
 		let process: LaunchedProcess | undefined;
 		let upstreamUrl: string;
 		try {
 			upstreamUrl = buildMatchUpstreamUrl(this.#options.upstreamHost, port);
-			process = this.#options.launcher.launch({ matchId, port });
+			process = this.#options.launcher.launch({
+				matchId,
+				port,
+				course: officialTraprushCoursePath(course),
+			});
 			await this.#waitUntilListening(process, port);
 			await this.#options.registrar.register({
 				matchId,
 				upstreamUrl,
 				seats: this.#options.seats,
+				course,
 			});
 		} catch (error) {
 			process?.kill();
@@ -140,6 +160,7 @@ export class MatchRegistry {
 			lease: createLease(now, this.#options.leaseDurationMs),
 			upstreamUrl,
 			seats: this.#options.seats,
+			course,
 		};
 
 		this.#entries.set(matchId, { record, process });

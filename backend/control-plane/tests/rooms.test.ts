@@ -25,6 +25,7 @@ import { isMatchId } from "../src/tickets.ts";
 
 class FakeMatchLauncher implements MatchLauncher {
 	readonly launched: string[] = [];
+	readonly launchedCourses: string[] = [];
 	seats = 2;
 	failWith: Error | undefined;
 	#app: FastifyInstance | undefined;
@@ -34,7 +35,7 @@ class FakeMatchLauncher implements MatchLauncher {
 		this.#app = app;
 	}
 
-	async launch(): Promise<{ matchId: string }> {
+	async launch(request: { course?: string } = {}): Promise<{ matchId: string }> {
 		if (this.failWith !== undefined) {
 			throw this.failWith;
 		}
@@ -42,6 +43,7 @@ class FakeMatchLauncher implements MatchLauncher {
 			throw new Error("fake launcher is not bound");
 		}
 
+		const course = request.course ?? "course_01";
 		const matchId = randomUUID();
 		const registered = await this.#app.inject({
 			method: "POST",
@@ -50,6 +52,7 @@ class FakeMatchLauncher implements MatchLauncher {
 				matchId,
 				upstreamUrl: `ws://127.0.0.1:${this.#nextPort}`,
 				seats: this.seats,
+				course,
 			},
 		});
 		this.#nextPort += 1;
@@ -57,6 +60,7 @@ class FakeMatchLauncher implements MatchLauncher {
 			throw new Error(`fake register failed: ${registered.statusCode}`);
 		}
 		this.launched.push(matchId);
+		this.launchedCourses.push(course);
 		return { matchId };
 	}
 }
@@ -124,6 +128,7 @@ describe("control plane matchmaking", () => {
 			assert.ok(isMatchId(room.matchId));
 			assert.equal(room.seats, 2);
 			assert.equal(room.issued, 1);
+			assert.equal(room.course, "course_01");
 			assert.equal(room.expiresAt, "2026-08-25T01:01:00.000Z");
 			assert.ok(room.ticket.length >= 32);
 

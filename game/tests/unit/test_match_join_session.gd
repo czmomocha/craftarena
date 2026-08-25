@@ -11,6 +11,7 @@ func test_quick_play_201_becomes_ready_with_ticket() -> void:
 	assert_true(session.try_quick())
 	assert_eq(session.pending_method(), "POST")
 	assert_eq(session.pending_path(), "/matchmaking/quick")
+	assert_true(session.pending_body().contains("course_01"))
 	assert_true(session.accept_http(201, _join("ABCD23", "ticket-a")))
 	assert_eq(session.state, MatchJoinSession.STATE_READY)
 	assert_eq(session.ticket, "ticket-a")
@@ -18,6 +19,7 @@ func test_quick_play_201_becomes_ready_with_ticket() -> void:
 	assert_eq(session.match_id, "match-1")
 	assert_eq(session.seats, 2)
 	assert_eq(session.issued, 1)
+	assert_eq(session.course, "course_01")
 	assert_false(session.has_pending())
 	assert_false(session.allows_settlement())
 	assert_false(session.allows_online_writes())
@@ -31,6 +33,7 @@ func test_create_room_202_then_poll_ready() -> void:
 	assert_eq(session.state, MatchJoinSession.STATE_WAITING)
 	assert_eq(session.position, 1)
 	assert_eq(session.estimated_wait_ms, 30000)
+	assert_eq(session.course, "course_01")
 	assert_true(session.try_poll())
 	assert_eq(session.pending_method(), "GET")
 	assert_true(session.pending_path().begins_with("/matchmaking/queue/"))
@@ -220,6 +223,36 @@ func test_reconnect_from_ready_replaces_ticket() -> void:
 	assert_false(session.has_pending())
 
 
+func test_quick_and_create_send_official_course_and_reject_paths() -> void:
+	var session: MatchJoinSession = MatchJoinSession.create()
+	assert_false(session.try_quick("res://content/official/traprush/course_01.json"))
+	assert_false(session.try_quick("course_99"))
+	assert_false(session.try_create_room("ugc_draft"))
+	assert_false(session.has_pending())
+	assert_true(session.try_quick("course_02"))
+	assert_true(session.pending_body().contains("course_02"))
+	assert_true(session.accept_http(201, _join("ABCD23", "ticket-course", "course_02")))
+	assert_eq(session.course, "course_02")
+	var created: MatchJoinSession = MatchJoinSession.create()
+	assert_true(created.try_create_room("course_03"))
+	assert_true(created.pending_body().contains("course_03"))
+	assert_true(created.accept_http(202, _waiting("queue-token-dddddddddddddddd", 1, 30000, "course_03")))
+	assert_eq(created.course, "course_03")
+
+
+func test_join_rejects_missing_or_unknown_course() -> void:
+	var missing: MatchJoinSession = MatchJoinSession.create()
+	assert_true(missing.try_quick())
+	var body: Dictionary = _join("ABCD23", "ticket-missing")
+	body.erase("course")
+	assert_true(missing.accept_http(201, body))
+	assert_eq(missing.error, "parse_error")
+	var unknown: MatchJoinSession = MatchJoinSession.create()
+	assert_true(unknown.try_quick())
+	assert_true(unknown.accept_http(201, _join("ABCD23", "ticket-bad", "course_99")))
+	assert_eq(unknown.error, "parse_error")
+
+
 func test_reconnect_rejects_unconsumed_path_errors_and_idle() -> void:
 	var idle: MatchJoinSession = MatchJoinSession.create()
 	assert_false(idle.try_reconnect())
@@ -257,7 +290,7 @@ func _waiting_session() -> MatchJoinSession:
 	return session
 
 
-func _join(room_code: String, ticket: String) -> Dictionary:
+func _join(room_code: String, ticket: String, course: String = "course_01") -> Dictionary:
 	return {
 		"roomCode": room_code,
 		"ticket": ticket,
@@ -265,20 +298,27 @@ func _join(room_code: String, ticket: String) -> Dictionary:
 		"expiresAt": "2026-08-25T03:00:00.000Z",
 		"seats": 2,
 		"issued": 1,
+		"course": course,
 	}
 
 
-func _waiting(token: String, position: int, estimated_wait_ms: int) -> Dictionary:
+func _waiting(
+	token: String,
+	position: int,
+	estimated_wait_ms: int,
+	course: String = "course_01"
+) -> Dictionary:
 	return {
 		"status": "waiting",
 		"queueToken": token,
 		"position": position,
 		"estimatedWaitMs": estimated_wait_ms,
 		"expiresAt": "2026-08-25T02:10:00.000Z",
+		"course": course,
 	}
 
 
-func _ready_view(room_code: String, ticket: String) -> Dictionary:
-	var body: Dictionary = _join(room_code, ticket)
+func _ready_view(room_code: String, ticket: String, course: String = "course_01") -> Dictionary:
+	var body: Dictionary = _join(room_code, ticket, course)
 	body["status"] = "ready"
 	return body

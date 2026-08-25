@@ -19,7 +19,10 @@ extends Node
 ## intents. play_move_step is a presentation stub, not a product speed.
 ## Unexpected socket close while connecting or in-match reissues the
 ## consumed ticket and follows the latest snapshot again.
-## No BASTION, accounts, settlement, ghosts, or offline writes.
+## Quick play / create room send an official course id; join-by-code
+## follows the room's course and remounts maps from that response.
+## Solo play reuses the same selector. No BASTION, accounts, settlement,
+## ghosts, or offline writes.
 
 const MatchFrameCodec := preload("res://src/shared/protocol/match_frame_codec.gd")
 const MatchJoinSessionGd := preload("res://src/client/match_join_session.gd")
@@ -32,6 +35,7 @@ const MatchPortalLinkMapGd := preload("res://src/client/match_portal_link_map.gd
 const MatchSnapshotFollowGd := preload("res://src/client/match_snapshot_follow.gd")
 const MatchSnapshotMapGd := preload("res://src/client/match_snapshot_map.gd")
 const MatchStandingMapGd := preload("res://src/client/match_standing_map.gd")
+const OfficialTraprushCoursesGd := preload("res://src/shared/official_traprush_courses.gd")
 const PlayerIntentNames := preload("res://src/shared/commands/player_intent_names.gd")
 
 const TITLE: String = "Traprush"
@@ -46,6 +50,7 @@ const CANCEL_NAME: String = "Cancel"
 const SOLO_NAME: String = "SoloPlay"
 const POLL_NAME: String = "Poll"
 const ROOM_NAME: String = "RoomCode"
+const COURSE_ID_NAME: String = "CourseId"
 const _STATUS_NAME: String = "Status"
 const _MAP_NAME: String = "SnapshotMap"
 const _COURSE_NAME: String = "CourseMap"
@@ -75,12 +80,14 @@ var web_platform: bool = false
 var control_plane_base: String = DEFAULT_CONTROL_PLANE
 var gateway_base: String = DEFAULT_GATEWAY
 var course_path: String = DEFAULT_COURSE
+var course_id: String = OfficialTraprushCoursesGd.DEFAULT_ID
 var play_move_step: int = Fixed.SCALE / 16
 var queue_poll_s: float = DEFAULT_QUEUE_POLL_S
 var last_sent_command: PackedByteArray = PackedByteArray()
 
 var _status: Label = null
-var _room_edit: LineEdit = null
+var _room_edit: LineEdit
+var _course_edit: LineEdit = null
 var _http: HTTPRequest = null
 var _http_busy: bool = false
 var _peer: WebSocketPeer = null
@@ -141,10 +148,35 @@ func set_room_code_text(text: String) -> void:
 		_room_edit.text = text
 
 
+func course_id_text() -> String:
+	if _course_edit == null:
+		return course_id
+	return _course_edit.text
+
+
+func set_course_id_text(text: String) -> void:
+	course_id = text
+	if _course_edit != null:
+		_course_edit.text = text
+
+
+func selected_course_id() -> String:
+	var raw: String = course_id
+	if _course_edit != null:
+		raw = _course_edit.text
+	var trimmed: String = raw.strip_edges()
+	if trimmed == "":
+		return OfficialTraprushCoursesGd.DEFAULT_ID
+	return OfficialTraprushCoursesGd.normalize_id(trimmed)
+
+
 func try_quick() -> bool:
 	if join == null or _offline_playing():
 		return false
-	if not join.try_quick():
+	var id: String = selected_course_id()
+	if id == "":
+		return false
+	if not join.try_quick(id):
 		return false
 	_dispatch_pending()
 	_refresh_status()
@@ -154,7 +186,10 @@ func try_quick() -> bool:
 func try_create_room() -> bool:
 	if join == null or _offline_playing():
 		return false
-	if not join.try_create_room():
+	var id: String = selected_course_id()
+	if id == "":
+		return false
+	if not join.try_create_room(id):
 		return false
 	_dispatch_pending()
 	_refresh_status()
@@ -189,10 +224,15 @@ func try_solo() -> bool:
 		return false
 	if _online_busy():
 		return false
+	var id: String = selected_course_id()
+	if id == "":
+		return false
 	_prepare_offline_stubs()
+	course_path = OfficialTraprushCoursesGd.document_path(id)
 	if not offline.try_begin(course_path, web_platform):
 		_refresh_status()
 		return false
+	_apply_course_document(course_path)
 	_apply_snapshot_map()
 	_refresh_status()
 	return true
@@ -413,6 +453,8 @@ func status_view() -> Dictionary:
 		"estimated_wait_ms": join_view.get("estimated_wait_ms", 0),
 		"room_code": join_view.get("room_code", ""),
 		"ticket": join_view.get("ticket", ""),
+		"course": join_view.get("course", ""),
+		"course_id": selected_course_id(),
 		"play_state": play_view.get("state", ""),
 		"offline_state": offline_view.get("state", ""),
 		"offline_banner": offline_view.get("banner", ""),
@@ -479,7 +521,7 @@ func _ensure_window() -> void:
 			host_viewport.gui_embed_subwindows = true
 	window = Window.new()
 	window.title = TITLE
-	window.size = Vector2i(640, 360)
+	window.size = Vector2i(640, 400)
 	window.exclusive = false
 	window.transient = false
 	window.own_world_3d = true
@@ -509,6 +551,12 @@ func _ensure_window() -> void:
 	_room_edit.placeholder_text = "Room code"
 	_room_edit.max_length = 6
 	root.add_child(_room_edit)
+	_course_edit = LineEdit.new()
+	_course_edit.name = COURSE_ID_NAME
+	_course_edit.placeholder_text = OfficialTraprushCoursesGd.DEFAULT_ID
+	_course_edit.text = OfficialTraprushCoursesGd.DEFAULT_ID
+	_course_edit.max_length = 32
+	root.add_child(_course_edit)
 	map = MatchSnapshotMapGd.new()
 	map.name = _MAP_NAME
 	window.add_child(map)
@@ -529,10 +577,28 @@ func _ensure_window() -> void:
 	map.add_child(standings)
 	add_child(window)
 	map.ensure_rig()
-	course.apply_path(course_path)
-	crates.apply_path(course_path)
-	links.apply_path(course_path)
-	orders.apply_path(course_path)
+	_apply_course_document(course_path)
+
+
+func _apply_join_course() -> void:
+	if join == null:
+		return
+	var path: String = OfficialTraprushCoursesGd.document_path(join.course)
+	if path == "":
+		return
+	_apply_course_document(path)
+
+
+func _apply_course_document(path: String) -> void:
+	course_path = path
+	if course != null:
+		course.apply_path(path)
+	if crates != null:
+		crates.apply_path(path)
+	if links != null:
+		links.apply_path(path)
+	if orders != null:
+		orders.apply_path(path)
 
 
 func _ensure_http() -> void:
@@ -592,6 +658,8 @@ func _on_http_completed(result: int, response_code: int, _headers: PackedStringA
 
 
 func _after_join_http() -> void:
+	if join != null and join.course != "":
+		_apply_join_course()
 	if join != null and join.state == MatchJoinSessionGd.STATE_READY and play != null:
 		if play.state == MatchPlaySessionGd.STATE_IDLE or play.state == MatchPlaySessionGd.STATE_CLOSED:
 			try_begin_play()
@@ -670,6 +738,11 @@ func _refresh_status() -> void:
 	var room_code: String = str(view.get("room_code", ""))
 	if room_code != "":
 		parts.append("room=%s" % room_code)
+	var shown_course: String = str(view.get("course", ""))
+	if shown_course == "":
+		shown_course = str(view.get("course_id", ""))
+	if shown_course != "":
+		parts.append("course_id=%s" % shown_course)
 	var error_text: String = str(view.get("error", ""))
 	if error_text != "":
 		parts.append("error=%s" % error_text)
