@@ -2,6 +2,7 @@ import type { FastifyInstance } from "fastify";
 
 import { loadConfig } from "./config.ts";
 import { GodotProcessLauncher } from "./launcher.ts";
+import { ControlPlaneMatchSessionRegistrar } from "./registrar.ts";
 import { MatchRegistry } from "./registry.ts";
 import { buildMatchHost } from "./server.ts";
 
@@ -19,6 +20,8 @@ const registry = new MatchRegistry({
 		course: config.matchCourse,
 		players: config.matchPlayers,
 	}),
+	registrar: new ControlPlaneMatchSessionRegistrar(config.controlPlaneUrl),
+	upstreamHost: config.upstreamHost,
 	portRangeMin: config.portRangeMin,
 	portRangeMax: config.portRangeMax,
 	leaseDurationMs: config.leaseDurationMs,
@@ -87,6 +90,8 @@ try {
 			godot: config.godotExecutable,
 			scene: config.matchScene,
 			portRange: [config.portRangeMin, config.portRangeMax],
+			controlPlaneUrl: config.controlPlaneUrl,
+			upstreamHost: config.upstreamHost,
 		},
 		"match host ready",
 	);

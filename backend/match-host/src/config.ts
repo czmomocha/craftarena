@@ -1,5 +1,7 @@
 import { resolve } from "node:path";
 
+import { buildMatchUpstreamUrl } from "./registrar.ts";
+
 export interface MatchHostConfig {
 	readonly host: string;
 	readonly port: number;
@@ -14,6 +16,13 @@ export interface MatchHostConfig {
 	readonly maxConcurrentMatches: number;
 	readonly matchCourse: string;
 	readonly matchPlayers: number;
+	/** 控制面基址。MatchHost 只通过它登记对局上游，绝不直接碰数据库（宪法第二十一条）。 */
+	readonly controlPlaneUrl: string;
+	/**
+	 * 拼进 `ws://{host}:{port}` 的对局广告地址。默认回环；网关与 MatchHost
+	 * 不在同一台机器时用 MATCH_HOST_UPSTREAM_HOST 覆盖。不是产品锁定值。
+	 */
+	readonly upstreamHost: string;
 	readonly version: string;
 	readonly logLevel: string;
 }
@@ -67,9 +76,18 @@ export function loadConfig(
 		maxConcurrentMatches: parseInteger(env["MATCH_HOST_MAX_MATCHES"], portCapacity, "MATCH_HOST_MAX_MATCHES"),
 		matchCourse: env["MATCH_HOST_COURSE"] ?? DEFAULT_MATCH_COURSE,
 		matchPlayers: parsePlayers(env["MATCH_HOST_PLAYERS"]),
+		controlPlaneUrl: (env["CONTROL_PLANE_URL"] ?? "http://127.0.0.1:8080").replace(/\/+$/, ""),
+		upstreamHost: parseUpstreamHost(env["MATCH_HOST_UPSTREAM_HOST"]),
 		version: env["CRAFTARENA_VERSION"] ?? "0.0.0-dev",
 		logLevel: env["MATCH_HOST_LOG_LEVEL"] ?? "info",
 	};
+}
+
+function parseUpstreamHost(raw: string | undefined): string {
+	const host = raw === undefined || raw.trim() === "" ? "127.0.0.1" : raw.trim();
+	// 用同一套拼装规则预检，避免启动后再在 start() 里才发现 host 非法。
+	buildMatchUpstreamUrl(host, 1);
+	return host;
 }
 
 /**

@@ -3,6 +3,11 @@ import { randomUUID } from "node:crypto";
 import { createLease, evaluateLease, renewLease, type Lease, type LeaseExpiryReason } from "./lease.ts";
 import { PortAllocator } from "./ports.ts";
 import type { LaunchedProcess, MatchExit, ProcessLauncher } from "./launcher.ts";
+import {
+	MatchSessionRegisterError,
+	buildMatchUpstreamUrl,
+	type MatchSessionRegistrar,
+} from "./registrar.ts";
 
 export type MatchState = "running" | "stopped";
 
@@ -15,12 +20,17 @@ export interface MatchRecord {
 	readonly state: MatchState;
 	readonly startedAt: number;
 	readonly lease: Lease;
+	/** 已交给控制面的对局 WebSocket 上游。登记失败的场次不会出现在注册表里。 */
+	readonly upstreamUrl: string;
 	readonly stopReason?: MatchStopReason | undefined;
 	readonly exit?: MatchExit | undefined;
 }
 
 export interface MatchRegistryOptions {
 	readonly launcher: ProcessLauncher;
+	readonly registrar: MatchSessionRegistrar;
+	/** 拼 `ws://{host}:{port}` 用的广告主机名，默认由调用方从配置传入。 */
+	readonly upstreamHost: string;
 	readonly portRangeMin: number;
 	readonly portRangeMax: number;
 	readonly leaseDurationMs: number;
@@ -53,14 +63,16 @@ interface MatchEntry {
 /**
  * 对局注册表：一场对局一个 Godot Headless 进程（CD-44 §3）。
  *
- * 这里只管进程生命周期、端口和租约。它**不碰数据库**——宪法第二十一条规定
- * 只有控制面能直接读写 SQLite，MatchHost 需要持久化时必须走控制面 API。
+ * 这里管进程生命周期、端口、租约，以及拉起后经控制面 API 登记上游。
+ * 它**不碰数据库**——宪法第二十一条规定只有控制面能直接读写 SQLite。
  */
 export class MatchRegistry {
 	readonly #options: MatchRegistryOptions;
 	readonly #ports: PortAllocator;
 	readonly #entries = new Map<string, MatchEntry>();
 	readonly #now: () => number;
+	/** 正在登记、尚未写入注册表的场次。占容量，避免并发 POST 挤爆上限。 */
+	#reservations = 0;
 
 	constructor(options: MatchRegistryOptions) {
 		this.#options = options;
@@ -68,23 +80,41 @@ export class MatchRegistry {
 		this.#now = options.now ?? (() => Date.now());
 	}
 
-	start(): MatchRecord {
-		if (this.runningCount() >= this.#options.maxConcurrentMatches) {
+	async start(): Promise<MatchRecord> {
+		if (this.occupiedCount() >= this.#options.maxConcurrentMatches) {
 			throw new MatchCapacityError(this.#options.maxConcurrentMatches);
 		}
 
+		this.#reservations += 1;
+		try {
+			return await this.#launchAndRegister();
+		} finally {
+			this.#reservations -= 1;
+		}
+	}
+
+	async #launchAndRegister(): Promise<MatchRecord> {
 		const matchId = randomUUID();
 		const port = this.#ports.allocate();
-		const now = this.#now();
-
-		let process: LaunchedProcess;
+		let process: LaunchedProcess | undefined;
+		let upstreamUrl: string;
 		try {
+			upstreamUrl = buildMatchUpstreamUrl(this.#options.upstreamHost, port);
 			process = this.#options.launcher.launch({ matchId, port });
+			await this.#options.registrar.register({ matchId, upstreamUrl });
 		} catch (error) {
-			// 启动失败必须还回端口，否则反复失败会把号段耗干。
+			process?.kill();
 			this.#ports.release(port);
-			throw error;
+			if (error instanceof MatchSessionRegisterError) {
+				throw error;
+			}
+			if (process === undefined) {
+				throw error;
+			}
+			throw new MatchSessionRegisterError(error instanceof Error ? error.message : String(error));
 		}
+
+		const now = this.#now();
 
 		const record: MatchRecord = {
 			matchId,
@@ -93,6 +123,7 @@ export class MatchRegistry {
 			state: "running",
 			startedAt: now,
 			lease: createLease(now, this.#options.leaseDurationMs),
+			upstreamUrl,
 		};
 
 		this.#entries.set(matchId, { record, process });
@@ -116,6 +147,11 @@ export class MatchRegistry {
 
 	runningCount(): number {
 		return [...this.#entries.values()].filter((entry) => entry.record.state === "running").length;
+	}
+
+	/** 已在跑的场次加上正在登记的预约。容量与 /readyz 都看这个数。 */
+	occupiedCount(): number {
+		return this.runningCount() + this.#reservations;
 	}
 
 	/**

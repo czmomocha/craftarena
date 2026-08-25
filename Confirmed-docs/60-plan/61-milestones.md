@@ -95,7 +95,7 @@
 
 ### M3：权威联机与进程隔离
 
-状态：**进行中**（2026-08-24 启动，人类选定 M3 先于 M5）。已合入：对局进程多人仿真循环（无网络，`TraprushMatchSession`）、对局二进制协议 v1（`MatchFrameCodec`）、对局进程仿真入口（`match_server.gd` 真仿真 + MatchHost 传参）、对局进程实时回路（WebSocket 监听 + `MatchRealtime` 槽位/命令队列/快照广播）、实时网关代理（[PR #119](https://github.com/czmomocha/craftarena/pull/119)）。本刀锁：控制面真票据签发/校验——`POST /match-sessions` 登记对局上游、`POST /match-sessions/:matchId/tickets` 签发一次性票据、`POST /tickets/verify` 消费并返回上游；网关默认 `ControlPlaneTicketVerifier` 只调控制面（不查库）；`GATEWAY_DEV_UPSTREAM` 仍是显式开发旁路。不锁：MatchHost 自动登记、真匹配/房间码、账号绑定、重连补票、名次排序、快照/插值/校正、防伪造门禁、离线模式（均为后续章节）。
+状态：**进行中**（2026-08-24 启动，人类选定 M3 先于 M5）。已合入：对局进程多人仿真循环（无网络，`TraprushMatchSession`）、对局二进制协议 v1（`MatchFrameCodec`）、对局进程仿真入口（`match_server.gd` 真仿真 + MatchHost 传参）、对局进程实时回路（WebSocket 监听 + `MatchRealtime` 槽位/命令队列/快照广播）、实时网关代理（[PR #119](https://github.com/czmomocha/craftarena/pull/119)）、控制面真票据签发/校验（[PR #120](https://github.com/czmomocha/craftarena/pull/120)）。本刀锁：MatchHost 自动登记上游——拉起对局进程后 `POST /match-sessions` 登记同一 `matchId` 与 `ws` 上游；登记失败则杀掉进程并 502；不查库。不锁：真匹配/房间码、账号绑定、重连补票、名次排序、快照/插值/校正、防伪造门禁、离线模式、等待 listen、会话注销（均为后续章节）。
 
 产出：
 
