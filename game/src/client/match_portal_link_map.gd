@@ -5,9 +5,10 @@ extends Node3D
 ## Source and dest Q48.16 poses become a bar gizmo. two_way / one_way
 ## use the same colors as Preview. one_way adds a direction marker.
 ## Dangling bags are omitted by the compiler and are not drawn.
-## Authority stays on SimulationBundle; float conversion happens only
-## here. Gizmos are not hitboxes. No interpolation, prediction, ranking,
-## or course-selection API.
+## Checkpoint-order gizmos stay undrawn here; MatchCheckpointOrderMap
+## draws them. Authority stays on SimulationBundle; float conversion
+## happens only here. Gizmos are not hitboxes. No interpolation,
+## prediction, ranking, or course-selection API.
 
 const AuthoringDocumentGd := preload("res://src/creator/authoring_document.gd")
 const AuthoringPortalKindsGd := preload("res://src/creator/authoring_portal_kinds.gd")
@@ -87,6 +88,10 @@ func dangle_node(entity_id: int) -> MeshInstance3D:
 
 
 func crate_node_count() -> int:
+	return 0
+
+
+func checkpoint_node_count() -> int:
 	return 0
 
 

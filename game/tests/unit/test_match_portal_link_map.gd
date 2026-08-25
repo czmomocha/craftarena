@@ -31,6 +31,7 @@ func test_official_course_01_maps_two_way_links() -> void:
 	assert_true(_map.apply_path(COURSE_01_PATH))
 	assert_eq(_map.link_count(), 2)
 	assert_eq(_map.direction_count(), 0)
+	assert_eq(_map.checkpoint_node_count(), 0)
 	var link: MeshInstance3D = _map.link_node(10)
 	assert_not_null(link)
 	assert_almost_eq(link.position.x, 1.5, EPS)

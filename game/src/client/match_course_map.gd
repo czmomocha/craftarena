@@ -7,6 +7,8 @@ extends Node3D
 ## happens only here. Placeholders are not hitboxes. Destructibles have
 ## poses in the bundle but stay undrawn here; MatchCrateMap draws them.
 ## Portal source→dest bars stay undrawn here; MatchPortalLinkMap draws them.
+## Checkpoint-order labels and sequence bars stay undrawn here;
+## MatchCheckpointOrderMap draws them.
 ## No interpolation, prediction, ranking, or course-selection API.
 
 const AuthoringDocumentGd := preload("res://src/creator/authoring_document.gd")
@@ -97,6 +99,10 @@ func crate_node_count() -> int:
 
 
 func link_node_count() -> int:
+	return 0
+
+
+func checkpoint_node_count() -> int:
 	return 0
 
 
