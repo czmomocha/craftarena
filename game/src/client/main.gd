@@ -1,8 +1,9 @@
 extends Node
 
 ## Client boot scene. Prints a structured boot line for Headless smoke,
-## then opens the TRAPRUSH match lobby (code-created Window). Live HTTP/WS
-## stays off in headless so CI --quit does not call localhost.
+## then opens the TRAPRUSH match lobby (code-created Window) and maps the
+## default official course occupancy. Live HTTP/WS stays off in headless
+## so CI --quit does not call localhost.
 
 const BOOT_EVENT: String = "client_boot"
 const MatchLobbyShellGd := preload("res://src/client/match_lobby_shell.gd")
