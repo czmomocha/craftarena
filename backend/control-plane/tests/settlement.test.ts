@@ -137,6 +137,17 @@ describe("control plane match settlement", () => {
 		assert.equal(afterGone.json<{ error: string }>().error, "match_not_found");
 	});
 
+	test("GET is 404 until the first write", async () => {
+		const matchId = "dddddddd-eeee-ffff-0000-111111111111";
+		await registerMatch(matchId);
+		const missing = await app.inject({
+			method: "GET",
+			url: `/match-sessions/${matchId}/settlement`,
+		});
+		assert.equal(missing.statusCode, 404);
+		assert.equal(missing.json<{ error: string }>().error, "settlement_not_found");
+	});
+
 	test("rejects unknown matches, extra fields, and unfinished rows", async () => {
 		const missing = await app.inject({
 			method: "POST",

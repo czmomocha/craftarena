@@ -329,6 +329,59 @@ func test_reconnect_rejects_unconsumed_path_errors_and_idle() -> void:
 	assert_eq(gone.error, "match_not_found")
 
 
+func test_ready_get_settlement_writes_board_without_failing() -> void:
+	var session: MatchJoinSession = MatchJoinSession.create()
+	assert_false(session.try_get_settlement())
+	assert_true(session.try_quick())
+	assert_true(session.accept_http(201, _join("ABCD23", "ticket-settle")))
+	assert_true(session.try_get_settlement())
+	assert_eq(session.pending_method(), "GET")
+	assert_eq(session.pending_path(), "/match-sessions/match-1/settlement")
+	assert_true(session.accept_http(200, _settlement()))
+	assert_eq(session.state, MatchJoinSession.STATE_READY)
+	assert_eq(session.ticket, "ticket-settle")
+	assert_true(session.has_settlement)
+	assert_eq(session.settlement_line, "#1s0,#2s1 mvp=0")
+	assert_false(session.allows_settlement())
+	assert_false(session.allows_online_writes())
+	assert_true(session.try_abandon())
+	assert_eq(session.settlement_line, "")
+	assert_false(session.has_settlement)
+
+
+func test_settlement_get_404_and_malformed_keep_ready() -> void:
+	var missing: MatchJoinSession = MatchJoinSession.create()
+	assert_true(missing.try_quick())
+	assert_true(missing.accept_http(201, _join("ABCD23", "ticket-404")))
+	assert_true(missing.try_get_settlement())
+	assert_true(missing.accept_http(404, {"error": "settlement_not_found"}))
+	assert_eq(missing.state, MatchJoinSession.STATE_READY)
+	assert_eq(missing.ticket, "ticket-404")
+	assert_eq(missing.settlement_line, "")
+	assert_false(missing.has_settlement)
+	var extra: MatchJoinSession = MatchJoinSession.create()
+	assert_true(extra.try_quick())
+	assert_true(extra.accept_http(201, _join("ABCD23", "ticket-extra")))
+	assert_true(extra.try_get_settlement())
+	var body: Dictionary = _settlement()
+	body["mmr"] = 1200
+	assert_true(extra.accept_http(200, body))
+	assert_eq(extra.state, MatchJoinSession.STATE_READY)
+	assert_eq(extra.settlement_line, "")
+	assert_true(extra.try_get_settlement())
+	assert_true(extra.fail_transport())
+	assert_eq(extra.state, MatchJoinSession.STATE_READY)
+	assert_eq(extra.error, "")
+	var waiting: MatchJoinSession = _waiting_session()
+	assert_false(waiting.try_get_settlement())
+	assert_eq(waiting.state, MatchJoinSession.STATE_WAITING)
+	var ready: MatchJoinSession = MatchJoinSession.create()
+	assert_true(ready.try_quick())
+	assert_true(ready.accept_http(201, _join("ABCD23", "ticket-poll")))
+	assert_false(ready.try_poll())
+	assert_false(ready.has_pending())
+
+
 func _waiting_session() -> MatchJoinSession:
 	var session: MatchJoinSession = MatchJoinSession.create()
 	assert_true(session.try_create_room())
@@ -369,6 +422,21 @@ func _waiting(
 		"expiresAt": "2026-08-25T02:10:00.000Z",
 		"course": course,
 		"seats": seats,
+	}
+
+
+func _settlement() -> Dictionary:
+	return {
+		"matchId": "match-1",
+		"tick": 8,
+		"stateHash": "abc123",
+		"padTotal": 3,
+		"mvpSlot": 0,
+		"rows": [
+			{"slot": 0, "place": 1, "finishTick": 4, "acceptedCount": 3},
+			{"slot": 1, "place": 2, "finishTick": 8, "acceptedCount": 3},
+		],
+		"createdAt": "2026-08-25T12:00:00.000Z",
 	}
 
 

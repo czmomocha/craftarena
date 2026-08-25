@@ -7,6 +7,7 @@ extends GutTest
 ## Own-seat box uses OWN_ALBEDO; standing labels prefix the own seat with "*".
 ## Own-seat accepted_count tints course pads done / current / pending.
 ## Own-seat finish_tick tints the finish zone; HUD shows pads/floor/finish/crates/result.
+## Online all-finished GET writes settled=; Solo never GETs. Client never POSTs.
 ## Reset rising-edge returns to the last accepted pad without dropping progress.
 
 const MatchFrameCodec := preload("res://src/shared/protocol/match_frame_codec.gd")
@@ -700,6 +701,9 @@ func test_solo_walk_finishes_and_marks_local_result() -> void:
 	assert_true(_shell.status_label_text().contains("result="))
 	assert_false(_shell.allows_settlement())
 	assert_false(_shell.allows_online_writes())
+	assert_false(_shell.status_label_text().contains("settled="))
+	assert_false(_shell.try_fetch_settlement())
+	assert_false(_shell.join.has_pending())
 	assert_true(_shell.try_cancel())
 	assert_eq(_finish_albedo(), MatchCourseMap.FINISH_PENDING_ALBEDO)
 	assert_false(_shell.status_label_text().contains("result="))
@@ -751,6 +755,7 @@ func test_online_finish_tints_and_result_when_all_done() -> void:
 	])))
 	assert_eq(_finish_albedo(), MatchCourseMap.FINISH_ACCEPTED_ALBEDO)
 	assert_false(_shell.status_label_text().contains("result="))
+	assert_false(_shell.try_fetch_settlement())
 	assert_true(_shell.on_binary(_ranked_snapshot(3, [
 		_ranked_player(0, 3, 4),
 		_ranked_player(2 * Fixed.SCALE, 3, 8),
@@ -758,6 +763,36 @@ func test_online_finish_tints_and_result_when_all_done() -> void:
 	assert_eq(_finish_albedo(), MatchCourseMap.FINISH_ACCEPTED_ALBEDO)
 	assert_true(_shell.status_label_text().contains("result="))
 	assert_true(_shell.status_label_text().contains("mvp=0"))
+	assert_false(_shell.status_label_text().contains("settled="))
+	assert_true(_shell.try_fetch_settlement())
+	assert_eq(_shell.join.pending_method(), "GET")
+	assert_eq(_shell.join.pending_path(), "/match-sessions/match-1/settlement")
+	assert_true(_shell.accept_http(200, _settlement_board()))
+	assert_true(_shell.status_label_text().contains("result="))
+	assert_true(_shell.status_label_text().contains("settled=#1s0,#2s1 mvp=0"))
+	assert_false(_shell.allows_settlement())
+	assert_false(_shell.allows_online_writes())
+	assert_true(_shell.try_cancel())
+	assert_false(_shell.status_label_text().contains("settled="))
+	assert_false(_shell.status_label_text().contains("result="))
+
+
+func test_online_finish_404_keeps_local_result_without_settled() -> void:
+	_shell = _open_shell()
+	assert_true(_shell.try_quick())
+	assert_true(_shell.accept_http(201, _join("ABCD23", "ticket-settle-404")))
+	assert_true(_shell.on_socket_open())
+	assert_true(_shell.on_binary(_ranked_snapshot(3, [
+		_ranked_player(0, 3, 4),
+		_ranked_player(2 * Fixed.SCALE, 3, 8),
+	])))
+	assert_true(_shell.status_label_text().contains("result="))
+	assert_true(_shell.try_fetch_settlement())
+	assert_true(_shell.accept_http(404, {"error": "settlement_not_found"}))
+	assert_eq(_shell.join.state, MatchJoinSession.STATE_READY)
+	assert_true(_shell.status_label_text().contains("result="))
+	assert_false(_shell.status_label_text().contains("settled="))
+	assert_false(_shell.join.has_settlement)
 
 
 func test_solo_use_item_from_spawn_breaks_course_01_crate() -> void:
@@ -859,6 +894,21 @@ func _join(
 		"issued": 1,
 		"seat": seat,
 		"course": course,
+	}
+
+
+func _settlement_board() -> Dictionary:
+	return {
+		"matchId": "match-1",
+		"tick": 8,
+		"stateHash": "abc123",
+		"padTotal": 3,
+		"mvpSlot": 0,
+		"rows": [
+			{"slot": 0, "place": 1, "finishTick": 4, "acceptedCount": 3},
+			{"slot": 1, "place": 2, "finishTick": 8, "acceptedCount": 3},
+		],
+		"createdAt": "2026-08-25T12:00:00.000Z",
 	}
 
 

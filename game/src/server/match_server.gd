@@ -11,7 +11,7 @@ extends Node
 ## 断开丢弃排队；握手后按上游 URL 的 slot 占用席位，缺席位则占用最小空槽。
 ## 墙钟发送速率仍待（CD-63）。
 ## 心跳：每 HEARTBEAT_EVERY_TICKS 个 tick 打印一行结构化 JSON（含状态哈希），
-## 全员冲线后另含 settlement；供 MatchHost 停止前写库与跨进程确定性核对。
+## 全员冲线后另含 settlement；供 MatchHost 活场 flush / 停止前写库与跨进程核对。
 ## 心跳不续租（CD-44 §3）。
 ## --max-ticks 到达后打印最终心跳并 exit 0；配置非法打印错误事件并 exit 1。
 ## 出生偏移、胶囊尺寸、心跳/快照节奏与动作数值（跳跃/支撑/道具伤害与触达）

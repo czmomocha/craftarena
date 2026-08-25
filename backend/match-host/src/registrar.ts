@@ -171,7 +171,7 @@ export class ControlPlaneMatchSessionRegistrar implements MatchSessionRegistrar 
 			throw new MatchSessionSettlementError(error instanceof Error ? error.message : String(error));
 		}
 
-		// 409 = 已经写过，停止路径上视为成功。
+		// 409 = 已经写过。活场 flush 与停止路径都视为成功。
 		if (response.status === 409) {
 			return;
 		}

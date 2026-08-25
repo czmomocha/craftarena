@@ -214,6 +214,7 @@
 - `match_pad_progress = own_accepted_count_tint`（2026-08-25）：大厅本席 `accepted_count` 把编译拓扑检查点垫涂成已验收 / 当前目标 / 未到；`accepted_count < 0` 保持原垫色。不是走路可达或合法路径距离。不锁账号绑定、远端外推碰撞、平滑对账、离开对局 HTTP。口径见 [CD-12 §1](../10-product/12-product-structure.md#1-入口结构)。
 - `match_finish_loop = own_finish_hud_result`（2026-08-25）：大厅本席 `finish_tick` 把终点涂成未到 / 当前目标 / 已冲线；HUD 写 `pads=n/m` 与 `finish=n`；快照全员 `finish_tick>=0` 时加 `result=`。本地表现，不是结算写库或 GET 结算面板。不锁账号绑定、远端外推碰撞、平滑对账、离开对局 HTTP。口径见 [CD-12 §1](../10-product/12-product-structure.md#1-入口结构)。
 - `match_lobby_reset_hud = floor_crates_reset`（2026-08-25）：大厅开玩 HUD 写 `floor=n`（本席权威 `y / Fixed.SCALE` 向零，不用插值采样）与 `crates=n/m`（活着的箱 / 编译袋总数）；R 上升沿把已有 ResetToCheckpointIntent 接到可见复位，进度不回退。不是长按时长、走路可达或结算写库。不锁离开对局 HTTP。口径见 [CD-12 §1](../10-product/12-product-structure.md#1-入口结构)。
+- `match_settlement_panel = lobby_get_after_host_write`（2026-08-25）：MatchHost 对 running 场解析心跳，一旦有合法 settlement 就 POST（409 已写入）；停止前再 POST 一次。大厅在线上全员冲线后轮询 GET，200 后 HUD `settled=`。Solo 不 GET。客户端 `allows_settlement` 仍为 false（不 POST）。404 `settlement_not_found` 不把 join 打成 FAILED。不锁离开对局 HTTP、MMR、限时未全员冲线结算、账号绑定。口径见 [CD-12 §1](../10-product/12-product-structure.md#1-入口结构)、[CD-13 §4](../10-product/13-account-and-session.md#4-单局排名) 与 [CD-44 §3](../40-technical/44-deployment.md#3-进程隔离与租约)。
 
 ## D.9 明确延期或跳过
 

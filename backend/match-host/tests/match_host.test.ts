@@ -651,6 +651,71 @@ describe("match registry", () => {
 		assert.deepEqual(registrar.unregistered, [match.matchId]);
 	});
 
+	test("flushes settlement from a live heartbeat without stopping", async () => {
+		const heartbeat = JSON.stringify({
+			event: "match_tick",
+			tick: 5,
+			hash: "abc123",
+			settlement: {
+				tick: 5,
+				state_hash: "abc123",
+				pad_total: 3,
+				mvp_slot: 0,
+				rows: [
+					{ slot: 0, place: 1, finish_tick: 4, accepted_count: 3 },
+					{ slot: 1, place: 2, finish_tick: 4, accepted_count: 3 },
+				],
+			},
+		});
+		const emptyLauncher = new FakeLauncher();
+		const empty = makeRegistry({ launcher: emptyLauncher });
+		const emptyMatch = await empty.registry.start();
+		await empty.registry.flushSettlements();
+		assert.deepEqual(empty.registrar.settlements, []);
+		assert.equal(empty.registry.get(emptyMatch.matchId)?.state, "running");
+
+		const launcher = new FakeLauncher();
+		launcher.recentOutputLines = ["noise", heartbeat];
+		const { registrar, registry } = makeRegistry({ launcher });
+		const match = await registry.start();
+		await registry.flushSettlements();
+		assert.equal(registrar.settlements.length, 1);
+		assert.equal(registrar.settlements[0]?.matchId, match.matchId);
+		assert.equal(registry.get(match.matchId)?.state, "running");
+		await registry.flushSettlements();
+		assert.equal(registrar.settlements.length, 1);
+		await registry.stop(match.matchId);
+		assert.equal(registrar.settlements.length, 2);
+		assert.deepEqual(registrar.unregistered, [match.matchId]);
+	});
+
+	test("live settlement write failure does not stop the match", async () => {
+		const launcher = new FakeLauncher();
+		launcher.recentOutputLines = [
+			JSON.stringify({
+				event: "match_tick",
+				tick: 5,
+				settlement: {
+					tick: 5,
+					state_hash: "abc123",
+					pad_total: 3,
+					mvp_slot: 0,
+					rows: [{ slot: 0, place: 1, finish_tick: 4, accepted_count: 3 }],
+				},
+			}),
+		];
+		const registrar = new FakeRegistrar();
+		registrar.settlementFailWith = new MatchSessionSettlementError(
+			"control plane settlement returned HTTP 503",
+		);
+		const { registry } = makeRegistry({ launcher, registrar });
+		const match = await registry.start();
+		await assert.doesNotReject(() => registry.flushSettlements());
+		assert.equal(registrar.settlements.length, 0);
+		assert.equal(registry.get(match.matchId)?.state, "running");
+		assert.deepEqual(registrar.unregistered, []);
+	});
+
 	test("does not unregister when settlement write fails", async () => {
 		const launcher = new FakeLauncher();
 		launcher.recentOutputLines = [

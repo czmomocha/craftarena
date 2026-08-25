@@ -53,62 +53,51 @@ Worktree 端口偏移见 README「并行工作区」；本文件不复述端口�
 
 ---
 
-## 本刀：对局大厅本席复位与楼层/箱子 HUD
+## 本刀：大厅只读结算面板
 
-对应：当前完整章节 PR。锁的是**同一条试玩 HUD 对齐链路**：开玩后状态行写 `floor=n`（本席权威 `y / Fixed.SCALE` 向零，与 Preview 相同）和 `crates=n/m`（活着的橙箱 / 编译袋总数）；R 上升沿把已有 `ResetToCheckpointIntent` 接到可见复位。不是长按时长、走路可达、GET 结算面板或结算写库。1 人 Solo 就能验箱子、楼层和复位；1 人 Quick play 只看出生 HUD。
+对应：当前完整章节 PR。锁的是**同一条结算面板链路**：MatchHost 对仍在跑的场解析心跳，一旦有合法 `settlement` 就 POST 控制面（409 视为已写入）；大厅在**线上**全员冲线后轮询 GET，200 后状态行出现 `settled=`。Solo 冲线只有本地 `result=`，**没有** `settled=`（客户端不 POST、Solo 不 GET）。不是离开对局 HTTP、MMR 或限时未全员冲线结算。
 
-先做 A（Solo，不需要三后端），再做 B（在线 1 人只验出生 HUD）。A 才是本章主路径。
+先做 A（Solo，不需要三后端），再做 B（1 人 Quick play，需要 `npm run dev`）。B 才是本章主路径。
 
-### A. 离线 Solo（箱子 → 传送楼层 → R 复位）
+### A. 离线 Solo（只有本地 `result=`）
 
 不需要 `npm run dev`。若已在线对局，先点 **Cancel** 回到 `play=idle`。
 
-1. 课程框保持 `course_01`。先看未开玩的状态行。
+1. 课程框保持 `course_01`。点 **Solo play**。点窗口内部一次，确保键盘焦点在游戏窗口。
+2. 按住 **D** 走到第二垫（+X 约 2m），走进约 +X 3m 的青色传送门，落地后继续向 +X 走到金色终点盒。
 
-   预期：状态行没有 `floor=`，也没有 `crates=1/1` 这种开玩分数（可以有 `crates_mapped=1`）。失败：未开玩就已经出现 `floor=`。
+   预期：状态行含 `result=`，**没有** `settled=`。失败：出现 `settled=`（说明客户端写了库或 Solo 误 GET）。
 
-2. 点 **Solo play**。点窗口内部一次，确保键盘焦点在游戏窗口。
+3. 点 **Cancel**。
 
-   预期：状态行含 `pads=1/3`、`floor=0`、`finish=-1`、`crates=1/1`。出生点 +Z 约 1m 有橙色箱。失败：没有 `floor=0` 或没有 `crates=1/1`。
-
-3. 按 **Q**（或点窗口内鼠标左键）使用道具。不要先走开。
-
-   预期：橙色箱消失；状态行变为 `crates=0/1`（分母仍是 1）。失败：箱子还在，或变成裸 `crates=0` 而没有 `/1`。
-
-4. 按住 **D** 走到第二垫（+X 约 2m），再走进约 +X 3m 的青色传送门。一落地就停，不要继续往终点走。
-
-   预期：状态行 `floor=1`，`pads=2/3`。失败：进门后 `floor` 仍是 0，或已经变成 `pads=3/3`。
-
-5. 按 **R**。
-
-   预期：玩家盒回到地面第二垫附近（+X 约 2m，高度回到地面）；`floor=0`；`pads` 仍是 `2/3`；`finish=-1`。失败：进度回到 `1/3`，或人还停在上层，或 `floor` 仍是 1。
-
-6. 点 **Cancel**。
-
-   预期：`offline=` 不再是 `playing`；状态行没有 `floor=`，也没有 `crates=0/1` / `crates=1/1`；WASD 不再移动。失败：点了之后还能继续走，或 `floor=` 仍在。
+   预期：`offline=` 不再是 `playing`；没有 `result=` / `settled=`。失败：点了之后还能继续走。
 
 点 **Cancel** 结束后再做 B。
 
-### B. 快速游戏（1 人只验出生 HUD）
+### B. 快速游戏（1 人：本地 `result=` 之后出现 `settled=`）
 
-需要「共用启动」0.1 与 0.2。人数改成 `1`，这样不必等第二人。
+需要「共用启动」0.1 与 0.2。人数改成 `1`，这样不必等第二人。走完 `course_01` 的路径与 A 相同（D 进门再进终点）。
 
 1. 课程框 `course_01`，人数框改成 `1`。点 **Quick play**。
 2. 等状态行出现 `join=ready`、`play=in_match`、`seats=1`、`seat=0`、`mapped=1`。若长时间停在 `connecting` 或 `error=`，先看 `npm run dev` 三个进程是否仍在。
+3. 点窗口内部一次。按住 **D** 进传送门，再走进终点。
 
-3. 看状态行。
+   预期：先出现本地 `result=`（1 人应为 `result=` 且含 `mvp=0`），此时可以还没有 `settled=`。失败：冲线后没有 `result=`。
 
-   预期：`floor=0`、`crates=1/1`、`pads=1/3`、`finish=-1`。失败：入场后没有 `floor=`，或箱子 HUD 仍是旧的裸 `crates=1`。
+4. 停在终点，最多等约 **20 秒**（MatchHost 默认 15s 扫描心跳 + 大厅 1s 轮询）。
 
-4. 点 **Cancel** 停场（不要点窗口关闭，见共用启动说明：Traprush 是嵌入子窗口，关闭只是隐藏）。
+   预期：状态行出现 `settled=#1s0 mvp=0`，且仍有 `result=`。失败：20 秒后仍没有 `settled=`（Host 没写库或大厅没 GET）；或 join 变成 `failed`（把 GET 404 当成了入场失败）。
 
-   预期：`join=idle` `play=idle`，没有 `tick=` / `floor=` / `pads=`；橙色箱按赛道拓扑重新出现。失败：点了之后 `tick=` 仍在涨。
+5. 点 **Cancel** 停场（不要点窗口关闭，见共用启动说明：Traprush 是嵌入子窗口，关闭只是隐藏）。
+
+   预期：`join=idle` `play=idle`，没有 `tick=` / `result=` / `settled=`。失败：点了之后 `tick=` 仍在涨，或 `settled=` 还在。
 
 ### 本刀不测
 
-- GET 结算面板、离开对局 HTTP、结算写库；
-- 长按 R 的时长（CD-63 待决）；
+- 离开对局 HTTP、MMR、限时未全员冲线结算；
+- GET 在 Host 写入前必须立刻 200（允许先 404 再出现 `settled=`）；
 - 第二人同屏；
+- 长按 R 的时长（CD-63 待决）；
 - 走路可达、合法路径距离、检查点到达时间；
 - 产品皮肤、产品镜头、空格跳（官方赛道无立足点）；
 - 账号绑定、远端外推、平滑对账。

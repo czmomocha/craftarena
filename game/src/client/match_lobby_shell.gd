@@ -26,11 +26,12 @@ extends Node
 ## Own-seat accepted_count tints course pads: done / current / pending.
 ## Own-seat finish_tick tints the finish zone: pending / current / done.
 ## HUD shows pads=n/m, floor=n, finish=n, and crates=n/m; result= appears
-## when every snapshot seat has finished. floor uses own-seat authority y
+## when every snapshot seat has finished. Online matches then GET the
+## control-plane board; 200 adds settled=. floor uses own-seat authority y
 ## (y / Fixed.SCALE toward zero), not interpolated samples. crates n/m is
 ## live boxes over compiled bag count. Reset rising-edge encodes the
-## existing ResetToCheckpointIntent. result= is local presentation, not a
-## settlement write.
+## existing ResetToCheckpointIntent. result= is local presentation; settled=
+## is a read-only GET. The client never POSTs settlement.
 ## WASD encodes Move plus discrete 8-way yaw_bam; Jump / Reset / Use item
 ## encode existing intents.
 ## play_move_step is a presentation stub, not a product speed.
@@ -122,6 +123,7 @@ var _http: HTTPRequest = null
 var _http_busy: bool = false
 var _peer: WebSocketPeer = null
 var _poll_accum: float = 0.0
+var _settlement_poll_accum: float = 0.0
 var _reset_held: bool = false
 var _use_item_held: bool = false
 var _jump_held: bool = false
@@ -583,6 +585,8 @@ func status_view() -> Dictionary:
 		"own_finish_tick": own_finish_tick,
 		"own_floor_index": own_floor_index,
 		"match_finished": match_finished,
+		"settlement_line": str(join_view.get("settlement_line", "")),
+		"has_settlement": join_view.get("has_settlement", false),
 		"window_visible": is_window_visible(),
 	}
 
@@ -615,6 +619,27 @@ func interp_progress() -> int:
 	return _interp_t
 
 
+func try_fetch_settlement() -> bool:
+	if _offline_playing():
+		return false
+	if join == null or play == null:
+		return false
+	if play.state != MatchPlaySessionGd.STATE_IN_MATCH:
+		return false
+	if join.has_settlement:
+		return false
+	var follow: MatchSnapshotFollowGd = _active_follow()
+	if follow == null or not follow.has_snapshot:
+		return false
+	if not _all_players_finished(follow.players):
+		return false
+	if not join.try_get_settlement():
+		return false
+	_dispatch_pending()
+	_refresh_status()
+	return true
+
+
 func allows_settlement() -> bool:
 	return false
 
@@ -626,6 +651,7 @@ func allows_online_writes() -> bool:
 func _process(delta: float) -> void:
 	if live_io and not _offline_playing():
 		_poll_queue_clock(delta)
+		_poll_settlement_clock(delta)
 		_poll_gateway()
 	if window == null or not window.visible:
 		return
@@ -838,6 +864,29 @@ func _poll_queue_clock(delta: float) -> void:
 	try_poll()
 
 
+func _poll_settlement_clock(delta: float) -> void:
+	if join == null or join.state != MatchJoinSessionGd.STATE_READY:
+		_settlement_poll_accum = 0.0
+		return
+	if play == null or play.state != MatchPlaySessionGd.STATE_IN_MATCH:
+		_settlement_poll_accum = 0.0
+		return
+	if join.has_settlement:
+		_settlement_poll_accum = 0.0
+		return
+	if join.has_pending() or _http_busy:
+		return
+	var follow: MatchSnapshotFollowGd = _active_follow()
+	if follow == null or not follow.has_snapshot or not _all_players_finished(follow.players):
+		_settlement_poll_accum = 0.0
+		return
+	_settlement_poll_accum += delta
+	if _settlement_poll_accum < queue_poll_s:
+		return
+	_settlement_poll_accum = 0.0
+	try_fetch_settlement()
+
+
 func _poll_gateway() -> void:
 	if _peer == null:
 		return
@@ -939,6 +988,9 @@ func _refresh_status() -> void:
 			var result_line: String = str(view.get("standing_line", ""))
 			if result_line != "":
 				parts.append("result=%s" % result_line)
+			var settled_line: String = str(view.get("settlement_line", ""))
+			if settled_line != "":
+				parts.append("settled=%s" % settled_line)
 	parts.append("course=%d/%d/%d" % [mapped_pads, mapped_portals, mapped_finish])
 	var mapped_crates: int = view.get("mapped_crates", 0)
 	parts.append("crates_mapped=%d" % mapped_crates)
