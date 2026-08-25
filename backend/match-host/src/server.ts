@@ -9,7 +9,7 @@ import {
 } from "../../contracts/src/index.ts";
 import { MatchCapacityError, type MatchRecord, type MatchRegistry } from "./registry.ts";
 import { MatchListenError } from "./listen_probe.ts";
-import { MatchSessionRegisterError, MatchSessionUnregisterError } from "./registrar.ts";
+import { MatchSessionRegisterError, MatchSessionSettlementError, MatchSessionUnregisterError } from "./registrar.ts";
 
 export interface BuildMatchHostOptions {
 	readonly registry: MatchRegistry;
@@ -166,6 +166,10 @@ export function buildMatchHost(options: BuildMatchHostOptions): FastifyInstance 
 			if (error instanceof MatchSessionUnregisterError) {
 				reply.code(502);
 				return { error: "session_unregister_failed", message: error.message };
+			}
+			if (error instanceof MatchSessionSettlementError) {
+				reply.code(502);
+				return { error: "session_settlement_failed", message: error.message };
 			}
 			throw error;
 		}

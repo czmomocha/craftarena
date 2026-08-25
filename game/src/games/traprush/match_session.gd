@@ -8,8 +8,9 @@ extends RefCounted
 ## 出生偏移、跳跃/支撑/道具伤害与触达数值由调用方传入，不锁产品数值。
 ## 语义与 AuthoringPreview 试玩逐字对齐：同一 IntentStepper、同一占用扫描
 ## 顺序（垫→门→垫→终点）。无网络、无结算、不在线写入。
-## 直播名次由 TraprushStanding 从 accepted_count / finish_tick 派生；
-## 本会话仍不写结算。路径距离排序仍待。
+## 直播名次由 TraprushStanding 从 accepted_count / finish_tick 派生。
+## 全员冲线后可由 TraprushMatchSettlement 生成写库 payload；本会话不 HTTP。
+## 路径距离排序仍待。
 
 const CheckpointSpawn := preload("res://src/games/traprush/checkpoint_spawn.gd")
 const CheckpointTrack := preload("res://src/games/traprush/checkpoint_track.gd")
@@ -116,6 +117,10 @@ static func create(
 
 func player_count() -> int:
 	return _players.size()
+
+
+func checkpoint_count() -> int:
+	return _ordered_ids.size()
 
 
 func tick_index() -> int:

@@ -30,4 +30,10 @@ export {
 	type MatchmakingQueueStatusResponse,
 	type MatchmakingQueueWaitingResponse,
 } from "./match_room.ts";
+export {
+	recordMatchSettlementBodySchema,
+	type MatchSettlementResponse,
+	type MatchSettlementRow,
+	type RecordMatchSettlementRequest,
+} from "./match_settlement.ts";
 

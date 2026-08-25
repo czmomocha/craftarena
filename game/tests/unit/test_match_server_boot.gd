@@ -118,6 +118,7 @@ func test_heartbeat_line_is_structured_json() -> void:
 	assert_eq(players, 2)
 	var state_hash: String = event.get("hash", "")
 	assert_eq(state_hash, session.hash_state())
+	assert_false(event.has("settlement"))
 
 
 func test_same_boot_same_hash_after_ticks() -> void:

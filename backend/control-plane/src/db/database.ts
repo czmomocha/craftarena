@@ -66,6 +66,23 @@ export class MatchQueueNotWaitingError extends Error {
 	}
 }
 
+export class MatchSettlementExistsError extends Error {
+	constructor(matchId: string) {
+		super(`match settlement already exists: ${matchId}`);
+		this.name = "MatchSettlementExistsError";
+	}
+}
+
+export interface MatchSettlementRecord {
+	readonly matchId: string;
+	readonly tick: number;
+	readonly stateHash: string;
+	readonly padTotal: number;
+	readonly mvpSlot: number;
+	readonly rowsJson: string;
+	readonly createdAt: string;
+}
+
 export type MatchQueueRowStatus = "waiting" | "ready" | "failed" | "cancelled";
 
 export interface MatchQueueRecord {
@@ -218,6 +235,62 @@ export class ControlPlaneDatabase {
 		}
 
 		return existing;
+	}
+
+	insertMatchSettlement(input: {
+		readonly matchId: string;
+		readonly tick: number;
+		readonly stateHash: string;
+		readonly padTotal: number;
+		readonly mvpSlot: number;
+		readonly rowsJson: string;
+		readonly now: Date;
+	}): MatchSettlementRecord {
+		if (this.getMatchSession(input.matchId) === undefined) {
+			throw new MatchSessionNotFoundError(input.matchId);
+		}
+		const createdAt = input.now.toISOString();
+		try {
+			this.#db
+				.prepare(
+					`INSERT INTO match_settlements
+					 (match_id, tick, state_hash, pad_total, mvp_slot, rows_json, created_at)
+					 VALUES (?, ?, ?, ?, ?, ?, ?)`,
+				)
+				.run(
+					input.matchId,
+					input.tick,
+					input.stateHash,
+					input.padTotal,
+					input.mvpSlot,
+					input.rowsJson,
+					createdAt,
+				);
+		} catch (error) {
+			if (isUniqueConstraint(error)) {
+				throw new MatchSettlementExistsError(input.matchId);
+			}
+			throw error;
+		}
+		return {
+			matchId: input.matchId,
+			tick: input.tick,
+			stateHash: input.stateHash,
+			padTotal: input.padTotal,
+			mvpSlot: input.mvpSlot,
+			rowsJson: input.rowsJson,
+			createdAt,
+		};
+	}
+
+	getMatchSettlement(matchId: string): MatchSettlementRecord | undefined {
+		const row = this.#db
+			.prepare(
+				`SELECT match_id, tick, state_hash, pad_total, mvp_slot, rows_json, created_at
+				 FROM match_settlements WHERE match_id = ?`,
+			)
+			.get(matchId);
+		return row === undefined ? undefined : settlementFromRow(row);
 	}
 
 	getMatchSession(matchId: string): MatchSessionRecord | undefined {
@@ -547,6 +620,18 @@ function queueStatusFromRow(value: unknown): MatchQueueRowStatus {
 		return value;
 	}
 	return "waiting";
+}
+
+function settlementFromRow(row: Record<string, unknown>): MatchSettlementRecord {
+	return {
+		matchId: String(row["match_id"]),
+		tick: Number(row["tick"]),
+		stateHash: String(row["state_hash"]),
+		padTotal: Number(row["pad_total"]),
+		mvpSlot: Number(row["mvp_slot"]),
+		rowsJson: String(row["rows_json"]),
+		createdAt: String(row["created_at"]),
+	};
 }
 
 function sessionFromRow(row: Record<string, unknown>): MatchSessionRecord {
