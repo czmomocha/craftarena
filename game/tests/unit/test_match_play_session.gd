@@ -106,6 +106,18 @@ func test_gateway_url_rejects_userinfo_and_empty_ticket() -> void:
 	)
 
 
+func test_wss_url_uses_unsafe_client_tls_options() -> void:
+	assert_false(MatchPlaySession.uses_tls("ws://127.0.0.1:8090/ws?ticket=t"))
+	assert_true(MatchPlaySession.uses_tls("wss://127.0.0.1:8090/ws?ticket=t"))
+	assert_eq(MatchPlaySession.tls_client_options("ws://127.0.0.1:8090/ws?ticket=t"), null)
+	var tls: TLSOptions = MatchPlaySession.tls_client_options("wss://127.0.0.1:8090/ws?ticket=t")
+	assert_not_null(tls)
+	var play: MatchPlaySession = MatchPlaySession.new()
+	assert_true(play.try_begin(_ready_join(), "wss://127.0.0.1:8090"))
+	var play_tls: bool = play.status_view().get("tls", false)
+	assert_true(play_tls)
+
+
 func test_close_then_reissue_follows_latest_snapshot() -> void:
 	var join: MatchJoinSession = _ready_join()
 	var play: MatchPlaySession = MatchPlaySession.new()

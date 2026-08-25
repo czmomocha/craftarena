@@ -32,7 +32,8 @@ extends Node
 ## when every snapshot seat has finished. Online matches then GET the
 ## control-plane board; 200 adds settled=. floor uses own-seat authority y
 ## (y / Fixed.SCALE toward zero), not interpolated samples. crates n/m is
-## live boxes over compiled bag count. Reset rising-edge encodes the
+## live boxes over compiled bag count. tls=on when the gateway URL is wss
+## (in-process TLS); default local npm run dev stays ws / tls=off. Reset rising-edge encodes the
 ## existing ResetToCheckpointIntent. result= is local presentation; settled=
 ## is a read-only GET. The client never POSTs settlement.
 ## WASD encodes Move plus discrete 8-way yaw_bam; Jump / Reset / Use item
@@ -566,6 +567,7 @@ func status_view() -> Dictionary:
 		"selected_seats": selected_seats(),
 		"seat": join_view.get("seat", -1),
 		"play_state": play_view.get("state", ""),
+		"tls": _tls_on(play_view),
 		"offline_state": offline_view.get("state", ""),
 		"offline_banner": offline_view.get("banner", ""),
 		"offline_error": offline_view.get("error", ""),
@@ -840,7 +842,8 @@ func _connect_gateway() -> void:
 		return
 	_drop_gateway()
 	_peer = WebSocketPeer.new()
-	var err: int = _peer.connect_to_url(play.websocket_url)
+	var tls: TLSOptions = MatchPlaySessionGd.tls_client_options(play.websocket_url)
+	var err: int = _peer.connect_to_url(play.websocket_url, tls)
 	if err != OK:
 		play.on_close()
 		_peer = null
@@ -959,6 +962,8 @@ func _refresh_status() -> void:
 	if error_text != "":
 		parts.append("error=%s" % error_text)
 	parts.append("play=%s" % play_state)
+	var tls_on: bool = view.get("tls", false)
+	parts.append("tls=%s" % ("on" if tls_on else "off"))
 	var offline_state: String = str(view.get("offline_state", ""))
 	if offline_state != "":
 		parts.append("offline=%s" % offline_state)
@@ -1145,6 +1150,13 @@ func _sync_interp_t(follow: MatchSnapshotFollowGd) -> void:
 func _reset_interp() -> void:
 	_interp_t = 0
 	_interp_tick = -1
+
+
+func _tls_on(play_view: Dictionary) -> bool:
+	var play_url: String = str(play_view.get("websocket_url", ""))
+	if play_url != "":
+		return MatchPlaySessionGd.uses_tls(play_url)
+	return MatchPlaySessionGd.uses_tls(gateway_base)
 
 
 func _offline_playing() -> bool:

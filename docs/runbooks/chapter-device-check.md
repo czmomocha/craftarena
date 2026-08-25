@@ -47,20 +47,33 @@ Worktree 端口偏移见 README「并行工作区」；本文件不复述端口�
 
 也可以先 `& $env:GODOT4 --editor --path game` / `"$GODOT4" --editor --path game`，再在编辑器里运行主场景。
 
-预期：出现标题为 **Traprush** 的窗口；状态行含 `join=idle`、`play=idle`、`course=3/2/1`（默认 `course_01` 的垫/门/终点占位）。失败：没有窗口、立刻退出、或只有 Headless 日志。
+预期：出现标题为 **Traprush** 的窗口；状态行含 `join=idle`、`play=idle`、`tls=off`、`course=3/2/1`（默认 `course_01` 的垫/门/终点占位）。失败：没有窗口、立刻退出、或只有 Headless 日志。
 
 操作：WASD 移动，空格跳跃，Q 或鼠标左键使用道具（打碎眼前箱），R 重置到最近已验收检查点。点窗口内部一次，确保键盘焦点在游戏窗口而不是终端。
 
 ---
 
-## 本刀：真人命令才续租
+## 本刀：网关进程内 TLS
 
-对应：当前完整章节 PR。锁的是 **MatchHost 只对改变权威状态的真人命令续租**：对局心跳上报 `valid_input_tick`（最近一次已入队、apply 成功、且哈希相对应用前变化的权威 tick；从未发生为 -1）。心跳本身不续租。MatchHost 仅在该 tick 相对该场上次续租前进时 `renew`。不是离开对局 HTTP、墙钟发送速率或 Bot 流量。不改 30 分钟租约与 10 分钟 idle 数字。
+对应：当前完整章节 PR。锁的是 **网关可在进程内终结 TLS**：成对设置 `GATEWAY_TLS_CERT` / `GATEWAY_TLS_KEY` 后客户端走 `wss`；都不设则仍明文 `ws`（本机开发）。对局进程上游仍是内网明文 `ws`。默认 `npm run dev` 不启用 TLS。生产 CA、控制面 HTTPS、MatchHost 子进程 TLS 仍待。
 
-本章无开发机可见行为：续租发生在 MatchHost 扫描对局进程心跳，大厅窗口没有新控件或新文案；用缩短 idle 的 npm 夹具验收。
+### 1. 默认明文仍能玩
+
+前置：共用启动 0.1（`npm run dev`）与 0.2。
+
+预期：状态行含 `tls=off`、`join=idle`、`play=idle`。失败：没有 `tls=`，或显示 `tls=on`。
+
+### 2. Quick play 仍走明文网关
+
+操作：点 **Quick play**。
+
+预期：状态行仍含 `tls=off`；`join` 离开 idle（出现 `pending=1`，或 `play=connecting` / `in_match`）。失败：进不去、或变成 `tls=on`。
+
+### 3. wss 不在本窗口手测
+
+自签夹具与未信任证书拒绝握手由 `npm test` 覆盖。不要改 `npm run dev` 去挂证书；DevLauncher 的 `/readyz` 仍走 http。
 
 ### 本刀不测
 
-- 大厅 Quick play / Solo 的窗口表现（上一章已合入）；
-- 离开对局 HTTP、账号绑定、墙钟发送速率；
-- Bot 流量、30 分钟租约数字、10 分钟 idle 数字本身。
+- 生产 CA 信任链、控制面 HTTPS、MatchHost 子进程 TLS；
+- 离开对局 HTTP、账号绑定、平滑对账、远端外推。
