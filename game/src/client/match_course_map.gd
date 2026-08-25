@@ -5,8 +5,9 @@ extends Node3D
 ## Pads, classified portals, and finish occupancy become 1 m boxes at the
 ## Q48.16 poses. Authority stays on SimulationBundle; float conversion
 ## happens only here. Placeholders are not hitboxes. Destructibles have
-## poses in the bundle but stay undrawn in this chapter. No interpolation,
-## prediction, ranking, or course-selection API.
+## poses in the bundle but stay undrawn here; MatchCrateMap draws them.
+## Portal source→dest bars stay undrawn here; MatchPortalLinkMap draws them.
+## No interpolation, prediction, ranking, or course-selection API.
 
 const AuthoringDocumentGd := preload("res://src/creator/authoring_document.gd")
 const TraprushTopologyCompilerGd := preload("res://src/ugc/traprush_topology_compiler.gd")
@@ -92,6 +93,10 @@ func finish_count() -> int:
 
 
 func crate_node_count() -> int:
+	return 0
+
+
+func link_node_count() -> int:
 	return 0
 
 

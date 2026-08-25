@@ -5,8 +5,9 @@ extends Node3D
 ## Topology bags supply Q48.16 poses; the latest snapshot supplies
 ## durability. Float conversion happens only here. Placeholders are not
 ## hitboxes. Durability <= 0 or a crate omitted from the snapshot removes
-## the box. Snapshots never move a crate. No interpolation, prediction,
-## ranking, or course-selection API.
+## the box. Snapshots never move a crate. Portal source→dest bars stay
+## undrawn here; MatchPortalLinkMap draws them. No interpolation,
+## prediction, ranking, or course-selection API.
 
 const AuthoringDocumentGd := preload("res://src/creator/authoring_document.gd")
 const TraprushTopologyCompilerGd := preload("res://src/ugc/traprush_topology_compiler.gd")
@@ -74,6 +75,10 @@ func crate_count() -> int:
 
 func crate_node(entity_id: int) -> MeshInstance3D:
 	return get_node_or_null(crate_name(entity_id)) as MeshInstance3D
+
+
+func link_node_count() -> int:
+	return 0
 
 
 func allows_settlement() -> bool:
