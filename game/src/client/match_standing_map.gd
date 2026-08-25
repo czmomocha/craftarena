@@ -8,16 +8,22 @@ extends Node3D
 ## / portal bars / checkpoint-order gizmos stay undrawn here. This
 ## node does not interpolate; the lobby may pass sampled poses from
 ## MatchSnapshotInterp. Ranking still uses finish_tick / accepted_count.
+## follow_slot prefixes that seat's label with "*" so the own seat is
+## readable on a cube. Not product cosmetics.
 ## No prediction, settlement, path-distance ranking, or online writes.
 
 const MatchSnapshotFollowGd := preload("res://src/client/match_snapshot_follow.gd")
 const TraprushStandingGd := preload("res://src/games/traprush/standing.gd")
 
 const MARK_PREFIX: String = "standing_mark_"
+const OWN_MARK_PREFIX: String = "*"
 const STANDING_LIFT: float = 1.35
 const _FINISHED_ALBEDO: Color = Color(1.0, 0.85, 0.2)
 const _RUNNING_ALBEDO: Color = Color(0.85, 0.9, 1.0)
+const _OWN_OUTLINE: Color = Color(0.15, 0.85, 0.75)
+const _REMOTE_OUTLINE: Color = Color(0.0, 0.0, 0.0)
 
+var follow_slot: int = -1
 var _standing_count: int = 0
 var _mvp_slot: int = -1
 var _line: String = ""
@@ -168,6 +174,11 @@ func _spawn_mark(slot: int, pose: Dictionary, row: Dictionary) -> void:
 	var label: Label3D = Label3D.new()
 	label.name = mark_name(slot)
 	label.text = mark_text(row)
+	if follow_slot >= 0 and slot == follow_slot:
+		label.text = "%s%s" % [OWN_MARK_PREFIX, label.text]
+		label.outline_modulate = _OWN_OUTLINE
+	else:
+		label.outline_modulate = _REMOTE_OUTLINE
 	label.font_size = 64
 	label.pixel_size = 0.02
 	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED

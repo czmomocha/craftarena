@@ -1,8 +1,9 @@
 extends GutTest
 
 ## MatchStandingMap: latest-snapshot poses → standing Label3D.
-## Finished / unfinished text follows TraprushStanding. A bad follow or
-## malformed player list keeps the last labels. Never settlement.
+## Finished / unfinished text follows TraprushStanding. follow_slot
+## prefixes that seat with "*". A bad follow or malformed player list
+## keeps the last labels. Never settlement.
 
 const MatchFrameCodec := preload("res://src/shared/protocol/match_frame_codec.gd")
 const MatchSnapshotFollow := preload("res://src/client/match_snapshot_follow.gd")
@@ -47,6 +48,29 @@ func test_rebuild_maps_places_and_skips_other_gizmos() -> void:
 	assert_eq(_map.standing_line(), "standings=#1s1,#2s0 mvp=1")
 	assert_false(_map.allows_settlement())
 	assert_false(_map.allows_online_writes())
+
+
+func test_follow_slot_stars_own_mark_only() -> void:
+	_map = MatchStandingMap.new()
+	add_child(_map)
+	_map.follow_slot = 0
+	assert_true(_map.apply_players([
+		_player(0, 0, 0, 1, -1),
+		_player(2 * CELL, CELL, 0, 3, 4),
+	], 3))
+	var first: Label3D = _map.standing_node(0)
+	var second: Label3D = _map.standing_node(1)
+	assert_eq(first.text, "*#2 P0 1/3")
+	assert_eq(second.text, "#1 P1")
+	assert_eq(first.outline_modulate, Color(0.15, 0.85, 0.75))
+	assert_eq(second.outline_modulate, Color(0.0, 0.0, 0.0))
+	_map.follow_slot = 1
+	assert_true(_map.apply_players([
+		_player(0, 0, 0, 1, -1),
+		_player(2 * CELL, CELL, 0, 3, 4),
+	], 3))
+	assert_eq(_map.standing_node(0).text, "#2 P0 1/3")
+	assert_eq(_map.standing_node(1).text, "*#1 P1")
 
 
 func test_later_snapshot_jumps_without_interpolation() -> void:

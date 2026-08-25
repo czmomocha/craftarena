@@ -3,8 +3,9 @@ extends GutTest
 ## MatchSnapshotMap: latest-snapshot player poses → 1 m boxes with a
 ## local -Z facing marker. No interpolation. Crates have no pose in the
 ## v1 snapshot, so they are not drawn. A bad follow or malformed player
-## list keeps the last map. follow_slot aims the camera at that player;
-## default -1 looks at origin.
+## list keeps the last map. follow_slot aims the camera at that player
+## and tints that box OWN_ALBEDO; default -1 looks at origin and uses
+## REMOTE_ALBEDO.
 
 const MatchFrameCodec := preload("res://src/shared/protocol/match_frame_codec.gd")
 const MatchMoveFacing := preload("res://src/client/match_move_facing.gd")
@@ -28,6 +29,9 @@ func test_meters_and_yaw_conversion() -> void:
 	assert_almost_eq(MatchSnapshotMap.meters_from_fixed(0), 0.0, EPS)
 	assert_almost_eq(MatchSnapshotMap.yaw_radians_from_bam(16384), PI / 2.0, EPS)
 	assert_almost_eq(MatchSnapshotMap.yaw_radians_from_bam(0), 0.0, EPS)
+	assert_eq(MatchSnapshotMap.player_albedo(0, 0), MatchSnapshotMap.OWN_ALBEDO)
+	assert_eq(MatchSnapshotMap.player_albedo(1, 0), MatchSnapshotMap.REMOTE_ALBEDO)
+	assert_eq(MatchSnapshotMap.player_albedo(0, -1), MatchSnapshotMap.REMOTE_ALBEDO)
 
 
 func test_rebuild_maps_player_poses_and_skips_crates() -> void:
@@ -114,6 +118,28 @@ func test_facing_marker_sits_on_local_neg_z_and_rotates_with_yaw() -> void:
 	assert_gt(face.global_position.x - player.global_position.x, 0.4)
 
 
+func test_follow_slot_tints_own_box_not_remote() -> void:
+	_map = MatchSnapshotMap.new()
+	add_child(_map)
+	_map.follow_slot = 0
+	assert_true(_map.apply_players([
+		_player(0, 0, 0, 0),
+		_player(CELL, 0, 0, 0),
+	]))
+	assert_eq(_player_albedo(0), MatchSnapshotMap.OWN_ALBEDO)
+	assert_eq(_player_albedo(1), MatchSnapshotMap.REMOTE_ALBEDO)
+	_map.follow_slot = 1
+	assert_true(_map.apply_players([
+		_player(0, 0, 0, 0),
+		_player(CELL, 0, 0, 0),
+	]))
+	assert_eq(_player_albedo(0), MatchSnapshotMap.REMOTE_ALBEDO)
+	assert_eq(_player_albedo(1), MatchSnapshotMap.OWN_ALBEDO)
+	_map.follow_slot = -1
+	assert_true(_map.apply_players([_player(0, 0, 0, 0)]))
+	assert_eq(_player_albedo(0), MatchSnapshotMap.REMOTE_ALBEDO)
+
+
 func test_follow_slot_aims_camera_at_that_player() -> void:
 	_map = MatchSnapshotMap.new()
 	add_child(_map)
@@ -176,6 +202,16 @@ func _player(x: int, y: int, z: int, yaw_bam: int) -> Dictionary:
 		"accepted_count": 0,
 		"finish_tick": -1,
 	}
+
+
+func _player_albedo(slot: int) -> Color:
+	var node: MeshInstance3D = _map.player_node(slot)
+	assert_not_null(node)
+	var box: BoxMesh = node.mesh as BoxMesh
+	assert_not_null(box)
+	var material: StandardMaterial3D = box.material as StandardMaterial3D
+	assert_not_null(material)
+	return material.albedo_color
 
 
 func _assert_yaw(node: Node3D, yaw_bam: int) -> void:

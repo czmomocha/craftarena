@@ -21,8 +21,10 @@ extends Node
 ## the latest authority for Move/Jump; remotes still interpolate.
 ## SnapshotCamera follows the own-seat presentation pose (predicted
 ## online, local authority offline) with the Preview camera offset.
-## Remotes do not pull the camera. WASD encodes Move plus discrete 8-way
-## yaw_bam; Jump / Reset / Use item encode existing intents.
+## The own-seat box uses OWN_ALBEDO; remotes use REMOTE_ALBEDO. Standing
+## labels prefix the own seat with "*". Remotes do not pull the camera.
+## WASD encodes Move plus discrete 8-way yaw_bam; Jump / Reset / Use item
+## encode existing intents.
 ## play_move_step is a presentation stub, not a product speed.
 ## Unexpected socket close while connecting or in-match reissues the
 ## consumed ticket and follows the latest snapshot again.
@@ -286,6 +288,7 @@ func try_stop_offline() -> bool:
 		map.follow_slot = -1
 		map.apply_players([])
 	if standings != null:
+		standings.follow_slot = -1
 		standings.apply_players([])
 	if crates != null:
 		crates.apply_path(course_path)
@@ -322,6 +325,7 @@ func try_leave_play() -> bool:
 		map.follow_slot = -1
 		map.apply_players([])
 	if standings != null:
+		standings.follow_slot = -1
 		standings.apply_players([])
 	if crates != null:
 		crates.apply_path(course_path)
@@ -938,6 +942,7 @@ func _apply_snapshot_map() -> void:
 		var pad_total: int = 0
 		if course != null:
 			pad_total = course.pad_count()
+		standings.follow_slot = _camera_follow_slot()
 		standings.apply_players(players, pad_total)
 
 
