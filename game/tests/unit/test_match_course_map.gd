@@ -3,6 +3,7 @@ extends GutTest
 ## MatchCourseMap: compiled topology occupancy poses → 1 m boxes.
 ## Pads, portals, and finish are drawn. Destructibles are not.
 ## A null / missing / malformed bundle keeps the last course.
+## apply_own_progress tints pads from own-seat accepted_count.
 
 const AuthoringWorld := preload("res://src/creator/authoring_world.gd")
 const MatchCourseMap := preload("res://src/client/match_course_map.gd")
@@ -46,8 +47,33 @@ func test_official_course_01_maps_occupancy_and_skips_crates() -> void:
 	assert_not_null(box)
 	assert_almost_eq(box.size.x, 1.0, EPS)
 	assert_null(_map.get_node_or_null("crate_40"))
+	assert_eq(_pad_albedo(1), MatchCourseMap.PENDING_ALBEDO)
+	assert_eq(_map.own_accepted_count(), -1)
 	assert_false(_map.allows_settlement())
 	assert_false(_map.allows_online_writes())
+
+
+func test_own_progress_tints_done_current_and_pending() -> void:
+	_map = MatchCourseMap.new()
+	add_child(_map)
+	assert_true(_map.apply_path(COURSE_01_PATH))
+	assert_eq(MatchCourseMap.pad_albedo(0, 1), MatchCourseMap.ACCEPTED_ALBEDO)
+	assert_eq(MatchCourseMap.pad_albedo(1, 1), MatchCourseMap.CURRENT_ALBEDO)
+	assert_eq(MatchCourseMap.pad_albedo(2, 1), MatchCourseMap.PENDING_ALBEDO)
+	assert_eq(MatchCourseMap.pad_albedo(0, -1), MatchCourseMap.PENDING_ALBEDO)
+	_map.apply_own_progress(1)
+	assert_eq(_pad_albedo(1), MatchCourseMap.ACCEPTED_ALBEDO)
+	assert_eq(_pad_albedo(2), MatchCourseMap.CURRENT_ALBEDO)
+	assert_eq(_pad_albedo(3), MatchCourseMap.PENDING_ALBEDO)
+	_map.apply_own_progress(3)
+	assert_eq(_pad_albedo(1), MatchCourseMap.ACCEPTED_ALBEDO)
+	assert_eq(_pad_albedo(2), MatchCourseMap.ACCEPTED_ALBEDO)
+	assert_eq(_pad_albedo(3), MatchCourseMap.ACCEPTED_ALBEDO)
+	_map.apply_own_progress(-1)
+	assert_eq(_pad_albedo(1), MatchCourseMap.PENDING_ALBEDO)
+	assert_eq(_pad_albedo(2), MatchCourseMap.PENDING_ALBEDO)
+	assert_eq(_pad_albedo(3), MatchCourseMap.PENDING_ALBEDO)
+	assert_eq(_map.own_accepted_count(), -1)
 
 
 func test_official_courses_map_distinct_layouts() -> void:
@@ -103,3 +129,13 @@ func test_malformed_pad_keeps_previous_map() -> void:
 	assert_false(_map.apply_bundle(bundle))
 	assert_eq(_map.pad_count(), 3)
 	assert_almost_eq(_map.pad_node(1).position.z, 0.0, EPS)
+
+
+func _pad_albedo(entity_id: int) -> Color:
+	var node: MeshInstance3D = _map.pad_node(entity_id)
+	assert_not_null(node)
+	var box: BoxMesh = node.mesh as BoxMesh
+	assert_not_null(box)
+	var material: StandardMaterial3D = box.material as StandardMaterial3D
+	assert_not_null(material)
+	return material.albedo_color

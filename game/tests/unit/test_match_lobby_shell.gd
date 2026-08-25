@@ -5,6 +5,7 @@ extends GutTest
 ## Own-seat SnapshotCamera follows the presentation pose; remotes do not.
 ## WASD writes discrete 8-way yaw_bam; player boxes show a facing marker.
 ## Own-seat box uses OWN_ALBEDO; standing labels prefix the own seat with "*".
+## Own-seat accepted_count tints course pads done / current / pending.
 
 const MatchFrameCodec := preload("res://src/shared/protocol/match_frame_codec.gd")
 const MatchJoinSession := preload("res://src/client/match_join_session.gd")
@@ -14,6 +15,7 @@ const MatchOfflineSession := preload("res://src/client/match_offline_session.gd"
 const MatchPlaySession := preload("res://src/client/match_play_session.gd")
 const MatchSnapshotMap := preload("res://src/client/match_snapshot_map.gd")
 const MatchStandingMap := preload("res://src/client/match_standing_map.gd")
+const MatchCourseMap := preload("res://src/client/match_course_map.gd")
 const PlayerIntentNames := preload("res://src/shared/commands/player_intent_names.gd")
 
 var _shell: MatchLobbyShell = null
@@ -631,6 +633,60 @@ func test_online_seat_one_tints_second_box() -> void:
 	assert_true(_shell.standings.standing_node(1).text.begins_with("*"))
 
 
+func test_solo_own_progress_tints_pads_and_cancel_restores() -> void:
+	_shell = _open_shell()
+	assert_eq(_pad_albedo(1), MatchCourseMap.PENDING_ALBEDO)
+	assert_true(_shell.try_solo())
+	assert_eq(_shell.offline.session.player_accepted_count(0), 1)
+	assert_eq(_pad_albedo(1), MatchCourseMap.ACCEPTED_ALBEDO)
+	assert_eq(_pad_albedo(2), MatchCourseMap.CURRENT_ALBEDO)
+	assert_eq(_pad_albedo(3), MatchCourseMap.PENDING_ALBEDO)
+	assert_true(_shell.try_cancel())
+	assert_eq(_shell.course.own_accepted_count(), -1)
+	assert_eq(_pad_albedo(1), MatchCourseMap.PENDING_ALBEDO)
+	assert_eq(_pad_albedo(2), MatchCourseMap.PENDING_ALBEDO)
+
+
+func test_solo_walk_accepts_second_pad_and_retints() -> void:
+	_shell = _open_shell()
+	assert_true(_shell.try_solo())
+	var steps: int = 0
+	while steps < 40:
+		assert_false(_shell.try_sample_play_move(false, false, false, true).is_empty())
+		if _shell.offline.session.player_accepted_count(0) >= 2:
+			break
+		steps += 1
+	assert_eq(_shell.offline.session.player_accepted_count(0), 2)
+	assert_eq(_pad_albedo(1), MatchCourseMap.ACCEPTED_ALBEDO)
+	assert_eq(_pad_albedo(2), MatchCourseMap.ACCEPTED_ALBEDO)
+	assert_eq(_pad_albedo(3), MatchCourseMap.CURRENT_ALBEDO)
+
+
+func test_online_own_progress_follows_seat_accepted_count() -> void:
+	_shell = _open_shell()
+	assert_true(_shell.try_quick())
+	assert_true(_shell.accept_http(201, _join("ABCD23", "ticket-pads")))
+	assert_true(_shell.on_socket_open())
+	assert_true(_shell.on_binary(_ranked_snapshot(1, [
+		_ranked_player(0, 1, -1),
+		_ranked_player(2 * Fixed.SCALE, 2, -1),
+	])))
+	assert_eq(_pad_albedo(1), MatchCourseMap.ACCEPTED_ALBEDO)
+	assert_eq(_pad_albedo(2), MatchCourseMap.CURRENT_ALBEDO)
+	assert_eq(_pad_albedo(3), MatchCourseMap.PENDING_ALBEDO)
+	assert_true(_shell.try_cancel())
+	assert_true(_shell.try_quick())
+	assert_true(_shell.accept_http(201, _join("ABCD23", "ticket-pads1", "course_01", 2, 1)))
+	assert_true(_shell.on_socket_open())
+	assert_true(_shell.on_binary(_ranked_snapshot(1, [
+		_ranked_player(0, 1, -1),
+		_ranked_player(2 * Fixed.SCALE, 2, -1),
+	])))
+	assert_eq(_pad_albedo(1), MatchCourseMap.ACCEPTED_ALBEDO)
+	assert_eq(_pad_albedo(2), MatchCourseMap.ACCEPTED_ALBEDO)
+	assert_eq(_pad_albedo(3), MatchCourseMap.CURRENT_ALBEDO)
+
+
 func test_solo_use_item_from_spawn_breaks_course_01_crate() -> void:
 	_shell = _open_shell()
 	assert_true(_shell.try_solo())
@@ -710,6 +766,10 @@ func _ranked_player(x: int, accepted_count: int, finish_tick: int) -> Dictionary
 func _ranked_snapshot(tick: int, players: Array[Dictionary]) -> PackedByteArray:
 	var crates: Array[Dictionary] = []
 	return MatchFrameCodec.encode_snapshot(tick, players, crates)
+
+
+func _pad_albedo(entity_id: int) -> Color:
+	return _player_albedo(_shell.course.pad_node(entity_id))
 
 
 func _player_albedo(node: MeshInstance3D) -> Color:

@@ -9,7 +9,9 @@ extends Node3D
 ## Portal source→dest bars stay undrawn here; MatchPortalLinkMap draws them.
 ## Checkpoint-order labels and sequence bars stay undrawn here;
 ## MatchCheckpointOrderMap draws them. Standing labels stay undrawn
-## here; MatchStandingMap draws them.
+## here; MatchStandingMap draws them. apply_own_progress tints pads from
+## the own-seat accepted_count: done / current / pending. Idle (-1)
+## keeps PENDING_ALBEDO. Not walk-reachability or product cosmetics.
 ## No interpolation, prediction, or course-selection API.
 
 const AuthoringDocumentGd := preload("res://src/creator/authoring_document.gd")
@@ -19,7 +21,9 @@ const PAD_PREFIX: String = "pad_"
 const PORTAL_PREFIX: String = "portal_"
 const FINISH_PREFIX: String = "finish_"
 const PLACEHOLDER_SIZE: Vector3 = Vector3(1.0, 1.0, 1.0)
-const _PAD_ALBEDO: Color = Color(0.35, 0.9, 0.4)
+const PENDING_ALBEDO: Color = Color(0.35, 0.9, 0.4)
+const ACCEPTED_ALBEDO: Color = Color(0.16, 0.38, 0.22)
+const CURRENT_ALBEDO: Color = Color(0.55, 1.0, 0.45)
 const _TWO_WAY_ALBEDO: Color = Color(0.2, 0.75, 0.95)
 const _ONE_WAY_ALBEDO: Color = Color(0.95, 0.55, 0.15)
 const _FINISH_ALBEDO: Color = Color(0.95, 0.82, 0.2)
@@ -27,6 +31,8 @@ const _FINISH_ALBEDO: Color = Color(0.95, 0.82, 0.2)
 var _pad_count: int = 0
 var _portal_count: int = 0
 var _finish_count: int = 0
+var _accepted_count: int = -1
+var _pad_orders: Dictionary = {}
 
 
 static func meters_from_fixed(value: int) -> float:
@@ -43,6 +49,16 @@ static func portal_name(entity_id: int) -> String:
 
 static func finish_name(entity_id: int) -> String:
 	return "%s%d" % [FINISH_PREFIX, entity_id]
+
+
+static func pad_albedo(order: int, accepted_count: int) -> Color:
+	if accepted_count < 0 or order < 0:
+		return PENDING_ALBEDO
+	if order < accepted_count:
+		return ACCEPTED_ALBEDO
+	if order == accepted_count:
+		return CURRENT_ALBEDO
+	return PENDING_ALBEDO
 
 
 static func compile_path(path: String) -> SimulationBundle:
@@ -70,7 +86,12 @@ func apply_bundle(bundle: SimulationBundle) -> bool:
 	_clear_course()
 	for pad: Dictionary in bundle.pads:
 		var pad_id: int = pad["entity_id"]
-		_spawn_box(pad_name(pad_id), pad, _PAD_ALBEDO)
+		_remember_pad_order(pad)
+		_spawn_box(
+			pad_name(pad_id),
+			pad,
+			pad_albedo(_order_of(pad_id), _accepted_count)
+		)
 	for portal: Dictionary in bundle.portals:
 		var portal_id: int = portal["entity_id"]
 		_spawn_box(portal_name(portal_id), portal, _portal_color(portal))
@@ -81,6 +102,15 @@ func apply_bundle(bundle: SimulationBundle) -> bool:
 	_portal_count = bundle.portals.size()
 	_finish_count = bundle.finish.size()
 	return true
+
+
+func apply_own_progress(accepted_count: int) -> void:
+	_accepted_count = accepted_count
+	_retint_pads()
+
+
+func own_accepted_count() -> int:
+	return _accepted_count
 
 
 func pad_count() -> int:
@@ -211,6 +241,46 @@ func _clear_course() -> void:
 	_pad_count = 0
 	_portal_count = 0
 	_finish_count = 0
+	_pad_orders.clear()
+
+
+func _remember_pad_order(pad: Dictionary) -> void:
+	if not pad.has("entity_id") or typeof(pad["entity_id"]) != TYPE_INT:
+		return
+	if not pad.has("order") or typeof(pad["order"]) != TYPE_INT:
+		return
+	var pad_id: int = pad["entity_id"]
+	var order: int = pad["order"]
+	if pad_id < 1 or order < 0:
+		return
+	_pad_orders[pad_id] = order
+
+
+func _order_of(entity_id: int) -> int:
+	if not _pad_orders.has(entity_id):
+		return -1
+	var raw: Variant = _pad_orders[entity_id]
+	if typeof(raw) != TYPE_INT:
+		return -1
+	var order: int = raw
+	return order
+
+
+func _retint_pads() -> void:
+	for entity_raw: Variant in _pad_orders.keys():
+		if typeof(entity_raw) != TYPE_INT:
+			continue
+		var entity_id: int = entity_raw
+		var node: MeshInstance3D = pad_node(entity_id)
+		if node == null:
+			continue
+		var box: BoxMesh = node.mesh as BoxMesh
+		if box == null:
+			continue
+		var material: StandardMaterial3D = box.material as StandardMaterial3D
+		if material == null:
+			continue
+		material.albedo_color = pad_albedo(_order_of(entity_id), _accepted_count)
 
 
 func _unshaded(color: Color) -> StandardMaterial3D:

@@ -211,6 +211,7 @@
 - `match_own_slot_camera = preview_offset_follow`（2026-08-25）：大厅 SnapshotCamera 跟随本席表现位姿（线上预测 overlay / Solo 本地权威），偏移与 `AuthoringPreviewMap` 相同；`follow_slot < 0` 或缺席位看原点；远端不拉镜头。不是产品镜头或 FOV。不锁远端外推碰撞、平滑对账、离开对局 HTTP。口径见 [CD-12 §1](../10-product/12-product-structure.md#1-入口结构)。
 - `match_move_facing = wasd_discrete_8way_yaw_bam`（2026-08-25）：大厅 WASD 把水平朝向写入已有 Move 命令 `yaw_bam`（8 向离散 BAM，W=0 为世界 -Z）；省略哨兵仍是 `-1`，`0` 是合法朝前。立方体玩家盒加 local -Z 面向标记。线上 overlay 立即改本席朝向，Solo 走本地权威。不发明 atan2，不锁产品转向速度，不改 Preview WASD。口径见 [CD-21 §3](../20-gameplay/21-traprush.md#33-权威运动模型) 与 [CD-12 §1](../10-product/12-product-structure.md#1-入口结构)。
 - `match_own_slot_tint = follow_slot_albedo`（2026-08-25）：大厅 `follow_slot` 把本席玩家盒涂成 `OWN_ALBEDO`（青），远端仍 `REMOTE_ALBEDO`（海军蓝）；名次标本席前缀 `*`。`follow_slot < 0` 时全员远端色。不是产品皮肤或槽位色盘。不锁账号绑定、远端外推碰撞、平滑对账、离开对局 HTTP。口径见 [CD-12 §1](../10-product/12-product-structure.md#1-入口结构)。
+- `match_pad_progress = own_accepted_count_tint`（2026-08-25）：大厅本席 `accepted_count` 把编译拓扑检查点垫涂成已验收 / 当前目标 / 未到；`accepted_count < 0` 保持原垫色。不是走路可达或合法路径距离。不锁账号绑定、远端外推碰撞、平滑对账、离开对局 HTTP。口径见 [CD-12 §1](../10-product/12-product-structure.md#1-入口结构)。
 
 ## D.9 明确延期或跳过
 
