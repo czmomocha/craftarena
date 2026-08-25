@@ -15,7 +15,8 @@ extends Node3D
 ## follow_slot aims SnapshotCamera at that player's presentation pose
 ## with the same offset as AuthoringPreviewMap; < 0 or a missing slot
 ## looks at the origin. The offset is a presentation stub, not a
-## product camera rig.
+## product camera rig. Each player box has a local -Z facing marker so
+## yaw is visible on a cube. Not a product turn speed.
 
 const MatchSnapshotFollowGd := preload("res://src/client/match_snapshot_follow.gd")
 
@@ -24,8 +25,12 @@ const LIGHT_NAME: String = "SnapshotLight"
 const PLAYER_PREFIX: String = "player_"
 const PLACEHOLDER_SIZE: Vector3 = Vector3(1.0, 1.0, 1.0)
 const CAMERA_OFFSET: Vector3 = Vector3(6.0, 8.0, 6.0)
+const FACE_NAME: String = "face"
+const FACE_OFFSET: Vector3 = Vector3(0.0, 0.15, -0.55)
+const FACE_SIZE: Vector3 = Vector3(0.18, 0.18, 0.28)
 const _LIGHT_ROT_DEG: Vector3 = Vector3(-50.0, -30.0, 0.0)
 const _PLAYER_ALBEDO: Color = Color(0.2, 0.45, 0.95)
+const _FACE_ALBEDO: Color = Color(0.95, 0.92, 0.35)
 
 var follow_slot: int = -1
 var _player_count: int = 0
@@ -88,6 +93,13 @@ func standing_node_count() -> int:
 
 func player_node(slot: int) -> MeshInstance3D:
 	return get_node_or_null(player_name(slot)) as MeshInstance3D
+
+
+func facing_node(slot: int) -> MeshInstance3D:
+	var player: MeshInstance3D = player_node(slot)
+	if player == null:
+		return null
+	return player.get_node_or_null(FACE_NAME) as MeshInstance3D
 
 
 func camera_node() -> Camera3D:
@@ -167,6 +179,18 @@ func _spawn_player(slot: int, body: Dictionary) -> void:
 	node.position = Vector3(meters_from_fixed(x), meters_from_fixed(y), meters_from_fixed(z))
 	node.rotation.y = yaw_radians_from_bam(yaw_bam)
 	add_child(node)
+	_spawn_facing(node)
+
+
+func _spawn_facing(player: MeshInstance3D) -> void:
+	var mesh: BoxMesh = BoxMesh.new()
+	mesh.size = FACE_SIZE
+	mesh.material = _unshaded(_FACE_ALBEDO)
+	var node: MeshInstance3D = MeshInstance3D.new()
+	node.name = FACE_NAME
+	node.mesh = mesh
+	node.position = FACE_OFFSET
+	player.add_child(node)
 
 
 func _clear_players() -> void:

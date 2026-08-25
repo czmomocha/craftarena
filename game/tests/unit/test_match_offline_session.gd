@@ -4,6 +4,7 @@ extends GutTest
 ## CD-13 offline banner, no HTTP / settlement / online writes.
 
 const MatchFrameCodec := preload("res://src/shared/protocol/match_frame_codec.gd")
+const MatchMoveFacing := preload("res://src/client/match_move_facing.gd")
 const MatchOfflineSession := preload("res://src/client/match_offline_session.gd")
 const PlayerIntentNames := preload("res://src/shared/commands/player_intent_names.gd")
 
@@ -83,8 +84,23 @@ func test_wasd_and_unwired_intents() -> void:
 	var decoded: Dictionary = MatchFrameCodec.decode_command(bytes)
 	var decoded_dx: int = decoded.get("dx", 0)
 	var decoded_dz: int = decoded.get("dz", 0)
+	var decoded_yaw: int = decoded.get("yaw_bam", -2)
 	assert_eq(decoded_dx, 16)
 	assert_eq(decoded_dz, -16)
+	assert_eq(decoded_yaw, MatchMoveFacing.YAW_FORWARD_RIGHT)
+	var before: Dictionary = offline.follow.players[0]
+	var before_yaw: int = before.get("yaw_bam", -3)
+	var right: PackedByteArray = offline.try_encode_move_axes(false, false, false, true, 16)
+	assert_false(right.is_empty())
+	var after: Dictionary = offline.follow.players[0]
+	var after_yaw: int = after.get("yaw_bam", -3)
+	assert_eq(after_yaw, MatchMoveFacing.YAW_RIGHT)
+	assert_ne(before_yaw, MatchMoveFacing.YAW_RIGHT)
+	var forward: PackedByteArray = offline.try_encode_move_axes(true, false, false, false, 16)
+	assert_false(forward.is_empty())
+	var faced: Dictionary = offline.follow.players[0]
+	var faced_yaw: int = faced.get("yaw_bam", -3)
+	assert_eq(faced_yaw, MatchMoveFacing.YAW_FORWARD)
 	assert_true(offline.try_encode_move_axes(false, false, false, false, 16).is_empty())
 	assert_true(offline.try_encode_intent(PlayerIntentNames.SHOVE, 0, 0, 0).is_empty())
 	assert_true(offline.try_encode_intent(PlayerIntentNames.INTERACT, 0, 0, 0).is_empty())

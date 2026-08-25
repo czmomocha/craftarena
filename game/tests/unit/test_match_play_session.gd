@@ -2,10 +2,12 @@ extends GutTest
 
 ## Play session: ready ticket → gateway URL, open, follow snapshots,
 ## encode existing command frames. Tick field is 0. Own-slot Move/Jump
-## overlay via MatchLocalPredict; a newer snapshot tick hard-snaps.
+## overlay via MatchLocalPredict; WASD Move writes discrete yaw_bam.
+## A newer snapshot tick hard-snaps.
 
 const MatchFrameCodec := preload("res://src/shared/protocol/match_frame_codec.gd")
 const MatchJoinSession := preload("res://src/client/match_join_session.gd")
+const MatchMoveFacing := preload("res://src/client/match_move_facing.gd")
 const MatchPlaySession := preload("res://src/client/match_play_session.gd")
 const PlayerIntentNames := preload("res://src/shared/commands/player_intent_names.gd")
 
@@ -41,10 +43,18 @@ func test_open_then_snapshot_then_commands() -> void:
 	var decoded_tick: int = decoded.get("tick", -1)
 	var decoded_intent: String = decoded.get("intent", "")
 	var decoded_dx: int = decoded.get("dx", 0)
+	var decoded_yaw: int = decoded.get("yaw_bam", 0)
 	assert_true(decoded_ok)
 	assert_eq(decoded_tick, 0)
 	assert_eq(decoded_intent, PlayerIntentNames.MOVE)
 	assert_eq(decoded_dx, 65536)
+	assert_eq(decoded_yaw, -1)
+	assert_eq(play.predict.yaw_bam, -1)
+	var faced: PackedByteArray = play.try_encode_intent(PlayerIntentNames.MOVE, 65536, 0, 0)
+	var faced_decoded: Dictionary = MatchFrameCodec.decode_command(faced)
+	var faced_yaw: int = faced_decoded.get("yaw_bam", -2)
+	assert_eq(faced_yaw, MatchMoveFacing.YAW_FORWARD)
+	assert_eq(play.predict.yaw_bam, MatchMoveFacing.YAW_FORWARD)
 	var jump: PackedByteArray = play.try_encode_intent(PlayerIntentNames.JUMP, 0, 0, 0)
 	assert_false(jump.is_empty())
 	assert_eq(play.predict.dy, 0)
@@ -65,8 +75,20 @@ func test_wasd_axes_encode_move_only_when_in_match() -> void:
 	var decoded: Dictionary = MatchFrameCodec.decode_command(bytes)
 	var dx: int = decoded.get("dx", 0)
 	var dz: int = decoded.get("dz", 0)
+	var yaw_bam: int = decoded.get("yaw_bam", -2)
 	assert_eq(dx, 16)
 	assert_eq(dz, -16)
+	assert_eq(yaw_bam, MatchMoveFacing.YAW_FORWARD_RIGHT)
+	assert_eq(play.predict.yaw_bam, MatchMoveFacing.YAW_FORWARD_RIGHT)
+	var forward: PackedByteArray = play.try_encode_move_axes(true, false, false, false, 16)
+	var forward_decoded: Dictionary = MatchFrameCodec.decode_command(forward)
+	var forward_yaw: int = forward_decoded.get("yaw_bam", -2)
+	assert_eq(forward_yaw, MatchMoveFacing.YAW_FORWARD)
+	assert_eq(play.predict.yaw_bam, MatchMoveFacing.YAW_FORWARD)
+	var right: PackedByteArray = play.try_encode_move_axes(false, false, false, true, 16)
+	var right_decoded: Dictionary = MatchFrameCodec.decode_command(right)
+	var right_yaw: int = right_decoded.get("yaw_bam", -2)
+	assert_eq(right_yaw, MatchMoveFacing.YAW_RIGHT)
 	assert_true(play.try_encode_move_axes(false, false, false, false, 16).is_empty())
 	assert_true(play.try_leave())
 	assert_eq(play.state, MatchPlaySession.STATE_IDLE)

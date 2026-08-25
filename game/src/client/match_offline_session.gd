@@ -11,6 +11,7 @@ extends RefCounted
 
 const MatchCourseMapGd := preload("res://src/client/match_course_map.gd")
 const MatchFrameCodec := preload("res://src/shared/protocol/match_frame_codec.gd")
+const MatchMoveFacingGd := preload("res://src/client/match_move_facing.gd")
 const MatchSnapshotFollowGd := preload("res://src/client/match_snapshot_follow.gd")
 const PlayerIntentNames := preload("res://src/shared/commands/player_intent_names.gd")
 const TraprushMatchSessionGd := preload("res://src/games/traprush/match_session.gd")
@@ -40,25 +41,7 @@ var play_use_item_reach_dz: int = 0
 
 
 static func move_axes(forward: bool, back: bool, left: bool, right: bool, step: int) -> Dictionary:
-	if step < 1:
-		return {}
-	var dx: int = 0
-	var dz: int = 0
-	if right:
-		dx += step
-	if left:
-		dx -= step
-	if back:
-		dz += step
-	if forward:
-		dz -= step
-	if dx == 0 and dz == 0:
-		return {}
-	return {
-		"intent": PlayerIntentNames.MOVE,
-		"dx": dx,
-		"dz": dz,
-	}
+	return MatchMoveFacingGd.move_axes(forward, back, left, right, step)
 
 
 func try_begin(path: String, web_platform: bool = false) -> bool:
@@ -121,8 +104,6 @@ func try_encode_intent(intent_name: String, dx: int, dz: int, yaw_bam: int) -> P
 		dx = 0
 		dz = 0
 		yaw = 0
-	elif yaw == 0:
-		yaw = _YAW_OMITTED
 	var bytes: PackedByteArray = MatchFrameCodec.encode_command(0, intent_name, dx, dz, yaw)
 	if bytes.is_empty():
 		return PackedByteArray()
@@ -138,7 +119,8 @@ func try_encode_move_axes(forward: bool, back: bool, left: bool, right: bool, st
 		return PackedByteArray()
 	var dx: int = payload.get("dx", 0)
 	var dz: int = payload.get("dz", 0)
-	return try_encode_intent(PlayerIntentNames.MOVE, dx, dz, _YAW_OMITTED)
+	var yaw_bam: int = payload.get("yaw_bam", _YAW_OMITTED)
+	return try_encode_intent(PlayerIntentNames.MOVE, dx, dz, yaw_bam)
 
 
 func try_apply_command(bytes: PackedByteArray) -> bool:

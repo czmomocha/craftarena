@@ -9,10 +9,12 @@ extends RefCounted
 ## local overlay via MatchLocalPredict; a newer snapshot tick hard-snaps.
 ## After a close, a new ticket from reconnect can try_begin again.
 ## try_leave returns the session to idle and drops followed snapshots.
+## WASD Move writes discrete 8-way yaw_bam; 0 is face -Z, not omitted.
 
 const MatchFrameCodec := preload("res://src/shared/protocol/match_frame_codec.gd")
 const MatchJoinSessionGd := preload("res://src/client/match_join_session.gd")
 const MatchLocalPredictGd := preload("res://src/client/match_local_predict.gd")
+const MatchMoveFacingGd := preload("res://src/client/match_move_facing.gd")
 const MatchSnapshotFollowGd := preload("res://src/client/match_snapshot_follow.gd")
 const PlayerIntentNames := preload("res://src/shared/commands/player_intent_names.gd")
 
@@ -50,25 +52,7 @@ static func gateway_ws_url(gateway_base: String, ticket: String) -> String:
 
 
 static func move_axes(forward: bool, back: bool, left: bool, right: bool, step: int) -> Dictionary:
-	if step < 1:
-		return {}
-	var dx: int = 0
-	var dz: int = 0
-	if right:
-		dx += step
-	if left:
-		dx -= step
-	if back:
-		dz += step
-	if forward:
-		dz -= step
-	if dx == 0 and dz == 0:
-		return {}
-	return {
-		"intent": PlayerIntentNames.MOVE,
-		"dx": dx,
-		"dz": dz,
-	}
+	return MatchMoveFacingGd.move_axes(forward, back, left, right, step)
 
 
 func try_begin(join: MatchJoinSessionGd, gateway_base: String) -> bool:
@@ -132,14 +116,12 @@ func try_encode_intent(intent_name: String, dx: int, dz: int, yaw_bam: int) -> P
 		dx = 0
 		dz = 0
 		yaw = 0
-	elif yaw == 0:
-		yaw = _YAW_OMITTED
 	var bytes: PackedByteArray = MatchFrameCodec.encode_command(0, intent_name, dx, dz, yaw)
 	if bytes.is_empty():
 		return PackedByteArray()
 	last_command = bytes
 	if intent_name == PlayerIntentNames.MOVE:
-		predict.try_add_move(dx, dz)
+		predict.try_add_move(dx, dz, yaw)
 	elif intent_name == PlayerIntentNames.JUMP:
 		predict.try_add_jump(play_jump_dy)
 	return bytes
@@ -151,7 +133,8 @@ func try_encode_move_axes(forward: bool, back: bool, left: bool, right: bool, st
 		return PackedByteArray()
 	var dx: int = payload.get("dx", 0)
 	var dz: int = payload.get("dz", 0)
-	return try_encode_intent(PlayerIntentNames.MOVE, dx, dz, _YAW_OMITTED)
+	var yaw_bam: int = payload.get("yaw_bam", _YAW_OMITTED)
+	return try_encode_intent(PlayerIntentNames.MOVE, dx, dz, yaw_bam)
 
 
 func status_view() -> Dictionary:

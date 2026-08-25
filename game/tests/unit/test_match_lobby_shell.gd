@@ -3,10 +3,12 @@ extends GutTest
 ## MatchLobbyShell: TRAPRUSH quick play / room code / queue / latest snapshot.
 ## Injected HTTP and socket events. Close only hides. Never settlement.
 ## Own-seat SnapshotCamera follows the presentation pose; remotes do not.
+## WASD writes discrete 8-way yaw_bam; player boxes show a facing marker.
 
 const MatchFrameCodec := preload("res://src/shared/protocol/match_frame_codec.gd")
 const MatchJoinSession := preload("res://src/client/match_join_session.gd")
 const MatchLobbyShell := preload("res://src/client/match_lobby_shell.gd")
+const MatchMoveFacing := preload("res://src/client/match_move_facing.gd")
 const MatchOfflineSession := preload("res://src/client/match_offline_session.gd")
 const MatchPlaySession := preload("res://src/client/match_play_session.gd")
 const MatchSnapshotMap := preload("res://src/client/match_snapshot_map.gd")
@@ -556,6 +558,41 @@ func test_online_camera_follows_seat_one() -> void:
 	_assert_lobby_camera_at(Vector3.ZERO)
 
 
+func test_solo_wasd_turns_facing_marker() -> void:
+	_shell = _open_shell()
+	assert_true(_shell.try_solo())
+	var player: MeshInstance3D = _shell.map.player_node(0)
+	var face: MeshInstance3D = _shell.map.facing_node(0)
+	assert_not_null(player)
+	assert_not_null(face)
+	_assert_player_yaw(player, MatchMoveFacing.YAW_FORWARD)
+	assert_false(_shell.try_sample_play_move(false, false, false, true).is_empty())
+	player = _shell.map.player_node(0)
+	face = _shell.map.facing_node(0)
+	_assert_player_yaw(player, MatchMoveFacing.YAW_RIGHT)
+	assert_gt(face.global_position.x - player.global_position.x, 0.4)
+	assert_false(_shell.try_sample_play_move(true, false, false, false).is_empty())
+	player = _shell.map.player_node(0)
+	face = _shell.map.facing_node(0)
+	_assert_player_yaw(player, MatchMoveFacing.YAW_FORWARD)
+	assert_lt(face.global_position.z - player.global_position.z, -0.4)
+
+
+func test_online_wasd_overlays_yaw_then_hard_snaps() -> void:
+	_shell = _open_shell()
+	assert_true(_shell.try_quick())
+	assert_true(_shell.accept_http(201, _join("ABCD23", "ticket-yaw")))
+	assert_true(_shell.on_socket_open())
+	assert_true(_shell.on_binary(_snapshot(1, 0, [_crate(40, 1)])))
+	_assert_player_yaw(_shell.map.player_node(0), MatchMoveFacing.YAW_FORWARD)
+	assert_false(_shell.try_sample_play_move(false, false, false, true).is_empty())
+	_assert_player_yaw(_shell.map.player_node(0), MatchMoveFacing.YAW_RIGHT)
+	assert_eq(_shell.play.predict.yaw_bam, MatchMoveFacing.YAW_RIGHT)
+	assert_true(_shell.on_binary(_snapshot(2, 0, [_crate(40, 1)])))
+	assert_eq(_shell.play.predict.yaw_bam, -1)
+	_assert_player_yaw(_shell.map.player_node(0), MatchMoveFacing.YAW_FORWARD)
+
+
 func test_solo_use_item_from_spawn_breaks_course_01_crate() -> void:
 	_shell = _open_shell()
 	assert_true(_shell.try_solo())
@@ -635,6 +672,12 @@ func _ranked_player(x: int, accepted_count: int, finish_tick: int) -> Dictionary
 func _ranked_snapshot(tick: int, players: Array[Dictionary]) -> PackedByteArray:
 	var crates: Array[Dictionary] = []
 	return MatchFrameCodec.encode_snapshot(tick, players, crates)
+
+
+func _assert_player_yaw(node: Node3D, yaw_bam: int) -> void:
+	assert_not_null(node)
+	var expected: float = MatchSnapshotMap.yaw_radians_from_bam(yaw_bam)
+	assert_almost_eq(angle_difference(node.rotation.y, expected), 0.0, 0.0001)
 
 
 func _assert_lobby_camera_on(node: MeshInstance3D) -> void:

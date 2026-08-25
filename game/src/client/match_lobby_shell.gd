@@ -21,8 +21,9 @@ extends Node
 ## the latest authority for Move/Jump; remotes still interpolate.
 ## SnapshotCamera follows the own-seat presentation pose (predicted
 ## online, local authority offline) with the Preview camera offset.
-## Remotes do not pull the camera. WASD / Jump / Reset / Use item encode existing
-## intents. play_move_step is a presentation stub, not a product speed.
+## Remotes do not pull the camera. WASD encodes Move plus discrete 8-way
+## yaw_bam; Jump / Reset / Use item encode existing intents.
+## play_move_step is a presentation stub, not a product speed.
 ## Unexpected socket close while connecting or in-match reissues the
 ## consumed ticket and follows the latest snapshot again.
 ## Cancel stops solo play, cancels a waiting queue, and locally leaves
