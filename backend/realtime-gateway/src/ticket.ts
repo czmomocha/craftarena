@@ -23,8 +23,8 @@ export interface TicketVerifier {
  * 开发期占位实现：只检查票据非空，不做任何真实校验；上游地址来自构造参数
  * （`GATEWAY_DEV_UPSTREAM`），即开发机上所有连接都代理到同一个对局进程。
  *
- * M0 阶段控制面还没有票据签发与校验接口，先用它把连接握手链路跑通。
- * **上线前必须替换**，相关风险已记在 CD-62。
+ * 仅当显式设置 `GATEWAY_DEV_UPSTREAM` 时使用。生产路径走
+ * {@link ControlPlaneTicketVerifier}。**上线前不得把本类当默认校验**，相关风险见 CD-62。
  */
 export class DevTicketVerifier implements TicketVerifier {
 	readonly #upstreamUrl: string | undefined;
@@ -40,5 +40,69 @@ export class DevTicketVerifier implements TicketVerifier {
 		}
 
 		return { ok: true, upstreamUrl: this.#upstreamUrl };
+	}
+}
+
+/**
+ * 生产路径：把票据交给控制面消费校验。网关不记账、不查库，
+ * 只把控制面返回的上游地址带进代理（宪法第二十一条）。
+ */
+export class ControlPlaneTicketVerifier implements TicketVerifier {
+	readonly #baseUrl: string;
+	readonly #timeoutMs: number;
+
+	constructor(baseUrl: string, timeoutMs = 2000) {
+		this.#baseUrl = baseUrl.replace(/\/+$/, "");
+		this.#timeoutMs = timeoutMs;
+	}
+
+	async verify(ticket: string | null): Promise<TicketVerdict> {
+		if (ticket === null || ticket.trim() === "") {
+			return { ok: false, reason: "missing ticket" };
+		}
+
+		const response = await fetch(`${this.#baseUrl}/tickets/verify`, {
+			method: "POST",
+			headers: { "content-type": "application/json" },
+			body: JSON.stringify({ ticket: ticket.trim() }),
+			signal: AbortSignal.timeout(this.#timeoutMs),
+		});
+
+		if (response.status === 401) {
+			const failure = await readVerifyBody(response);
+			return { ok: false, reason: failure?.reason ?? "rejected" };
+		}
+		if (!response.ok) {
+			throw new Error(`control plane verify returned HTTP ${response.status}`);
+		}
+
+		const body = await readVerifyBody(response);
+		if (body === undefined || body.ok !== true) {
+			return { ok: false, reason: body?.reason ?? "rejected" };
+		}
+
+		return {
+			ok: true,
+			upstreamUrl: typeof body.upstreamUrl === "string" ? body.upstreamUrl : undefined,
+		};
+	}
+}
+
+async function readVerifyBody(
+	response: Response,
+): Promise<{ ok?: unknown; reason?: string | undefined; upstreamUrl?: unknown } | undefined> {
+	try {
+		const body: unknown = await response.json();
+		if (typeof body !== "object" || body === null) {
+			return undefined;
+		}
+		const record = body as { ok?: unknown; reason?: unknown; upstreamUrl?: unknown };
+		return {
+			ok: record.ok,
+			reason: typeof record.reason === "string" ? record.reason : undefined,
+			upstreamUrl: record.upstreamUrl,
+		};
+	} catch {
+		return undefined;
 	}
 }

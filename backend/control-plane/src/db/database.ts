@@ -1,8 +1,41 @@
+import { randomUUID } from "node:crypto";
 import { mkdirSync } from "node:fs";
 import { dirname } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 
+import { TICKET_REJECT_REASONS, type TicketRejectReason } from "../../../contracts/src/match_ticket.ts";
+import { generateTicket, hashTicket } from "../tickets.ts";
 import { MIGRATIONS, SCHEMA_MIGRATIONS_TABLE } from "./migrations.ts";
+
+export interface MatchSessionRecord {
+	readonly matchId: string;
+	readonly upstreamUrl: string;
+	readonly createdAt: string;
+}
+
+export interface IssuedTicket {
+	readonly ticket: string;
+	readonly matchId: string;
+	readonly expiresAt: string;
+}
+
+export type ConsumeTicketResult =
+	| { readonly ok: true; readonly upstreamUrl: string }
+	| { readonly ok: false; readonly reason: TicketRejectReason };
+
+export class MatchSessionExistsError extends Error {
+	constructor(matchId: string) {
+		super(`match session already exists: ${matchId}`);
+		this.name = "MatchSessionExistsError";
+	}
+}
+
+export class MatchSessionNotFoundError extends Error {
+	constructor(matchId: string) {
+		super(`match session not found: ${matchId}`);
+		this.name = "MatchSessionNotFoundError";
+	}
+}
 
 /**
  * 控制面对 SQLite 的唯一入口。
@@ -83,7 +116,116 @@ export class ControlPlaneDatabase {
 		return row !== undefined && String(row["last_checked_at"]) === stamp;
 	}
 
+	insertMatchSession(input: {
+		readonly matchId?: string | undefined;
+		readonly upstreamUrl: string;
+		readonly now: Date;
+	}): MatchSessionRecord {
+		const matchId = input.matchId ?? randomUUID();
+		const createdAt = input.now.toISOString();
+
+		try {
+			this.#db
+				.prepare("INSERT INTO match_sessions (match_id, upstream_url, created_at) VALUES (?, ?, ?)")
+				.run(matchId, input.upstreamUrl, createdAt);
+		} catch (error) {
+			if (isUniqueConstraint(error)) {
+				throw new MatchSessionExistsError(matchId);
+			}
+			throw error;
+		}
+
+		return { matchId, upstreamUrl: input.upstreamUrl, createdAt };
+	}
+
+	getMatchSession(matchId: string): MatchSessionRecord | undefined {
+		const row = this.#db
+			.prepare("SELECT match_id, upstream_url, created_at FROM match_sessions WHERE match_id = ?")
+			.get(matchId);
+		if (row === undefined) {
+			return undefined;
+		}
+
+		return {
+			matchId: String(row["match_id"]),
+			upstreamUrl: String(row["upstream_url"]),
+			createdAt: String(row["created_at"]),
+		};
+	}
+
+	issueTicket(matchId: string, now: Date, ttlMs: number): IssuedTicket {
+		if (this.getMatchSession(matchId) === undefined) {
+			throw new MatchSessionNotFoundError(matchId);
+		}
+
+		const ticket = generateTicket();
+		const createdAt = now.toISOString();
+		const expiresAt = new Date(now.getTime() + ttlMs).toISOString();
+
+		this.#db
+			.prepare(
+				"INSERT INTO match_tickets (ticket_hash, match_id, expires_at, consumed_at, created_at) VALUES (?, ?, ?, NULL, ?)",
+			)
+			.run(hashTicket(ticket), matchId, expiresAt, createdAt);
+
+		return { ticket, matchId, expiresAt };
+	}
+
+	/**
+	 * 一次性消费。同一票据第二次调用必须失败。
+	 * 明文从不入库：先哈希再查。
+	 */
+	consumeTicket(ticket: string, now: Date): ConsumeTicketResult {
+		const hash = hashTicket(ticket);
+		const nowIso = now.toISOString();
+
+		this.#db.exec("BEGIN");
+		try {
+			const row = this.#db
+				.prepare(
+					`SELECT t.expires_at AS expires_at, t.consumed_at AS consumed_at, s.upstream_url AS upstream_url
+					 FROM match_tickets t
+					 INNER JOIN match_sessions s ON s.match_id = t.match_id
+					 WHERE t.ticket_hash = ?`,
+				)
+				.get(hash);
+
+			if (row === undefined) {
+				this.#db.exec("ROLLBACK");
+				return { ok: false, reason: TICKET_REJECT_REASONS.unknownTicket };
+			}
+			if (row["consumed_at"] !== null && row["consumed_at"] !== undefined) {
+				this.#db.exec("ROLLBACK");
+				return { ok: false, reason: TICKET_REJECT_REASONS.consumedTicket };
+			}
+			if (String(row["expires_at"]) <= nowIso) {
+				this.#db.exec("ROLLBACK");
+				return { ok: false, reason: TICKET_REJECT_REASONS.expiredTicket };
+			}
+
+			const updated = this.#db
+				.prepare(
+					"UPDATE match_tickets SET consumed_at = ? WHERE ticket_hash = ? AND consumed_at IS NULL",
+				)
+				.run(nowIso, hash);
+			if (updated.changes !== 1) {
+				this.#db.exec("ROLLBACK");
+				return { ok: false, reason: TICKET_REJECT_REASONS.consumedTicket };
+			}
+
+			this.#db.exec("COMMIT");
+			return { ok: true, upstreamUrl: String(row["upstream_url"]) };
+		} catch (error) {
+			this.#db.exec("ROLLBACK");
+			throw error;
+		}
+	}
+
 	close(): void {
 		this.#db.close();
 	}
+}
+
+function isUniqueConstraint(error: unknown): boolean {
+	return error instanceof Error && error.message.includes("UNIQUE constraint failed");
 }

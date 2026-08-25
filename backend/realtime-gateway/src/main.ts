@@ -1,11 +1,16 @@
 import { loadConfig } from "./config.ts";
 import { HttpControlPlaneProbe, buildGateway } from "./server.ts";
-import { DevTicketVerifier } from "./ticket.ts";
+import { ControlPlaneTicketVerifier, DevTicketVerifier } from "./ticket.ts";
 
 const config = loadConfig();
 
+const ticketVerifier =
+	config.devUpstreamUrl === undefined
+		? new ControlPlaneTicketVerifier(config.controlPlaneUrl)
+		: new DevTicketVerifier(config.devUpstreamUrl);
+
 const gateway = buildGateway({
-	ticketVerifier: new DevTicketVerifier(config.devUpstreamUrl),
+	ticketVerifier,
 	controlPlaneProbe: new HttpControlPlaneProbe(config.controlPlaneUrl),
 	version: config.version,
 	logger: { level: config.logLevel },

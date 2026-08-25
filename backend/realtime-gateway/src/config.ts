@@ -4,8 +4,8 @@ export interface GatewayConfig {
 	/** 控制面基址。网关只通过它做票据校验，绝不直接碰数据库（宪法第二十一条）。 */
 	readonly controlPlaneUrl: string;
 	/**
-	 * 开发期占位上游：DevTicketVerifier 把所有合法票据代理到这个对局进程地址。
-	 * 真票据的 票据→对局 解析在控制面（后续章节），生产路径不读这个值。
+	 * 开发期显式旁路：设置后网关改用 DevTicketVerifier，所有非空票据代理到这个地址。
+	 * 未设置时走控制面 `POST /tickets/verify`。
 	 */
 	readonly devUpstreamUrl?: string | undefined;
 	readonly version: string;
@@ -19,10 +19,15 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): GatewayConfig 
 		host: env["GATEWAY_HOST"] ?? "127.0.0.1",
 		port: parsePort(env["GATEWAY_PORT"], DEFAULT_PORT),
 		controlPlaneUrl: (env["CONTROL_PLANE_URL"] ?? "http://127.0.0.1:8080").replace(/\/+$/, ""),
-		devUpstreamUrl: env["GATEWAY_DEV_UPSTREAM"],
+		devUpstreamUrl: emptyToUndefined(env["GATEWAY_DEV_UPSTREAM"]),
 		version: env["CRAFTARENA_VERSION"] ?? "0.0.0-dev",
 		logLevel: env["GATEWAY_LOG_LEVEL"] ?? "info",
 	};
+}
+
+function emptyToUndefined(raw: string | undefined): string | undefined {
+	const trimmed = raw?.trim();
+	return trimmed === undefined || trimmed === "" ? undefined : trimmed;
 }
 
 function parsePort(raw: string | undefined, fallback: number): number {
