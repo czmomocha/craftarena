@@ -12,18 +12,23 @@ extends Node
 ## Maps compiled checkpoint order as labels plus unique-order bars;
 ## duplicate orders are labeled only. Maps live standings from the latest
 ## snapshot (finish_tick then accepted_count; slot is the stable key).
-## Path distance is not ranked. No interpolation. WASD / Jump /
-## Reset / Use item encode existing intents. play_move_step is a
-## presentation stub, not a product speed.
-## No BASTION, accounts, reconnect tickets, settlement, or offline writes.
+## Path distance is not ranked. Solo play starts a local
+## TraprushMatchSession (CD-13 §3); the HUD keeps
+## "离线试玩，成绩不上传" while it runs. Web is refused.
+## No interpolation. WASD / Jump / Reset / Use item encode existing
+## intents. play_move_step is a presentation stub, not a product speed.
+## No BASTION, accounts, reconnect tickets, settlement, ghosts,
+## or offline writes.
 
 const MatchFrameCodec := preload("res://src/shared/protocol/match_frame_codec.gd")
 const MatchJoinSessionGd := preload("res://src/client/match_join_session.gd")
+const MatchOfflineSessionGd := preload("res://src/client/match_offline_session.gd")
 const MatchPlaySessionGd := preload("res://src/client/match_play_session.gd")
 const MatchCheckpointOrderMapGd := preload("res://src/client/match_checkpoint_order_map.gd")
 const MatchCourseMapGd := preload("res://src/client/match_course_map.gd")
 const MatchCrateMapGd := preload("res://src/client/match_crate_map.gd")
 const MatchPortalLinkMapGd := preload("res://src/client/match_portal_link_map.gd")
+const MatchSnapshotFollowGd := preload("res://src/client/match_snapshot_follow.gd")
 const MatchSnapshotMapGd := preload("res://src/client/match_snapshot_map.gd")
 const MatchStandingMapGd := preload("res://src/client/match_standing_map.gd")
 const PlayerIntentNames := preload("res://src/shared/commands/player_intent_names.gd")
@@ -37,6 +42,7 @@ const QUICK_NAME: String = "QuickPlay"
 const CREATE_NAME: String = "CreateRoom"
 const JOIN_NAME: String = "JoinRoom"
 const CANCEL_NAME: String = "Cancel"
+const SOLO_NAME: String = "SoloPlay"
 const POLL_NAME: String = "Poll"
 const ROOM_NAME: String = "RoomCode"
 const _STATUS_NAME: String = "Status"
@@ -55,6 +61,7 @@ const _JUMP: String = "jump"
 
 var join: MatchJoinSessionGd = null
 var play: MatchPlaySessionGd = null
+var offline: MatchOfflineSessionGd = null
 var map: MatchSnapshotMapGd = null
 var course: MatchCourseMapGd = null
 var crates: MatchCrateMapGd = null
@@ -63,6 +70,7 @@ var orders: MatchCheckpointOrderMapGd = null
 var standings: MatchStandingMapGd = null
 var window: Window = null
 var live_io: bool = false
+var web_platform: bool = false
 var control_plane_base: String = DEFAULT_CONTROL_PLANE
 var gateway_base: String = DEFAULT_GATEWAY
 var course_path: String = DEFAULT_COURSE
@@ -86,6 +94,8 @@ static func create() -> MatchLobbyShell:
 	var shell := new()
 	shell.join = MatchJoinSessionGd.create()
 	shell.play = MatchPlaySessionGd.new()
+	shell.offline = MatchOfflineSessionGd.new()
+	shell.web_platform = OS.has_feature("web")
 	return shell
 
 
@@ -131,7 +141,7 @@ func set_room_code_text(text: String) -> void:
 
 
 func try_quick() -> bool:
-	if join == null:
+	if join == null or _offline_playing():
 		return false
 	if not join.try_quick():
 		return false
@@ -141,7 +151,7 @@ func try_quick() -> bool:
 
 
 func try_create_room() -> bool:
-	if join == null:
+	if join == null or _offline_playing():
 		return false
 	if not join.try_create_room():
 		return false
@@ -151,7 +161,7 @@ func try_create_room() -> bool:
 
 
 func try_join_room(raw_code: String = "") -> bool:
-	if join == null:
+	if join == null or _offline_playing():
 		return false
 	var code: String = raw_code
 	if code == "" and _room_edit != null:
@@ -164,7 +174,7 @@ func try_join_room(raw_code: String = "") -> bool:
 
 
 func try_poll() -> bool:
-	if join == null:
+	if join == null or _offline_playing():
 		return false
 	if not join.try_poll():
 		return false
@@ -173,7 +183,38 @@ func try_poll() -> bool:
 	return true
 
 
+func try_solo() -> bool:
+	if offline == null:
+		return false
+	if _online_busy():
+		return false
+	_prepare_offline_stubs()
+	if not offline.try_begin(course_path, web_platform):
+		_refresh_status()
+		return false
+	_apply_snapshot_map()
+	_refresh_status()
+	return true
+
+
+func try_stop_offline() -> bool:
+	if offline == null or not _offline_playing():
+		return false
+	if not offline.try_stop():
+		return false
+	if map != null:
+		map.apply_players([])
+	if standings != null:
+		standings.apply_players([])
+	if crates != null:
+		crates.apply_path(course_path)
+	_refresh_status()
+	return true
+
+
 func try_cancel() -> bool:
+	if _offline_playing():
+		return try_stop_offline()
 	if join == null:
 		return false
 	if not join.try_cancel():
@@ -200,7 +241,7 @@ func apply_http_text(status_code: int, text: String) -> bool:
 
 
 func try_begin_play() -> bool:
-	if join == null or play == null:
+	if join == null or play == null or _offline_playing():
 		return false
 	if not play.try_begin(join, gateway_base):
 		return false
@@ -236,7 +277,15 @@ func on_binary(bytes: PackedByteArray) -> bool:
 
 
 func try_sample_play_move(forward: bool, back: bool, left: bool, right: bool) -> PackedByteArray:
-	if play == null or window == null or not window.visible:
+	if window == null or not window.visible:
+		return PackedByteArray()
+	if _offline_playing():
+		var offline_bytes: PackedByteArray = offline.try_encode_move_axes(
+			forward, back, left, right, play_move_step
+		)
+		_apply_snapshot_map()
+		return offline_bytes
+	if play == null:
 		return PackedByteArray()
 	var bytes: PackedByteArray = play.try_encode_move_axes(forward, back, left, right, play_move_step)
 	_note_command(bytes)
@@ -246,7 +295,15 @@ func try_sample_play_move(forward: bool, back: bool, left: bool, right: bool) ->
 func try_sample_play_reset(pressed: bool) -> PackedByteArray:
 	var rising: bool = pressed and not _reset_held
 	_reset_held = pressed
-	if not rising or play == null or window == null or not window.visible:
+	if not rising or window == null or not window.visible:
+		return PackedByteArray()
+	if _offline_playing():
+		var offline_bytes: PackedByteArray = offline.try_encode_intent(
+			PlayerIntentNames.RESET_TO_CHECKPOINT, 0, 0, 0
+		)
+		_apply_snapshot_map()
+		return offline_bytes
+	if play == null:
 		return PackedByteArray()
 	var bytes: PackedByteArray = play.try_encode_intent(PlayerIntentNames.RESET_TO_CHECKPOINT, 0, 0, 0)
 	_note_command(bytes)
@@ -256,7 +313,15 @@ func try_sample_play_reset(pressed: bool) -> PackedByteArray:
 func try_sample_play_use_item(pressed: bool) -> PackedByteArray:
 	var rising: bool = pressed and not _use_item_held
 	_use_item_held = pressed
-	if not rising or play == null or window == null or not window.visible:
+	if not rising or window == null or not window.visible:
+		return PackedByteArray()
+	if _offline_playing():
+		var offline_bytes: PackedByteArray = offline.try_encode_intent(
+			PlayerIntentNames.USE_ITEM, 0, 0, 0
+		)
+		_apply_snapshot_map()
+		return offline_bytes
+	if play == null:
 		return PackedByteArray()
 	var bytes: PackedByteArray = play.try_encode_intent(PlayerIntentNames.USE_ITEM, 0, 0, 0)
 	_note_command(bytes)
@@ -266,7 +331,15 @@ func try_sample_play_use_item(pressed: bool) -> PackedByteArray:
 func try_sample_play_jump(pressed: bool) -> PackedByteArray:
 	var rising: bool = pressed and not _jump_held
 	_jump_held = pressed
-	if not rising or play == null or window == null or not window.visible:
+	if not rising or window == null or not window.visible:
+		return PackedByteArray()
+	if _offline_playing():
+		var offline_bytes: PackedByteArray = offline.try_encode_intent(
+			PlayerIntentNames.JUMP, 0, 0, 0
+		)
+		_apply_snapshot_map()
+		return offline_bytes
+	if play == null:
 		return PackedByteArray()
 	var bytes: PackedByteArray = play.try_encode_intent(PlayerIntentNames.JUMP, 0, 0, 0)
 	_note_command(bytes)
@@ -280,6 +353,9 @@ func status_view() -> Dictionary:
 		join_view = join.status_view()
 	if play != null:
 		play_view = play.status_view()
+	var offline_view: Dictionary = {}
+	if offline != null:
+		offline_view = offline.status_view()
 	var mapped_players: int = 0
 	var mapped_pads: int = 0
 	var mapped_portals: int = 0
@@ -308,6 +384,9 @@ func status_view() -> Dictionary:
 		mapped_standings = standings.standing_count()
 		mvp_slot = standings.mvp_slot()
 		standing_line = standings.standing_line()
+	var source: Dictionary = play_view
+	if _offline_playing():
+		source = offline_view
 	return {
 		"join_state": join_view.get("state", ""),
 		"error": join_view.get("error", ""),
@@ -317,9 +396,12 @@ func status_view() -> Dictionary:
 		"room_code": join_view.get("room_code", ""),
 		"ticket": join_view.get("ticket", ""),
 		"play_state": play_view.get("state", ""),
-		"tick": play_view.get("tick", -1),
-		"player_count": play_view.get("player_count", 0),
-		"crate_count": play_view.get("crate_count", 0),
+		"offline_state": offline_view.get("state", ""),
+		"offline_banner": offline_view.get("banner", ""),
+		"offline_error": offline_view.get("error", ""),
+		"tick": source.get("tick", -1),
+		"player_count": source.get("player_count", 0),
+		"crate_count": source.get("crate_count", 0),
 		"mapped_players": mapped_players,
 		"mapped_pads": mapped_pads,
 		"mapped_portals": mapped_portals,
@@ -350,7 +432,7 @@ func allows_online_writes() -> bool:
 
 
 func _process(delta: float) -> void:
-	if live_io:
+	if live_io and not _offline_playing():
 		_poll_queue_clock(delta)
 		_poll_gateway()
 	if window == null or not window.visible:
@@ -364,6 +446,10 @@ func _process(delta: float) -> void:
 	try_sample_play_reset(Input.is_physical_key_pressed(KEY_R))
 	try_sample_play_use_item(Input.is_action_pressed(_USE_ITEM))
 	try_sample_play_jump(Input.is_action_pressed(_JUMP))
+	if _offline_playing():
+		offline.try_advance()
+		_apply_snapshot_map()
+		_refresh_status()
 
 
 func _ensure_window() -> void:
@@ -397,6 +483,7 @@ func _ensure_window() -> void:
 	_add_button(row, QUICK_NAME, "Quick play", try_quick)
 	_add_button(row, CREATE_NAME, "Create room", try_create_room)
 	_add_button(row, JOIN_NAME, "Join room", try_join_room)
+	_add_button(row, SOLO_NAME, "Solo play", try_solo)
 	_add_button(row, CANCEL_NAME, "Cancel", try_cancel)
 	_add_button(row, POLL_NAME, "Poll", try_poll)
 	_room_edit = LineEdit.new()
@@ -565,7 +652,16 @@ func _refresh_status() -> void:
 	if error_text != "":
 		parts.append("error=%s" % error_text)
 	parts.append("play=%s" % play_state)
-	if play_state == MatchPlaySessionGd.STATE_IN_MATCH:
+	var offline_state: String = str(view.get("offline_state", ""))
+	if offline_state != "":
+		parts.append("offline=%s" % offline_state)
+	var offline_banner: String = str(view.get("offline_banner", ""))
+	if offline_banner != "":
+		parts.append(offline_banner)
+	var offline_error: String = str(view.get("offline_error", ""))
+	if offline_error != "":
+		parts.append("offline_error=%s" % offline_error)
+	if play_state == MatchPlaySessionGd.STATE_IN_MATCH or offline_state == MatchOfflineSessionGd.STATE_PLAYING:
 		var tick: int = view.get("tick", -1)
 		var player_count: int = view.get("player_count", 0)
 		var crate_count: int = view.get("crate_count", 0)
@@ -592,17 +688,50 @@ func _refresh_status() -> void:
 
 
 func _apply_snapshot_map() -> void:
-	if play == null:
+	var follow: MatchSnapshotFollowGd = null
+	if _offline_playing():
+		follow = offline.follow
+	elif play != null:
+		follow = play.follow
+	if follow == null:
 		return
 	if map != null:
-		map.apply_follow(play.follow)
+		map.apply_follow(follow)
 	if crates != null:
-		crates.apply_follow(play.follow)
+		crates.apply_follow(follow)
 	if standings != null:
 		var pad_total: int = 0
 		if course != null:
 			pad_total = course.pad_count()
-		standings.apply_follow(play.follow, pad_total)
+		standings.apply_follow(follow, pad_total)
+
+
+func _offline_playing() -> bool:
+	return offline != null and offline.state == MatchOfflineSessionGd.STATE_PLAYING
+
+
+func _online_busy() -> bool:
+	if join != null:
+		if join.state == MatchJoinSessionGd.STATE_WAITING:
+			return true
+		if join.state == MatchJoinSessionGd.STATE_READY:
+			return true
+	if play == null:
+		return false
+	if play.state == MatchPlaySessionGd.STATE_CONNECTING:
+		return true
+	return play.state == MatchPlaySessionGd.STATE_IN_MATCH
+
+
+func _prepare_offline_stubs() -> void:
+	if offline == null:
+		return
+	offline.play_jump_dy = Fixed.SCALE
+	offline.play_support_dy = Fixed.SCALE
+	offline.play_use_item_damage = 1
+	offline.play_use_item_reach_dx = Fixed.SCALE
+	offline.play_use_item_reach_dy = Fixed.SCALE
+	offline.play_use_item_reach_dz = Fixed.SCALE
 
 
 func _on_close_requested() -> void:
