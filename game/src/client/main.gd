@@ -4,7 +4,8 @@ extends Node
 ## then opens the TRAPRUSH match lobby (code-created Window) and maps the
 ## default official course occupancy, destructible placeholders,
 ## compiled portal-link gizmos, checkpoint-order gizmos, and live
-## standing labels from the latest snapshot.
+## standing labels from the latest snapshot. Solo play starts a local
+## embedded match session and keeps "离线试玩，成绩不上传" on the HUD.
 ## Live HTTP/WS stays off in headless
 ## so CI --quit does not call localhost.
 
