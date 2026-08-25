@@ -10,7 +10,9 @@ extends Node
 ## Maps compiled portal source→dest as bar gizmos; one_way adds a
 ## direction marker. Dangling bags are omitted by the compiler.
 ## Maps compiled checkpoint order as labels plus unique-order bars;
-## duplicate orders are labeled only. No interpolation. WASD / Jump /
+## duplicate orders are labeled only. Maps live standings from the latest
+## snapshot (finish_tick then accepted_count; slot is the stable key).
+## Path distance is not ranked. No interpolation. WASD / Jump /
 ## Reset / Use item encode existing intents. play_move_step is a
 ## presentation stub, not a product speed.
 ## No BASTION, accounts, reconnect tickets, settlement, or offline writes.
@@ -23,6 +25,7 @@ const MatchCourseMapGd := preload("res://src/client/match_course_map.gd")
 const MatchCrateMapGd := preload("res://src/client/match_crate_map.gd")
 const MatchPortalLinkMapGd := preload("res://src/client/match_portal_link_map.gd")
 const MatchSnapshotMapGd := preload("res://src/client/match_snapshot_map.gd")
+const MatchStandingMapGd := preload("res://src/client/match_standing_map.gd")
 const PlayerIntentNames := preload("res://src/shared/commands/player_intent_names.gd")
 
 const TITLE: String = "Traprush"
@@ -42,6 +45,7 @@ const _COURSE_NAME: String = "CourseMap"
 const _CRATE_NAME: String = "CrateMap"
 const _LINK_NAME: String = "PortalLinkMap"
 const _ORDER_NAME: String = "CheckpointOrderMap"
+const _STANDING_NAME: String = "StandingMap"
 const _MOVE_FORWARD: String = "move_forward"
 const _MOVE_BACK: String = "move_back"
 const _MOVE_LEFT: String = "move_left"
@@ -56,6 +60,7 @@ var course: MatchCourseMapGd = null
 var crates: MatchCrateMapGd = null
 var links: MatchPortalLinkMapGd = null
 var orders: MatchCheckpointOrderMapGd = null
+var standings: MatchStandingMapGd = null
 var window: Window = null
 var live_io: bool = false
 var control_plane_base: String = DEFAULT_CONTROL_PLANE
@@ -283,6 +288,9 @@ func status_view() -> Dictionary:
 	var mapped_links: int = 0
 	var mapped_orders: int = 0
 	var mapped_sequences: int = 0
+	var mapped_standings: int = 0
+	var mvp_slot: int = -1
+	var standing_line: String = ""
 	if map != null:
 		mapped_players = map.player_count()
 	if course != null:
@@ -296,6 +304,10 @@ func status_view() -> Dictionary:
 	if orders != null:
 		mapped_orders = orders.checkpoint_count()
 		mapped_sequences = orders.sequence_count()
+	if standings != null:
+		mapped_standings = standings.standing_count()
+		mvp_slot = standings.mvp_slot()
+		standing_line = standings.standing_line()
 	return {
 		"join_state": join_view.get("state", ""),
 		"error": join_view.get("error", ""),
@@ -316,6 +328,9 @@ func status_view() -> Dictionary:
 		"mapped_links": mapped_links,
 		"mapped_orders": mapped_orders,
 		"mapped_sequences": mapped_sequences,
+		"mapped_standings": mapped_standings,
+		"mvp_slot": mvp_slot,
+		"standing_line": standing_line,
 		"window_visible": is_window_visible(),
 	}
 
@@ -404,6 +419,9 @@ func _ensure_window() -> void:
 	orders = MatchCheckpointOrderMapGd.new()
 	orders.name = _ORDER_NAME
 	map.add_child(orders)
+	standings = MatchStandingMapGd.new()
+	standings.name = _STANDING_NAME
+	map.add_child(standings)
 	add_child(window)
 	map.ensure_rig()
 	course.apply_path(course_path)
@@ -567,6 +585,9 @@ func _refresh_status() -> void:
 	var mapped_orders: int = view.get("mapped_orders", 0)
 	var mapped_sequences: int = view.get("mapped_sequences", 0)
 	parts.append("orders_mapped=%d/%d" % [mapped_orders, mapped_sequences])
+	var standing_line: String = str(view.get("standing_line", ""))
+	if standing_line != "":
+		parts.append(standing_line)
 	_status.text = " ".join(parts)
 
 
@@ -577,6 +598,11 @@ func _apply_snapshot_map() -> void:
 		map.apply_follow(play.follow)
 	if crates != null:
 		crates.apply_follow(play.follow)
+	if standings != null:
+		var pad_total: int = 0
+		if course != null:
+			pad_total = course.pad_count()
+		standings.apply_follow(play.follow, pad_total)
 
 
 func _on_close_requested() -> void:

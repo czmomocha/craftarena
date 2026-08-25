@@ -29,6 +29,7 @@ func test_open_window_quick_play_ready_begins_play() -> void:
 	assert_not_null(_shell.crates)
 	assert_not_null(_shell.links)
 	assert_not_null(_shell.orders)
+	assert_not_null(_shell.standings)
 	assert_eq(_shell.map.player_count(), 0)
 	assert_eq(_shell.course.pad_count(), 3)
 	assert_eq(_shell.course.portal_count(), 2)
@@ -41,12 +42,19 @@ func test_open_window_quick_play_ready_begins_play() -> void:
 	assert_eq(_shell.crates.checkpoint_node_count(), 0)
 	assert_eq(_shell.map.link_node_count(), 0)
 	assert_eq(_shell.map.checkpoint_node_count(), 0)
+	assert_eq(_shell.map.standing_node_count(), 0)
 	assert_eq(_shell.links.link_count(), 2)
 	assert_eq(_shell.links.direction_count(), 0)
 	assert_eq(_shell.links.checkpoint_node_count(), 0)
 	assert_eq(_shell.orders.checkpoint_count(), 3)
 	assert_eq(_shell.orders.sequence_count(), 2)
 	assert_eq(_shell.orders.link_node_count(), 0)
+	assert_eq(_shell.orders.standing_node_count(), 0)
+	assert_eq(_shell.course.standing_node_count(), 0)
+	assert_eq(_shell.crates.standing_node_count(), 0)
+	assert_eq(_shell.links.standing_node_count(), 0)
+	assert_eq(_shell.standings.standing_count(), 0)
+	assert_eq(_shell.standings.crate_node_count(), 0)
 	assert_almost_eq(_shell.course.finish_node(30).position.x, 2.0, 0.0001)
 	assert_almost_eq(_shell.course.finish_node(30).position.z, 0.0, 0.0001)
 	assert_almost_eq(_shell.crates.crate_node(40).position.z, 1.0, 0.0001)
@@ -69,9 +77,14 @@ func test_open_window_quick_play_ready_begins_play() -> void:
 	assert_true(_shell.on_binary(_snapshot(2, 12)))
 	assert_eq(_shell.play.follow.tick, 2)
 	assert_eq(_shell.map.player_count(), 1)
+	assert_eq(_shell.standings.standing_count(), 1)
 	var marker: MeshInstance3D = _shell.map.player_node(0)
 	assert_not_null(marker)
 	assert_almost_eq(marker.position.x, 12.0 / float(Fixed.SCALE), 0.0001)
+	var standing_mark: Label3D = _shell.standings.standing_node(0)
+	assert_not_null(standing_mark)
+	assert_eq(standing_mark.text, "#1 P0 0/3")
+	assert_almost_eq(standing_mark.position.x, 12.0 / float(Fixed.SCALE), 0.0001)
 	assert_eq(_shell.map.crate_node_count(), 0)
 	assert_eq(_shell.map.link_node_count(), 0)
 	assert_eq(_shell.course.pad_count(), 3)
@@ -85,6 +98,7 @@ func test_open_window_quick_play_ready_begins_play() -> void:
 	assert_true(_shell.status_label_text().contains("crates_mapped=0"))
 	assert_true(_shell.status_label_text().contains("links_mapped=2"))
 	assert_true(_shell.status_label_text().contains("orders_mapped=3/2"))
+	assert_true(_shell.status_label_text().contains("standings=#1s0 mvp=-"))
 	assert_true(_shell.status_label_text().contains("room=ABCD23"))
 	assert_false(_shell.allows_settlement())
 	assert_false(_shell.allows_online_writes())
@@ -171,6 +185,9 @@ func test_stale_or_bad_snapshot_keeps_mapped_pose() -> void:
 	assert_almost_eq(_shell.links.link_node(10).position.x, 1.5, 0.0001)
 	assert_eq(_shell.orders.checkpoint_count(), 3)
 	assert_almost_eq(_shell.orders.checkpoint_node(3).position.z, 0.0, 0.0001)
+	assert_eq(_shell.standings.standing_count(), 1)
+	assert_eq(_shell.standings.standing_node(0).text, "#1 P0 0/3")
+	assert_almost_eq(_shell.standings.standing_node(0).position.x, 2.0, 0.0001)
 
 
 func test_snapshot_crate_durability_hides_without_moving_or_redrawing_course() -> void:
@@ -210,6 +227,33 @@ func test_buttons_exist_and_live_io_stays_off_in_tests() -> void:
 	assert_eq(_shell.play_move_step, Fixed.SCALE / 16)
 
 
+func test_snapshot_standings_rank_finished_first_without_settlement() -> void:
+	_shell = _open_shell()
+	assert_true(_shell.try_quick())
+	assert_true(_shell.accept_http(201, _join("ABCD23", "ticket-e")))
+	assert_true(_shell.on_socket_open())
+	assert_true(_shell.on_binary(_ranked_snapshot(7, [
+		_ranked_player(0, 1, -1),
+		_ranked_player(Fixed.SCALE, 3, 4),
+	])))
+	assert_eq(_shell.standings.standing_count(), 2)
+	assert_eq(_shell.standings.mvp_slot(), 1)
+	assert_eq(_shell.standings.standing_node(0).text, "#2 P0 1/3")
+	assert_eq(_shell.standings.standing_node(1).text, "#1 P1")
+	assert_almost_eq(_shell.standings.standing_node(1).position.x, 1.0, 0.0001)
+	assert_true(_shell.status_label_text().contains("standings=#1s1,#2s0 mvp=1"))
+	assert_eq(_shell.map.standing_node_count(), 0)
+	assert_eq(_shell.course.standing_node_count(), 0)
+	assert_eq(_shell.crates.standing_node_count(), 0)
+	assert_eq(_shell.links.standing_node_count(), 0)
+	assert_eq(_shell.orders.standing_node_count(), 0)
+	assert_false(_shell.on_binary(PackedByteArray([1, 2, 3])))
+	assert_eq(_shell.standings.standing_node(0).text, "#2 P0 1/3")
+	assert_eq(_shell.standings.mvp_slot(), 1)
+	assert_false(_shell.allows_settlement())
+	assert_false(_shell.allows_online_writes())
+
+
 func _open_shell() -> MatchLobbyShell:
 	var shell: MatchLobbyShell = MatchLobbyShell.create()
 	add_child(shell)
@@ -237,12 +281,21 @@ func _crate(entity_id: int, durability: int) -> Dictionary:
 
 
 func _snapshot(tick: int, x: int, crates: Array[Dictionary] = []) -> PackedByteArray:
-	var players: Array[Dictionary] = [{
+	var players: Array[Dictionary] = [_ranked_player(x, 0, -1)]
+	return MatchFrameCodec.encode_snapshot(tick, players, crates)
+
+
+func _ranked_player(x: int, accepted_count: int, finish_tick: int) -> Dictionary:
+	return {
 		"x": x,
 		"y": 0,
 		"z": 0,
 		"yaw_bam": 0,
-		"accepted_count": 0,
-		"finish_tick": -1,
-	}]
+		"accepted_count": accepted_count,
+		"finish_tick": finish_tick,
+	}
+
+
+func _ranked_snapshot(tick: int, players: Array[Dictionary]) -> PackedByteArray:
+	var crates: Array[Dictionary] = []
 	return MatchFrameCodec.encode_snapshot(tick, players, crates)

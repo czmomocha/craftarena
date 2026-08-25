@@ -5,13 +5,14 @@ extends GutTest
 ## progress, finish tick and portal latch; destructible crates are shared.
 ## Caller supplies spawn offsets and motion stubs. Same course + same intent
 ## tape -> same hash sequence. No network, no settlement, no online writes.
-## Finish ordering (名次) is a later chapter.
+## Live standings derive from accepted_count / finish_tick. Never settlement.
 
 const AuthoringDocument := preload("res://src/creator/authoring_document.gd")
 const AuthoringWorld := preload("res://src/creator/authoring_world.gd")
 const PlayerIntentNames := preload("res://src/shared/commands/player_intent_names.gd")
 const SimulationBundle := preload("res://src/ugc/simulation_bundle.gd")
 const TraprushMatchSession := preload("res://src/games/traprush/match_session.gd")
+const TraprushStanding := preload("res://src/games/traprush/standing.gd")
 const TraprushTopologyCompiler := preload("res://src/ugc/traprush_topology_compiler.gd")
 
 const COURSE_01_PATH: String = "res://content/official/traprush/course_01.json"
@@ -96,6 +97,40 @@ func test_finish_tick_is_per_player() -> void:
 	assert_eq(session.player_finish_tick(0), 0)
 	assert_eq(session.player_finish_tick(1), -1)
 	assert_eq(session.tick_index(), 0)
+	var standing: Dictionary = TraprushStanding.from_players([
+		{
+			"accepted_count": session.player_accepted_count(0),
+			"finish_tick": session.player_finish_tick(0),
+		},
+		{
+			"accepted_count": session.player_accepted_count(1),
+			"finish_tick": session.player_finish_tick(1),
+		},
+	])
+	var ok: bool = standing.get("ok", false)
+	assert_true(ok)
+	var rows_raw: Variant = standing.get("rows", [])
+	assert_eq(typeof(rows_raw), TYPE_ARRAY)
+	var rows: Array = rows_raw
+	assert_eq(rows.size(), 2)
+	var first_raw: Variant = rows[0]
+	var second_raw: Variant = rows[1]
+	assert_eq(typeof(first_raw), TYPE_DICTIONARY)
+	assert_eq(typeof(second_raw), TYPE_DICTIONARY)
+	var first: Dictionary = first_raw
+	var second: Dictionary = second_raw
+	var first_slot: int = first.get("slot", -1)
+	var first_place: int = first.get("place", 0)
+	var first_finished: bool = first.get("finished", false)
+	var second_slot: int = second.get("slot", -1)
+	var second_place: int = second.get("place", 0)
+	var mvp_slot: int = standing.get("mvp_slot", -2)
+	assert_eq(first_slot, 0)
+	assert_eq(first_place, 1)
+	assert_eq(first_finished, true)
+	assert_eq(second_slot, 1)
+	assert_eq(second_place, 2)
+	assert_eq(mvp_slot, 0)
 
 
 func test_commit_tick_advances_and_intents_do_not() -> void:

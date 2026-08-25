@@ -37,6 +37,7 @@ func test_rebuild_maps_player_poses_and_skips_crates() -> void:
 	assert_eq(_map.player_count(), 2)
 	assert_eq(_map.crate_node_count(), 0)
 	assert_eq(_map.checkpoint_node_count(), 0)
+	assert_eq(_map.standing_node_count(), 0)
 	var first: MeshInstance3D = _map.player_node(0)
 	var second: MeshInstance3D = _map.player_node(1)
 	assert_not_null(first)

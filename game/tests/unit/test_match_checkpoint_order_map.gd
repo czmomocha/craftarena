@@ -32,6 +32,7 @@ func test_official_course_01_maps_unique_orders() -> void:
 	assert_eq(_map.sequence_count(), 2)
 	assert_eq(_map.crate_node_count(), 0)
 	assert_eq(_map.link_node_count(), 0)
+	assert_eq(_map.standing_node_count(), 0)
 	var first: Label3D = _map.checkpoint_node(1)
 	var second: Label3D = _map.checkpoint_node(2)
 	var third: Label3D = _map.checkpoint_node(3)
