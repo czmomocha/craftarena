@@ -50,6 +50,7 @@ var play_destructible_ids: Dictionary = {}
 var play_destructible_health: Dictionary = {}
 var play_hazard_ids: Dictionary = {}
 var play_hazard_cycle: Array[Dictionary] = []
+var play_solid_ids: Dictionary = {}
 var play_track: TraprushCheckpointTrack = null
 var play_spawn: TraprushCheckpointSpawn = null
 var play_cell: int = 0
@@ -142,6 +143,7 @@ func try_start_play(seed: int, radius: int = 0, cylinder_height: int = 0) -> boo
 	var finish_raw: Variant = loaded.get("finish_ids", {})
 	var crates_raw: Variant = loaded.get("destructible_ids", {})
 	var hazards_raw: Variant = loaded.get("hazard_ids", {})
+	var solids_raw: Variant = loaded.get("solid_ids", {})
 	if not (world_raw is SimulationWorld):
 		return false
 	if not (graph_raw is TraprushPortalGraph):
@@ -156,6 +158,8 @@ func try_start_play(seed: int, radius: int = 0, cylinder_height: int = 0) -> boo
 		return false
 	if typeof(hazards_raw) != TYPE_DICTIONARY:
 		return false
+	if typeof(solids_raw) != TYPE_DICTIONARY:
+		return false
 	var sim: SimulationWorld = world_raw
 	var graph: TraprushPortalGraph = graph_raw
 	var pad_ids: Dictionary = pads_raw
@@ -163,6 +167,7 @@ func try_start_play(seed: int, radius: int = 0, cylinder_height: int = 0) -> boo
 	var finish_ids: Dictionary = finish_raw
 	var crate_ids: Dictionary = crates_raw
 	var hazard_ids: Dictionary = hazards_raw
+	var solid_ids: Dictionary = solids_raw
 	var crate_health: Dictionary = _destructible_ledgers(bundle, crate_ids)
 	if crate_health.size() != _durable_crate_count(bundle):
 		return false
@@ -186,6 +191,7 @@ func try_start_play(seed: int, radius: int = 0, cylinder_height: int = 0) -> boo
 	play_destructible_health = crate_health
 	play_hazard_ids = hazard_ids
 	play_hazard_cycle = cycle
+	play_solid_ids = solid_ids
 	play_track = TraprushCheckpointTrack.new(_ordered_checkpoint_ids(bundle))
 	play_spawn = spawn
 	play_cell = bundle.cell
@@ -360,6 +366,12 @@ func play_hazard_solid_count() -> int:
 	return solid
 
 
+func play_solid_count() -> int:
+	if not is_playing():
+		return 0
+	return play_solid_ids.size()
+
+
 func play_is_hazard_solid(entity_id: int) -> bool:
 	if not is_playing() or play_world == null:
 		return false
@@ -514,6 +526,7 @@ func _clear_play() -> void:
 	play_destructible_health = {}
 	play_hazard_ids = {}
 	play_hazard_cycle = []
+	play_solid_ids = {}
 	play_track = null
 	play_spawn = null
 	play_cell = 0

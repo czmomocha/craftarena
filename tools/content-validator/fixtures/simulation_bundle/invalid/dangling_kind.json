@@ -19,5 +19,6 @@
 	],
 	"finish": [],
 	"destructibles": [],
-	"hazards": []
+	"hazards": [],
+	"solids": []
 }

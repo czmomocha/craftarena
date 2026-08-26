@@ -18,7 +18,7 @@ extends Node
 ## AABB stub onto Preview (not a product bound). Occupancy
 ## accepts overlapping checkpoint pads through PadAccept and portal boxes
 ## through PortalLanding.try_land_exit; status shows pads=n/m, floor=n,
-## finish=n, crates=n/m, and hazards=n/m.
+## finish=n, crates=n/m, hazards=n/m, and solids=n/m.
 ## Tab host
 ## is reserved and refused.
 ## The window defaults to 1280×720 maximized; HUD buttons use
@@ -491,7 +491,7 @@ func _refresh_status() -> void:
 	if map != null:
 		reach_ok = map.reachability_ok()
 		reach_issue_count = map.reachability_issue_count()
-	_status.text = "connected=%s revision=%d entities=%d restart=%s playing=%s pads=%d/%d floor=%d finish=%d crates=%d/%d hazards=%d/%d reach_ok=%s issues=%d" % [
+	_status.text = "connected=%s revision=%d entities=%d restart=%s playing=%s pads=%d/%d floor=%d finish=%d crates=%d/%d hazards=%d/%d solids=%d/%d reach_ok=%s issues=%d" % [
 		str(preview.connected),
 		preview.preview_revision,
 		entity_count,
@@ -505,6 +505,8 @@ func _refresh_status() -> void:
 		preview.play_destructible_count(),
 		preview.play_hazard_solid_count(),
 		preview.play_hazard_count(),
+		preview.play_solid_count(),
+		preview.play_solid_count(),
 		str(reach_ok),
 		reach_issue_count,
 	]

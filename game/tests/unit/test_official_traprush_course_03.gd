@@ -89,6 +89,7 @@ func test_course_03_compiles_and_loads() -> void:
 	assert_eq(bundle.finish.size(), 1)
 	assert_eq(bundle.destructibles.size(), 1)
 	assert_eq(bundle.hazards.size(), 0)
+	assert_eq(bundle.solids.size(), 0)
 	var crate: Dictionary = _destructible(bundle, 40)
 	var crate_x: int = crate.get("x", -1)
 	var crate_durability: int = crate.get("durability", -1)

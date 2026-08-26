@@ -108,6 +108,8 @@ UGC 权威碰撞形状约束见 [CD-42](../40-technical/42-contracts-and-rulevm.
 
 实现落点（2026-08-26）：周期机关表现映射。`MatchHazardMap` 把编译袋 `hazards` 画成 1 米占位盒（洋红 `HAZARD_ALBEDO`）；显隐跟同一 `is_solid(快照 tick, cooldown_ticks)`，不改协议。固体半周期计入本席 overlay 的 `live_solid_boxes`（半长 `cell/2`，与箱子相同）。`AuthoringPreviewMap` 对 `hazard` 实体用同一色；开玩后非固体隐藏。HUD 写 `hazards=n/m`（固体数 / 编译袋总数）。官方赛道仍 0 个。不锁预警动画、产品秒数。落点见 [CD-12 §1](../10-product/12-product-structure.md#1-入口结构)、[CD-32 §3](../30-ugc/32-editor-and-preview.md#3-从编辑到预览) 与 [CD-43 §2](../40-technical/43-networking-and-replay.md#2-传输)。
 
+实现落点（2026-08-26）：固定固体占用。`SimulationBundle` 必含 `solids` 数组（可空）。袋为 `entity_id` / `x` / `y` / `z`。`TraprushTopologyCompiler` 把 `zone.tags` 含 `solid` 且有 `transform` 的实体编进去（`SOLID_ZONE_TAG`，与 `finish` 同一套 `zone.tags`，不新增 Component Schema 字段）；缺 transform、或与检查点/传送/终点/可破坏/机关同实体、或同一实体同时带 `finish`+`solid` 则整份拒绝。加载为始终固体静态盒，不随 tick 切换。大厅 `MatchSolidMap` 画石色 1 米占位（`SOLID_ALBEDO`），永远显示；计入本席 overlay 的 `live_solid_boxes`（半长 `cell/2`）。Preview 对 `zone.tags` 含 `solid` 的占位同一色。HUD 写 `solids=n/m`（编译袋数，永不切换故 n=m）。官方三张赛道 0 个 solid。Jump 接地位移用合成固体袋单测，不改官方赛道、不改 Preview `play_support_dy` 默认 0。不锁编辑器 Place solid、官方赛道塞固体、重力/下落。落点见 [CD-32 §3](../30-ugc/32-editor-and-preview.md#3-从编辑到预览)、[CD-42 §3.4](../40-technical/42-contracts-and-rulevm.md#34-实现落点) 与 [CD-43 §2](../40-technical/43-networking-and-replay.md#2-传输)。
+
 ### 5.2 障碍破坏
 
 - 可破坏障碍具有服务端权威 `health`；

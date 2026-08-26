@@ -9,6 +9,7 @@ extends Node
 ## to 1 m boxes and hides them when snapshot durability is <= 0 or omitted.
 ## Maps compiled period hazards to 1 m boxes and hides them when
 ## TraprushHazardCycle.is_solid(tick, cooldown_ticks) is false.
+## Maps compiled always-solid occupancy to 1 m stone boxes that never toggle.
 ## Maps compiled portal source→dest as bar gizmos; one_way adds a
 ## direction marker. Dangling bags are omitted by the compiler.
 ## Maps compiled checkpoint order as labels plus unique-order bars;
@@ -21,9 +22,9 @@ extends Node
 ## the last two snapshots. play_interp_step is a presentation stub, not
 ## an interpolation window. The local seat overlays MatchLocalPredict on
 ## the latest authority for Move/Jump; remotes still interpolate. Overlay
-## that overlaps a latest live crate, latest solid hazard, or latest remote
-## capsule is dropped this frame (authority capsule/crate/hazard geometry,
-## not 1 m placeholders).
+## that overlaps a latest live crate, latest solid hazard, latest always-solid
+## occupancy, or latest remote capsule is dropped this frame (authority
+## capsule/crate/hazard/solid geometry, not 1 m placeholders).
 ## Remotes are not extrapolated.
 ## SnapshotCamera follows the own-seat presentation pose (predicted
 ## online, local authority offline) with the Preview camera offset.
@@ -31,12 +32,13 @@ extends Node
 ## labels prefix the own seat with "*". Remotes do not pull the camera.
 ## Own-seat accepted_count tints course pads: done / current / pending.
 ## Own-seat finish_tick tints the finish zone: pending / current / done.
-## HUD shows pads=n/m, floor=n, finish=n, crates=n/m, and hazards=n/m; result= appears
+## HUD shows pads=n/m, floor=n, finish=n, crates=n/m, hazards=n/m, and solids=n/m; result= appears
 ## when every snapshot seat has finished. Online matches then GET the
 ## control-plane board; 200 adds settled=. floor uses own-seat authority y
 ## (y / Fixed.SCALE toward zero), not interpolated samples. crates n/m is
 ## live boxes over compiled bag count. hazards n/m is solid boxes over
-## compiled bag count (tick 0 solid half). tls=on when the gateway URL is wss
+## compiled bag count (tick 0 solid half). solids n/m is compiled always-solid
+## bags (never toggle). tls=on when the gateway URL is wss
 ## (in-process TLS); default local npm run dev stays ws / tls=off. Reset rising-edge encodes the
 ## existing ResetToCheckpointIntent. result= is local presentation; settled=
 ## is a read-only GET. The client never POSTs settlement.
@@ -64,6 +66,7 @@ const MatchCheckpointOrderMapGd := preload("res://src/client/match_checkpoint_or
 const MatchCourseMapGd := preload("res://src/client/match_course_map.gd")
 const MatchCrateMapGd := preload("res://src/client/match_crate_map.gd")
 const MatchHazardMapGd := preload("res://src/client/match_hazard_map.gd")
+const MatchSolidMapGd := preload("res://src/client/match_solid_map.gd")
 const MatchPortalLinkMapGd := preload("res://src/client/match_portal_link_map.gd")
 const MatchSnapshotFollowGd := preload("res://src/client/match_snapshot_follow.gd")
 const MatchSnapshotInterpGd := preload("res://src/client/match_snapshot_interp.gd")
@@ -94,6 +97,7 @@ const _MAP_NAME: String = "SnapshotMap"
 const _COURSE_NAME: String = "CourseMap"
 const _CRATE_NAME: String = "CrateMap"
 const _HAZARD_NAME: String = "HazardMap"
+const _SOLID_NAME: String = "SolidMap"
 const _LINK_NAME: String = "PortalLinkMap"
 const _ORDER_NAME: String = "CheckpointOrderMap"
 const _STANDING_NAME: String = "StandingMap"
@@ -116,6 +120,7 @@ var map: MatchSnapshotMapGd = null
 var course: MatchCourseMapGd = null
 var crates: MatchCrateMapGd = null
 var hazards: MatchHazardMapGd = null
+var solids: MatchSolidMapGd = null
 var links: MatchPortalLinkMapGd = null
 var orders: MatchCheckpointOrderMapGd = null
 var standings: MatchStandingMapGd = null
@@ -553,6 +558,7 @@ func status_view() -> Dictionary:
 	var mapped_finish: int = 0
 	var mapped_crates: int = 0
 	var mapped_hazards: int = 0
+	var mapped_solids: int = 0
 	var mapped_links: int = 0
 	var mapped_orders: int = 0
 	var mapped_sequences: int = 0
@@ -564,6 +570,7 @@ func status_view() -> Dictionary:
 	var own_floor_index: int = 0
 	var crate_total: int = 0
 	var hazard_total: int = 0
+	var solid_total: int = 0
 	var match_finished: bool = false
 	if map != null:
 		mapped_players = map.player_count()
@@ -577,6 +584,9 @@ func status_view() -> Dictionary:
 	if hazards != null:
 		mapped_hazards = hazards.hazard_count()
 		hazard_total = hazards.hazard_total()
+	if solids != null:
+		mapped_solids = solids.solid_count()
+		solid_total = solids.solid_total()
 	if links != null:
 		mapped_links = links.link_count()
 	if orders != null:
@@ -624,6 +634,8 @@ func status_view() -> Dictionary:
 		"crate_total": crate_total,
 		"mapped_hazards": mapped_hazards,
 		"hazard_total": hazard_total,
+		"mapped_solids": mapped_solids,
+		"solid_total": solid_total,
 		"mapped_links": mapped_links,
 		"mapped_orders": mapped_orders,
 		"mapped_sequences": mapped_sequences,
@@ -790,6 +802,9 @@ func _ensure_window() -> void:
 	hazards = MatchHazardMapGd.new()
 	hazards.name = _HAZARD_NAME
 	map.add_child(hazards)
+	solids = MatchSolidMapGd.new()
+	solids.name = _SOLID_NAME
+	map.add_child(solids)
 	links = MatchPortalLinkMapGd.new()
 	links.name = _LINK_NAME
 	map.add_child(links)
@@ -822,6 +837,8 @@ func _apply_course_document(path: String) -> void:
 		crates.apply_path(path)
 	if hazards != null:
 		hazards.apply_path(path)
+	if solids != null:
+		solids.apply_path(path)
 	if links != null:
 		links.apply_path(path)
 	if orders != null:
@@ -1052,6 +1069,9 @@ func _refresh_status() -> void:
 		var hazard_alive: int = view.get("mapped_hazards", 0)
 		var hazard_total: int = view.get("hazard_total", 0)
 		parts.append("hazards=%d/%d" % [hazard_alive, hazard_total])
+		var solid_alive: int = view.get("mapped_solids", 0)
+		var solid_total: int = view.get("solid_total", 0)
+		parts.append("solids=%d/%d" % [solid_alive, solid_total])
 		if view.get("match_finished", false):
 			var result_line: String = str(view.get("standing_line", ""))
 			if result_line != "":
@@ -1064,6 +1084,8 @@ func _refresh_status() -> void:
 	parts.append("crates_mapped=%d" % mapped_crates)
 	var mapped_hazards: int = view.get("mapped_hazards", 0)
 	parts.append("hazards_mapped=%d" % mapped_hazards)
+	var mapped_solids: int = view.get("mapped_solids", 0)
+	parts.append("solids_mapped=%d" % mapped_solids)
 	var mapped_links: int = view.get("mapped_links", 0)
 	parts.append("links_mapped=%d" % mapped_links)
 	var mapped_orders: int = view.get("mapped_orders", 0)
@@ -1141,6 +1163,9 @@ func _predict_solid_boxes() -> Array:
 			boxes.append(item)
 	if hazards != null:
 		for item: Variant in hazards.live_solid_boxes():
+			boxes.append(item)
+	if solids != null:
+		for item: Variant in solids.live_solid_boxes():
 			boxes.append(item)
 	return boxes
 

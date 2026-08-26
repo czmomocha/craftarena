@@ -13,5 +13,6 @@
 			"z": 65536
 		}
 	],
-	"hazards": []
+	"hazards": [],
+	"solids": []
 }

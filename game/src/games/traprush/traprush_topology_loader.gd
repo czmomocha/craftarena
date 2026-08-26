@@ -5,7 +5,8 @@ extends RefCounted
 ## Checkpoint pads, portal sources, and the optional finish occupancy become
 ## non-solid static boxes. Destructibles become solid boxes (durability 0
 ## loads already open). Hazards become solid boxes (tick 0 is the solid half
-## of the cooldown_ticks cycle). Half-extents are cell / 2 (derived from the
+## of the cooldown_ticks cycle). Always-solid bags become solid boxes that
+## never toggle. Half-extents are cell / 2 (derived from the
 ## authoring lattice, not a new product budget). Does not spawn a player.
 ## Does not tick. Never settlement.
 
@@ -22,6 +23,7 @@ static func try_load(bundle: SimulationBundle, seed: int) -> Dictionary:
 	var finish_ids: Dictionary = {}
 	var destructible_ids: Dictionary = {}
 	var hazard_ids: Dictionary = {}
+	var solid_ids: Dictionary = {}
 	var half: int = bundle.cell / 2
 	for pad: Dictionary in bundle.pads:
 		var entity_id: int = pad["entity_id"]
@@ -101,6 +103,17 @@ static func try_load(bundle: SimulationBundle, seed: int) -> Dictionary:
 		if hazard_box_id < 1:
 			return failed
 		hazard_ids[hazard_id] = hazard_box_id
+	for item: Dictionary in bundle.solids:
+		var solid_id: int = item["entity_id"]
+		var solid_x: int = item["x"]
+		var solid_y: int = item["y"]
+		var solid_z: int = item["z"]
+		var solid_box_id: int = world.spawn_static_box(
+			solid_x, solid_y, solid_z, half, half, half
+		)
+		if solid_box_id < 1:
+			return failed
+		solid_ids[solid_id] = solid_box_id
 	return {
 		"ok": true,
 		"world": world,
@@ -110,4 +123,5 @@ static func try_load(bundle: SimulationBundle, seed: int) -> Dictionary:
 		"finish_ids": finish_ids,
 		"destructible_ids": destructible_ids,
 		"hazard_ids": hazard_ids,
+		"solid_ids": solid_ids,
 	}

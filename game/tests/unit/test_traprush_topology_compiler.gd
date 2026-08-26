@@ -31,6 +31,7 @@ func test_empty_world_compiles_to_empty_bundle() -> void:
 	assert_eq(bundle.finish.size(), 0)
 	assert_eq(bundle.destructibles.size(), 0)
 	assert_eq(bundle.hazards.size(), 0)
+	assert_eq(bundle.solids.size(), 0)
 	var encoded: Dictionary = bundle.to_dictionary()
 	var decoded: SimulationBundle = SimulationBundle.from_dictionary(encoded)
 	assert_not_null(decoded)
@@ -52,6 +53,8 @@ func test_official_courses_compile_distinct_topology() -> void:
 	assert_eq(second.destructibles.size(), 1)
 	assert_eq(first.hazards.size(), 0)
 	assert_eq(second.hazards.size(), 0)
+	assert_eq(first.solids.size(), 0)
+	assert_eq(second.solids.size(), 0)
 	var first_crate: Dictionary = _destructible(first, 40)
 	var second_crate: Dictionary = _destructible(second, 40)
 	var first_crate_z: int = first_crate.get("z", -1)
@@ -153,6 +156,7 @@ func test_portal_bag_without_source_pose_is_rejected() -> void:
 		"finish": [],
 		"destructibles": [],
 		"hazards": [],
+		"solids": [],
 	}
 	assert_null(SimulationBundle.from_dictionary(data))
 
@@ -204,6 +208,7 @@ func test_dangling_kind_in_bundle_is_rejected() -> void:
 		"finish": [],
 		"destructibles": [],
 		"hazards": [],
+		"solids": [],
 	}
 	assert_null(SimulationBundle.from_dictionary(data))
 
@@ -343,6 +348,7 @@ func test_two_finish_bags_are_rejected() -> void:
 		],
 		"destructibles": [],
 		"hazards": [],
+		"solids": [],
 	}
 	assert_null(SimulationBundle.from_dictionary(data))
 
@@ -389,6 +395,15 @@ func test_bundle_without_hazards_key_is_rejected() -> void:
 	assert_not_null(bundle)
 	var data: Dictionary = bundle.to_dictionary()
 	data.erase(SimulationBundle.FIELD_HAZARDS)
+	assert_null(SimulationBundle.from_dictionary(data))
+
+
+func test_bundle_without_solids_key_is_rejected() -> void:
+	var world: AuthoringWorld = AuthoringWorld.new()
+	var bundle: SimulationBundle = TraprushTopologyCompiler.compile(world)
+	assert_not_null(bundle)
+	var data: Dictionary = bundle.to_dictionary()
+	data.erase(SimulationBundle.FIELD_SOLIDS)
 	assert_null(SimulationBundle.from_dictionary(data))
 
 
@@ -440,6 +455,78 @@ func test_hazard_compiles_and_loads_solid_at_tick_zero() -> void:
 	assert_true(sim.is_static_box_solid(box_id))
 
 
+func test_solid_without_transform_fails_compile() -> void:
+	var world: AuthoringWorld = AuthoringWorld.new()
+	var half: int = CELL / 2
+	var record: SharedComponentRecord = SharedComponentRecord.create(70, {
+		"zone": {
+			"shape": {"kind": "box", "hx": half, "hy": half, "hz": half},
+			"tags": [TraprushTopologyCompiler.SOLID_ZONE_TAG],
+		},
+	})
+	assert_not_null(record)
+	assert_true(world.put(record))
+	assert_null(TraprushTopologyCompiler.compile(world))
+
+
+func test_solid_on_checkpoint_fails_compile() -> void:
+	var world: AuthoringWorld = AuthoringWorld.new()
+	var half: int = CELL / 2
+	var record: SharedComponentRecord = SharedComponentRecord.create(1, {
+		"transform": {"x": 0, "y": 0, "z": 0, "yaw_bam": 0},
+		"checkpoint": {
+			"order": 0,
+			"respawn_dx": 0,
+			"respawn_dy": 0,
+			"respawn_dz": 0,
+		},
+		"zone": {
+			"shape": {"kind": "box", "hx": half, "hy": half, "hz": half},
+			"tags": [TraprushTopologyCompiler.SOLID_ZONE_TAG],
+		},
+	})
+	assert_not_null(record)
+	assert_true(world.put(record))
+	assert_null(TraprushTopologyCompiler.compile(world))
+
+
+func test_finish_and_solid_tags_together_fail_compile() -> void:
+	var world: AuthoringWorld = AuthoringWorld.new()
+	var half: int = CELL / 2
+	var record: SharedComponentRecord = SharedComponentRecord.create(30, {
+		"transform": {"x": 0, "y": 0, "z": 0, "yaw_bam": 0},
+		"zone": {
+			"shape": {"kind": "box", "hx": half, "hy": half, "hz": half},
+			"tags": [
+				TraprushTopologyCompiler.FINISH_ZONE_TAG,
+				TraprushTopologyCompiler.SOLID_ZONE_TAG,
+			],
+		},
+	})
+	assert_not_null(record)
+	assert_true(world.put(record))
+	assert_null(TraprushTopologyCompiler.compile(world))
+
+
+func test_solid_compiles_and_loads_always_solid() -> void:
+	var world: AuthoringWorld = AuthoringWorld.new()
+	assert_true(world.put(_checkpoint_record(1, 0, 0, 0, 0)))
+	assert_true(world.put(_solid_record(70, 0, -CELL, 0)))
+	var bundle: SimulationBundle = TraprushTopologyCompiler.compile(world)
+	assert_not_null(bundle)
+	assert_eq(bundle.solids.size(), 1)
+	var solid: Dictionary = _solid(bundle, 70)
+	var solid_y: int = solid.get("y", 1)
+	assert_eq(solid_y, -CELL)
+	var loaded: Dictionary = TraprushTopologyLoader.try_load(bundle, 1)
+	assert_true(_flag(loaded))
+	var sim: SimulationWorld = loaded["world"]
+	var solid_ids: Dictionary = loaded["solid_ids"]
+	assert_eq(solid_ids.size(), 1)
+	var box_id: int = solid_ids[70]
+	assert_true(sim.is_static_box_solid(box_id))
+
+
 func _compile_path(path: String) -> SimulationBundle:
 	var world: AuthoringWorld = AuthoringDocument.load_from_path(path)
 	if world == null:
@@ -482,6 +569,13 @@ func _hazard(bundle: SimulationBundle, entity_id: int) -> Dictionary:
 	return {}
 
 
+func _solid(bundle: SimulationBundle, entity_id: int) -> Dictionary:
+	for item: Dictionary in bundle.solids:
+		if item.get("entity_id", 0) == entity_id:
+			return item
+	return {}
+
+
 func _checkpoint_record(entity_id: int, order: int, x: int, y: int, z: int) -> SharedComponentRecord:
 	return SharedComponentRecord.create(entity_id, {
 		"transform": {"x": x, "y": y, "z": z, "yaw_bam": 0},
@@ -515,6 +609,17 @@ func _finish_record(entity_id: int, x: int, y: int, z: int) -> SharedComponentRe
 		"zone": {
 			"shape": {"kind": "box", "hx": half, "hy": half, "hz": half},
 			"tags": [TraprushTopologyCompiler.FINISH_ZONE_TAG],
+		},
+	})
+
+
+func _solid_record(entity_id: int, x: int, y: int, z: int) -> SharedComponentRecord:
+	var half: int = CELL / 2
+	return SharedComponentRecord.create(entity_id, {
+		"transform": {"x": x, "y": y, "z": z, "yaw_bam": 0},
+		"zone": {
+			"shape": {"kind": "box", "hx": half, "hy": half, "hz": half},
+			"tags": [TraprushTopologyCompiler.SOLID_ZONE_TAG],
 		},
 	})
 
