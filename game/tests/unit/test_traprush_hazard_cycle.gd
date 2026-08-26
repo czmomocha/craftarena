@@ -7,6 +7,7 @@ extends GutTest
 
 const AuthoringPreview := preload("res://src/creator/authoring_preview.gd")
 const AuthoringPreviewHostKinds := preload("res://src/creator/authoring_preview_host_kinds.gd")
+const AuthoringPreviewMap := preload("res://src/creator/authoring_preview_map.gd")
 const AuthoringPreviewShell := preload("res://src/creator/authoring_preview_shell.gd")
 const AuthoringSession := preload("res://src/creator/authoring_session.gd")
 const AuthoringWorld := preload("res://src/creator/authoring_world.gd")
@@ -116,9 +117,18 @@ func test_shell_advance_tick_button_opens_period_one_hazard() -> void:
 	assert_not_null(button)
 	assert_true(_preview_shell.try_start_play(1, PLAY_RADIUS, PLAY_RADIUS))
 	assert_true(_preview_shell.preview.play_is_hazard_solid(HAZARD_ID))
+	assert_eq(_preview_shell.preview.play_hazard_solid_count(), 1)
+	var marker: MeshInstance3D = _preview_shell.map.placeholder_node(HAZARD_ID)
+	assert_not_null(marker)
+	assert_true(marker.visible)
+	assert_eq(_hazard_albedo(marker), AuthoringPreviewMap.HAZARD_ALBEDO)
+	assert_true(_preview_shell.status_label_text().contains("hazards=1/1"))
 	button.pressed.emit()
 	assert_eq(_preview_shell.preview.play_world.tick_index, 1)
 	assert_false(_preview_shell.preview.play_is_hazard_solid(HAZARD_ID))
+	assert_eq(_preview_shell.preview.play_hazard_solid_count(), 0)
+	assert_false(_preview_shell.map.placeholder_node(HAZARD_ID).visible)
+	assert_true(_preview_shell.status_label_text().contains("hazards=0/1"))
 
 
 func _hazard_session(cooldown_ticks: int) -> TraprushMatchSession:
@@ -171,3 +181,9 @@ func _move(dx: int, dz: int) -> Dictionary:
 		"dx": dx,
 		"dz": dz,
 	}
+
+
+func _hazard_albedo(node: MeshInstance3D) -> Color:
+	var box: BoxMesh = node.mesh as BoxMesh
+	var material: StandardMaterial3D = box.material as StandardMaterial3D
+	return material.albedo_color

@@ -347,6 +347,19 @@ func play_hazard_count() -> int:
 	return play_hazard_ids.size()
 
 
+func play_hazard_solid_count() -> int:
+	if not is_playing():
+		return 0
+	var solid: int = 0
+	for key: Variant in play_hazard_ids.keys():
+		if typeof(key) != TYPE_INT:
+			continue
+		var entity_id: int = key
+		if play_is_hazard_solid(entity_id):
+			solid += 1
+	return solid
+
+
 func play_is_hazard_solid(entity_id: int) -> bool:
 	if not is_playing() or play_world == null:
 		return false

@@ -6,6 +6,7 @@ extends Node3D
 ## Q48.16 poses. Authority stays on SimulationBundle; float conversion
 ## happens only here. Placeholders are not hitboxes. Destructibles have
 ## poses in the bundle but stay undrawn here; MatchCrateMap draws them.
+## Period hazards stay undrawn here; MatchHazardMap draws them.
 ## Portal source→dest bars stay undrawn here; MatchPortalLinkMap draws them.
 ## Checkpoint-order labels and sequence bars stay undrawn here;
 ## MatchCheckpointOrderMap draws them. Standing labels stay undrawn
@@ -153,6 +154,10 @@ func finish_count() -> int:
 
 
 func crate_node_count() -> int:
+	return 0
+
+
+func hazard_node_count() -> int:
 	return 0
 
 

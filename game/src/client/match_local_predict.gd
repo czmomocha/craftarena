@@ -6,8 +6,9 @@ extends RefCounted
 ## pose. WASD Move may also overlay yaw_bam; -1 keeps the latest facing.
 ## A newer snapshot tick clears the overlay (hard snap, not smooth
 ## reconciliation). Own slot is not interpolated. If the predicted pose
-## overlaps a latest live crate or a latest remote capsule, this frame
-## keeps the latest own-slot pose (overlay numbers still accumulate).
+## overlaps a latest live crate, a latest solid period hazard, or a latest
+## remote capsule, this frame keeps the latest own-slot pose (overlay
+## numbers still accumulate).
 ## Geometry matches the match_server / Preview occupancy stubs, not the
 ## 1 m presentation boxes. Remotes are not extrapolated. Portals, reset,
 ## items, finish, pads, and doors are not predicted and are not solids.
