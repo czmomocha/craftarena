@@ -4,7 +4,8 @@ extends RefCounted
 ## Loads a v1 TRAPRUSH SimulationBundle into a SimulationWorld + portal graph.
 ## Checkpoint pads, portal sources, and the optional finish occupancy become
 ## non-solid static boxes. Destructibles become solid boxes (durability 0
-## loads already open). Half-extents are cell / 2 (derived from the
+## loads already open). Hazards become solid boxes (tick 0 is the solid half
+## of the cooldown_ticks cycle). Half-extents are cell / 2 (derived from the
 ## authoring lattice, not a new product budget). Does not spawn a player.
 ## Does not tick. Never settlement.
 
@@ -20,6 +21,7 @@ static func try_load(bundle: SimulationBundle, seed: int) -> Dictionary:
 	var portal_ids: Dictionary = {}
 	var finish_ids: Dictionary = {}
 	var destructible_ids: Dictionary = {}
+	var hazard_ids: Dictionary = {}
 	var half: int = bundle.cell / 2
 	for pad: Dictionary in bundle.pads:
 		var entity_id: int = pad["entity_id"]
@@ -88,6 +90,17 @@ static func try_load(bundle: SimulationBundle, seed: int) -> Dictionary:
 			if not world.set_static_box_solid(crate_box_id, false):
 				return failed
 		destructible_ids[crate_id] = crate_box_id
+	for item: Dictionary in bundle.hazards:
+		var hazard_id: int = item["entity_id"]
+		var hazard_x: int = item["x"]
+		var hazard_y: int = item["y"]
+		var hazard_z: int = item["z"]
+		var hazard_box_id: int = world.spawn_static_box(
+			hazard_x, hazard_y, hazard_z, half, half, half
+		)
+		if hazard_box_id < 1:
+			return failed
+		hazard_ids[hazard_id] = hazard_box_id
 	return {
 		"ok": true,
 		"world": world,
@@ -96,4 +109,5 @@ static func try_load(bundle: SimulationBundle, seed: int) -> Dictionary:
 		"portal_ids": portal_ids,
 		"finish_ids": finish_ids,
 		"destructible_ids": destructible_ids,
+		"hazard_ids": hazard_ids,
 	}

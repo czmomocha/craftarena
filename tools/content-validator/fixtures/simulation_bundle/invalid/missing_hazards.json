@@ -5,7 +5,5 @@
 	"pads": [],
 	"portals": [],
 	"finish": [],
-	"destructibles": [],
-	"hazards": [],
-	"signed": false
+	"destructibles": []
 }

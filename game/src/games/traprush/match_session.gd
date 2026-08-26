@@ -13,6 +13,8 @@ extends RefCounted
 ## 冷却是调用方 tick，不是产品秒数。力度不从命令帧读取。
 ## 出界复位：range_enabled 时用调用方 AABB（闭区间）经 TraprushOutOfRangeReset
 ## 写回最近检查点落点。不计数 N，不接重力，不写硬直。默认关闭。
+## 周期机关：commit_tick 在 world.tick() 之后按已有 cooldown_ticks 切换固体。
+## 意图不推进 tick，故不切换。不读 damage/knockback，不发明 period。
 ## 语义与 AuthoringPreview 试玩逐字对齐：同一 IntentStepper、同一占用扫描
 ## 顺序（垫→门→垫→终点）。无网络、无结算、不在线写入。
 ## 直播名次由 TraprushStanding 从 accepted_count / finish_tick 派生。
@@ -23,6 +25,7 @@ const CheckpointSpawn := preload("res://src/games/traprush/checkpoint_spawn.gd")
 const CheckpointTrack := preload("res://src/games/traprush/checkpoint_track.gd")
 const DestructibleBreak := preload("res://src/games/traprush/destructible_break.gd")
 const FinishAccept := preload("res://src/games/traprush/finish_accept.gd")
+const HazardCycle := preload("res://src/games/traprush/hazard_cycle.gd")
 const IntentStepper := preload("res://src/games/traprush/intent_stepper.gd")
 const JumpIntent := preload("res://src/games/traprush/jump_intent.gd")
 const MoveIntent := preload("res://src/games/traprush/move_intent.gd")
@@ -66,6 +69,8 @@ var _portal_ids: Dictionary = {}
 var _finish_ids: Dictionary = {}
 var _crate_ids: Dictionary = {}
 var _crate_health: Dictionary = {}
+var _hazard_ids: Dictionary = {}
+var _hazard_cycle: Array[Dictionary] = []
 var _spawn: CheckpointSpawn = null
 var _ordered_ids: PackedInt32Array = PackedInt32Array()
 var _players: Array[Dictionary] = []
@@ -105,6 +110,15 @@ static func create(
 	session._finish_ids = loaded["finish_ids"]
 	session._crate_ids = loaded["destructible_ids"]
 	session._crate_health = _destructible_ledgers(bundle)
+	var hazards_raw: Variant = loaded.get("hazard_ids", {})
+	if typeof(hazards_raw) != TYPE_DICTIONARY:
+		return null
+	var hazard_ids: Dictionary = hazards_raw
+	var cycle: Array[Dictionary] = HazardCycle.entries_from(bundle.hazards, hazard_ids)
+	if cycle.size() != bundle.hazards.size():
+		return null
+	session._hazard_ids = hazard_ids
+	session._hazard_cycle = cycle
 	session._spawn = spawn
 	session._ordered_ids = ordered
 	var start_x: int = start["x"]
@@ -206,6 +220,20 @@ func destructible_alive_count() -> int:
 	return alive
 
 
+func hazard_count() -> int:
+	return _hazard_ids.size()
+
+
+func is_hazard_solid(entity_id: int) -> bool:
+	if _world == null or not _hazard_ids.has(entity_id):
+		return false
+	var box_raw: Variant = _hazard_ids[entity_id]
+	if typeof(box_raw) != TYPE_INT:
+		return false
+	var box_id: int = box_raw
+	return _world.is_static_box_solid(box_id)
+
+
 ## 快照用：全部可破坏箱的当前耐久（含已毁的 0），按 entity_id 升序。
 func destructible_states() -> Array[Dictionary]:
 	var ids: Array[int] = []
@@ -280,6 +308,7 @@ func commit_tick() -> void:
 	if _world == null:
 		return
 	_world.tick()
+	HazardCycle.apply(_world, _hazard_cycle)
 	for player: Dictionary in _players:
 		_reset_player_if_out_of_range(player)
 		_accept_player_pads(player)

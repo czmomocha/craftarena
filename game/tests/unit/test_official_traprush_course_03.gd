@@ -88,6 +88,7 @@ func test_course_03_compiles_and_loads() -> void:
 	assert_eq(bundle.portals.size(), 3)
 	assert_eq(bundle.finish.size(), 1)
 	assert_eq(bundle.destructibles.size(), 1)
+	assert_eq(bundle.hazards.size(), 0)
 	var crate: Dictionary = _destructible(bundle, 40)
 	var crate_x: int = crate.get("x", -1)
 	var crate_durability: int = crate.get("durability", -1)
@@ -104,6 +105,8 @@ func test_course_03_compiles_and_loads() -> void:
 	assert_eq(portal_ids.size(), 3)
 	assert_eq(finish_ids.size(), 1)
 	assert_eq(destructible_ids.size(), 1)
+	var hazard_ids: Dictionary = loaded["hazard_ids"]
+	assert_eq(hazard_ids.size(), 0)
 	var pad_box: int = pad_ids[1]
 	assert_false(sim.is_static_box_solid(pad_box))
 	var crate_box: int = destructible_ids[40]

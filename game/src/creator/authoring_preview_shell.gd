@@ -7,7 +7,9 @@ extends Node
 ## Play compiles the connected Preview world into a SimulationBundle, loads
 ## it, and draws the player pose as a presentation stub. While playing and
 ## visible, WASD maps to world-space MoveIntent; play_move_step is a
-## presentation stub, not a product speed. Reset button and R rising-edge
+## presentation stub, not a product speed. Advance tick calls existing
+## try_advance_play so period hazards can open; intents still do not tick.
+## Reset button and R rising-edge
 ## encode ResetToCheckpointIntent; that sample is a stub, not a hold
 ## duration. Use item button and use_item rising-edge encode UseItemIntent;
 ## play_use_item_damage / reach are stubs, not a blast table. Jump button
@@ -28,6 +30,7 @@ const STOP_NAME: String = "Stop"
 const RESET_NAME: String = "Reset"
 const USE_ITEM_NAME: String = "UseItem"
 const JUMP_NAME: String = "Jump"
+const ADVANCE_TICK_NAME: String = "AdvanceTick"
 const _USE_ITEM: String = "use_item"
 const _JUMP: String = "jump"
 const _STATUS_NAME: String = "Status"
@@ -346,6 +349,7 @@ func _ensure_window() -> void:
 	_add_button(action_row, RESET_NAME, "Reset", _on_reset)
 	_add_button(action_row, USE_ITEM_NAME, "Use item", _on_use_item)
 	_add_button(action_row, JUMP_NAME, "Jump", _on_jump)
+	_add_button(action_row, ADVANCE_TICK_NAME, "Advance tick", _on_advance_tick)
 	map = AuthoringPreviewMap.new()
 	map.name = _MAP_NAME
 	window.add_child(map)
@@ -383,6 +387,10 @@ func _on_jump() -> void:
 	try_apply_play_intent({
 		"intent": PlayerIntentNames.JUMP,
 	})
+
+
+func _on_advance_tick() -> void:
+	try_advance_play()
 
 
 func _copy_use_item_stubs() -> void:

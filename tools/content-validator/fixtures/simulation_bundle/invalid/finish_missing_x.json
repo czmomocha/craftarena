@@ -11,5 +11,6 @@
 			"z": 0
 		}
 	],
-	"destructibles": []
+	"destructibles": [],
+	"hazards": []
 }

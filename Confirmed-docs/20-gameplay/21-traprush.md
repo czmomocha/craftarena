@@ -104,6 +104,8 @@ UGC 权威碰撞形状约束见 [CD-42](../40-technical/42-contracts-and-rulevm.
 | 可破坏障碍 | 木箱、能量墙、碎石、障碍核心 | 普通攻击机制或道具削减耐久 |
 | 触发型障碍 | 门、移动平台、开关链 | 交互、踩区或规则图触发 |
 
+实现落点（2026-08-26）：周期机关编进 v1 拓扑。`SimulationBundle` 必含 `hazards` 数组（可空）。袋为 `entity_id` / `x` / `y` / `z` / `cooldown_ticks`（已有 `hazard` 组件字段，当半周期，不发明 `period`，不编 `damage` / `knockback`）。`TraprushTopologyCompiler` 把带 `hazard`+`transform` 的实体编进去；缺 transform、或与检查点/传送/终点/可破坏同实体则整份拒绝。加载为固体静态盒（tick 0 落在固体半周期）。`TraprushHazardCycle` 在对局 `commit_tick` 与 Preview `try_advance_play` 于 `world.tick()` 之后按 `((tick_index / cooldown_ticks) % 2) == 0` 切换固体（`cooldown_ticks < 1` 始终固体）。意图不推进 tick，故不切换。切回固体不挤出、不伤害。官方三张赛道 0 个机关。Preview 壳 **Advance tick** 调用已有 `try_advance_play`。不锁产品秒数、预警动画、大厅机关图。落点见 [CD-32 §3](../30-ugc/32-editor-and-preview.md#3-从编辑到预览) 与 [CD-42 §3.4](../40-technical/42-contracts-and-rulevm.md#34-实现落点)。
+
 ### 5.2 障碍破坏
 
 - 可破坏障碍具有服务端权威 `health`；
@@ -241,6 +243,8 @@ ResetToCheckpointIntent
 实现落点（2026-08-26）：对局基础推击。命令 `intent_id=5` 为 `ShoveIntent`，保留字段仍须为零，无线上目标 id。`TraprushMatchSession` 在 `SHOVE_REACH_MAX = Fixed.SCALE` 的 XZ/Y 邻域内选最近其它胶囊（切比雪夫，平手再曼哈顿，再低席位），沿 XZ 远离施术者用调用方 `shove_step` 经已有 `TraprushShoveApply` 推开；冷却为调用方 `shove_cooldown_ticks`。`shove_step` 超过 `SHOVE_STEP_MAX` 或为负则整条拒绝。对局进程占位桩 `shove_step = SCALE/4`、冷却 1 tick，不是产品力度。大厅 **F** 上升沿编码；Solo 只有一枚胶囊，无目标。推击不进本席 overlay。Interact 仍不接线。Preview 仍拒绝 Shove。
 
 实现落点（2026-08-26）：出界复位见 [§6](#6-胜负与排名)。对局 Move/Jump/Reset 步进后、传送早退、Shove 推中目标后、以及 `commit_tick` 在 `world.tick()` 之后、占用扫描之前，调用同一模块。Preview 试玩同样先复位再占用。
+
+实现落点（2026-08-26）：周期机关见 [§5.1](#51-障碍分类)。对局 `commit_tick` 在 `world.tick()` 之后经 `TraprushHazardCycle` 切换固体，再做出界复位与占用扫描；lease 比较仍在 tick 前。意图不推进 tick。官方赛道 0 个机关。
 
 实现落点（2026-08-25）：在线大厅本席 `MatchLocalPredict` 只叠加已有 Move/Jump 的 Q48.16 位移到最新权威位姿；本席不插值。更新的快照 tick 硬贴权威（不是平滑对账）。传送、重置、道具、冲线不预测。预测位姿若与最新活箱或最新远端胶囊重叠，本帧不叠 overlay（权威胶囊/箱几何，不是 1 米表现盒）；远端不外推。垫 / 门 / 终点不是固体。在线 `play_jump_dy` 仍为 0（不叠假跳跃 overlay）；对局进程 `jump_dy` 已是 Preview 占位桩。官方赛道无固体立足点，Jump 仍为空操作。对局进程 UseItem 伤害/触达与 Preview 对齐，官方 `course_01` 出生点可打碎 +Z 箱。大厅 SnapshotCamera 跟随本席表现位姿（线上预测 overlay / Solo 本地权威），偏移与 Preview 相同；远端不拉镜头。大厅 WASD 把 8 向离散水平 `yaw_bam` 写入已有 Move 命令（W=0 为世界 -Z；省略哨兵仍是 -1，0 是合法朝前）；线上 overlay 立即改本席朝向，Solo 走本地权威；立方体玩家盒加 local -Z 面向标记。不发明 atan2，不锁产品转向速度，不改 Preview WASD。大厅 `follow_slot` 把本席玩家盒涂成 `OWN_ALBEDO`（青），远端仍 `REMOTE_ALBEDO`；名次标本席前缀 `*`。不是产品皮肤或槽位色盘。大厅用本席 `accepted_count` 给检查点垫分色（已验收 / 当前目标 / 未到）；未开玩保持原垫色。大厅用本席 `finish_tick` 给终点分色（未到金 / 垫齐后当前目标 / 已冲线暗金）；HUD 写 `pads=n/m`、`floor=n`（本席权威 `y / Fixed.SCALE` 向零）、`finish=n` 与 `crates=n/m`（活着的箱 / 编译袋总数），快照全员 `finish_tick>=0` 时加 `result=`。线上全员冲线后大厅 GET 控制面结算记录，200 后 HUD 加 `settled=`；Solo 不 GET。R 上升沿把已有 ResetToCheckpointIntent 接到可见复位（传送后回到最近已验收垫，进度不回退）。不是走路可达、合法路径距离或结算写库。客户端不 POST。落点见 [CD-43 §2](../40-technical/43-networking-and-replay.md#2-传输) 与 [CD-12 §1](../10-product/12-product-structure.md#1-入口结构)。
 
