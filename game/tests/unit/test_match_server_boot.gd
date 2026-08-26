@@ -98,7 +98,7 @@ func test_boot_session_from_config() -> void:
 	assert_ne(Vector3i(x0, 0, z0), Vector3i(x1, 0, z1))
 	assert_eq(session.jump_dy, Fixed.SCALE / 4)
 	assert_eq(session.support_dy, -Fixed.SCALE)
-	assert_eq(session.fall_dy, -Fixed.SCALE)
+	assert_eq(session.fall_dy, -Fixed.SCALE / 16)
 	assert_eq(session.use_item_damage, 1)
 	assert_eq(session.use_item_reach_dx, 0)
 	assert_eq(session.use_item_reach_dy, 0)
@@ -145,6 +145,8 @@ func test_boot_session_jump_hops_on_course_01_spawn_footing() -> void:
 	assert_eq(realtime.add_player(), 0)
 	realtime.commit_tick()
 	assert_eq(realtime.last_valid_input_tick(), -1)
+	for _settle: int in range(8):
+		realtime.commit_tick()
 	var rest: Dictionary = session.player_pose(0)
 	var rest_y: int = rest.get("y", 1)
 	assert_true(realtime.accept_command(
@@ -155,10 +157,14 @@ func test_boot_session_jump_hops_on_course_01_spawn_footing() -> void:
 	var hopped: Dictionary = session.player_pose(0)
 	var hopped_y: int = hopped.get("y", 2)
 	assert_eq(hopped_y, rest_y + Fixed.SCALE / 4)
-	assert_eq(realtime.last_valid_input_tick(), 2)
-	realtime.commit_tick()
-	var landed: Dictionary = session.player_pose(0)
-	var landed_y: int = landed.get("y", 3)
+	assert_eq(realtime.last_valid_input_tick(), session.tick_index())
+	var landed_y: int = hopped_y
+	for _land: int in range(8):
+		realtime.commit_tick()
+		var landed: Dictionary = session.player_pose(0)
+		landed_y = landed.get("y", 3)
+		if landed_y == rest_y:
+			break
 	assert_eq(landed_y, rest_y)
 
 

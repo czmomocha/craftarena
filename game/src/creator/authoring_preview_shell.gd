@@ -14,7 +14,8 @@ extends Node
 ## and jump rising-edge encode JumpIntent; play_jump_dy / play_support_dy
 ## / play_fall_dy are stubs, not a locked jump height or product gravity.
 ## Advance tick falls then ticks so period hazards can open; intents still
-## do not tick. Play copies an 8-cell AABB stub onto Preview (not a product
+## do not tick. play_fall_dy is one cell per Advance click (manual tick),
+## not the match/Solo engine-tick stub. Play copies an 8-cell AABB stub onto Preview (not a product
 ## bound). Occupancy
 ## accepts overlapping checkpoint pads through PadAccept and portal boxes
 ## through PortalLanding.try_land_exit; status shows pads=n/m, floor=n,

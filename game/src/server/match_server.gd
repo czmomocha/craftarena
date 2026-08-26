@@ -17,7 +17,8 @@ extends Node
 ## --max-ticks 到达后打印最终心跳并 exit 0；配置非法打印错误事件并 exit 1。
 ## 出生偏移、胶囊尺寸、心跳/快照节奏与动作数值（跳跃/支撑/道具伤害与触达/推击）
 ## 以及出界 AABB 半宽均为进程内占位桩，不锁产品出生布局、数值或场地尺寸。
-## 与大厅 Solo / Preview 试玩占位桩同值。
+## 跳跃/支撑/道具/推击占位与大厅 Solo / Preview 同值；下落占位与 Solo 同值
+## （Preview 手动 Advance 仍用一格）。
 
 const AuthoringDocument := preload("res://src/creator/authoring_document.gd")
 const AuthoringWorld := preload("res://src/creator/authoring_world.gd")
@@ -47,10 +48,12 @@ const MATCH_SEED: int = 1
 ## 占位动作数值，与大厅 Solo / Preview 壳对齐，不是产品跳跃高度、重力或爆破表。
 ## support_dy 为负：与灰盒相同，向下探测立足固体。
 ## jump_dy 为 SCALE/4：一格 hop 会与 course_01 出生点正上方 two_way 盒闭区间相交并落地。
-## fall_dy 为 -SCALE：每 tick 最多落一格直到固体，不是产品重力。
+## fall_dy 为 -SCALE/16：与大厅 play_move_step 同量。引擎 ~60 physics tick/s，
+## 一格每 tick 会在约 8 帧内触发出界复位，看起来像往上弹回出生点。Preview 壳
+## 仍用 -SCALE（手动 Advance tick）。不是产品重力。
 const STUB_JUMP_DY: int = Fixed.SCALE / 4
 const STUB_SUPPORT_DY: int = -Fixed.SCALE
-const STUB_FALL_DY: int = -Fixed.SCALE
+const STUB_FALL_DY: int = -Fixed.SCALE / 16
 const STUB_USE_ITEM_DAMAGE: int = 1
 ## 占位推击步长（四分之一格）与冷却 tick，不是产品力度或冷却秒数。
 const STUB_SHOVE_COOLDOWN_TICKS: int = 1

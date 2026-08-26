@@ -13,6 +13,6 @@ alwaysApply: true
 
 真机：PR Test plan 与 [章节真机清单](docs/runbooks/chapter-device-check.md) 本刀必须是编号步骤（怎么开、点什么、期望 / 失败）；禁止只写「真机再看一眼」。无 GUI 的章写「无」加原因。人工检查，不是 CI 门禁。口径见 [CD-52 §3.2](Confirmed-docs/50-engineering/52-ai-workflow.md)。
 
-- 做：权威下落接到对局 / Solo / Preview——`TraprushMatchSession.fall_dy` 默认 0（2 人 Headless 冲线夹具不走路板）；boot / Solo / Preview 壳占位 `fall_dy = -Fixed.SCALE`（每 tick 最多落一格直到固体）；`MatchRealtime.commit_tick` 先 `apply_player_falls` 再意图再 `advance_sim_tick`（同一拍 Jump 不被立刻落下）；Solo `_process` 先 `try_advance` 再采样空格；Preview 意图不下落，Advance tick 才落；纯下落不续租。不锁产品重力加速度、不铺官方沿路地板。
+- 做：权威下落接到对局 / Solo / Preview——`TraprushMatchSession.fall_dy` 默认 0（2 人 Headless 冲线夹具不走路板）；boot / Solo 占位 `fall_dy = -Fixed.SCALE / 16`（跟引擎 tick 走，避免每帧一格掉出 ±8 出界桩）；Preview 壳占位 `-Fixed.SCALE`（手动 Advance tick）；`MatchRealtime.commit_tick` 先 `apply_player_falls` 再意图再 `advance_sim_tick`（同一拍 Jump 不被立刻落下）；Solo `_process` 先 `try_advance` 再采样空格；Preview 意图不下落，Advance tick 才落；纯下落不续租。不锁产品重力加速度、不铺官方沿路地板。
 - 不做：账号绑定、远端外推碰撞、平滑对账、可达性叠加 gizmos、走路可达/合法路径距离、检查点到达时间、本机最佳轨迹幽灵、已缓存 UGC/草稿试玩、个人试玩记录落盘、墙钟发送速率、MMR、限时未全员冲线结算、Shove/Interact 线上 id、Tick/快照频率锁定、2 秒云端上传、5 分钟定时、BASTION 面板、批量生成、性能分析、时延自动门禁、产品重力加速度、官方沿路地板、在线 overlay 假跳、二进制签名、产品速度、复活硬直、产品镜头/FOV、离开对局 HTTP、生产 CA 信任链、控制面 HTTPS、MatchHost 子进程 TLS、把 `godot_ai` 插件目录或 `_mcp_game_helper` 入库、预警动画、产品秒数、伤害/击退；不开 M4 / M5 新章节；不为了两域并行而各交半章。
 - 仍不做：把预算数字、走路可达、多人试玩房、Rule VM 真应用和整个 M3 塞进一个 PR。

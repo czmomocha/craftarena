@@ -56,7 +56,7 @@
 
 移动、扫掠、推挤和击退由定点 `SimulationCore` 按稳定顺序解算。Godot 物理只允许承担受控静态查询和表现，不决定竞速结果。
 
-实现落点（2026-08-26）：权威下落。`TraprushMatchSession.fall_dy` 默认 0（2 人 Headless 冲线夹具不走路板，不能默认下落）。对局进程 / Solo / Preview 壳占位 `-Fixed.SCALE`：每 tick 经已有 `try_move_y_until_blocked` 最多落一格直到固体，不是产品重力加速度。会话 `commit_tick` 先下落再 `world.tick`（与灰盒相同）。`MatchRealtime.commit_tick` 把下落与 `world.tick` 拆开，中间按到达顺序应用排队意图，避免同一拍 Jump 被立刻落下。Preview 只在 `try_advance_play` 下落，意图不推进 tick。纯下落不续租。不铺官方沿路地板。落点见 [CD-32 §3](../30-ugc/32-editor-and-preview.md#3-从编辑到预览) 与 [CD-42 §3.4](../40-technical/42-contracts-and-rulevm.md#34-实现落点)。
+实现落点（2026-08-26）：权威下落。`TraprushMatchSession.fall_dy` 默认 0（2 人 Headless 冲线夹具不走路板，不能默认下落）。对局进程 / Solo 占位 `-Fixed.SCALE / 16`（与大厅 `play_move_step` 同量；引擎 ~60 tick/s 时一格每 tick 会在约 8 帧内触发出界复位）。Preview 壳占位 `-Fixed.SCALE`（手动 Advance tick）。经已有 `try_move_y_until_blocked` 直到固体，不是产品重力加速度。会话 `commit_tick` 先下落再 `world.tick`（与灰盒相同）。`MatchRealtime.commit_tick` 把下落与 `world.tick` 拆开，中间按到达顺序应用排队意图，避免同一拍 Jump 被立刻落下。Preview 只在 `try_advance_play` 下落，意图不推进 tick。纯下落不续租。不铺官方沿路地板。落点见 [CD-32 §3](../30-ugc/32-editor-and-preview.md#3-从编辑到预览) 与 [CD-42 §3.4](../40-technical/42-contracts-and-rulevm.md#34-实现落点)。
 
 ## 4. 地图传送与立体移动
 

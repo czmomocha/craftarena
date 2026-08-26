@@ -1281,7 +1281,9 @@ func _prepare_offline_stubs() -> void:
 		return
 	offline.play_jump_dy = Fixed.SCALE / 4
 	offline.play_support_dy = -Fixed.SCALE
-	offline.play_fall_dy = -Fixed.SCALE
+	## Same stub as match_server STUB_FALL_DY: one move-step per tick so a
+	## 60 Hz _process does not drop eight cells and OOB-reset in a blink.
+	offline.play_fall_dy = -Fixed.SCALE / 16
 	offline.play_use_item_damage = 1
 	offline.play_use_item_reach_dx = 0
 	offline.play_use_item_reach_dy = 0

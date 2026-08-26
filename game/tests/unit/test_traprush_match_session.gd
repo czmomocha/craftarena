@@ -362,6 +362,36 @@ func test_fall_off_spawn_footing_drops_y() -> void:
 	assert_lt(dropped_y, rest_y)
 
 
+func test_fall_off_spawn_footing_then_range_resets_to_spawn() -> void:
+	var session: TraprushMatchSession = _two_player_session()
+	session.fall_dy = -CELL
+	session.enable_play_range(8 * CELL)
+	session.commit_tick()
+	var rest: Dictionary = session.player_pose(0)
+	var rest_y: int = rest.get("y", 1)
+	assert_true(session.apply_player_intent(0, _move(CELL, 0)))
+	var walked: Dictionary = session.player_pose(0)
+	var walked_x: int = walked.get("x", -1)
+	assert_eq(walked_x, CELL)
+	var saw_drop: bool = false
+	var saw_reset: bool = false
+	for _step: int in range(16):
+		session.commit_tick()
+		var pose: Dictionary = session.player_pose(0)
+		var pose_y: int = pose.get("y", 2)
+		var pose_x: int = pose.get("x", -1)
+		if pose_y < rest_y:
+			saw_drop = true
+		if saw_drop and pose_x == 0:
+			saw_reset = true
+			break
+	assert_true(saw_drop)
+	assert_true(saw_reset)
+	var spawn: Dictionary = session.player_pose(0)
+	var spawn_x: int = spawn.get("x", -1)
+	assert_eq(spawn_x, 0)
+
+
 func _jump() -> Dictionary:
 	return {"intent": PlayerIntentNames.JUMP}
 
