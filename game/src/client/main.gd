@@ -8,14 +8,20 @@ extends Node
 ## embedded match session and keeps "离线试玩，成绩不上传" on the HUD.
 ## Live HTTP/WS stays off in headless
 ## so CI --quit does not call localhost.
+## `-- --package-check` short-circuits all of that and prints the exported
+## package self report instead (course correction C1).
 
 const BOOT_EVENT: String = "client_boot"
 const MatchLobbyShellGd := preload("res://src/client/match_lobby_shell.gd")
+const PackageCheckGd := preload("res://src/client/package_check.gd")
 
 var lobby: MatchLobbyShellGd = null
 
 
 func _ready() -> void:
+	if PackageCheckGd.requested(OS.get_cmdline_user_args()):
+		get_tree().quit(PackageCheckGd.run_and_print())
+		return
 	print(_format_log_line(BOOT_EVENT, {
 		"project": ProjectSettings.get_setting("application/config/name", ""),
 		"engine": Engine.get_version_info().get("string", ""),
