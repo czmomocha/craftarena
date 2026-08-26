@@ -38,6 +38,7 @@ extends Node
 ## is a read-only GET. The client never POSTs settlement.
 ## WASD encodes Move plus discrete 8-way yaw_bam; Jump / Reset / Use item
 ## encode existing intents. F rising-edge encodes ShoveIntent (no target id).
+## Solo opens an 8-cell play-range stub (not a product bound).
 ## play_move_step is a presentation stub, not a product speed.
 ## Unexpected socket close while connecting or in-match reissues the
 ## consumed ticket and follows the latest snapshot again.
@@ -61,6 +62,7 @@ const MatchSnapshotInterpGd := preload("res://src/client/match_snapshot_interp.g
 const MatchSnapshotMapGd := preload("res://src/client/match_snapshot_map.gd")
 const MatchStandingMapGd := preload("res://src/client/match_standing_map.gd")
 const OfficialTraprushCoursesGd := preload("res://src/shared/official_traprush_courses.gd")
+const OutOfRangeResetGd := preload("res://src/games/traprush/out_of_range_reset.gd")
 const PlayerIntentNames := preload("res://src/shared/commands/player_intent_names.gd")
 
 const TITLE: String = "Traprush"
@@ -1207,6 +1209,7 @@ func _prepare_offline_stubs() -> void:
 	offline.play_use_item_reach_dz = Fixed.SCALE
 	offline.play_shove_step = Fixed.SCALE / 4
 	offline.play_shove_cooldown_ticks = 1
+	offline.play_range_half = OutOfRangeResetGd.STUB_HALF
 
 
 func _on_close_requested() -> void:

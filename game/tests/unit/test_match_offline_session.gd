@@ -126,3 +126,16 @@ func test_course_01_finish_is_local_mvp_without_online_write() -> void:
 	assert_false(offline.allows_online_writes())
 	var finish_banner: String = str(offline.status_view().get("banner", ""))
 	assert_eq(finish_banner, MatchOfflineSession.BANNER)
+
+
+func test_tight_play_range_resets_two_cell_move() -> void:
+	var offline: MatchOfflineSession = MatchOfflineSession.new()
+	offline.play_range_half = CELL
+	assert_true(offline.try_begin(COURSE_01))
+	assert_true(offline.session.range_enabled)
+	assert_false(offline.try_encode_intent(PlayerIntentNames.MOVE, CELL, 0, -1).is_empty())
+	assert_false(offline.try_encode_intent(PlayerIntentNames.MOVE, CELL, 0, -1).is_empty())
+	var pose: Dictionary = offline.session.player_pose(0)
+	var pose_x: int = pose.get("x", -1)
+	assert_eq(pose_x, 0)
+	assert_eq(offline.session.player_accepted_count(0), 1)

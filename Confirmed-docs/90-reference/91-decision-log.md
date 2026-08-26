@@ -219,6 +219,7 @@
 - `gateway_tls = in_process_wss_optional_pem`（2026-08-26）：`GATEWAY_TLS_CERT` 与 `GATEWAY_TLS_KEY` 成对指向 PEM 时网关在本进程终结 TLS（Fastify `https`，客户端 `wss`）；只设一个拒绝启动；都不设仍明文 `ws`，只许本机开发。`/healthz` `/readyz` 与 `/ws` 同一端口。对局进程上游仍内网明文 `ws`。Godot `wss://` 使用 `TLSOptions.client_unsafe()`；大厅 HUD 常驻 `tls=on|off`。`npm run dev` 默认不启用。不锁生产 CA 信任链、控制面 HTTPS、MatchHost 子进程 TLS。口径见 [CD-43 §2](../40-technical/43-networking-and-replay.md#2-传输)。
 - `match_move_cap = one_cell_per_command_reject`（2026-08-26）：对局会话拒绝 |dx| 或 |dz| 超过 `Fixed.SCALE` 的 Move，整条不应用、不裁剪。这是防瞬移门禁（M3 验收：客户端不能伪造位置），不是产品速度。诚实大厅仍发 `play_move_step = SCALE/16`；Headless 一格步进仍通过。线上超限帧可入队，apply 失败则该 tick 作废且不续租。Preview `IntentStepper` 不经此门。口径见 [CD-21 §8](../20-gameplay/21-traprush.md#8-网络与仿真基线) 与 [CD-43 §3](../40-technical/43-networking-and-replay.md#3-回放与确定性)。
 - `match_shove = nearest_capsule_no_wire_id`（2026-08-26）：命令 `intent_id=5` 为 `ShoveIntent`，无线上目标 id，保留字段仍须为零。服务端在一格邻域内选最近其它胶囊，沿 XZ 远离施术者用调用方 `shove_step` 推开，冷却为调用方 tick。超限 step 整条拒绝。大厅 F 上升沿采样。不预测、不锁产品力度。Interact 仍不接线。口径见 [CD-21 §8](../20-gameplay/21-traprush.md#8-网络与仿真基线) 与 [CD-43 §1](../40-technical/43-networking-and-replay.md#1-序列化分工)。
+- `match_oob_reset = caller_aabb_checkpoint_respawn`（2026-08-26）：环境失败后无限复活到最近检查点。`TraprushOutOfRangeReset` 在调用方 AABB（闭区间）外写回 `CheckpointSpawn.pose_for`。对局默认关闭；boot / Solo / Preview 壳打开 ±8 格开发桩，不是产品场地。先复位再占用扫描。不计数掉出次数 N，不接重力/下落，不写复活硬直。空区间拒绝。口径见 [CD-21 §6](../20-gameplay/21-traprush.md#6-胜负与排名) 与 [CD-32 §3](../30-ugc/32-editor-and-preview.md#3-从编辑到预览)。
 
 ## D.9 明确延期或跳过
 

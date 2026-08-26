@@ -16,13 +16,15 @@ extends Node
 ## 心跳本身不续租（CD-44 §3）。
 ## --max-ticks 到达后打印最终心跳并 exit 0；配置非法打印错误事件并 exit 1。
 ## 出生偏移、胶囊尺寸、心跳/快照节奏与动作数值（跳跃/支撑/道具伤害与触达/推击）
-## 均为进程内占位桩，不锁产品出生布局或数值。与大厅 Solo 占位桩同值。
+## 以及出界 AABB 半宽均为进程内占位桩，不锁产品出生布局、数值或场地尺寸。
+## 与大厅 Solo / Preview 试玩占位桩同值。
 
 const AuthoringDocument := preload("res://src/creator/authoring_document.gd")
 const AuthoringWorld := preload("res://src/creator/authoring_world.gd")
 const Fixed := preload("res://src/shared/fixed/fixed.gd")
 const MatchRealtime := preload("res://src/server/match_realtime.gd")
 const SimulationBundle := preload("res://src/ugc/simulation_bundle.gd")
+const OutOfRangeReset := preload("res://src/games/traprush/out_of_range_reset.gd")
 const TraprushMatchSession := preload("res://src/games/traprush/match_session.gd")
 const TraprushMatchSettlement := preload("res://src/games/traprush/match_settlement.gd")
 const TraprushTopologyCompiler := preload("res://src/ugc/traprush_topology_compiler.gd")
@@ -265,6 +267,8 @@ static func boot_session(config: Dictionary) -> TraprushMatchSession:
 	session.use_item_reach_dz = Fixed.SCALE
 	session.shove_step = Fixed.SCALE / 4
 	session.shove_cooldown_ticks = STUB_SHOVE_COOLDOWN_TICKS
+	## 开发桩半宽 ±8 格，不是产品场地尺寸。官方赛道最大约 4 格。
+	session.enable_play_range(OutOfRangeReset.STUB_HALF)
 	return session
 
 

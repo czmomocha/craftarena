@@ -13,6 +13,8 @@ extends RefCounted
 ## caller reach), and JumpIntent (grounded caller play_jump_dy hop via
 ## IntentStepper; airborne keeps the pose and still reports ok).
 ## Shove/Interact stay refused. Does not tick. No gravity or fall.
+## Out-of-range reset uses caller AABB via TraprushOutOfRangeReset when
+## play_range_enabled; default off. No drop-count N, no stun.
 ## Occupancy uses existing TraprushPadAccept: overlapping a checkpoint pad
 ## advances ordered progress. Occupancy uses existing TraprushPortalLanding
 ## try_land_exit: overlapping a portal source box lands one hop. two_way dest
@@ -29,6 +31,8 @@ extends RefCounted
 ## locked jump height or gravity. Never settlement or online writes.
 ## Capsule radius/height are caller-provided, not a locked product size.
 ## Window host is AuthoringPreviewShell.
+
+const OutOfRangeReset := preload("res://src/games/traprush/out_of_range_reset.gd")
 
 var world: AuthoringWorld = null
 var preview_revision: int = 0
@@ -51,6 +55,13 @@ var play_use_item_reach_dy: int = 0
 var play_use_item_reach_dz: int = 0
 var play_jump_dy: int = 0
 var play_support_dy: int = 0
+var play_range_enabled: bool = false
+var play_range_min_x: int = 0
+var play_range_max_x: int = 0
+var play_range_min_y: int = 0
+var play_range_max_y: int = 0
+var play_range_min_z: int = 0
+var play_range_max_z: int = 0
 var _in_tick: bool = false
 var _playing: bool = false
 var _portal_latch: Dictionary = {}
@@ -186,6 +197,7 @@ func try_advance_play() -> bool:
 	if not is_playing():
 		return false
 	play_world.tick()
+	_reset_play_if_out_of_range()
 	_accept_overlapping_play_pads()
 	_resolve_play_portals()
 	_accept_overlapping_play_pads()
@@ -208,6 +220,7 @@ func try_apply_play_intent(payload: Dictionary) -> bool:
 	if not move_ok and not reset_ok and not jump_ok:
 		return false
 	if move_ok and _resolve_play_portals():
+		_reset_play_if_out_of_range()
 		return true
 	if play_spawn == null or play_track == null:
 		return false
@@ -225,11 +238,25 @@ func try_apply_play_intent(payload: Dictionary) -> bool:
 		return false
 	if reset_ok:
 		_portal_latch = {}
+	_reset_play_if_out_of_range()
 	_accept_overlapping_play_pads()
 	_resolve_play_portals()
 	_accept_overlapping_play_pads()
 	_accept_overlapping_play_finish()
 	return true
+
+
+func enable_play_range(half: int) -> void:
+	if half < 1:
+		play_range_enabled = false
+		return
+	play_range_enabled = true
+	play_range_min_x = -half
+	play_range_max_x = half
+	play_range_min_y = -half
+	play_range_max_y = half
+	play_range_min_z = -half
+	play_range_max_z = half
 
 
 func try_accept_play_checkpoint(checkpoint_id: int) -> bool:
@@ -405,6 +432,29 @@ func _apply_decoded(decoded: EditPayload) -> bool:
 			return world.replace(decoded.record)
 		_:
 			return false
+
+
+func _reset_play_if_out_of_range() -> bool:
+	if not play_range_enabled:
+		return false
+	if not is_playing() or play_spawn == null or play_track == null:
+		return false
+	var result: Dictionary = OutOfRangeReset.try_apply(
+		play_world,
+		player_id,
+		play_spawn,
+		play_track,
+		play_range_min_y,
+		play_range_max_y,
+		play_range_min_x,
+		play_range_max_x,
+		play_range_min_z,
+		play_range_max_z
+	)
+	var reset: bool = result.get("reset", false)
+	if reset:
+		_portal_latch = {}
+	return reset
 
 
 func _clear_play() -> void:
