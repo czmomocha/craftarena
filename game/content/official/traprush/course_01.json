@@ -1,7 +1,7 @@
 {
 	"schema_version": 1,
 	"cell": 65536,
-	"revision": 7,
+	"revision": 8,
 	"entities": [
 		{
 			"schema_version": 1,
@@ -127,6 +127,46 @@
 				"destructible": {
 					"durability": 1,
 					"regen_policy_id": 0
+				}
+			}
+		},
+		{
+			"schema_version": 1,
+			"entity_id": 60,
+			"components": {
+				"transform": {
+					"x": 0,
+					"y": 0,
+					"z": -131072,
+					"yaw_bam": 0
+				},
+				"hazard": {
+					"damage": 0,
+					"knockback": 0,
+					"cooldown_ticks": 1
+				}
+			}
+		},
+		{
+			"schema_version": 1,
+			"entity_id": 70,
+			"components": {
+				"transform": {
+					"x": -65536,
+					"y": 0,
+					"z": 0,
+					"yaw_bam": 0
+				},
+				"zone": {
+					"shape": {
+						"kind": "box",
+						"hx": 32768,
+						"hy": 32768,
+						"hz": 32768
+					},
+					"tags": [
+						"solid"
+					]
 				}
 			}
 		}

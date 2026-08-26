@@ -31,18 +31,22 @@ func after_each() -> void:
 	_map = null
 
 
-func test_official_courses_map_zero_hazards() -> void:
+func test_official_courses_map_one_hazard() -> void:
 	_map = MatchHazardMap.new()
 	add_child(_map)
 	assert_true(_map.apply_path(COURSE_01_PATH))
-	assert_eq(_map.hazard_count(), 0)
-	assert_eq(_map.hazard_total(), 0)
-	assert_eq(_map.live_solid_boxes().size(), 0)
+	assert_eq(_map.hazard_count(), 1)
+	assert_eq(_map.hazard_total(), 1)
+	assert_eq(_map.live_solid_boxes().size(), 1)
 	assert_eq(_map.crate_node_count(), 0)
 	assert_null(_map.hazard_node(50))
+	var node: MeshInstance3D = _map.hazard_node(60)
+	assert_not_null(node)
+	assert_almost_eq(node.position.z, -2.0, EPS)
+	assert_eq(_albedo(node), MatchHazardMap.HAZARD_ALBEDO)
 	assert_true(_map.apply_path(COURSE_03_PATH))
-	assert_eq(_map.hazard_count(), 0)
-	assert_eq(_map.hazard_total(), 0)
+	assert_eq(_map.hazard_count(), 1)
+	assert_eq(_map.hazard_total(), 1)
 	assert_false(_map.allows_settlement())
 	assert_false(_map.allows_online_writes())
 
