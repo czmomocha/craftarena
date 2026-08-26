@@ -580,8 +580,8 @@ cell = Fixed.SCALE 与由其推导的一切 cell/2 占用半长
 
 | 批次 | 状态 | 落点 |
 |---|---|---|
-| C0 立刻闸门 | 进行中 | `.github/CODEOWNERS`、`.cursor/rules/course-correction-freeze.mdc`、`.cursor/rules/chapter-granularity-and-review.mdc`、[docs/audits/2026-08-26-audit.md](../audits/2026-08-26-audit.md)、本文件 §4.0 |
-| C1 真机与真网络 | 未开工 | 阻塞于 §4.0 的 D3 具体规格 / 域名 |
+| C0 立刻闸门 | 已交审查 | `.github/CODEOWNERS`、`.cursor/rules/course-correction-freeze.mdc`、`.cursor/rules/chapter-granularity-and-review.mdc`、[docs/audits/2026-08-26-audit.md](../audits/2026-08-26-audit.md)、本文件 §4.0 |
+| C1 真机与真网络 | 第 1 章已交审查 | 导出预设 + 包内核查：`game/export_presets.cfg`、`game/src/client/package_check.gd`、[导出包核查清单](../runbooks/desktop-export-check.md)。第 2 章（香港 VPS 部署 + 域名 + 证书 + 双机对局）阻塞于 §4.0 的 D3 具体规格 / 域名 |
 | C2 度量与自动可玩性 | 未开工 | 与 C1 并行（D1 = A） |
 | C3 核心玩法前提 | 未开工 | 阻塞于 C1 真网络结论 + §4.0 的 D5 两项空白 |
 | C4 资产契约与美术规格 | 未开工 | 阻塞于 §4.0 的 D4 字体方案 |

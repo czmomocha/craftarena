@@ -53,19 +53,50 @@ Worktree 端口偏移见 README「并行工作区」；本文件不复述端口�
 
 ---
 
-## 本刀：纠偏 C0 立刻闸门
+## 本刀：纠偏 C1 第一章 — 导出预设与包内核查
 
-对应：当前完整章节 PR。
+对应：当前完整章节 PR。这是本项目**第一次真正离开开发机**，所以「真机」在本刀里指**导出的安装包**，不是编辑器运行源码。
 
-**本章无开发机可见行为**。原因：C0 只动治理面——`.github/CODEOWNERS`、`.cursor/rules/`、`docs/plans/` 与 `docs/audits/`，不改 `game/` 与 `backend/` 任何代码，窗口里看不到任何差异。
+前置：先按[导出包核查清单](desktop-export-check.md) §1 装好 4.7.2-stable 导出模板并核对 SHA512。本刀不需要三后端。
 
-### 人类需要做的两项非真机核查
+### 1. 三个预设都能导出
 
-这两项不是窗口走查，但只有人类能确认，请在合并前完成。
+仓库根依次执行（macOS 把 `& $env:GODOT4_CONSOLE` 换成 `"$GODOT4"`）：
 
-1. **GitHub 上确认 code owner 审查真的会拦。** 打开仓库 Settings → Branches → `main` 的保护规则，确认 "Require review from Code Owners" 处于开启。预期：本 PR 的 Reviewers 里出现由 `CODEOWNERS` 自动请求的 `@czmomocha`。失败：PR 没有自动请求 code owner，说明规则未开，`CODEOWNERS` 只是一份注释文件。
-2. **新开一个 Agent 会话，不给它任何提示，问它「现在可以开工做什么」。** 预期：它能自己说出冻结范围（不做 M4 / BASTION / 表现层增强）和占位常量不得扩散，来源是 `.cursor/rules/`。失败：它开始规划 M4 或新表现层章节——说明规则文件没有对新会话生效。
+```powershell
+& $env:GODOT4_CONSOLE --headless --path game --export-release "Windows Desktop" "../export/windows/CraftArena.exe"
+& $env:GODOT4_CONSOLE --headless --path game --export-release "Linux Headless" "../export/linux-headless/craftarena-server.x86_64"
+& $env:GODOT4_CONSOLE --headless --path game --export-release "Web" "../export/web/index.html"
+```
+
+预期：三条退出码都是 0，`export/` 下出现 `CraftArena.exe` + `.pck`、`craftarena-server.x86_64` + `.pck`、以及 9 个 Web 文件。失败：出现 `Cannot export project with preset ... due to configuration errors`（引擎不会列出具体项，见核查清单 §5 第 2 条）。
+
+### 2. 包内自检必须 `ok=true`
+
+```powershell
+& "export\windows\CraftArena.exe" --headless -- --package-check
+```
+
+预期：打印一行 JSON，含 `"ok":true`、`"failures":[]`、`"template_build":true`、`"packed_addons":[]`，退出码 0。失败：`failures` 非空——尤其 `no_godot_ai_packed`，那意味着 Godot AI 插件又漏进了玩家包。
+
+### 3. 双击运行 Windows 包，开窗并能跳
+
+1. 双击 `export\windows\CraftArena.exe`（**不加** `--headless`）。
+2. 预期：出现标题 **Traprush** 的窗口，状态行含 `join=idle`、`play=idle`、`tls=off`、`course=3/2/1`。失败：闪退、黑窗、或只有控制台。
+3. 点 **Solo play**，点窗口内部一次，按 WASD 移动、空格跳跃。预期：青色本席盒会动、会跳、会落回脚下石色盒，与编辑器里跑源码时一致。
+4. 与 `& $env:GODOT4 --path game` 的画面并排比一次颜色与明暗。预期：一致。失败：包里的盒子发白、发黑或颜色不同——那是 Compatibility 下运行时创建材质的问题，Headless 自检查不出来。
+
+### 4. Web 包能在浏览器里开到大厅
+
+```powershell
+python -m http.server 8060 --directory export\web
+```
+
+浏览器开 `http://127.0.0.1:8060/`。预期：加载条走完后出现同一个大厅画面，能点 **Solo play**。失败：白屏（多半是改了 `variant/thread_support` 却没给服务端配 COOP / COEP 响应头）。
 
 ### 本刀不测
 
-- 任何窗口行为、任何仿真数值。C0 不改代码。
+- 联机：`wss://` 需要真域名 + 受信证书，属 C1 部署那一章；
+- Linux 包在真机上跑：需要香港 VPS，同上；
+- 移动端导出、代码签名、安装器、自动更新；
+- 任何玩法数值、重力、道具——那是 C3。

@@ -15,6 +15,6 @@ alwaysApply: true
 
 真机：PR Test plan 与 [章节真机清单](docs/runbooks/chapter-device-check.md) 本刀必须是编号步骤（怎么开、点什么、期望 / 失败）；禁止只写「真机再看一眼」。无 GUI 的章写「无」加原因。人工检查，不是 CI 门禁。口径见 [CD-52 §3.2](Confirmed-docs/50-engineering/52-ai-workflow.md)。
 
-- 做（本刀 = 纠偏 C0 立刻闸门）：`.github/CODEOWNERS` 覆盖 `game/src/client/`、`game/src/games/`、`.cursor/rules/` 三处治理盲区；占位常量冻结令与章粒度 / 审查分级写入 `.cursor/rules/`，使新会话不读方案文档也受约束；`docs/plans/course-correction-2026-08.md` 落 §4.0 签字汇总与 §9.1 批次进度，并列出仍阻塞 C1 / C3 / C4 的人类空白；`docs/audits/` 作为审视基线目录成立。本章不改 `Confirmed-docs/`（留到 C5 一次性同步）、不改 `game/` 与 `backend/` 代码。
+- 做（本刀 = 纠偏 C1 第一章：导出预设与包内核查）：`game/export_presets.cfg` 落 Windows Desktop / Linux Headless / Web 三个预设，`exclude_filter` 挡住 `addons/*` 与 `tests/*`、`include_filter` 带上官方赛道 `.json`；`res://src/client/package_check.gd` + `main.gd` 的 `-- --package-check` 把包内核查变成一条命令与一个退出码；`docs/runbooks/desktop-export-check.md` 记录模板安装校验和、三条导出命令、包体基线与**第一次真导出证伪的四件事**；GUT 守住预设契约与自检语义。本章不改 `Confirmed-docs/`（留到 C5 一次性同步）、不部署、不联机。
 - 不做：一切被 [纠偏冻结令](.cursor/rules/course-correction-freeze.mdc) §1 列为「不得开工」的内容——M3 剩余表现层增强、M4、M6 / M7、第 4 张及以后官方赛道、新增冻结常量引用点；以及原先各章已列的不做项（账号绑定、远端外推碰撞、平滑对账、走路可达、Tick / 快照频率锁定、MMR、Rule VM、BASTION、生产 CA 信任链、把 `godot_ai` 插件目录或 `_mcp_game_helper` 入库等）。
 - 仍不做：把 C0 与 C1 / C2 塞进同一个 PR；不为了两域并行而各交半章。
