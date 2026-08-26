@@ -53,26 +53,26 @@ Worktree 端口偏移见 README「并行工作区」；本文件不复述端口�
 
 ---
 
-## 本刀：固定固体占用
+## 本刀：编辑器占用摆放
 
-对应：当前完整章节 PR。锁的是 **`zone.tags` 含 `solid` 编进 v1 可空 `solids` 袋**、**始终固体静态盒**、**大厅/Preview 石色 1 米占位**、**HUD `solids=n/m`**、**本席 overlay 挡住始终固体**。官方三张赛道 0 个 solid。不新增 Component Schema 字段。不是编辑器 Place solid，不是官方赛道地板，不是重力。
+对应：当前完整章节 PR。锁的是工具条 **Place solid** / **Place hazard** / **Place crate** 走已有 EDIT `place`，Editor 与已连接 Preview 画出石色 / 洋红 / 橙色 1 米盒。`cooldown_ticks=1` 与箱子耐久 1 是开发桩。不是新 `op`，不是官方赛道塞固体/机关，不是重力。
 
-### 1. Preview 沙箱能看见石色盒
+### 1. 工具条能摆三种占用盒
 
 前置：关掉上次运行。本刀不需要三后端。
 
-操作：在编辑器 **F6** 运行 `res://src/creator/preview_sandbox.tscn`。看 Preview 窗里出生点（原点）正下一格。点 **Play**，看状态行。
+操作：在编辑器 **F6** 运行 `res://src/creator/editor_sandbox.tscn`。Editor 窗已有一块检查点垫和一扇悬空传送门。点 **Place solid**、**Place hazard**、**Place crate**（占用行，检查点行下面）。
 
-预期：出生点正下一格有一块石色（偏灰棕）1 米盒，不是洋红；Play 后状态行含 `solids=1/1`；出生点 +X 仍有洋红机关。失败：没有石色盒、`solids=` 缺失或不是 `1/1`、或石色盒被涂成洋红。
+预期：沿 +X 依次出现石色（偏灰棕）盒、洋红盒、橙色盒；三种颜色互不相同。失败：没有新按钮、点了没盒、或三种都是同一金色占位。
 
-### 2. 官方 Solo 赛道没有石色盒
+### 2. Preview 跟随同一套颜色
 
-前置：共用启动 0.2。本刀不需要三后端。
+前置：步骤 1 的 Editor 仍开着。
 
-操作：点 **Solo play**（默认 `course_01`）。看 3D 与状态行。
+操作：点 Editor 的 **Preview**。看独立 Preview 窗。
 
-预期：状态行含 `solids=0/0`；看不见石色 1 米盒。失败：出现石色盒，或 HUD 写了非零 `solids=`。
+预期：Preview 里同样三块石色 / 洋红 / 橙色盒，位置与 Editor 一致。失败：Preview 没有这三块，或颜色对不上。
 
 ### 本刀不测
 
-- 官方赛道真正跳起来（无固体立足点）、编辑器 Place solid、重力/下落、产品镜头/FOV、伤害/击退。
+- 官方赛道塞固体/机关、编辑器 Place finish、重力/下落、产品秒数、预警动画、伤害/击退。
