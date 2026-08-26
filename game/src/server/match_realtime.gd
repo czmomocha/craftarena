@@ -9,6 +9,7 @@ extends RefCounted
 ## 断开丢弃该槽已排队命令，避免旧意图落到新连接。这是位置伪造门禁：同 tick
 ## 连发多条 Move 不能在一次仿真步里叠成瞬移。每条已解码 Move 的 |dx|/|dz|
 ## 仍受 TraprushMatchSession.MOVE_STEP_MAX 约束（超限 apply 失败，本 tick 作废）。
+## Shove 无线上目标 id；apply 时由会话选最近其它胶囊。
 ## 墙钟发送速率仍待（CD-63）。
 ## 最近一次「已入队、apply 成功、且应用后权威标记相对应用前变化」的权威 tick 记在
 ## `last_valid_input_tick`（从未发生为 -1），供心跳上报；MatchHost 只在该值前进

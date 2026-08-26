@@ -38,6 +38,8 @@ var play_use_item_damage: int = 0
 var play_use_item_reach_dx: int = 0
 var play_use_item_reach_dy: int = 0
 var play_use_item_reach_dz: int = 0
+var play_shove_step: int = 0
+var play_shove_cooldown_ticks: int = 1
 
 
 static func move_axes(forward: bool, back: bool, left: bool, right: bool, step: int) -> Dictionary:
@@ -73,6 +75,8 @@ func try_begin(path: String, web_platform: bool = false) -> bool:
 	created.use_item_reach_dx = play_use_item_reach_dx
 	created.use_item_reach_dy = play_use_item_reach_dy
 	created.use_item_reach_dz = play_use_item_reach_dz
+	created.shove_step = play_shove_step
+	created.shove_cooldown_ticks = play_shove_cooldown_ticks
 	session = created
 	follow = MatchSnapshotFollowGd.new()
 	last_command = PackedByteArray()
@@ -97,7 +101,7 @@ func try_stop() -> bool:
 func try_encode_intent(intent_name: String, dx: int, dz: int, yaw_bam: int) -> PackedByteArray:
 	if state != STATE_PLAYING:
 		return PackedByteArray()
-	if intent_name == PlayerIntentNames.SHOVE or intent_name == PlayerIntentNames.INTERACT:
+	if intent_name == PlayerIntentNames.INTERACT:
 		return PackedByteArray()
 	var yaw: int = yaw_bam
 	if intent_name != PlayerIntentNames.MOVE:

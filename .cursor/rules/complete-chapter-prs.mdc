@@ -13,6 +13,6 @@ alwaysApply: true
 
 真机：PR Test plan 与 [章节真机清单](docs/runbooks/chapter-device-check.md) 本刀必须是编号步骤（怎么开、点什么、期望 / 失败）；禁止只写「真机再看一眼」。无 GUI 的章写「无」加原因。人工检查，不是 CI 门禁。口径见 [CD-52 §3.2](Confirmed-docs/50-engineering/52-ai-workflow.md)。
 
-- 做：M3 「权威 Move 位移门禁」——`TraprushMatchSession` 拒绝 |dx| 或 |dz| 超过 `MOVE_STEP_MAX`（`Fixed.SCALE`，每命令一格）的 Move，整条不应用、不裁剪。这是防瞬移，不是产品速度。线上排队后 apply 失败则本 tick 作废且不续租。Preview IntentStepper 不经此门。作为一章。
+- 做：M3 「对局基础推击」——命令 `intent_id=5` 为 `ShoveIntent`，无线上目标 id（保留字段仍须为零）。服务端在一格邻域内选最近其它胶囊，沿 XZ 远离施术者用调用方 `shove_step` 推开，冷却为调用方 tick。超限 step 整条拒绝。大厅 **F** 上升沿采样。不预测、不锁产品力度。Interact 仍不接线。Preview 仍拒绝 Shove。作为一章（协议+会话+大厅一次闭合，不拆）。
 - 不做：账号绑定、远端外推碰撞、平滑对账、可达性叠加 gizmos、走路可达/合法路径距离、检查点到达时间、本机最佳轨迹幽灵、已缓存 UGC/草稿试玩、个人试玩记录落盘、墙钟发送速率、MMR、限时未全员冲线结算、Shove/Interact 线上 id、Tick/快照频率锁定、2 秒云端上传、5 分钟定时、BASTION 面板、批量生成、性能分析、时延自动门禁、重力/下落、二进制签名、产品速度、复活硬直、产品镜头/FOV、离开对局 HTTP、生产 CA 信任链、控制面 HTTPS、MatchHost 子进程 TLS；不开 M4 / M5 新章节；不为了两域并行而各交半章。
 - 仍不做：把预算数字、走路可达、多人试玩房、Rule VM 真应用和整个 M3 塞进一个 PR。

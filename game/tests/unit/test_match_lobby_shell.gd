@@ -270,10 +270,18 @@ func test_visible_window_encodes_intents_hidden_does_not() -> void:
 	assert_false(reset.is_empty())
 	var use_item: PackedByteArray = _shell.try_sample_play_use_item(true)
 	assert_false(use_item.is_empty())
+	var shove: PackedByteArray = _shell.try_sample_play_shove(true)
+	assert_false(shove.is_empty())
+	var shove_decoded: Dictionary = MatchFrameCodec.decode_command(shove)
+	var shove_intent: String = shove_decoded.get("intent", "")
+	assert_eq(shove_intent, PlayerIntentNames.SHOVE)
+	assert_true(_shell.try_sample_play_shove(true).is_empty())
 	_shell.window.close_requested.emit()
 	assert_false(_shell.is_window_visible())
 	assert_eq(_shell.join.state, MatchJoinSession.STATE_READY)
 	assert_true(_shell.try_sample_play_move(true, false, false, false).is_empty())
+	assert_true(_shell.try_sample_play_shove(false).is_empty())
+	assert_true(_shell.try_sample_play_shove(true).is_empty())
 	assert_true(_shell.show_window())
 	assert_true(_shell.is_window_visible())
 
@@ -864,6 +872,17 @@ func test_solo_use_item_from_spawn_breaks_course_01_crate() -> void:
 	assert_true(_shell.status_label_text().contains("crates=0/1"))
 	assert_false(_shell.allows_settlement())
 	assert_false(_shell.allows_online_writes())
+
+
+func test_solo_shove_has_no_target() -> void:
+	_shell = _open_shell()
+	assert_true(_shell.try_solo())
+	var before: Dictionary = _shell.offline.session.player_pose(0)
+	var before_z: int = before.get("z", -1)
+	assert_true(_shell.try_sample_play_shove(true).is_empty())
+	var after: Dictionary = _shell.offline.session.player_pose(0)
+	var after_z: int = after.get("z", -2)
+	assert_eq(after_z, before_z)
 
 
 func test_solo_reset_after_portal_returns_to_last_pad() -> void:

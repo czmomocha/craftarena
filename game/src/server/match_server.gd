@@ -15,7 +15,7 @@ extends Node
 ## 停止前写库、跨进程核对，以及仅在 `valid_input_tick` 前进时续租。
 ## 心跳本身不续租（CD-44 §3）。
 ## --max-ticks 到达后打印最终心跳并 exit 0；配置非法打印错误事件并 exit 1。
-## 出生偏移、胶囊尺寸、心跳/快照节奏与动作数值（跳跃/支撑/道具伤害与触达）
+## 出生偏移、胶囊尺寸、心跳/快照节奏与动作数值（跳跃/支撑/道具伤害与触达/推击）
 ## 均为进程内占位桩，不锁产品出生布局或数值。与大厅 Solo 占位桩同值。
 
 const AuthoringDocument := preload("res://src/creator/authoring_document.gd")
@@ -44,6 +44,8 @@ const SPAWN_STRIDE: int = 32768
 const MATCH_SEED: int = 1
 ## 占位动作数值，与大厅 Solo 对齐，不是产品跳跃高度、支撑探测或爆破表。
 const STUB_USE_ITEM_DAMAGE: int = 1
+## 占位推击步长（四分之一格）与冷却 tick，不是产品力度或冷却秒数。
+const STUB_SHOVE_COOLDOWN_TICKS: int = 1
 
 var _session: TraprushMatchSession = null
 var _realtime: MatchRealtime = null
@@ -261,6 +263,8 @@ static func boot_session(config: Dictionary) -> TraprushMatchSession:
 	session.use_item_reach_dx = 0
 	session.use_item_reach_dy = 0
 	session.use_item_reach_dz = Fixed.SCALE
+	session.shove_step = Fixed.SCALE / 4
+	session.shove_cooldown_ticks = STUB_SHOVE_COOLDOWN_TICKS
 	return session
 
 

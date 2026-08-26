@@ -34,7 +34,12 @@ func test_command_round_trip_all_intents() -> void:
 	)
 	var omitted_yaw: int = omitted.get("yaw_bam", 0)
 	assert_eq(omitted_yaw, -1)
-	for intent: String in [PlayerIntentNames.JUMP, PlayerIntentNames.RESET_TO_CHECKPOINT, PlayerIntentNames.USE_ITEM]:
+	for intent: String in [
+		PlayerIntentNames.JUMP,
+		PlayerIntentNames.RESET_TO_CHECKPOINT,
+		PlayerIntentNames.USE_ITEM,
+		PlayerIntentNames.SHOVE,
+	]:
 		var decoded: Dictionary = MatchFrameCodec.decode_command(
 			MatchFrameCodec.encode_command(9, intent, 0, 0, 0)
 		)
@@ -47,7 +52,6 @@ func test_command_round_trip_all_intents() -> void:
 
 
 func test_command_encode_rejects_unwired_intent() -> void:
-	assert_eq(MatchFrameCodec.encode_command(1, PlayerIntentNames.SHOVE, 0, 0, 0).size(), 0)
 	assert_eq(MatchFrameCodec.encode_command(1, PlayerIntentNames.INTERACT, 0, 0, 0).size(), 0)
 	assert_eq(MatchFrameCodec.encode_command(1, "NopeIntent", 0, 0, 0).size(), 0)
 

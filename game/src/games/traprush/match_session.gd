@@ -8,6 +8,9 @@ extends RefCounted
 ## 出生偏移、跳跃/支撑/道具伤害与触达数值由调用方传入，不锁产品数值。
 ## Move |dx|/|dz| 不得超过 MOVE_STEP_MAX（Fixed.SCALE，每命令一格）：超限整条
 ## 拒绝，不裁剪。这是防瞬移门禁，不是产品速度。Preview IntentStepper 不经此门。
+## Shove 无线上目标 id：服务端在 SHOVE_REACH_MAX 邻域内选最近其它胶囊，沿 XZ
+## 远离施术者用调用方 shove_step 推开。shove_step 不得超过 SHOVE_STEP_MAX。
+## 冷却是调用方 tick，不是产品秒数。力度不从命令帧读取。
 ## 语义与 AuthoringPreview 试玩逐字对齐：同一 IntentStepper、同一占用扫描
 ## 顺序（垫→门→垫→终点）。无网络、无结算、不在线写入。
 ## 直播名次由 TraprushStanding 从 accepted_count / finish_tick 派生。
@@ -21,6 +24,8 @@ const FinishAccept := preload("res://src/games/traprush/finish_accept.gd")
 const IntentStepper := preload("res://src/games/traprush/intent_stepper.gd")
 const JumpIntent := preload("res://src/games/traprush/jump_intent.gd")
 const MoveIntent := preload("res://src/games/traprush/move_intent.gd")
+const ShoveApply := preload("res://src/games/traprush/shove_apply.gd")
+const ShoveIntent := preload("res://src/games/traprush/shove_intent.gd")
 const PadAccept := preload("res://src/games/traprush/pad_accept.gd")
 const PortalLanding := preload("res://src/games/traprush/portal_landing.gd")
 const StateHasher := preload("res://src/shared/protocol/state_hasher.gd")
@@ -31,6 +36,9 @@ const UseItemIntent := preload("res://src/games/traprush/use_item_intent.gd")
 const MAX_PLAYERS: int = 8
 ## 每条 Move 命令每轴上限。等于 Fixed.SCALE（1 格）。不是产品速度。
 const MOVE_STEP_MAX: int = Fixed.SCALE
+## 每条 Shove 的调用方步长上限与选目标邻域。等于 Fixed.SCALE（1 格）。不是产品力度。
+const SHOVE_STEP_MAX: int = Fixed.SCALE
+const SHOVE_REACH_MAX: int = Fixed.SCALE
 
 var jump_dy: int = 0
 var support_dy: int = 0
@@ -38,6 +46,8 @@ var use_item_damage: int = 0
 var use_item_reach_dx: int = 0
 var use_item_reach_dy: int = 0
 var use_item_reach_dz: int = 0
+var shove_step: int = 0
+var shove_cooldown_ticks: int = 1
 
 var _world: SimulationWorld = null
 var _graph: TraprushPortalGraph = null
@@ -111,6 +121,7 @@ static func create(
 			"track": CheckpointTrack.new(ordered),
 			"finish_tick": -1,
 			"latch": {},
+			"last_shove_tick": -1,
 		})
 	for player: Dictionary in session._players:
 		session._accept_player_pads(player)
@@ -212,6 +223,10 @@ func apply_player_intent(slot: int, payload: Dictionary) -> bool:
 	var use_ok: bool = use_decoded.get("ok", false)
 	if use_ok:
 		return _try_use_item(player, payload)
+	var shove_decoded: Dictionary = ShoveIntent.decode(payload)
+	var shove_ok: bool = shove_decoded.get("ok", false)
+	if shove_ok:
+		return _try_shove(slot, player, payload)
 	var move_decoded: Dictionary = MoveIntent.decode(payload)
 	var move_ok: bool = move_decoded.get("ok", false)
 	if move_ok:
@@ -268,6 +283,14 @@ static func move_step_allowed(dx: int, dz: int) -> bool:
 	return true
 
 
+static func shove_step_allowed(step: int) -> bool:
+	if step < 0:
+		return false
+	if step > SHOVE_STEP_MAX:
+		return false
+	return true
+
+
 func hash_state() -> String:
 	var hasher: StateHasher = StateHasher.new()
 	if _world != null:
@@ -288,6 +311,8 @@ func hash_state() -> String:
 		hasher.write_s64(latched.size())
 		for entity_id: int in latched:
 			hasher.write_s64(entity_id)
+		var last_shove_tick: int = player.get("last_shove_tick", -1)
+		hasher.write_s64(last_shove_tick)
 	return hasher.digest_hex()
 
 
@@ -391,6 +416,171 @@ func _accept_player_finish(player: Dictionary) -> void:
 		if crossed_ok:
 			player["finish_tick"] = _world.tick_index
 			return
+
+
+func _try_shove(slot: int, player: Dictionary, payload: Dictionary) -> bool:
+	if not shove_step_allowed(shove_step):
+		return false
+	if shove_cooldown_ticks < 1:
+		return false
+	var target_slot: int = _pick_shove_target_slot(slot)
+	if target_slot < 0:
+		return false
+	var target: Dictionary = _player_at(target_slot)
+	if target.is_empty():
+		return false
+	var actor_id: int = player["capsule_id"]
+	var target_id: int = target["capsule_id"]
+	var impulse: Dictionary = _shove_impulse(actor_id, target_id)
+	if impulse.is_empty():
+		return false
+	var last_tick: int = player.get("last_shove_tick", -1)
+	var now_tick: int = 0
+	if _world != null:
+		now_tick = _world.tick_index
+	var impulse_dx: int = impulse["dx"]
+	var impulse_dz: int = impulse["dz"]
+	var result: Dictionary = ShoveApply.apply(
+		_world,
+		actor_id,
+		target_id,
+		payload,
+		now_tick,
+		last_tick,
+		shove_cooldown_ticks,
+		impulse_dx,
+		impulse_dz
+	)
+	var result_ok: bool = result.get("ok", false)
+	if not result_ok:
+		return false
+	var shoved: bool = result.get("shoved", false)
+	if shoved:
+		player["last_shove_tick"] = now_tick
+		_accept_player_pads(target)
+		_resolve_player_portals(target)
+		_accept_player_pads(target)
+		_accept_player_finish(target)
+	return true
+
+
+func _pick_shove_target_slot(actor_slot: int) -> int:
+	var actor_pose: Dictionary = player_pose(actor_slot)
+	if actor_pose.is_empty():
+		return -1
+	var best_slot: int = -1
+	var best_cheb: int = 0
+	var best_man: int = 0
+	for slot: int in range(player_count()):
+		if slot == actor_slot:
+			continue
+		var pose: Dictionary = player_pose(slot)
+		if pose.is_empty():
+			continue
+		var reach: Dictionary = _xz_delta(actor_pose, pose)
+		if reach.is_empty():
+			continue
+		var dx: int = reach["dx"]
+		var dy: int = reach["dy"]
+		var dz: int = reach["dz"]
+		if not _within_shove_reach(dx, dy, dz):
+			continue
+		var cheb: int = _chebyshev_xz(dx, dz)
+		var man: int = _manhattan_xz(dx, dz)
+		if best_slot < 0:
+			best_slot = slot
+			best_cheb = cheb
+			best_man = man
+			continue
+		if cheb < best_cheb:
+			best_slot = slot
+			best_cheb = cheb
+			best_man = man
+			continue
+		if cheb == best_cheb and man < best_man:
+			best_slot = slot
+			best_man = man
+			continue
+		if cheb == best_cheb and man == best_man and slot < best_slot:
+			best_slot = slot
+	return best_slot
+
+
+func _shove_impulse(actor_id: int, target_id: int) -> Dictionary:
+	if _world == null:
+		return {}
+	var actor_pose: Dictionary = _world.get_pose(actor_id)
+	var target_pose: Dictionary = _world.get_pose(target_id)
+	if actor_pose.is_empty() or target_pose.is_empty():
+		return {}
+	var reach: Dictionary = _xz_delta(actor_pose, target_pose)
+	if reach.is_empty():
+		return {}
+	var dx_delta: int = reach["dx"]
+	var dz_delta: int = reach["dz"]
+	var dx: int = 0
+	var dz: int = 0
+	if dx_delta > 0:
+		dx = shove_step
+	elif dx_delta < 0:
+		dx = -shove_step
+	if dz_delta > 0:
+		dz = shove_step
+	elif dz_delta < 0:
+		dz = -shove_step
+	if dx == 0 and dz == 0 and shove_step != 0:
+		return {}
+	return {"dx": dx, "dz": dz}
+
+
+static func _xz_delta(from_pose: Dictionary, to_pose: Dictionary) -> Dictionary:
+	var from_x: int = from_pose.get("x", 0)
+	var from_y: int = from_pose.get("y", 0)
+	var from_z: int = from_pose.get("z", 0)
+	var to_x: int = to_pose.get("x", 0)
+	var to_y: int = to_pose.get("y", 0)
+	var to_z: int = to_pose.get("z", 0)
+	var sub_x: FixedResult = Fixed.try_sub(to_x, from_x)
+	var sub_y: FixedResult = Fixed.try_sub(to_y, from_y)
+	var sub_z: FixedResult = Fixed.try_sub(to_z, from_z)
+	if not sub_x.ok or not sub_y.ok or not sub_z.ok:
+		return {}
+	return {"dx": sub_x.value, "dy": sub_y.value, "dz": sub_z.value}
+
+
+static func _within_shove_reach(dx: int, dy: int, dz: int) -> bool:
+	if dx > SHOVE_REACH_MAX or dx < -SHOVE_REACH_MAX:
+		return false
+	if dy > SHOVE_REACH_MAX or dy < -SHOVE_REACH_MAX:
+		return false
+	if dz > SHOVE_REACH_MAX or dz < -SHOVE_REACH_MAX:
+		return false
+	return true
+
+
+static func _chebyshev_xz(dx: int, dz: int) -> int:
+	var ax: int = dx
+	if ax < 0:
+		ax = -ax
+	var az: int = dz
+	if az < 0:
+		az = -az
+	if ax > az:
+		return ax
+	return az
+
+
+static func _manhattan_xz(dx: int, dz: int) -> int:
+	var ax: int = dx
+	if ax < 0:
+		ax = -ax
+	var az: int = dz
+	if az < 0:
+		az = -az
+	var sum: FixedResult = Fixed.try_add(ax, az)
+	if not sum.ok:
+		return SHOVE_REACH_MAX
+	return sum.value
 
 
 func _try_use_item(player: Dictionary, payload: Dictionary) -> bool:
