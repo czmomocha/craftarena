@@ -121,6 +121,21 @@ func test_patch_rebuilds_and_failed_patch_leaves_no_ghost() -> void:
 	assert_eq(_shell.preview.world.entity_count(), 0)
 
 
+func test_hazard_placeholder_uses_hazard_albedo() -> void:
+	var world: AuthoringWorld = AuthoringWorld.new()
+	assert_true(world.put(_record_hazard(6, CELL, 0, 0)))
+	_map = AuthoringPreviewMap.new()
+	add_child(_map)
+	_map.rebuild(world)
+	var node: MeshInstance3D = _map.placeholder_node(6)
+	assert_not_null(node)
+	assert_eq(_placeholder_albedo(node), AuthoringPreviewMap.HAZARD_ALBEDO)
+	_map.apply_hazard_visibility({6: false})
+	assert_false(node.visible)
+	_map.apply_hazard_visibility({6: true})
+	assert_true(node.visible)
+
+
 func _record_transform(entity_id: int, x: int, y: int, z: int, yaw_bam: int) -> SharedComponentRecord:
 	return SharedComponentRecord.create(entity_id, {
 		"transform": {"x": x, "y": y, "z": z, "yaw_bam": yaw_bam},
@@ -131,6 +146,19 @@ func _record_health(entity_id: int, current: int) -> SharedComponentRecord:
 	return SharedComponentRecord.create(entity_id, {
 		"health": {"current": current, "maximum": 10, "invuln_ticks": 0},
 	})
+
+
+func _record_hazard(entity_id: int, x: int, y: int, z: int) -> SharedComponentRecord:
+	return SharedComponentRecord.create(entity_id, {
+		"transform": {"x": x, "y": y, "z": z, "yaw_bam": 0},
+		"hazard": {"damage": 0, "knockback": 0, "cooldown_ticks": 1},
+	})
+
+
+func _placeholder_albedo(node: MeshInstance3D) -> Color:
+	var box: BoxMesh = node.mesh as BoxMesh
+	var material: StandardMaterial3D = box.material as StandardMaterial3D
+	return material.albedo_color
 
 
 func _place_transform(entity_id: int, x: int, y: int, z: int, yaw_bam: int) -> Dictionary:

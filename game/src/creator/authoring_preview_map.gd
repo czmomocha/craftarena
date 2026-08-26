@@ -4,9 +4,10 @@ extends Node3D
 ## Presentation mapping for AuthoringWorld (CD-32 §3). Used by Preview and Editor.
 ## Authority stays on AuthoringWorld Q48.16; float conversion happens only here.
 ## One 1×1×1 m BoxMesh per entity with transform; portal_link, checkpoint-order,
-## and reachability-issue gizmos. Preview play draws the sim player pose as a
-## presentation stub and marks accepted checkpoint labels with *. Placeholders
-## and gizmos are not hitboxes.
+## and reachability-issue gizmos. Hazard entities use HAZARD_ALBEDO. During
+## Preview play, non-solid period hazards are hidden. Preview play draws the
+## sim player pose as a presentation stub and marks accepted checkpoint labels
+## with *. Placeholders and gizmos are not hitboxes.
 ## Rebuild after every editor write or preview patch. Overlay reads evaluate();
 ## it is not a write gate.
 
@@ -34,6 +35,7 @@ const _MIN_LINK_LEN: float = 0.001
 const _CAMERA_POS: Vector3 = Vector3(6.0, 8.0, 6.0)
 const _LIGHT_ROT_DEG: Vector3 = Vector3(-50.0, -30.0, 0.0)
 const _STUB_ALBEDO: Color = Color(0.85, 0.7, 0.25)
+const HAZARD_ALBEDO: Color = Color(0.82, 0.18, 0.48)
 const _PLAYER_ALBEDO: Color = Color(0.2, 0.45, 0.95)
 const _TWO_WAY_ALBEDO: Color = Color(0.2, 0.75, 0.95)
 const _ONE_WAY_ALBEDO: Color = Color(0.95, 0.55, 0.15)
@@ -164,7 +166,7 @@ func rebuild(world: AuthoringWorld) -> void:
 		var pose: Dictionary = pose_from_record(record)
 		if pose.is_empty():
 			continue
-		_spawn_placeholder(entity_id, pose)
+		_spawn_placeholder(entity_id, pose, record)
 	_spawn_portal_gizmos(world)
 	_spawn_checkpoint_gizmos(world)
 	_spawn_reachability_overlay(world)
@@ -339,10 +341,28 @@ func _unshaded(color: Color) -> StandardMaterial3D:
 	return material
 
 
-func _spawn_placeholder(entity_id: int, pose: Dictionary) -> void:
+func apply_hazard_visibility(solid_by_entity: Dictionary) -> void:
+	for key: Variant in solid_by_entity.keys():
+		if typeof(key) != TYPE_INT:
+			continue
+		var entity_id: int = key
+		var node: MeshInstance3D = placeholder_node(entity_id)
+		if node == null:
+			continue
+		var solid_raw: Variant = solid_by_entity[entity_id]
+		if typeof(solid_raw) != TYPE_BOOL:
+			continue
+		var solid: bool = solid_raw
+		node.visible = solid
+
+
+func _spawn_placeholder(entity_id: int, pose: Dictionary, record: SharedComponentRecord) -> void:
+	var albedo: Color = _STUB_ALBEDO
+	if record != null and record.components.has(SharedComponentNames.HAZARD):
+		albedo = HAZARD_ALBEDO
 	var mesh: BoxMesh = BoxMesh.new()
 	mesh.size = PLACEHOLDER_SIZE
-	mesh.material = _unshaded(_STUB_ALBEDO)
+	mesh.material = _unshaded(albedo)
 	var node: MeshInstance3D = MeshInstance3D.new()
 	node.name = placeholder_name(entity_id)
 	node.mesh = mesh

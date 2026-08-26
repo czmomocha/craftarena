@@ -7,8 +7,8 @@ extends Node
 ## Occupancy accepts checkpoint pads; walking into a portal marker lands
 ## through try_land_exit. Overlapping the finish box after every pad records
 ## finish=n. Reset or R snaps back to the last accepted pad. Status shows
-## pads=n/m, floor=n, and finish=n. Entity 6 is a period-1 hazard on +X so
-## Play then D hits a wall; Advance tick opens it.
+## pads=n/m, floor=n, finish=n, and hazards=n/m. Entity 6 is a period-1
+## magenta hazard on +X so Play then D hits a wall; Advance tick opens it.
 
 const CELL: int = 65536
 
