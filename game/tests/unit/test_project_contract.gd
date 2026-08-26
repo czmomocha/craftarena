@@ -91,6 +91,21 @@ func test_required_input_actions_exist() -> void:
 		)
 
 
+func test_dev_run_window_defaults_are_not_product_fov() -> void:
+	var width_raw: Variant = ProjectSettings.get_setting("display/window/size/viewport_width", 0)
+	var height_raw: Variant = ProjectSettings.get_setting("display/window/size/viewport_height", 0)
+	var mode_raw: Variant = ProjectSettings.get_setting("display/window/size/mode", -1)
+	assert_eq(typeof(width_raw), TYPE_INT)
+	assert_eq(typeof(height_raw), TYPE_INT)
+	assert_eq(typeof(mode_raw), TYPE_INT)
+	var width: int = width_raw
+	var height: int = height_raw
+	var mode: int = mode_raw
+	assert_eq(width, 1600)
+	assert_eq(height, 900)
+	assert_eq(mode, 2)
+
+
 func test_project_contains_no_dotnet_sources() -> void:
 	var offenders: PackedStringArray = _collect_forbidden_files("res://")
 	assert_eq(

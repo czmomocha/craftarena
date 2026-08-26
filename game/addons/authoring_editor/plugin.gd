@@ -5,15 +5,19 @@ extends EditorPlugin
 ## Project > Tools > Authoring Editor opens AuthoringEditorShell.
 ## FileAccess for drafts lives here: Godot treats non-@tool plugin
 ## helpers as empty in the editor, so store.record cannot persist.
-## Not BASTION. Not godot_ai. No _mcp_game_helper.
+## Not BASTION. No _mcp_game_helper. If this machine has the gitignored
+## godot_ai addon, _enter_tree enables that editor plugin so a checkout
+## of project.godot does not force a manual toggle.
 
 const HostGd := preload("res://src/creator/authoring_editor_plugin_host.gd")
+const GodotAiEnableGd := preload("res://addons/authoring_editor/godot_ai_enable.gd")
 
 var _host: HostGd = null
 var _draft_store: AuthoringDraftStore = null
 
 
 func _enter_tree() -> void:
+	_try_enable_local_godot_ai()
 	_host = HostGd.new()
 	_draft_store = AuthoringDraftStore.new()
 	_host.draft_store = _draft_store
@@ -25,6 +29,14 @@ func _exit_tree() -> void:
 	if _host != null:
 		_host.detach()
 		_host = null
+
+
+func _try_enable_local_godot_ai() -> void:
+	var cfg_exists: bool = FileAccess.file_exists(GodotAiEnableGd.CFG_PATH)
+	var already_enabled: bool = EditorInterface.is_plugin_enabled(GodotAiEnableGd.PLUGIN_ID)
+	if not GodotAiEnableGd.should_enable(cfg_exists, already_enabled):
+		return
+	EditorInterface.set_plugin_enabled(GodotAiEnableGd.PLUGIN_ID, true)
 
 
 func _on_open_authoring() -> void:

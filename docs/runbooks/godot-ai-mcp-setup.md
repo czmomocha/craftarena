@@ -154,7 +154,7 @@ grep '^version=' game/addons/godot_ai/plugin.cfg
 
 人工操作：
 
-1. **项目 > 项目设置 > 插件**，启用 **Godot AI**。若提示要重启编辑器，重启后再确认 Dock 出现 **Godot AI**。
+1. 打开工程后确认 **项目 > 项目设置 > 插件** 里 **Godot AI** 已启用。Authoring Editor 会在检测到 `game/addons/godot_ai/` 时自动启用，一般不必再勾。若提示要重启编辑器，重启后再确认 Dock 出现 **Godot AI**。
 2. 点 Dock 上的 **Clients & Tools**（弹出窗口，不是主面板本身）：
    - **Tools** 页底部 **Telemetry** 关掉，再点 **Apply and Restart Server**；
    - **Settings** 页确认 **Vision Routing** 未启用（该项默认关，不会出现在主 Dock 上）；

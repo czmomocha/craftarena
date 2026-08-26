@@ -174,13 +174,13 @@ export GODOT_AI_DISABLE_TELEMETRY=true
 1. 写入 §7.2 环境变量并重启 Cursor / Godot；
 2. 安装 `uv`（Windows 优先 `winget install --id astral-sh.uv -e`，macOS 优先 `brew install uv`）；
 3. 从 GitHub Release **v3.1.5** 下载 `godot-ai-plugin.zip`，校验 sha256 后将 `addons/godot_ai` 放到 `game/addons/godot_ai/`。禁止用 Asset Library 的滞后包充当锁定版本；
-4. 编辑器中启用插件 **Godot AI**；
+4. 打开本工程编辑器。若 `game/addons/godot_ai/` 已就位，Authoring Editor 插件会自动启用 **Godot AI**，不必每次手动勾选。确认 Project Settings → Plugins 里它是启用的即可；
 5. 点 **Clients & Tools**：**Tools** 页关 Telemetry 并 Apply；**Settings** 页 Vision Routing 保持关，Remote access 保持空；只绑 `127.0.0.1`；
 6. Dock 为 **Cursor** 执行 Configure，关遥测后再 Configure 一次，然后重启 Cursor；
 7. 按接入烟测清单做 UndoRedo / 运行 / 错误读取 / Headless 退路 / 遥测核实；
-8. 删除临时场景；`git checkout -- game/project.godot` 丢掉插件列表与 `_mcp_game_helper`；确认 `game/addons/godot_ai/` 未进入 `git status`。
+8. 删除临时场景；`git checkout -- game/project.godot` 丢掉插件列表与 `_mcp_game_helper`；确认 `game/addons/godot_ai/` 未进入 `git status`。下次打开编辑器时 Authoring Editor 会再次自动启用本机插件。
 
-`_mcp_game_helper` 是插件为编辑器「试玩进程」注入的 autoload。上游导出时可从内存剥掉它，但 **Headless MatchServer 跑的是源码工程**。因此已提交的 `project.godot` 不得出现该 autoload，也不得把 `godot_ai` 写进 `editor_plugins`。本机日常用 MCP 时可以启用插件；提交前必须把这两处还原。
+`_mcp_game_helper` 是插件为编辑器「试玩进程」注入的 autoload。上游导出时可从内存剥掉它，但 **Headless MatchServer 跑的是源码工程**。因此已提交的 `project.godot` 不得出现该 autoload，也不得把 `godot_ai` 写进 `editor_plugins`（CI `--import` 在缺目录时会从启用列表摘掉该项）。本机日常用 MCP 时由 Authoring Editor 在打开编辑器时自动启用已安装的插件；提交前必须还原这两处脏写入。
 
 ### 7.4 与自动加载政策的关系
 
