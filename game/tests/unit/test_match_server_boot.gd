@@ -102,6 +102,8 @@ func test_boot_session_from_config() -> void:
 	assert_eq(session.use_item_reach_dx, 0)
 	assert_eq(session.use_item_reach_dy, 0)
 	assert_eq(session.use_item_reach_dz, Fixed.SCALE)
+	assert_eq(session.shove_step, Fixed.SCALE / 4)
+	assert_eq(session.shove_cooldown_ticks, 1)
 
 
 func test_boot_session_use_item_breaks_course_01_crate() -> void:
@@ -127,6 +129,27 @@ func test_boot_session_use_item_breaks_course_01_crate() -> void:
 	var crate: Dictionary = crates[0]
 	var durability: int = crate.get("durability", -1)
 	assert_eq(durability, 0)
+
+
+func test_boot_session_shove_pushes_other_spawn_capsule() -> void:
+	var config: Dictionary = MatchServer._boot_config({
+		"match-id": "m1", "port": "42000", "course": COURSE_01_PATH, "players": "2",
+	})
+	var session: TraprushMatchSession = MatchServer.boot_session(config)
+	assert_not_null(session)
+	var before: Dictionary = session.player_pose(1)
+	var before_z: int = before.get("z", 1)
+	var realtime: MatchRealtime = MatchRealtime.create(session)
+	assert_eq(realtime.add_player(), 0)
+	assert_true(realtime.accept_command(
+		0,
+		MatchFrameCodec.encode_command(0, PlayerIntentNames.SHOVE, 0, 0, 0)
+	))
+	realtime.commit_tick()
+	var after: Dictionary = session.player_pose(1)
+	var after_z: int = after.get("z", 2)
+	assert_eq(after_z, before_z - Fixed.SCALE / 4)
+	assert_eq(realtime.last_valid_input_tick(), 1)
 
 
 func test_boot_session_rejects_bad_config() -> void:

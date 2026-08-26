@@ -37,7 +37,7 @@ extends Node
 ## existing ResetToCheckpointIntent. result= is local presentation; settled=
 ## is a read-only GET. The client never POSTs settlement.
 ## WASD encodes Move plus discrete 8-way yaw_bam; Jump / Reset / Use item
-## encode existing intents.
+## encode existing intents. F rising-edge encodes ShoveIntent (no target id).
 ## play_move_step is a presentation stub, not a product speed.
 ## Unexpected socket close while connecting or in-match reissues the
 ## consumed ticket and follows the latest snapshot again.
@@ -131,6 +131,7 @@ var _settlement_poll_accum: float = 0.0
 var _reset_held: bool = false
 var _use_item_held: bool = false
 var _jump_held: bool = false
+var _shove_held: bool = false
 var _opened_socket: bool = false
 
 
@@ -500,6 +501,24 @@ func try_sample_play_jump(pressed: bool) -> PackedByteArray:
 	return bytes
 
 
+func try_sample_play_shove(pressed: bool) -> PackedByteArray:
+	var rising: bool = pressed and not _shove_held
+	_shove_held = pressed
+	if not rising or window == null or not window.visible:
+		return PackedByteArray()
+	if _offline_playing():
+		var offline_bytes: PackedByteArray = offline.try_encode_intent(
+			PlayerIntentNames.SHOVE, 0, 0, 0
+		)
+		_apply_snapshot_map()
+		return offline_bytes
+	if play == null:
+		return PackedByteArray()
+	var bytes: PackedByteArray = play.try_encode_intent(PlayerIntentNames.SHOVE, 0, 0, 0)
+	_note_command(bytes)
+	return bytes
+
+
 func status_view() -> Dictionary:
 	var join_view: Dictionary = {}
 	var play_view: Dictionary = {}
@@ -669,6 +688,7 @@ func _process(delta: float) -> void:
 	try_sample_play_reset(Input.is_physical_key_pressed(KEY_R))
 	try_sample_play_use_item(Input.is_action_pressed(_USE_ITEM))
 	try_sample_play_jump(Input.is_action_pressed(_JUMP))
+	try_sample_play_shove(Input.is_physical_key_pressed(KEY_F))
 	if _offline_playing():
 		offline.try_advance()
 	try_advance_interp()
@@ -1185,6 +1205,8 @@ func _prepare_offline_stubs() -> void:
 	offline.play_use_item_reach_dx = 0
 	offline.play_use_item_reach_dy = 0
 	offline.play_use_item_reach_dz = Fixed.SCALE
+	offline.play_shove_step = Fixed.SCALE / 4
+	offline.play_shove_cooldown_ticks = 1
 
 
 func _on_close_requested() -> void:

@@ -316,6 +316,25 @@ func test_oversize_move_frame_does_not_teleport_or_renew() -> void:
 	assert_eq(realtime.last_valid_input_tick(), -1)
 
 
+func test_shove_frame_pushes_target_and_renews() -> void:
+	var realtime: MatchRealtime = _two_player_realtime()
+	realtime.session.shove_step = CELL / 4
+	realtime.session.shove_cooldown_ticks = 1
+	var slot: int = realtime.add_player()
+	assert_eq(slot, 0)
+	var before: Dictionary = realtime.session.player_pose(1)
+	var before_z: int = before.get("z", 1)
+	assert_true(realtime.accept_command(
+		slot,
+		MatchFrameCodec.encode_command(0, PlayerIntentNames.SHOVE, 0, 0, 0)
+	))
+	realtime.commit_tick()
+	var after: Dictionary = realtime.session.player_pose(1)
+	var after_z: int = after.get("z", 2)
+	assert_eq(after_z, before_z - CELL / 4)
+	assert_eq(realtime.last_valid_input_tick(), 1)
+
+
 func _two_player_realtime() -> MatchRealtime:
 	var world: AuthoringWorld = AuthoringDocument.load_from_path(COURSE_01_PATH)
 	assert_not_null(world)

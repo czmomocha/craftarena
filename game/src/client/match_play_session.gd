@@ -3,7 +3,8 @@ extends RefCounted
 
 ## After a ready join ticket, build the gateway URL and follow snapshots.
 ## Commands use MatchFrameCodec; the command tick is 0 because the server
-## tick is authoritative (CD-43 §3). Shove/Interact stay unencoded.
+## tick is authoritative (CD-43 §3). Shove is button-only (no target id).
+## Interact stays unencoded.
 ## Sockets stay outside this type. Interpolation is sampled by the lobby
 ## from the follower's previous/latest poses. Own-slot Move/Jump add a
 ## local overlay via MatchLocalPredict; a newer snapshot tick hard-snaps.
@@ -120,7 +121,7 @@ func on_binary(bytes: PackedByteArray) -> bool:
 func try_encode_intent(intent_name: String, dx: int, dz: int, yaw_bam: int) -> PackedByteArray:
 	if state != STATE_IN_MATCH:
 		return PackedByteArray()
-	if intent_name == PlayerIntentNames.SHOVE or intent_name == PlayerIntentNames.INTERACT:
+	if intent_name == PlayerIntentNames.INTERACT:
 		return PackedByteArray()
 	var yaw: int = yaw_bam
 	if intent_name != PlayerIntentNames.MOVE:

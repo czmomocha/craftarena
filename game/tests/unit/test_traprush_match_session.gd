@@ -153,6 +153,89 @@ func test_oversize_move_is_rejected_without_teleport() -> void:
 	assert_eq(moved_x, before_x + CELL)
 
 
+func test_shove_nearest_other_capsule_along_xz() -> void:
+	assert_eq(TraprushMatchSession.SHOVE_STEP_MAX, CELL)
+	assert_eq(TraprushMatchSession.SHOVE_REACH_MAX, CELL)
+	assert_true(TraprushMatchSession.shove_step_allowed(0))
+	assert_true(TraprushMatchSession.shove_step_allowed(CELL))
+	assert_false(TraprushMatchSession.shove_step_allowed(-1))
+	assert_false(TraprushMatchSession.shove_step_allowed(CELL + 1))
+	var session: TraprushMatchSession = _two_player_session()
+	session.shove_step = CELL / 4
+	session.shove_cooldown_ticks = 1
+	var actor_before: Dictionary = session.player_pose(0)
+	var target_before: Dictionary = session.player_pose(1)
+	var actor_z: int = actor_before.get("z", 1)
+	var target_z: int = target_before.get("z", 1)
+	assert_lt(target_z, actor_z)
+	assert_true(session.apply_player_intent(0, _shove()))
+	var actor_after: Dictionary = session.player_pose(0)
+	var target_after: Dictionary = session.player_pose(1)
+	var actor_after_z: int = actor_after.get("z", 2)
+	var target_after_z: int = target_after.get("z", 2)
+	assert_eq(actor_after_z, actor_z)
+	assert_eq(target_after_z, target_z - CELL / 4)
+
+
+func test_shove_without_target_or_oversize_step_is_rejected() -> void:
+	var one: TraprushMatchSession = TraprushMatchSession.create(
+		_compile_course_01(), 1, 1, _offsets(1), PLAY_RADIUS, PLAY_RADIUS
+	)
+	assert_not_null(one)
+	one.shove_step = CELL / 4
+	assert_false(one.apply_player_intent(0, _shove()))
+	var two: TraprushMatchSession = _two_player_session()
+	var before: Dictionary = two.player_pose(1)
+	var before_z: int = before.get("z", -1)
+	two.shove_step = CELL + 1
+	assert_false(two.apply_player_intent(0, _shove()))
+	var blocked: Dictionary = two.player_pose(1)
+	var blocked_z: int = blocked.get("z", -2)
+	assert_eq(blocked_z, before_z)
+	two.shove_step = CELL / 4
+	assert_true(two.apply_player_intent(1, _move(CELL, 0)))
+	assert_true(two.apply_player_intent(1, _move(CELL, 0)))
+	assert_false(two.apply_player_intent(0, _shove()))
+	var far: Dictionary = two.player_pose(1)
+	var far_z: int = far.get("z", -3)
+	assert_eq(far_z, before_z)
+
+
+func test_shove_picks_nearest_slot_and_respects_cooldown() -> void:
+	var three: TraprushMatchSession = TraprushMatchSession.create(
+		_compile_course_01(), 1, 3, _offsets(3), PLAY_RADIUS, PLAY_RADIUS
+	)
+	assert_not_null(three)
+	three.shove_step = CELL / 4
+	three.shove_cooldown_ticks = 1
+	var slot2_before: Dictionary = three.player_pose(2)
+	var slot2_z: int = slot2_before.get("z", 1)
+	var slot1_before: Dictionary = three.player_pose(1)
+	var slot1_z: int = slot1_before.get("z", 1)
+	assert_true(three.apply_player_intent(0, _shove()))
+	var slot1_after: Dictionary = three.player_pose(1)
+	var slot2_after: Dictionary = three.player_pose(2)
+	var slot1_after_z: int = slot1_after.get("z", 2)
+	var slot2_after_z: int = slot2_after.get("z", 2)
+	assert_lt(slot1_after_z, slot1_z)
+	assert_eq(slot2_after_z, slot2_z)
+	var two: TraprushMatchSession = _two_player_session()
+	two.shove_step = CELL / 4
+	two.shove_cooldown_ticks = 1
+	assert_true(two.apply_player_intent(0, _shove()))
+	var first: Dictionary = two.player_pose(1)
+	var first_z: int = first.get("z", 1)
+	assert_true(two.apply_player_intent(0, _shove()))
+	var cooled: Dictionary = two.player_pose(1)
+	var cooled_z: int = cooled.get("z", 3)
+	assert_eq(cooled_z, first_z)
+	two.commit_tick()
+	assert_true(two.apply_player_intent(0, _shove()))
+	var second: Dictionary = two.player_pose(1)
+	var second_z: int = second.get("z", 4)
+	assert_eq(second_z, first_z - CELL / 4)
+
+
 func test_commit_tick_advances_and_intents_do_not() -> void:
 	var session: TraprushMatchSession = _two_player_session()
 	assert_eq(session.tick_index(), 0)
@@ -234,4 +317,10 @@ func _reset() -> Dictionary:
 func _use_item() -> Dictionary:
 	return {
 		"intent": PlayerIntentNames.USE_ITEM,
+	}
+
+
+func _shove() -> Dictionary:
+	return {
+		"intent": PlayerIntentNames.SHOVE,
 	}

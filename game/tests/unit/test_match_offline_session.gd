@@ -102,6 +102,7 @@ func test_wasd_and_unwired_intents() -> void:
 	var faced_yaw: int = faced.get("yaw_bam", -3)
 	assert_eq(faced_yaw, MatchMoveFacing.YAW_FORWARD)
 	assert_true(offline.try_encode_move_axes(false, false, false, false, 16).is_empty())
+	# Solo is one capsule: Shove has no target, so encode/apply fails closed.
 	assert_true(offline.try_encode_intent(PlayerIntentNames.SHOVE, 0, 0, 0).is_empty())
 	assert_true(offline.try_encode_intent(PlayerIntentNames.INTERACT, 0, 0, 0).is_empty())
 	assert_false(offline.try_encode_intent(PlayerIntentNames.JUMP, 0, 0, 0).is_empty())

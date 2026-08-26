@@ -11,8 +11,8 @@ extends RefCounted
 ## 再 [crate_count:u8] 与每箱 16 字节（entity_id:s64 + durability:s64，0 为已毁）。
 ## 解码拒绝：版本不符、未知类型、截断、尾随字节、保留字段非零。
 ## 编码是规范的：同一逻辑帧恒得同一字节序列。字节序为 PackedByteArray 原生小端。
-## 命令帧不带 slot：连接身份由服务端持有。Shove/Interact 暂无线上 id，
-## 新增 id 属协议变更，旧解码器拒绝。Tick/快照频率不在本文件锁定（CD-43 §4）。
+## 命令帧不带 slot：连接身份由服务端持有。Shove 已接线但无线上目标 id；
+## Interact 仍未接线。新增 id 属协议变更，旧解码器拒绝。Tick/快照频率不在本文件锁定（CD-43 §4）。
 
 const PlayerIntentNames := preload("res://src/shared/commands/player_intent_names.gd")
 
@@ -31,12 +31,14 @@ const _INTENT_TO_ID: Dictionary = {
 	"JumpIntent": 2,
 	"ResetToCheckpointIntent": 3,
 	"UseItemIntent": 4,
+	"ShoveIntent": 5,
 }
 const _ID_TO_INTENT: Dictionary = {
 	1: "MoveIntent",
 	2: "JumpIntent",
 	3: "ResetToCheckpointIntent",
 	4: "UseItemIntent",
+	5: "ShoveIntent",
 }
 
 
