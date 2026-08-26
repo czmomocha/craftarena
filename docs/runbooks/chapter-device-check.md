@@ -22,7 +22,7 @@
 
 ## 共用启动（大厅窗口）
 
-机关狂奔匹配大厅是代码创建的 `Window`，标题 **Traprush**。第一行是状态 Label。按钮（从左到右）：**Quick play**、**Create room**、**Join room**、**Solo play**、**Cancel**、**Poll**。其下三个输入框：房间码（placeholder `Room code`）、课程 id（默认 `course_01`）、人数（默认 `2`）。窗口里的 3D：本席玩家盒是青色（`OWN_ALBEDO`），远端玩家盒仍是海军蓝（`REMOTE_ALBEDO`）；橙色盒是可破坏箱；洋红盒是周期机关（固体半周期才出现；官方赛道 0 个）；石色盒是固定固体占用（始终显示；官方赛道 0 个）；垫 / 门 / 终点是赛道占位盒（未开玩时垫是原绿、终点是原金；开玩后本席已验收垫是暗绿，当前目标垫是亮薄荷；全部垫完成后终点变亮金，冲线后变暗金）；条是传送连线与检查点顺序 gizmos。玩家盒上方有名次 Label；本席名次标以 `*` 开头。开玩时状态行含 `pads=n/m`、`floor=n`、`finish=n`、`crates=n/m`、`hazards=n/m` 与 `solids=n/m`。
+机关狂奔匹配大厅是代码创建的 `Window`，标题 **Traprush**。第一行是状态 Label。按钮（从左到右）：**Quick play**、**Create room**、**Join room**、**Solo play**、**Cancel**、**Poll**。其下三个输入框：房间码（placeholder `Room code`）、课程 id（默认 `course_01`）、人数（默认 `2`）。窗口里的 3D：本席玩家盒是青色（`OWN_ALBEDO`），远端玩家盒仍是海军蓝（`REMOTE_ALBEDO`）；橙色盒是可破坏箱；洋红盒是周期机关（固体半周期才出现；官方赛道出生点 −Z 1 个）；石色盒是固定固体占用（始终显示；官方赛道出生点 −X 1 个）；垫 / 门 / 终点是赛道占位盒（未开玩时垫是原绿、终点是原金；开玩后本席已验收垫是暗绿，当前目标垫是亮薄荷；全部垫完成后终点变亮金，冲线后变暗金）；条是传送连线与检查点顺序 gizmos。玩家盒上方有名次 Label；本席名次标以 `*` 开头。开玩时状态行含 `pads=n/m`、`floor=n`、`finish=n`、`crates=n/m`、`hazards=n/m` 与 `solids=n/m`。
 
 ### 0.1 后端（本刀需要在线入场时）
 
@@ -53,26 +53,26 @@ Worktree 端口偏移见 README「并行工作区」；本文件不复述端口�
 
 ---
 
-## 本刀：编辑器占用摆放
+## 本刀：官方赛道占用
 
-对应：当前完整章节 PR。锁的是工具条 **Place solid** / **Place hazard** / **Place crate** 走已有 EDIT `place`，Editor 与已连接 Preview 画出石色 / 洋红 / 橙色 1 米盒。`cooldown_ticks=1` 与箱子耐久 1 是开发桩。不是新 `op`，不是官方赛道塞固体/机关，不是重力。
+对应：当前完整章节 PR。锁的是三张官方课各 1 个石色始终固体（出生点左边一格）与 1 个洋红周期机关（出生点朝前两格）。`cooldown_ticks=1` 是开发桩。不挡 +X 必经路。不是 Place finish，不是产品秒数。
 
-### 1. 工具条能摆三种占用盒
+### 1. 大厅默认课能看见石色盒和洋红盒
 
 前置：关掉上次运行。本刀不需要三后端。
 
-操作：在编辑器 **F6** 运行 `res://src/creator/editor_sandbox.tscn`。Editor 窗已有一块检查点垫和一扇悬空传送门。点 **Place solid**、**Place hazard**、**Place crate**（占用行，检查点行下面）。
+操作：仓库根 `"$GODOT4" --path game`（macOS）或 `& $env:GODOT4 --path game`（Windows）。看标题 **Traprush** 的窗。出生点在垫上。
 
-预期：沿 +X 依次出现石色（偏灰棕）盒、洋红盒、橙色盒；三种颜色互不相同。失败：没有新按钮、点了没盒、或三种都是同一金色占位。
+预期：出生点**左边一格**（−X）有一块石色（偏灰棕）盒；出生点**朝前两格**（W 方向，世界 −Z）有一块洋红盒；出生点**朝后**（S 方向，+Z）仍是橙色箱。状态行 `course=3/2/1`、`solids_mapped=1`、`hazards_mapped=1`。失败：缺石色或洋红、两种同色、或 mapped 仍是 0。
 
-### 2. Preview 跟随同一套颜色
+### 2. Solo 开玩 HUD 与固体挡住左移
 
-前置：步骤 1 的 Editor 仍开着。
+前置：步骤 1 的窗仍开着。
 
-操作：点 Editor 的 **Preview**。看独立 Preview 窗。
+操作：点 **Solo play**。看状态行。再按 **A**（左，−X）贴着石色盒走几步。
 
-预期：Preview 里同样三块石色 / 洋红 / 橙色盒，位置与 Editor 一致。失败：Preview 没有这三块，或颜色对不上。
+预期：HUD 含 `solids=1/1` 与 `hazards=1/1`（tick 0 机关为固体半周期）。玩家青盒停在出生点，不钻进石色盒。失败：`solids=0/0`、能穿石色盒、或洋红盒在开玩瞬间消失且 HUD 不是 `hazards=1/1`。
 
 ### 本刀不测
 
-- 官方赛道塞固体/机关、编辑器 Place finish、重力/下落、产品秒数、预警动画、伤害/击退。
+- 编辑器 Place finish、重力/下落、产品秒数、预警动画、伤害/击退。
