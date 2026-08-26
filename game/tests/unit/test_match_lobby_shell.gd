@@ -6,10 +6,10 @@ extends GutTest
 ## WASD writes discrete 8-way yaw_bam; player boxes show a facing marker.
 ## Own-seat box uses OWN_ALBEDO; standing labels prefix the own seat with "*".
 ## Own-seat accepted_count tints course pads done / current / pending.
-## Own-seat finish_tick tints the finish zone; HUD shows pads/floor/finish/crates/result.
+## Own-seat finish_tick tints the finish zone; HUD shows pads/floor/finish/crates/hazards/result.
 ## Online all-finished GET writes settled=; Solo never GETs. Client never POSTs.
 ## Reset rising-edge returns to the last accepted pad without dropping progress.
-## Online overlay stays off latest live crates and latest remote capsules.
+## Online overlay stays off latest live crates, solid hazards, and latest remote capsules.
 
 const MatchFrameCodec := preload("res://src/shared/protocol/match_frame_codec.gd")
 const MatchJoinSession := preload("res://src/client/match_join_session.gd")
@@ -20,6 +20,9 @@ const MatchPlaySession := preload("res://src/client/match_play_session.gd")
 const MatchSnapshotMap := preload("res://src/client/match_snapshot_map.gd")
 const MatchStandingMap := preload("res://src/client/match_standing_map.gd")
 const MatchCourseMap := preload("res://src/client/match_course_map.gd")
+const SharedComponentRecord := preload("res://src/shared/schema/component_record.gd")
+const TraprushTopologyCompiler := preload("res://src/ugc/traprush_topology_compiler.gd")
+const AuthoringWorld := preload("res://src/creator/authoring_world.gd")
 const PlayerIntentNames := preload("res://src/shared/commands/player_intent_names.gd")
 
 var _shell: MatchLobbyShell = null
@@ -43,6 +46,7 @@ func test_open_window_quick_play_ready_begins_play() -> void:
 	assert_not_null(_shell.map)
 	assert_not_null(_shell.course)
 	assert_not_null(_shell.crates)
+	assert_not_null(_shell.hazards)
 	assert_not_null(_shell.links)
 	assert_not_null(_shell.orders)
 	assert_not_null(_shell.standings)
@@ -54,6 +58,10 @@ func test_open_window_quick_play_ready_begins_play() -> void:
 	assert_eq(_shell.course.link_node_count(), 0)
 	assert_eq(_shell.course.checkpoint_node_count(), 0)
 	assert_eq(_shell.crates.crate_count(), 1)
+	assert_eq(_shell.hazards.hazard_count(), 0)
+	assert_eq(_shell.hazards.hazard_total(), 0)
+	assert_eq(_shell.course.hazard_node_count(), 0)
+	assert_eq(_shell.crates.hazard_node_count(), 0)
 	assert_eq(_shell.crates.link_node_count(), 0)
 	assert_eq(_shell.crates.checkpoint_node_count(), 0)
 	assert_eq(_shell.map.link_node_count(), 0)
@@ -85,6 +93,7 @@ func test_open_window_quick_play_ready_begins_play() -> void:
 	var idle_tls: bool = _shell.status_view().get("tls", true)
 	assert_false(idle_tls)
 	assert_true(_shell.status_label_text().contains("crates_mapped=1"))
+	assert_true(_shell.status_label_text().contains("hazards_mapped=0"))
 	assert_true(_shell.status_label_text().contains("links_mapped=2"))
 	assert_true(_shell.status_label_text().contains("orders_mapped=3/2"))
 	assert_true(_shell.try_quick())
@@ -119,6 +128,7 @@ func test_open_window_quick_play_ready_begins_play() -> void:
 	assert_true(_shell.status_label_text().contains("mapped=1"))
 	assert_true(_shell.status_label_text().contains("course=3/2/1"))
 	assert_true(_shell.status_label_text().contains("crates_mapped=0"))
+	assert_true(_shell.status_label_text().contains("hazards_mapped=0"))
 	assert_true(_shell.status_label_text().contains("links_mapped=2"))
 	assert_true(_shell.status_label_text().contains("orders_mapped=3/2"))
 	assert_true(_shell.status_label_text().contains("standings=#1s0 mvp=-"))
@@ -591,6 +601,31 @@ func test_online_overlay_stops_on_latest_remote_capsule() -> void:
 	assert_almost_eq(_shell.map.player_node(1).position.x, 1.0, 0.0001)
 
 
+func test_online_overlay_stops_on_solid_hazard_then_passes_when_open() -> void:
+	_shell = _open_shell()
+	assert_true(_shell.try_quick())
+	assert_true(_shell.accept_http(201, _join("ABCD23", "ticket-hazard-solid")))
+	assert_true(_shell.on_socket_open())
+	assert_true(_shell.on_binary(_snapshot(0, 0, [_crate(40, 1)])))
+	assert_true(_shell.hazards.apply_bundle(_one_hazard_bundle(1)))
+	assert_eq(_shell.hazards.hazard_count(), 1)
+	assert_eq(_shell.hazards.live_solid_boxes().size(), 1)
+	var steps: int = 0
+	while steps < 20:
+		assert_false(_shell.try_sample_play_move(false, false, false, true).is_empty())
+		steps += 1
+	assert_gt(_shell.play.predict.dx, 0)
+	assert_almost_eq(_shell.map.player_node(0).position.x, 0.0, 0.0001)
+	assert_true(_shell.on_binary(_snapshot(1, 0, [_crate(40, 1)])))
+	assert_eq(_shell.hazards.hazard_count(), 0)
+	assert_eq(_shell.play.predict.dx, 0)
+	steps = 0
+	while steps < 20:
+		assert_false(_shell.try_sample_play_move(false, false, false, true).is_empty())
+		steps += 1
+	assert_gt(_shell.map.player_node(0).position.x, 1.0)
+
+
 func test_offline_solo_does_not_stack_local_predict_overlay() -> void:
 	_shell = _open_shell()
 	assert_true(_shell.try_solo())
@@ -731,6 +766,7 @@ func test_solo_own_progress_tints_pads_and_cancel_restores() -> void:
 	assert_true(_shell.status_label_text().contains("floor=0"))
 	assert_true(_shell.status_label_text().contains("finish=-1"))
 	assert_true(_shell.status_label_text().contains("crates=1/1"))
+	assert_true(_shell.status_label_text().contains("hazards=0/0"))
 	assert_false(_shell.status_label_text().contains("result="))
 	assert_true(_shell.try_cancel())
 	assert_eq(_shell.course.own_accepted_count(), -1)
@@ -741,6 +777,7 @@ func test_solo_own_progress_tints_pads_and_cancel_restores() -> void:
 	assert_false(_shell.status_label_text().contains("pads="))
 	assert_false(_shell.status_label_text().contains("floor="))
 	assert_false(_shell.status_label_text().contains("crates=1/1"))
+	assert_false(_shell.status_label_text().contains("hazards="))
 	assert_false(_shell.status_label_text().contains("result="))
 
 
@@ -1024,6 +1061,40 @@ func _crate(entity_id: int, durability: int) -> Dictionary:
 		"entity_id": entity_id,
 		"durability": durability,
 	}
+
+
+func _one_hazard_bundle(cooldown_ticks: int) -> SimulationBundle:
+	var world: AuthoringWorld = AuthoringWorld.new()
+	assert_true(world.put(_checkpoint_record(1, 0, 0, 0, 0)))
+	assert_true(world.put(_hazard_record(50, Fixed.SCALE, 0, 0, cooldown_ticks)))
+	var bundle: SimulationBundle = TraprushTopologyCompiler.compile(world)
+	assert_not_null(bundle)
+	return bundle
+
+
+func _checkpoint_record(entity_id: int, order: int, x: int, y: int, z: int) -> SharedComponentRecord:
+	return SharedComponentRecord.create(entity_id, {
+		"transform": {"x": x, "y": y, "z": z, "yaw_bam": 0},
+		"checkpoint": {
+			"order": order,
+			"respawn_dx": 0,
+			"respawn_dy": 0,
+			"respawn_dz": 0,
+		},
+	})
+
+
+func _hazard_record(
+	entity_id: int,
+	x: int,
+	y: int,
+	z: int,
+	cooldown_ticks: int
+) -> SharedComponentRecord:
+	return SharedComponentRecord.create(entity_id, {
+		"transform": {"x": x, "y": y, "z": z, "yaw_bam": 0},
+		"hazard": {"damage": 0, "knockback": 0, "cooldown_ticks": cooldown_ticks},
+	})
 
 
 func _snapshot(tick: int, x: int, crates: Array[Dictionary] = [], y: int = 0) -> PackedByteArray:

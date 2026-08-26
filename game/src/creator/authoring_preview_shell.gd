@@ -18,7 +18,7 @@ extends Node
 ## AABB stub onto Preview (not a product bound). Occupancy
 ## accepts overlapping checkpoint pads through PadAccept and portal boxes
 ## through PortalLanding.try_land_exit; status shows pads=n/m, floor=n,
-## finish=n, and crates=n/m.
+## finish=n, crates=n/m, and hazards=n/m.
 ## Tab host
 ## is reserved and refused.
 ## The window defaults to 1280×720 maximized; HUD buttons use
@@ -280,6 +280,8 @@ func status_view() -> Dictionary:
 	var finish_tick: int = -1
 	var crate_alive: int = 0
 	var crate_count: int = 0
+	var hazard_alive: int = 0
+	var hazard_count: int = 0
 	var reach_ok: bool = true
 	var reach_issue_count: int = 0
 	if preview != null:
@@ -293,6 +295,8 @@ func status_view() -> Dictionary:
 		finish_tick = preview.play_finish_tick()
 		crate_alive = preview.play_destructible_alive_count()
 		crate_count = preview.play_destructible_count()
+		hazard_alive = preview.play_hazard_solid_count()
+		hazard_count = preview.play_hazard_count()
 		if preview.world != null:
 			entity_count = preview.world.entity_count()
 	if map != null:
@@ -310,6 +314,8 @@ func status_view() -> Dictionary:
 		"finish_tick": finish_tick,
 		"crate_alive": crate_alive,
 		"crate_count": crate_count,
+		"hazard_alive": hazard_alive,
+		"hazard_count": hazard_count,
 		"window_visible": is_window_visible(),
 		"reach_ok": reach_ok,
 		"reach_issue_count": reach_issue_count,
@@ -457,8 +463,21 @@ func _rebuild_map() -> void:
 	if preview.is_playing() and preview.play_world != null:
 		map.show_player_pose(preview.play_world.get_pose(preview.player_id))
 		map.mark_accepted_checkpoints(preview.play_accepted_ids())
+		_apply_play_hazard_visibility()
 	else:
 		map.clear_player_pose()
+
+
+func _apply_play_hazard_visibility() -> void:
+	if map == null or preview == null or not preview.is_playing():
+		return
+	var lookup: Dictionary = {}
+	for key: Variant in preview.play_hazard_ids.keys():
+		if typeof(key) != TYPE_INT:
+			continue
+		var entity_id: int = key
+		lookup[entity_id] = preview.play_is_hazard_solid(entity_id)
+	map.apply_hazard_visibility(lookup)
 
 
 func _refresh_status() -> void:
@@ -472,7 +491,7 @@ func _refresh_status() -> void:
 	if map != null:
 		reach_ok = map.reachability_ok()
 		reach_issue_count = map.reachability_issue_count()
-	_status.text = "connected=%s revision=%d entities=%d restart=%s playing=%s pads=%d/%d floor=%d finish=%d crates=%d/%d reach_ok=%s issues=%d" % [
+	_status.text = "connected=%s revision=%d entities=%d restart=%s playing=%s pads=%d/%d floor=%d finish=%d crates=%d/%d hazards=%d/%d reach_ok=%s issues=%d" % [
 		str(preview.connected),
 		preview.preview_revision,
 		entity_count,
@@ -484,6 +503,8 @@ func _refresh_status() -> void:
 		preview.play_finish_tick(),
 		preview.play_destructible_alive_count(),
 		preview.play_destructible_count(),
+		preview.play_hazard_solid_count(),
+		preview.play_hazard_count(),
 		str(reach_ok),
 		reach_issue_count,
 	]
