@@ -148,6 +148,18 @@ func test_solid_placeholder_uses_solid_albedo() -> void:
 	assert_true(node.visible)
 
 
+func test_crate_placeholder_uses_crate_albedo() -> void:
+	var world: AuthoringWorld = AuthoringWorld.new()
+	assert_true(world.put(_record_crate(8, CELL, 0, 0)))
+	_map = AuthoringPreviewMap.new()
+	add_child(_map)
+	_map.rebuild(world)
+	var node: MeshInstance3D = _map.placeholder_node(8)
+	assert_not_null(node)
+	assert_eq(_placeholder_albedo(node), AuthoringPreviewMap.CRATE_ALBEDO)
+	assert_true(node.visible)
+
+
 func _record_transform(entity_id: int, x: int, y: int, z: int, yaw_bam: int) -> SharedComponentRecord:
 	return SharedComponentRecord.create(entity_id, {
 		"transform": {"x": x, "y": y, "z": z, "yaw_bam": yaw_bam},
@@ -175,6 +187,13 @@ func _record_solid(entity_id: int, x: int, y: int, z: int) -> SharedComponentRec
 			"shape": {"kind": "box", "hx": half, "hy": half, "hz": half},
 			"tags": ["solid"],
 		},
+	})
+
+
+func _record_crate(entity_id: int, x: int, y: int, z: int) -> SharedComponentRecord:
+	return SharedComponentRecord.create(entity_id, {
+		"transform": {"x": x, "y": y, "z": z, "yaw_bam": 0},
+		"destructible": {"durability": 1, "regen_policy_id": 0},
 	})
 
 

@@ -110,6 +110,8 @@ UGC 权威碰撞形状约束见 [CD-42](../40-technical/42-contracts-and-rulevm.
 
 实现落点（2026-08-26）：固定固体占用。`SimulationBundle` 必含 `solids` 数组（可空）。袋为 `entity_id` / `x` / `y` / `z`。`TraprushTopologyCompiler` 把 `zone.tags` 含 `solid` 且有 `transform` 的实体编进去（`SOLID_ZONE_TAG`，与 `finish` 同一套 `zone.tags`，不新增 Component Schema 字段）；缺 transform、或与检查点/传送/终点/可破坏/机关同实体、或同一实体同时带 `finish`+`solid` 则整份拒绝。加载为始终固体静态盒，不随 tick 切换。大厅 `MatchSolidMap` 画石色 1 米占位（`SOLID_ALBEDO`），永远显示；计入本席 overlay 的 `live_solid_boxes`（半长 `cell/2`）。Preview 对 `zone.tags` 含 `solid` 的占位同一色。HUD 写 `solids=n/m`（编译袋数，永不切换故 n=m）。官方三张赛道 0 个 solid。Jump 接地位移用合成固体袋单测，不改官方赛道、不改 Preview `play_support_dy` 默认 0。不锁编辑器 Place solid、官方赛道塞固体、重力/下落。落点见 [CD-32 §3](../30-ugc/32-editor-and-preview.md#3-从编辑到预览)、[CD-42 §3.4](../40-technical/42-contracts-and-rulevm.md#34-实现落点) 与 [CD-43 §2](../40-technical/43-networking-and-replay.md#2-传输)。
 
+实现落点（2026-08-26）：编辑器占用摆放。`TraprushEditorPanel` 用已有 EDIT `place` 摆固定固体（`zone.tags` 含 `solid`）、周期机关（已有 `hazard`，`cooldown_ticks=1` 开发桩）与可破坏箱（已有 `destructible`，耐久 1 开发桩）。不新增 `op`，不新增 Component Schema 字段。Editor / Preview 占位盒分石色 / 洋红 / 橙色。不改官方赛道、不锁产品秒数、预警动画、伤害/击退、重力/下落。落点见 [CD-32 §3](../30-ugc/32-editor-and-preview.md#3-从编辑到预览)。
+
 ### 5.2 障碍破坏
 
 - 可破坏障碍具有服务端权威 `health`；
@@ -213,7 +215,7 @@ UGC 权威碰撞形状约束见 [CD-42](../40-technical/42-contracts-and-rulevm.
 - 一键启动 1 个 Headless + 2～4 个客户端；
 - 从报错直接定位到对象或规则节点。
 
-吸附格、楼层查询、传送连线分类、发布前通路/循环、Preview Patch、共同 AuthoringDocument、Preview 窗口宿主、3D 占位映射、传送连线可视化、检查点顺序可视化、可达性叠加、内部开发编辑外壳、编辑窗口 3D 映射、TRAPRUSH 工具面板、验证器详情（从报错定位）、三张官方赛道 JSON 与内部开发 EditorPlugin 与本地草稿恢复与 Preview 试玩与 Preview 试玩 MoveIntent 与 Preview 试玩检查点占用验收与 Preview 试玩传送占用落地与 Preview 试玩冲线占用与 Preview 试玩重置到检查点与 Preview 试玩 UseItemIntent 可破坏占用与 Preview 试玩 JumpIntent 接地跳跃的数据落点见 [CD-32 §2](../30-ugc/32-editor-and-preview.md#2-草稿持久化与协同) 与 [CD-32 §3](../30-ugc/32-editor-and-preview.md#3-从编辑到预览)。对局进程多人仿真循环（无网络）落点见 [CD-42 §3.4](../40-technical/42-contracts-and-rulevm.md#34-实现落点)。走路可达仍待。通用编辑器框架与预览行为见 [CD-32](../30-ugc/32-editor-and-preview.md)。
+吸附格、楼层查询、传送连线分类、发布前通路/循环、Preview Patch、共同 AuthoringDocument、Preview 窗口宿主、3D 占位映射、传送连线可视化、检查点顺序可视化、可达性叠加、内部开发编辑外壳、编辑窗口 3D 映射、TRAPRUSH 工具面板（检查点 / 传送门 / Place solid / Place hazard / Place crate / 删除 / 楼层）、验证器详情（从报错定位）、三张官方赛道 JSON 与内部开发 EditorPlugin 与本地草稿恢复与 Preview 试玩与 Preview 试玩 MoveIntent 与 Preview 试玩检查点占用验收与 Preview 试玩传送占用落地与 Preview 试玩冲线占用与 Preview 试玩重置到检查点与 Preview 试玩 UseItemIntent 可破坏占用与 Preview 试玩 JumpIntent 接地跳跃的数据落点见 [CD-32 §2](../30-ugc/32-editor-and-preview.md#2-草稿持久化与协同) 与 [CD-32 §3](../30-ugc/32-editor-and-preview.md#3-从编辑到预览)。对局进程多人仿真循环（无网络）落点见 [CD-42 §3.4](../40-technical/42-contracts-and-rulevm.md#34-实现落点)。走路可达仍待。通用编辑器框架与预览行为见 [CD-32](../30-ugc/32-editor-and-preview.md)。
 
 ## 8. 网络与仿真基线
 

@@ -130,6 +130,27 @@ func try_place_portal(entity_id: int, target_id: int, cell_x: int, cell_y: int, 
 	return try_edit(_portal_payload(entity_id, target_id, cell_x * cell, cell_y * cell, cell_z * cell))
 
 
+func try_place_solid(entity_id: int, cell_x: int, cell_y: int, cell_z: int) -> bool:
+	if session == null or session.world == null or session.world.grid == null:
+		return false
+	var cell: int = session.world.grid.cell
+	return try_edit(_solid_payload(entity_id, cell_x * cell, cell_y * cell, cell_z * cell, cell / 2))
+
+
+func try_place_hazard(entity_id: int, cell_x: int, cell_y: int, cell_z: int) -> bool:
+	if session == null or session.world == null or session.world.grid == null:
+		return false
+	var cell: int = session.world.grid.cell
+	return try_edit(_hazard_payload(entity_id, cell_x * cell, cell_y * cell, cell_z * cell))
+
+
+func try_place_crate(entity_id: int, cell_x: int, cell_y: int, cell_z: int) -> bool:
+	if session == null or session.world == null or session.world.grid == null:
+		return false
+	var cell: int = session.world.grid.cell
+	return try_edit(_crate_payload(entity_id, cell_x * cell, cell_y * cell, cell_z * cell))
+
+
 func try_remove(entity_id: int) -> bool:
 	return try_edit({"op": "remove", "entity_id": entity_id})
 
@@ -446,6 +467,63 @@ func _portal_payload(entity_id: int, target_id: int, x: int, y: int, z: int) -> 
 			"components": {
 				"transform": {"x": x, "y": y, "z": z, "yaw_bam": 0},
 				"portal": {"target_id": target_id, "yaw_bam": 0, "cooldown_ticks": 0},
+			},
+		},
+	}
+
+
+func _solid_payload(entity_id: int, x: int, y: int, z: int, half: int) -> Dictionary:
+	return {
+		"op": "place",
+		"record": {
+			"schema_version": 1,
+			"entity_id": entity_id,
+			"components": {
+				"transform": {"x": x, "y": y, "z": z, "yaw_bam": 0},
+				"zone": {
+					"shape": {
+						"kind": SharedCollisionShapeKinds.BOX,
+						"hx": half,
+						"hy": half,
+						"hz": half,
+					},
+					"tags": [TraprushTopologyCompiler.SOLID_ZONE_TAG],
+				},
+			},
+		},
+	}
+
+
+func _hazard_payload(entity_id: int, x: int, y: int, z: int) -> Dictionary:
+	return {
+		"op": "place",
+		"record": {
+			"schema_version": 1,
+			"entity_id": entity_id,
+			"components": {
+				"transform": {"x": x, "y": y, "z": z, "yaw_bam": 0},
+				"hazard": {
+					"damage": 0,
+					"knockback": 0,
+					"cooldown_ticks": TraprushEditorPanelGd.HAZARD_COOLDOWN_STUB,
+				},
+			},
+		},
+	}
+
+
+func _crate_payload(entity_id: int, x: int, y: int, z: int) -> Dictionary:
+	return {
+		"op": "place",
+		"record": {
+			"schema_version": 1,
+			"entity_id": entity_id,
+			"components": {
+				"transform": {"x": x, "y": y, "z": z, "yaw_bam": 0},
+				"destructible": {
+					"durability": TraprushEditorPanelGd.CRATE_DURABILITY_STUB,
+					"regen_policy_id": TraprushEditorPanelGd.CRATE_REGEN_POLICY_STUB,
+				},
 			},
 		},
 	}

@@ -5,7 +5,8 @@ extends Node3D
 ## Authority stays on AuthoringWorld Q48.16; float conversion happens only here.
 ## One 1×1×1 m BoxMesh per entity with transform; portal_link, checkpoint-order,
 ## and reachability-issue gizmos. Hazard entities use HAZARD_ALBEDO. Solid
-## zone tags use SOLID_ALBEDO. During Preview play, non-solid period hazards
+## zone tags use SOLID_ALBEDO. Destructible entities use CRATE_ALBEDO.
+## During Preview play, non-solid period hazards
 ## are hidden. Always-solid placeholders stay visible. Preview play draws the
 ## sim player pose as a presentation stub and marks accepted checkpoint labels
 ## with *. Placeholders and gizmos are not hitboxes.
@@ -38,6 +39,7 @@ const _LIGHT_ROT_DEG: Vector3 = Vector3(-50.0, -30.0, 0.0)
 const _STUB_ALBEDO: Color = Color(0.85, 0.7, 0.25)
 const HAZARD_ALBEDO: Color = Color(0.82, 0.18, 0.48)
 const SOLID_ALBEDO: Color = Color(0.52, 0.48, 0.42)
+const CRATE_ALBEDO: Color = Color(0.85, 0.4, 0.25)
 const _PLAYER_ALBEDO: Color = Color(0.2, 0.45, 0.95)
 const _TWO_WAY_ALBEDO: Color = Color(0.2, 0.75, 0.95)
 const _ONE_WAY_ALBEDO: Color = Color(0.95, 0.55, 0.15)
@@ -384,6 +386,8 @@ func _spawn_placeholder(entity_id: int, pose: Dictionary, record: SharedComponen
 		albedo = HAZARD_ALBEDO
 	elif record != null and _record_has_solid_tag(record):
 		albedo = SOLID_ALBEDO
+	elif record != null and record.components.has(SharedComponentNames.DESTRUCTIBLE):
+		albedo = CRATE_ALBEDO
 	var mesh: BoxMesh = BoxMesh.new()
 	mesh.size = PLACEHOLDER_SIZE
 	mesh.material = _unshaded(albedo)
