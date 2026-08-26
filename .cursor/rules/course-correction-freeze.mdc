@@ -1,0 +1,53 @@
+---
+description: Course-correction freeze - what is not allowed to start, and which placeholder constants must not spread
+alwaysApply: true
+---
+
+# 纠偏冻结令
+
+来源：[纠偏方案 2026-08](docs/plans/course-correction-2026-08.md) §1 / §5.1 / §5.3，人类 2026-08-26 拍板（D9 = 是）。审视基线见 [docs/audits/2026-08-26-audit.md](docs/audits/2026-08-26-audit.md)。
+
+**生效期**：到该方案 §6 的 E1–E14 全绿、人类明确解除为止。解除前本规则优先于 CD-61 的进度压力。
+
+## 1. 不得开工
+
+- CD-61 M3 剩余的**表现层增强**类章：镜头、UI、颜色、标签、HUD 字段、gizmos、皮肤、动效；
+- M4 全部（Rule VM、gas、签名、发布管线、热生效、回滚）；
+- M6 / M7 全部（BASTION）；
+- 第 4 张及以后的官方赛道；
+- 任何**新增**对第 3 节冻结常量的引用点。
+
+## 2. 可以开工
+
+只有纠偏方案的 C0–C5 六个批次。C3 会写玩法代码（重力、道具），**它不是新功能，是补回被跳过的核心前提**。
+
+阻断性缺陷（CI 红、`main` 不可运行、数据损坏）可修，按最小变更，PR 标 `[freeze-exception]` 并写理由。
+
+## 3. 占位常量冻结清单
+
+以下常量在 D4 美术规格数值拍板前**不得新增引用点**（可修 bug，不可扩散）：
+
+```text
+CAPSULE_RADIUS / CAPSULE_HEIGHT / SPAWN_STRIDE      （game/src/server/match_server.gd）
+STUB_JUMP_DY / STUB_SUPPORT_DY / STUB_USE_ITEM_DAMAGE / STUB_SHOVE_COOLDOWN_TICKS
+STUB_HALF（±8 格出界桩）
+play_move_step / play_interp_step / play_jump_dy      （match_lobby_shell.gd 及 Solo/Preview 壳）
+SNAPSHOT_EVERY_TICKS / HEARTBEAT_EVERY_TICKS
+OWN_ALBEDO / REMOTE_ALBEDO / HAZARD_ALBEDO / SOLID_ALBEDO / FINISH_ALBEDO
+cell = Fixed.SCALE 与由其推导的一切 cell/2 占用半长
+```
+
+理由：文档每处都诚实写了「不是产品数值」，**但声明不降低更改成本**。这些值已被 940 个 GUT 用例、3 张官方赛道 JSON、Preview / Solo / 对局三条壳共同引用。改角色半径会连带改赛道布局、Shove 邻域、UseItem reach、出界半宽与全部占用相交断言。
+
+**配套义务**：新增章若必须读这些值，改为**从单一配置源注入**，不再散落 `const`。D4 拍板后只改一处。
+
+## 4. 每章任务单必须多回答两行
+
+在 [CD-52 §3](Confirmed-docs/50-engineering/52-ai-workflow.md) 的任务单模板末尾加：
+
+```text
+纠偏归属：C0 | C1 | C2 | C3 | C4 | C5 | freeze-exception（原因）
+是否新增冻结常量引用：否 | 是（必须说明为何无法注入）
+```
+
+两行都不得留空。「是」而没有说明为何无法注入的章，人类应直接打回。

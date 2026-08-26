@@ -1,0 +1,41 @@
+---
+description: Minimum chapter size and tiered human review - stop shipping one-liner chapters through the full process
+alwaysApply: true
+---
+
+# 章粒度下限与审查分级
+
+来源：[纠偏方案 2026-08](docs/plans/course-correction-2026-08.md) §5.2，人类 2026-08-26 拍板（D9：粒度提高 5×，接受审查抽样分级）。所有者文档是 [CD-52 §3](Confirmed-docs/50-engineering/52-ai-workflow.md)，冻结期结束时由 C5 一次性同步。
+
+存在理由：审视基线记录 7 天 102 个合并 PR ≈ 每天 15 次人类 review + 15 次真机走查。宪法第十八条唯一的实质保障因此退化为橡皮章。**粒度不是风格问题，是人类门禁能否成立的问题。**
+
+## 1. 粒度下限
+
+一章必须是**一条完整产品或技术链路的闭合**，且规模约为纠偏前一章的 **5 倍**。
+
+以下**不再单独成章**，必须合并进它所服务的那条链路：颜色调整、单个 HUD 字段、按钮焦点、窗口尺寸、Label 前缀、单个常量改名。
+
+反例（纠偏前真实发生）：
+
+- 「本席分色」= 盒子涂青 + 名次加 `*`；
+- 「开发机运行窗口与空格跳跃」= 按钮设 `FOCUS_NONE` + 窗口 1600×900。
+
+这两章各自走完了「改 4 份文档 + 写 GUT + 整节替换真机清单 + 人类真机走查 + PR + CI + 人类合并」。**流程开销数量级超过变更价值。**
+
+## 2. 审查分级
+
+每章在 PR 正文声明自己属于哪一级，人类据此分配审查深度。等权审查的结果是每章都浅。
+
+| 级别 | 范围 | 要求 |
+|---|---|---|
+| 深审 | `game/src/shared/` 契约、协议帧、权威裁决、Schema、`backend/contracts/`、安全边界 | 逐行 + 真机 + AI 口头解释失败模式 |
+| 常审 | `game/src/simulation/`、`ugc/`、`server/`、`games/` | 读 diff + 跑测试 + 抽查真机 |
+| 轻审 | 表现层、HUD、runbook、注释 | 看 CI + 抽样 |
+
+## 3. 测试强度回归 CD-53 §1.1
+
+[CD-53 §1.1](Confirmed-docs/50-engineering/53-testing-and-ci.md) 明写：纯表现与 UI「可先实现，再补烟测和视觉检查」。
+
+当前 `game/tests/unit/test_match_lobby_shell.gd` 给占位方块颜色写了强断言，违反该条，且会在美术进来时成批失效、形成「改颜色要改测试」的固化阻力。
+
+**冻结期内不再为占位表现新增强断言。** 占位表现只写烟测（能构造、不崩、节点数量级正确）。权威仿真、契约、协议、裁决路径的强断言不受此限，照旧必须有。
