@@ -112,7 +112,9 @@ UGC 权威碰撞形状约束见 [CD-42](../40-technical/42-contracts-and-rulevm.
 
 实现落点（2026-08-26）：编辑器占用摆放。`TraprushEditorPanel` 用已有 EDIT `place` 摆固定固体（`zone.tags` 含 `solid`）、周期机关（已有 `hazard`，`cooldown_ticks=1` 开发桩）与可破坏箱（已有 `destructible`，耐久 1 开发桩）。不新增 `op`，不新增 Component Schema 字段。Editor / Preview 占位盒分石色 / 洋红 / 橙色。不锁产品秒数、预警动画、伤害/击退、重力/下落。落点见 [CD-32 §3](../30-ugc/32-editor-and-preview.md#3-从编辑到预览)。
 
-实现落点（2026-08-26）：官方赛道占用。三张官方 TRAPRUSH 赛道各含 1 个始终固体（entity 70，出生点 −X 一格，`zone.tags` 含 `solid`）与 1 个周期机关（entity 60，出生点 −Z 两格，已有 `hazard`，`cooldown_ticks=1` 开发桩；两格避开双人 Shove 邻域落点）。不挡 +X 必经检查点路，不改检查点/传送/终点/箱子布局。不锁产品秒数、预警动画、伤害/击退、Place finish、重力/下落。落点见 [CD-32 §3](../30-ugc/32-editor-and-preview.md#3-从编辑到预览)。
+实现落点（2026-08-26）：官方赛道占用。三张官方 TRAPRUSH 赛道各含 1 个始终固体（entity 70，出生点 −X 一格，`zone.tags` 含 `solid`）与 1 个周期机关（entity 60，出生点 −Z 两格，已有 `hazard`，`cooldown_ticks=1` 开发桩；两格避开双人 Shove 邻域落点）。不挡 +X 必经检查点路，不改检查点/传送/终点/箱子布局。不锁产品秒数、预警动画、伤害/击退、重力/下落。落点见 [CD-32 §3](../30-ugc/32-editor-and-preview.md#3-从编辑到预览)。
+
+实现落点（2026-08-26）：编辑器 Place finish。`TraprushEditorPanel` 用已有 EDIT `place` 摆 `zone.tags` 含 `finish` 的终点占用盒（与 solid 同一套 zone 形状，不新增 Component Schema 字段）。不新增 `op`。Editor / Preview 占位金色（`FINISH_ALBEDO`，与大厅 pending 金同色）。第二份终点仍可写入（不是写入门禁），编译整份拒绝。不改官方赛道。不锁预警动画、产品秒数、伤害/击退、重力/下落。落点见 [CD-32 §3](../30-ugc/32-editor-and-preview.md#3-从编辑到预览)。
 
 ### 5.2 障碍破坏
 
@@ -217,7 +219,7 @@ UGC 权威碰撞形状约束见 [CD-42](../40-technical/42-contracts-and-rulevm.
 - 一键启动 1 个 Headless + 2～4 个客户端；
 - 从报错直接定位到对象或规则节点。
 
-吸附格、楼层查询、传送连线分类、发布前通路/循环、Preview Patch、共同 AuthoringDocument、Preview 窗口宿主、3D 占位映射、传送连线可视化、检查点顺序可视化、可达性叠加、内部开发编辑外壳、编辑窗口 3D 映射、TRAPRUSH 工具面板（检查点 / 传送门 / Place solid / Place hazard / Place crate / 删除 / 楼层）、验证器详情（从报错定位）、三张官方赛道 JSON 与内部开发 EditorPlugin 与本地草稿恢复与 Preview 试玩与 Preview 试玩 MoveIntent 与 Preview 试玩检查点占用验收与 Preview 试玩传送占用落地与 Preview 试玩冲线占用与 Preview 试玩重置到检查点与 Preview 试玩 UseItemIntent 可破坏占用与 Preview 试玩 JumpIntent 接地跳跃的数据落点见 [CD-32 §2](../30-ugc/32-editor-and-preview.md#2-草稿持久化与协同) 与 [CD-32 §3](../30-ugc/32-editor-and-preview.md#3-从编辑到预览)。对局进程多人仿真循环（无网络）落点见 [CD-42 §3.4](../40-technical/42-contracts-and-rulevm.md#34-实现落点)。走路可达仍待。通用编辑器框架与预览行为见 [CD-32](../30-ugc/32-editor-and-preview.md)。
+吸附格、楼层查询、传送连线分类、发布前通路/循环、Preview Patch、共同 AuthoringDocument、Preview 窗口宿主、3D 占位映射、传送连线可视化、检查点顺序可视化、可达性叠加、内部开发编辑外壳、编辑窗口 3D 映射、TRAPRUSH 工具面板（检查点 / 传送门 / Place solid / Place hazard / Place crate / Place finish / 删除 / 楼层）、验证器详情（从报错定位）、三张官方赛道 JSON 与内部开发 EditorPlugin 与本地草稿恢复与 Preview 试玩与 Preview 试玩 MoveIntent 与 Preview 试玩检查点占用验收与 Preview 试玩传送占用落地与 Preview 试玩冲线占用与 Preview 试玩重置到检查点与 Preview 试玩 UseItemIntent 可破坏占用与 Preview 试玩 JumpIntent 接地跳跃的数据落点见 [CD-32 §2](../30-ugc/32-editor-and-preview.md#2-草稿持久化与协同) 与 [CD-32 §3](../30-ugc/32-editor-and-preview.md#3-从编辑到预览)。对局进程多人仿真循环（无网络）落点见 [CD-42 §3.4](../40-technical/42-contracts-and-rulevm.md#34-实现落点)。走路可达仍待。通用编辑器框架与预览行为见 [CD-32](../30-ugc/32-editor-and-preview.md)。
 
 ## 8. 网络与仿真基线
 

@@ -4,14 +4,16 @@ extends VBoxContainer
 ## TRAPRUSH tool strip on AuthoringEditorShell (CD-32 §1).
 ## Emits existing EDIT ops only. Bastion panel is not this chapter.
 ## Floor only changes the next place cell_y. Occupancy place uses the same
-## lattice as checkpoints. Hazard cooldown and crate durability are stubs,
-## not product seconds or blast tables. Never settlement.
+## lattice as checkpoints. Place finish writes zone.tags finish; a second
+## finish still writes and is not a write gate. Hazard cooldown and crate
+## durability are stubs, not product seconds or blast tables. Never settlement.
 
 const PLACE_CHECKPOINT_NAME: String = "PlaceCheckpoint"
 const PLACE_PORTAL_NAME: String = "PlacePortal"
 const PLACE_SOLID_NAME: String = "PlaceSolid"
 const PLACE_HAZARD_NAME: String = "PlaceHazard"
 const PLACE_CRATE_NAME: String = "PlaceCrate"
+const PLACE_FINISH_NAME: String = "PlaceFinish"
 const REMOVE_LAST_NAME: String = "RemoveLast"
 const FLOOR_UP_NAME: String = "FloorUp"
 const FLOOR_DOWN_NAME: String = "FloorDown"
@@ -87,6 +89,7 @@ func mount(p_host: AuthoringEditorShell) -> void:
 	_add_button(occupancy_row, PLACE_SOLID_NAME, "Place solid", place_next_solid)
 	_add_button(occupancy_row, PLACE_HAZARD_NAME, "Place hazard", place_next_hazard)
 	_add_button(occupancy_row, PLACE_CRATE_NAME, "Place crate", place_next_crate)
+	_add_button(occupancy_row, PLACE_FINISH_NAME, "Place finish", place_next_finish)
 	var floor_row: HBoxContainer = HBoxContainer.new()
 	floor_row.name = "FloorRow"
 	add_child(floor_row)
@@ -156,6 +159,18 @@ func place_next_crate() -> bool:
 	var entity_id: int = _next_entity_id
 	var cell_x: int = _next_cell_x
 	if not host.try_place_crate(entity_id, cell_x, floor_index, 0):
+		return false
+	_next_entity_id += 1
+	_next_cell_x += 1
+	return true
+
+
+func place_next_finish() -> bool:
+	if host == null:
+		return false
+	var entity_id: int = _next_entity_id
+	var cell_x: int = _next_cell_x
+	if not host.try_place_finish(entity_id, cell_x, floor_index, 0):
 		return false
 	_next_entity_id += 1
 	_next_cell_x += 1

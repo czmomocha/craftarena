@@ -13,6 +13,6 @@ alwaysApply: true
 
 真机：PR Test plan 与 [章节真机清单](docs/runbooks/chapter-device-check.md) 本刀必须是编号步骤（怎么开、点什么、期望 / 失败）；禁止只写「真机再看一眼」。无 GUI 的章写「无」加原因。人工检查，不是 CI 门禁。口径见 [CD-52 §3.2](Confirmed-docs/50-engineering/52-ai-workflow.md)。
 
-- 做：官方赛道占用——三张官方 TRAPRUSH 赛道各 1 个始终固体（entity 70，出生点 −X 一格，`zone.tags` 含 `solid`）与 1 个周期机关（entity 60，出生点 −Z 两格，已有 `hazard`，`cooldown_ticks=1` 桩；两格避开双人 Shove 邻域）；不挡 +X 必经路；大厅 / Preview 石色 / 洋红；HUD `solids=1/1`、tick 0 时 `hazards=1/1`。不新增 `op`，不改检查点/传送/终点/箱子布局。
-- 不做：账号绑定、远端外推碰撞、平滑对账、可达性叠加 gizmos、走路可达/合法路径距离、检查点到达时间、本机最佳轨迹幽灵、已缓存 UGC/草稿试玩、个人试玩记录落盘、墙钟发送速率、MMR、限时未全员冲线结算、Shove/Interact 线上 id、Tick/快照频率锁定、2 秒云端上传、5 分钟定时、BASTION 面板、批量生成、性能分析、时延自动门禁、重力/下落、二进制签名、产品速度、复活硬直、产品镜头/FOV、离开对局 HTTP、生产 CA 信任链、控制面 HTTPS、MatchHost 子进程 TLS、把 `godot_ai` 插件目录或 `_mcp_game_helper` 入库、预警动画、产品秒数、伤害/击退、编辑器 Place finish；不开 M4 / M5 新章节；不为了两域并行而各交半章。
+- 做：编辑器 Place finish——`TraprushEditorPanel` 用已有 `place` 摆 `zone.tags` 含 `finish` 的终点占用（与 solid 同一套 zone 盒）；Editor / Preview 金色占位（`FINISH_ALBEDO`，与大厅 pending 金同色）；第二份终点仍可写入（不是写入门禁）但编译整份拒绝；楼层切换作用于 Place finish；已连接 Preview 跟随；Undo 撤盒。不新增 `op`，不改官方赛道。
+- 不做：账号绑定、远端外推碰撞、平滑对账、可达性叠加 gizmos、走路可达/合法路径距离、检查点到达时间、本机最佳轨迹幽灵、已缓存 UGC/草稿试玩、个人试玩记录落盘、墙钟发送速率、MMR、限时未全员冲线结算、Shove/Interact 线上 id、Tick/快照频率锁定、2 秒云端上传、5 分钟定时、BASTION 面板、批量生成、性能分析、时延自动门禁、重力/下落、二进制签名、产品速度、复活硬直、产品镜头/FOV、离开对局 HTTP、生产 CA 信任链、控制面 HTTPS、MatchHost 子进程 TLS、把 `godot_ai` 插件目录或 `_mcp_game_helper` 入库、预警动画、产品秒数、伤害/击退；不开 M4 / M5 新章节；不为了两域并行而各交半章。
 - 仍不做：把预算数字、走路可达、多人试玩房、Rule VM 真应用和整个 M3 塞进一个 PR。
