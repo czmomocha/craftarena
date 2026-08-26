@@ -6,7 +6,7 @@ extends Node3D
 ## Float conversion happens only here. Placeholders are not hitboxes.
 ## live_solid_boxes() returns compiled Q48.16 centers plus cell/2 half-extents
 ## (authoring lattice, not the 1 m placeholder). Snapshots never move a solid;
-## v1 frames have no solid bag. Official courses compile zero solids.
+## v1 frames have no solid bag. Official courses compile two solids.
 ## No interpolation or prediction API.
 
 const AuthoringDocumentGd := preload("res://src/creator/authoring_document.gd")

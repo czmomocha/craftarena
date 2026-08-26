@@ -26,22 +26,27 @@ func after_each() -> void:
 	_map = null
 
 
-func test_official_courses_map_one_solid() -> void:
+func test_official_courses_map_two_solids() -> void:
 	_map = MatchSolidMap.new()
 	add_child(_map)
 	assert_true(_map.apply_path(COURSE_01_PATH))
-	assert_eq(_map.solid_count(), 1)
-	assert_eq(_map.solid_total(), 1)
-	assert_eq(_map.live_solid_boxes().size(), 1)
+	assert_eq(_map.solid_count(), 2)
+	assert_eq(_map.solid_total(), 2)
+	assert_eq(_map.live_solid_boxes().size(), 2)
 	assert_eq(_map.crate_node_count(), 0)
 	assert_eq(_map.hazard_node_count(), 0)
 	var node: MeshInstance3D = _map.solid_node(70)
 	assert_not_null(node)
 	assert_almost_eq(node.position.x, -1.0, EPS)
 	assert_eq(_albedo(node), MatchSolidMap.SOLID_ALBEDO)
+	var footing: MeshInstance3D = _map.solid_node(80)
+	assert_not_null(footing)
+	assert_almost_eq(footing.position.x, 0.0, EPS)
+	assert_almost_eq(footing.position.y, -1.0, EPS)
+	assert_almost_eq(footing.position.z, 0.0, EPS)
 	assert_true(_map.apply_path(COURSE_03_PATH))
-	assert_eq(_map.solid_count(), 1)
-	assert_eq(_map.solid_total(), 1)
+	assert_eq(_map.solid_count(), 2)
+	assert_eq(_map.solid_total(), 2)
 	assert_false(_map.allows_settlement())
 	assert_false(_map.allows_online_writes())
 

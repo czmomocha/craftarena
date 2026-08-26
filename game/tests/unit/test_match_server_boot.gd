@@ -6,8 +6,8 @@ extends GutTest
 ## engine physics loop (not a locked product tick rate), prints structured
 ## heartbeat JSON and exits 0 at --max-ticks or 1 on bad config.
 ## Boot applies Solo-matching action stubs (jump/support/use-item). Official
-## course_01 crate is in reach from spawn. Jump remains an airborne no-op on
-## official courses (no solid footing). These stubs are not product numbers.
+## course_01 crate is in reach from spawn. Spawn-underfoot solids make Jump
+## hop at slot 0. These stubs are not product numbers.
 
 const AuthoringDocument := preload("res://src/creator/authoring_document.gd")
 const AuthoringWorld := preload("res://src/creator/authoring_world.gd")
@@ -96,8 +96,8 @@ func test_boot_session_from_config() -> void:
 	var x1: int = pose1.get("x", 0)
 	var z1: int = pose1.get("z", 0)
 	assert_ne(Vector3i(x0, 0, z0), Vector3i(x1, 0, z1))
-	assert_eq(session.jump_dy, Fixed.SCALE)
-	assert_eq(session.support_dy, Fixed.SCALE)
+	assert_eq(session.jump_dy, Fixed.SCALE / 4)
+	assert_eq(session.support_dy, -Fixed.SCALE)
 	assert_eq(session.use_item_damage, 1)
 	assert_eq(session.use_item_reach_dx, 0)
 	assert_eq(session.use_item_reach_dy, 0)
@@ -132,6 +132,27 @@ func test_boot_session_use_item_breaks_course_01_crate() -> void:
 	var crate: Dictionary = crates[0]
 	var durability: int = crate.get("durability", -1)
 	assert_eq(durability, 0)
+
+
+func test_boot_session_jump_hops_on_course_01_spawn_footing() -> void:
+	var config: Dictionary = MatchServer._boot_config({
+		"match-id": "m1", "port": "42000", "course": COURSE_01_PATH, "players": "1",
+	})
+	var session: TraprushMatchSession = MatchServer.boot_session(config)
+	assert_not_null(session)
+	var before: Dictionary = session.player_pose(0)
+	var before_y: int = before.get("y", 1)
+	var realtime: MatchRealtime = MatchRealtime.create(session)
+	assert_eq(realtime.add_player(), 0)
+	assert_true(realtime.accept_command(
+		0,
+		MatchFrameCodec.encode_command(0, PlayerIntentNames.JUMP, 0, 0, 0)
+	))
+	realtime.commit_tick()
+	var after: Dictionary = session.player_pose(0)
+	var after_y: int = after.get("y", 2)
+	assert_eq(after_y, before_y + Fixed.SCALE / 4)
+	assert_eq(realtime.last_valid_input_tick(), 1)
 
 
 func test_boot_session_shove_pushes_other_spawn_capsule() -> void:

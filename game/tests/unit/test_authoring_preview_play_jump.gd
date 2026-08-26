@@ -5,9 +5,9 @@ extends GutTest
 ## stubs. Grounded (solid support inside the probe) moves up until blocked;
 ## airborne keeps the pose and still reports ok. Client height fields are
 ## ignored. Shove / Interact stay refused. No gravity or fall, no tick, no
-## settlement. Official courses have no solid footing at spawn, so jump is
-## an airborne no-op there; displacement is proven on synthetic footing
-## (a solid crate one cell below the spawn pad, and a compiled solids bag).
+## settlement. Official courses have spawn-underfoot solids, so jump hops
+## at spawn. Displacement is also proven on synthetic footing (a solid crate
+## one cell below the spawn pad, and a compiled solids bag).
 
 const AuthoringDocument := preload("res://src/creator/authoring_document.gd")
 const AuthoringPreview := preload("res://src/creator/authoring_preview.gd")
@@ -19,6 +19,7 @@ const SharedComponentRecord := preload("res://src/shared/schema/component_record
 
 const COURSE_01_PATH: String = "res://content/official/traprush/course_01.json"
 const COURSE_02_PATH: String = "res://content/official/traprush/course_02.json"
+const COURSE_03_PATH: String = "res://content/official/traprush/course_03.json"
 const CELL: int = 65536
 const PLAY_RADIUS: int = CELL / 8
 const PAD_ID: int = 1
@@ -27,6 +28,8 @@ const SOLID_ID: int = 70
 const STAND_Y: int = CELL
 const SUPPORT_DY: int = -CELL / 2
 const JUMP_DY: int = CELL / 2
+## Official spawn hop must stay below the upstairs two_way box (course_01).
+const SPAWN_JUMP_DY: int = CELL / 4
 
 
 var _preview_shell: AuthoringPreviewShell = null
@@ -82,11 +85,10 @@ func test_grounded_jump_on_compiled_solid_moves_up() -> void:
 	assert_false(preview.allows_settlement())
 
 
-func test_airborne_jump_on_official_courses_keeps_pose() -> void:
-	var first: AuthoringPreview = _connected_course(COURSE_01_PATH)
-	var second: AuthoringPreview = _connected_course(COURSE_02_PATH)
-	_assert_airborne_jump_keeps_pose(first)
-	_assert_airborne_jump_keeps_pose(second)
+func test_official_course_spawn_jump_moves_up() -> void:
+	_assert_spawn_jump_moves_up(_connected_course(COURSE_01_PATH))
+	_assert_spawn_jump_moves_up(_connected_course(COURSE_02_PATH))
+	_assert_spawn_jump_moves_up(_connected_course(COURSE_03_PATH))
 
 
 func test_zero_jump_dy_keeps_pose() -> void:
@@ -188,9 +190,9 @@ func test_shell_jump_sampling_and_hidden_window() -> void:
 	assert_eq(direct_y, STAND_Y + JUMP_DY)
 
 
-func _assert_airborne_jump_keeps_pose(preview: AuthoringPreview) -> void:
+func _assert_spawn_jump_moves_up(preview: AuthoringPreview) -> void:
 	assert_true(preview.try_start_play(1, PLAY_RADIUS, PLAY_RADIUS))
-	preview.play_jump_dy = JUMP_DY
+	preview.play_jump_dy = SPAWN_JUMP_DY
 	preview.play_support_dy = SUPPORT_DY
 	var before: Dictionary = preview.play_world.get_pose(preview.player_id)
 	var before_x: int = before.get("x", -1)
@@ -202,9 +204,10 @@ func _assert_airborne_jump_keeps_pose(preview: AuthoringPreview) -> void:
 	var after_y: int = after.get("y", -2)
 	var after_z: int = after.get("z", -2)
 	assert_eq(after_x, before_x)
-	assert_eq(after_y, before_y)
+	assert_eq(after_y, before_y + SPAWN_JUMP_DY)
 	assert_eq(after_z, before_z)
 	assert_eq(preview.play_world.tick_index, 0)
+	assert_eq(preview.play_solid_count(), 2)
 	assert_false(preview.allows_settlement())
 
 

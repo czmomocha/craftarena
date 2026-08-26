@@ -44,7 +44,11 @@ const CAPSULE_HEIGHT: int = 8192
 const SPAWN_STRIDE: int = 32768
 ## 占位仿真种子；对局种子由控制面下发是后续章节。
 const MATCH_SEED: int = 1
-## 占位动作数值，与大厅 Solo 对齐，不是产品跳跃高度、支撑探测或爆破表。
+## 占位动作数值，与大厅 Solo / Preview 壳对齐，不是产品跳跃高度或爆破表。
+## support_dy 为负：与灰盒相同，向下探测立足固体。
+## jump_dy 为 SCALE/4：一格 hop 会与 course_01 出生点正上方 two_way 盒闭区间相交并落地。
+const STUB_JUMP_DY: int = Fixed.SCALE / 4
+const STUB_SUPPORT_DY: int = -Fixed.SCALE
 const STUB_USE_ITEM_DAMAGE: int = 1
 ## 占位推击步长（四分之一格）与冷却 tick，不是产品力度或冷却秒数。
 const STUB_SHOVE_COOLDOWN_TICKS: int = 1
@@ -259,8 +263,8 @@ static func boot_session(config: Dictionary) -> TraprushMatchSession:
 	)
 	if session == null:
 		return null
-	session.jump_dy = Fixed.SCALE
-	session.support_dy = Fixed.SCALE
+	session.jump_dy = STUB_JUMP_DY
+	session.support_dy = STUB_SUPPORT_DY
 	session.use_item_damage = STUB_USE_ITEM_DAMAGE
 	session.use_item_reach_dx = 0
 	session.use_item_reach_dy = 0
