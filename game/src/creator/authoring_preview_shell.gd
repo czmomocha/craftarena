@@ -22,7 +22,9 @@ extends Node
 ## Tab host
 ## is reserved and refused.
 ## The window defaults to 1280×720 maximized; HUD buttons use
-## FOCUS_NONE so Space stays jump, not Play. Not a product FOV.
+## FOCUS_NONE so Space stays jump, not Play. Re-open raises the existing
+## window (grab_focus) and rebuilds it if the native instance was freed.
+## Not a product FOV.
 ## Never settlement.
 
 const OutOfRangeReset := preload("res://src/games/traprush/out_of_range_reset.gd")
@@ -86,27 +88,44 @@ func open_from(session: AuthoringSession) -> bool:
 		return false
 	_rebuild_map()
 	_refresh_status()
-	window.visible = true
-	return true
+	return _raise_window()
 
 
 func show_window() -> bool:
-	if preview == null or window == null:
+	if preview == null:
 		return false
 	if not preview.connected:
 		return false
-	window.visible = true
+	var rebuilt: bool = not _window_alive()
+	_ensure_window()
+	if window == null:
+		return false
+	if rebuilt:
+		_rebuild_map()
 	_refresh_status()
-	return true
+	return _raise_window()
 
 
 func hide_window() -> void:
-	if window != null:
+	if _window_alive():
 		window.visible = false
 
 
 func is_window_visible() -> bool:
-	return window != null and window.visible
+	return _window_alive() and window.visible
+
+
+func _window_alive() -> bool:
+	return window != null and is_instance_valid(window)
+
+
+func _raise_window() -> bool:
+	if not _window_alive():
+		return false
+	window.visible = true
+	if window.is_inside_tree():
+		window.grab_focus()
+	return true
 
 
 func try_apply_patch(level: String, command: SharedCommand) -> bool:
@@ -202,7 +221,7 @@ func try_apply_play_intent(payload: Dictionary) -> bool:
 func try_sample_play_move(forward: bool, back: bool, left: bool, right: bool) -> bool:
 	if preview == null or not preview.is_playing():
 		return false
-	if window == null or not window.visible:
+	if not _window_alive() or not window.visible:
 		return false
 	var payload: Dictionary = move_payload_from_axes(forward, back, left, right, play_move_step)
 	if payload.is_empty():
@@ -214,7 +233,7 @@ func try_sample_play_use_item(pressed: bool) -> bool:
 	if preview == null or not preview.is_playing():
 		_use_item_held = pressed
 		return false
-	if window == null or not window.visible:
+	if not _window_alive() or not window.visible:
 		_use_item_held = pressed
 		return false
 	var rising: bool = pressed and not _use_item_held
@@ -231,7 +250,7 @@ func try_sample_play_reset(pressed: bool) -> bool:
 	if preview == null or not preview.is_playing():
 		_reset_held = pressed
 		return false
-	if window == null or not window.visible:
+	if not _window_alive() or not window.visible:
 		_reset_held = pressed
 		return false
 	var rising: bool = pressed and not _reset_held
@@ -247,7 +266,7 @@ func try_sample_play_jump(pressed: bool) -> bool:
 	if preview == null or not preview.is_playing():
 		_jump_held = pressed
 		return false
-	if window == null or not window.visible:
+	if not _window_alive() or not window.visible:
 		_jump_held = pressed
 		return false
 	var rising: bool = pressed and not _jump_held
@@ -329,8 +348,11 @@ func status_label_text() -> String:
 
 
 func _ensure_window() -> void:
-	if window != null:
+	if _window_alive():
 		return
+	window = null
+	map = null
+	_status = null
 	var host_viewport: Viewport = get_viewport()
 	if host_viewport != null:
 		host_viewport.gui_embed_subwindows = true
@@ -433,7 +455,7 @@ func _process(_delta: float) -> void:
 		return
 	if preview == null or not preview.is_playing():
 		return
-	if window == null or not window.visible:
+	if not _window_alive() or not window.visible:
 		return
 	try_sample_play_move(
 		Input.is_action_pressed(_MOVE_FORWARD),

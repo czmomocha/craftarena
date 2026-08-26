@@ -4,14 +4,19 @@ extends VBoxContainer
 ## TRAPRUSH tool strip on AuthoringEditorShell (CD-32 §1).
 ## Emits existing EDIT ops only. Bastion panel is not this chapter.
 ## Floor only changes the next place cell_y. Occupancy place uses the same
-## lattice as checkpoints. Hazard cooldown and crate durability are stubs,
-## not product seconds or blast tables. Never settlement.
+## lattice as checkpoints. Place finish writes zone.tags finish; a second
+## finish still writes and is not a write gate. Occupancy ids skip the
+## reserved dangling portal target so Place finish still writes after a
+## sandbox dangling portal; the next Place portal fills that slot.
+## Hazard cooldown and crate
+## durability are stubs, not product seconds or blast tables. Never settlement.
 
 const PLACE_CHECKPOINT_NAME: String = "PlaceCheckpoint"
 const PLACE_PORTAL_NAME: String = "PlacePortal"
 const PLACE_SOLID_NAME: String = "PlaceSolid"
 const PLACE_HAZARD_NAME: String = "PlaceHazard"
 const PLACE_CRATE_NAME: String = "PlaceCrate"
+const PLACE_FINISH_NAME: String = "PlaceFinish"
 const REMOVE_LAST_NAME: String = "RemoveLast"
 const FLOOR_UP_NAME: String = "FloorUp"
 const FLOOR_DOWN_NAME: String = "FloorDown"
@@ -87,6 +92,7 @@ func mount(p_host: AuthoringEditorShell) -> void:
 	_add_button(occupancy_row, PLACE_SOLID_NAME, "Place solid", place_next_solid)
 	_add_button(occupancy_row, PLACE_HAZARD_NAME, "Place hazard", place_next_hazard)
 	_add_button(occupancy_row, PLACE_CRATE_NAME, "Place crate", place_next_crate)
+	_add_button(occupancy_row, PLACE_FINISH_NAME, "Place finish", place_next_finish)
 	var floor_row: HBoxContainer = HBoxContainer.new()
 	floor_row.name = "FloorRow"
 	add_child(floor_row)
@@ -97,12 +103,12 @@ func mount(p_host: AuthoringEditorShell) -> void:
 func place_next_checkpoint() -> bool:
 	if host == null:
 		return false
-	var entity_id: int = _next_entity_id
+	var entity_id: int = _peek_entity_id()
 	var order: int = _next_order
 	var cell_x: int = _next_cell_x
 	if not host.try_place_checkpoint(entity_id, order, cell_x, floor_index, 0):
 		return false
-	_next_entity_id += 1
+	_commit_entity_id(entity_id)
 	_next_order += 1
 	_next_cell_x += 1
 	return true
@@ -111,17 +117,25 @@ func place_next_checkpoint() -> bool:
 func place_next_portal() -> bool:
 	if host == null:
 		return false
-	var entity_id: int = _next_entity_id
-	var target_id: int = entity_id + 1
+	var entity_id: int = 0
+	var target_id: int = 0
 	if _pending_portal_id > 0:
+		entity_id = _pending_pair_entity_id()
+		if entity_id <= 0:
+			entity_id = _peek_entity_id()
 		target_id = _pending_portal_id
+	else:
+		entity_id = _peek_entity_id()
+		target_id = entity_id + 1
+		while _world_has(target_id):
+			target_id += 1
 	if not host.try_place_portal(entity_id, target_id, _next_cell_x, floor_index, 0):
 		return false
+	_commit_entity_id(entity_id)
 	if _pending_portal_id > 0:
 		_pending_portal_id = 0
 	else:
 		_pending_portal_id = entity_id
-	_next_entity_id += 1
 	_next_cell_x += 1
 	return true
 
@@ -129,11 +143,11 @@ func place_next_portal() -> bool:
 func place_next_solid() -> bool:
 	if host == null:
 		return false
-	var entity_id: int = _next_entity_id
+	var entity_id: int = _peek_entity_id()
 	var cell_x: int = _next_cell_x
 	if not host.try_place_solid(entity_id, cell_x, floor_index, 0):
 		return false
-	_next_entity_id += 1
+	_commit_entity_id(entity_id)
 	_next_cell_x += 1
 	return true
 
@@ -141,11 +155,11 @@ func place_next_solid() -> bool:
 func place_next_hazard() -> bool:
 	if host == null:
 		return false
-	var entity_id: int = _next_entity_id
+	var entity_id: int = _peek_entity_id()
 	var cell_x: int = _next_cell_x
 	if not host.try_place_hazard(entity_id, cell_x, floor_index, 0):
 		return false
-	_next_entity_id += 1
+	_commit_entity_id(entity_id)
 	_next_cell_x += 1
 	return true
 
@@ -153,12 +167,26 @@ func place_next_hazard() -> bool:
 func place_next_crate() -> bool:
 	if host == null:
 		return false
-	var entity_id: int = _next_entity_id
+	var entity_id: int = _peek_entity_id()
 	var cell_x: int = _next_cell_x
 	if not host.try_place_crate(entity_id, cell_x, floor_index, 0):
 		return false
-	_next_entity_id += 1
+	_commit_entity_id(entity_id)
 	_next_cell_x += 1
+	return true
+
+
+func place_next_finish() -> bool:
+	if host == null:
+		return false
+	var entity_id: int = _peek_entity_id()
+	var cell_x: int = _next_cell_x
+	if not host.try_place_finish(entity_id, cell_x, floor_index, 0):
+		return false
+	_commit_entity_id(entity_id)
+	_next_cell_x += 1
+	if host.map != null:
+		host.map.focus_entity(entity_id)
 	return true
 
 
@@ -198,3 +226,63 @@ func _add_button(row: HBoxContainer, node_name: String, text: String, handler: C
 	button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	button.pressed.connect(handler)
 	row.add_child(button)
+
+
+func _peek_entity_id() -> int:
+	var entity_id: int = _next_entity_id
+	var reserved: Dictionary = _dangling_target_ids()
+	while reserved.has(entity_id) or _world_has(entity_id):
+		entity_id += 1
+	return entity_id
+
+
+func _commit_entity_id(entity_id: int) -> void:
+	if entity_id >= _next_entity_id:
+		_next_entity_id = entity_id + 1
+
+
+func _world_has(entity_id: int) -> bool:
+	if host == null or host.session == null or host.session.world == null:
+		return false
+	return host.session.world.has_entity(entity_id)
+
+
+func _dangling_target_ids() -> Dictionary:
+	var reserved: Dictionary = {}
+	if host == null or host.session == null or host.session.world == null:
+		return reserved
+	var links: Array[Dictionary] = host.session.world.portal_links()
+	for link_value: Variant in links:
+		if typeof(link_value) != TYPE_DICTIONARY:
+			continue
+		var link: Dictionary = link_value
+		if str(link.get("kind", "")) != AuthoringPortalKinds.DANGLING:
+			continue
+		var dest_raw: Variant = link.get("dest_id", null)
+		if typeof(dest_raw) != TYPE_INT:
+			continue
+		var dest_id: int = dest_raw
+		if dest_id > 0:
+			reserved[dest_id] = true
+	return reserved
+
+
+func _pending_pair_entity_id() -> int:
+	if _pending_portal_id <= 0:
+		return 0
+	if host == null or host.session == null or host.session.world == null:
+		return 0
+	var record: SharedComponentRecord = host.session.world.get_record(_pending_portal_id)
+	if record == null or not record.components.has(SharedComponentNames.PORTAL):
+		return 0
+	var raw: Variant = record.components[SharedComponentNames.PORTAL]
+	if typeof(raw) != TYPE_DICTIONARY:
+		return 0
+	var portal: Dictionary = raw
+	var target_raw: Variant = portal.get("target_id", null)
+	if typeof(target_raw) != TYPE_INT:
+		return 0
+	var target_id: int = target_raw
+	if target_id <= 0 or _world_has(target_id):
+		return 0
+	return target_id

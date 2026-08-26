@@ -4,7 +4,7 @@ extends Node
 ## Not the main scene. Not CI. Play current scene (F6), not the project (F5).
 ## Seeds a checkpoint and one dangling portal so the Editor shows validator details.
 ## TRAPRUSH tools can pair the portal, or Place solid / Place hazard / Place crate
-## on the occupancy row. Press Preview, then keep editing: a
+## / Place finish on the occupancy row. Press Preview, then keep editing: a
 ## connected Preview follows committed writes, and the status bar shows follow.
 ## Preview Play compiles the current Preview world; WASD moves the capsule
 ## while the Preview window is visible. Overlapping checkpoint pads accept

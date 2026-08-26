@@ -134,7 +134,28 @@ func try_place_solid(entity_id: int, cell_x: int, cell_y: int, cell_z: int) -> b
 	if session == null or session.world == null or session.world.grid == null:
 		return false
 	var cell: int = session.world.grid.cell
-	return try_edit(_solid_payload(entity_id, cell_x * cell, cell_y * cell, cell_z * cell, cell / 2))
+	return try_edit(_zone_payload(
+		entity_id,
+		cell_x * cell,
+		cell_y * cell,
+		cell_z * cell,
+		cell / 2,
+		TraprushTopologyCompiler.SOLID_ZONE_TAG
+	))
+
+
+func try_place_finish(entity_id: int, cell_x: int, cell_y: int, cell_z: int) -> bool:
+	if session == null or session.world == null or session.world.grid == null:
+		return false
+	var cell: int = session.world.grid.cell
+	return try_edit(_zone_payload(
+		entity_id,
+		cell_x * cell,
+		cell_y * cell,
+		cell_z * cell,
+		cell / 2,
+		TraprushTopologyCompiler.FINISH_ZONE_TAG
+	))
 
 
 func try_place_hazard(entity_id: int, cell_x: int, cell_y: int, cell_z: int) -> bool:
@@ -191,6 +212,10 @@ func open_preview() -> bool:
 		if preview == null:
 			return false
 		add_child(preview)
+	if preview_follows and preview.preview != null and preview.preview.connected:
+		if preview.show_window():
+			_refresh_status()
+			return true
 	preview_follows = preview.open_from(session)
 	_refresh_status()
 	return preview_follows
@@ -472,7 +497,7 @@ func _portal_payload(entity_id: int, target_id: int, x: int, y: int, z: int) -> 
 	}
 
 
-func _solid_payload(entity_id: int, x: int, y: int, z: int, half: int) -> Dictionary:
+func _zone_payload(entity_id: int, x: int, y: int, z: int, half: int, tag: String) -> Dictionary:
 	return {
 		"op": "place",
 		"record": {
@@ -487,7 +512,7 @@ func _solid_payload(entity_id: int, x: int, y: int, z: int, half: int) -> Dictio
 						"hy": half,
 						"hz": half,
 					},
-					"tags": [TraprushTopologyCompiler.SOLID_ZONE_TAG],
+					"tags": [tag],
 				},
 			},
 		},

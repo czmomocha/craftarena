@@ -53,26 +53,26 @@ Worktree 端口偏移见 README「并行工作区」；本文件不复述端口�
 
 ---
 
-## 本刀：官方赛道占用
+## 本刀：编辑器 Place finish
 
-对应：当前完整章节 PR。锁的是三张官方课各 1 个石色始终固体（出生点左边一格）与 1 个洋红周期机关（出生点朝前两格）。`cooldown_ticks=1` 是开发桩。不挡 +X 必经路。不是 Place finish，不是产品秒数。
+对应：当前完整章节 PR。锁的是工具条 **Place finish**：已有 `place` 写出 `zone.tags` 含 `finish` 的终点占用盒。Editor / Preview 是金色占位，盒上有 `finish` 字。第二份终点仍能摆上去，但编译会拒绝整份世界。不是预警动画，不是产品秒数。
 
-### 1. 大厅默认课能看见石色盒和洋红盒
+### 1. 工具条能摆带 finish 字的金色终点盒
 
 前置：关掉上次运行。本刀不需要三后端。
 
-操作：仓库根 `"$GODOT4" --path game`（macOS）或 `& $env:GODOT4 --path game`（Windows）。看标题 **Traprush** 的窗。出生点在垫上。
+操作：仓库根先 `"$GODOT4" --editor --path game`（macOS）或 `& $env:GODOT4 --editor --path game`（Windows），再 **F6** 运行 `res://src/creator/editor_sandbox.tscn`。Editor 窗已有一块检查点垫和一扇悬空传送门（偏琥珀的默认占位，垫上有绿色 `0`）。点占用行的 **Place finish**。看状态行 `entities`。
 
-预期：出生点**左边一格**（−X）有一块石色（偏灰棕）盒；出生点**朝前两格**（W 方向，世界 −Z）有一块洋红盒；出生点**朝后**（S 方向，+Z）仍是橙色箱。状态行 `course=3/2/1`、`solids_mapped=1`、`hazards_mapped=1`。失败：缺石色或洋红、两种同色、或 mapped 仍是 0。
+预期：状态行变成 `entities=3`；沿 +X 出现一块金色盒，盒上方有 `finish` 字；镜头对到这块新盒。失败：没有 Place finish 按钮、状态仍是 `entities=2`、点了没盒、或只有一块琥珀盒上看不到 `finish` 字。
 
-### 2. Solo 开玩 HUD 与固体挡住左移
+### 2. Preview 跟随同一块金色，关掉或点没后能再打开
 
-前置：步骤 1 的窗仍开着。
+前置：步骤 1 的 Editor 仍开着。
 
-操作：点 **Solo play**。看状态行。再按 **A**（左，−X）贴着石色盒走几步。
+操作：点 Editor 的 **Preview**。看独立 Preview 窗里同样一块金色盒和 `finish` 字。然后点 Editor 3D 区或 Preview 标题栏关闭，Preview 会消失或被压到后面。再点 Editor 的 **Preview**。
 
-预期：HUD 含 `solids=1/1` 与 `hazards=1/1`（tick 0 机关为固体半周期）。玩家青盒停在出生点，不钻进石色盒。失败：`solids=0/0`、能穿石色盒、或洋红盒在开玩瞬间消失且 HUD 不是 `hazards=1/1`。
+预期：第一次 Preview 里位置与 Editor 一致，有 `finish` 字。再点 Preview 后窗口再次出现在前台，同一块金色仍在。失败：Preview 没有这块、没有 `finish` 字、或第二次再点 Preview 再也出不来。
 
 ### 本刀不测
 
-- 编辑器 Place finish、重力/下落、产品秒数、预警动画、伤害/击退。
+- 连点两次 Place finish 后 Preview Play 失败（编译拒绝两份终点；自动化已覆盖）、预警动画、产品秒数、伤害/击退、重力/下落。
