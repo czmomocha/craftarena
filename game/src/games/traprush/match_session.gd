@@ -11,6 +11,8 @@ extends RefCounted
 ## Shove 无线上目标 id：服务端在 SHOVE_REACH_MAX 邻域内选最近其它胶囊，沿 XZ
 ## 远离施术者用调用方 shove_step 推开。shove_step 不得超过 SHOVE_STEP_MAX。
 ## 冷却是调用方 tick，不是产品秒数。力度不从命令帧读取。
+## 出界复位：range_enabled 时用调用方 AABB（闭区间）经 TraprushOutOfRangeReset
+## 写回最近检查点落点。不计数 N，不接重力，不写硬直。默认关闭。
 ## 语义与 AuthoringPreview 试玩逐字对齐：同一 IntentStepper、同一占用扫描
 ## 顺序（垫→门→垫→终点）。无网络、无结算、不在线写入。
 ## 直播名次由 TraprushStanding 从 accepted_count / finish_tick 派生。
@@ -24,6 +26,7 @@ const FinishAccept := preload("res://src/games/traprush/finish_accept.gd")
 const IntentStepper := preload("res://src/games/traprush/intent_stepper.gd")
 const JumpIntent := preload("res://src/games/traprush/jump_intent.gd")
 const MoveIntent := preload("res://src/games/traprush/move_intent.gd")
+const OutOfRangeReset := preload("res://src/games/traprush/out_of_range_reset.gd")
 const ShoveApply := preload("res://src/games/traprush/shove_apply.gd")
 const ShoveIntent := preload("res://src/games/traprush/shove_intent.gd")
 const PadAccept := preload("res://src/games/traprush/pad_accept.gd")
@@ -48,6 +51,13 @@ var use_item_reach_dy: int = 0
 var use_item_reach_dz: int = 0
 var shove_step: int = 0
 var shove_cooldown_ticks: int = 1
+var range_enabled: bool = false
+var range_min_x: int = 0
+var range_max_x: int = 0
+var range_min_y: int = 0
+var range_max_y: int = 0
+var range_min_z: int = 0
+var range_max_z: int = 0
 
 var _world: SimulationWorld = null
 var _graph: TraprushPortalGraph = null
@@ -241,6 +251,7 @@ func apply_player_intent(slot: int, payload: Dictionary) -> bool:
 		return false
 	var capsule_id: int = player["capsule_id"]
 	if move_ok and _resolve_player_portals(player):
+		_reset_player_if_out_of_range(player)
 		return true
 	var track: CheckpointTrack = player["track"]
 	var stepped: Dictionary = IntentStepper.apply(
@@ -257,6 +268,7 @@ func apply_player_intent(slot: int, payload: Dictionary) -> bool:
 		return false
 	if reset_ok:
 		player["latch"] = {}
+	_reset_player_if_out_of_range(player)
 	_accept_player_pads(player)
 	_resolve_player_portals(player)
 	_accept_player_pads(player)
@@ -269,10 +281,24 @@ func commit_tick() -> void:
 		return
 	_world.tick()
 	for player: Dictionary in _players:
+		_reset_player_if_out_of_range(player)
 		_accept_player_pads(player)
 		_resolve_player_portals(player)
 		_accept_player_pads(player)
 		_accept_player_finish(player)
+
+
+func enable_play_range(half: int) -> void:
+	if half < 1:
+		range_enabled = false
+		return
+	range_enabled = true
+	range_min_x = -half
+	range_max_x = half
+	range_min_y = -half
+	range_max_y = half
+	range_min_z = -half
+	range_max_z = half
 
 
 static func move_step_allowed(dx: int, dz: int) -> bool:
@@ -457,6 +483,7 @@ func _try_shove(slot: int, player: Dictionary, payload: Dictionary) -> bool:
 	var shoved: bool = result.get("shoved", false)
 	if shoved:
 		player["last_shove_tick"] = now_tick
+		_reset_player_if_out_of_range(target)
 		_accept_player_pads(target)
 		_resolve_player_portals(target)
 		_accept_player_pads(target)
@@ -581,6 +608,31 @@ static func _manhattan_xz(dx: int, dz: int) -> int:
 	if not sum.ok:
 		return SHOVE_REACH_MAX
 	return sum.value
+
+
+func _reset_player_if_out_of_range(player: Dictionary) -> bool:
+	if not range_enabled:
+		return false
+	if _world == null or _spawn == null:
+		return false
+	var capsule_id: int = player["capsule_id"]
+	var track: CheckpointTrack = player["track"]
+	var result: Dictionary = OutOfRangeReset.try_apply(
+		_world,
+		capsule_id,
+		_spawn,
+		track,
+		range_min_y,
+		range_max_y,
+		range_min_x,
+		range_max_x,
+		range_min_z,
+		range_max_z
+	)
+	var reset: bool = result.get("reset", false)
+	if reset:
+		player["latch"] = {}
+	return reset
 
 
 func _try_use_item(player: Dictionary, payload: Dictionary) -> bool:

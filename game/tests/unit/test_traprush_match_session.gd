@@ -265,6 +265,61 @@ func test_same_tape_same_hash_sequence() -> void:
 	assert_ne(first[first.size() - 1], shorter[shorter.size() - 1])
 
 
+func test_range_defaults_off_so_two_cell_move_stays() -> void:
+	var session: TraprushMatchSession = _two_player_session()
+	assert_false(session.range_enabled)
+	assert_true(session.apply_player_intent(0, _move(CELL, 0)))
+	assert_true(session.apply_player_intent(0, _move(CELL, 0)))
+	var pose: Dictionary = session.player_pose(0)
+	var pose_x: int = pose.get("x", -1)
+	assert_eq(pose_x, 2 * CELL)
+	assert_eq(session.player_accepted_count(0), 2)
+
+
+func test_tight_range_resets_before_occupying_next_pad() -> void:
+	var session: TraprushMatchSession = _two_player_session()
+	session.enable_play_range(CELL)
+	assert_true(session.range_enabled)
+	assert_true(session.apply_player_intent(0, _move(CELL, 0)))
+	assert_true(session.apply_player_intent(0, _move(CELL, 0)))
+	var pose: Dictionary = session.player_pose(0)
+	var pose_x: int = pose.get("x", -1)
+	assert_eq(pose_x, 0)
+	assert_eq(session.player_accepted_count(0), 1)
+
+
+func test_out_of_range_reset_does_not_rewind_progress() -> void:
+	var session: TraprushMatchSession = _two_player_session()
+	assert_true(session.apply_player_intent(0, _move(CELL, 0)))
+	assert_true(session.apply_player_intent(0, _move(CELL, 0)))
+	assert_eq(session.player_accepted_count(0), 2)
+	assert_true(session.apply_player_intent(0, _reset()))
+	var expected: Dictionary = session.player_pose(0)
+	session.enable_play_range(2 * CELL)
+	assert_true(session.apply_player_intent(0, _move(CELL, 0)))
+	var after: Dictionary = session.player_pose(0)
+	var after_x: int = after.get("x", -3)
+	var after_z: int = after.get("z", -3)
+	var expected_x: int = expected.get("x", -4)
+	var expected_z: int = expected.get("z", -4)
+	assert_eq(session.player_accepted_count(0), 2)
+	assert_eq(after_x, expected_x)
+	assert_eq(after_z, expected_z)
+	assert_ne(after_x, 3 * CELL)
+
+
+func test_enable_play_range_zero_disables() -> void:
+	var session: TraprushMatchSession = _two_player_session()
+	session.enable_play_range(CELL)
+	session.enable_play_range(0)
+	assert_false(session.range_enabled)
+	assert_true(session.apply_player_intent(0, _move(CELL, 0)))
+	assert_true(session.apply_player_intent(0, _move(CELL, 0)))
+	var pose: Dictionary = session.player_pose(0)
+	var pose_x: int = pose.get("x", -1)
+	assert_eq(pose_x, 2 * CELL)
+
+
 func _run_tape(tape: Array) -> Array[String]:
 	var session: TraprushMatchSession = _two_player_session()
 	var hashes: Array[String] = []

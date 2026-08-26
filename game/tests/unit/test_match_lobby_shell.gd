@@ -885,6 +885,21 @@ func test_solo_shove_has_no_target() -> void:
 	assert_eq(after_z, before_z)
 
 
+func test_solo_opens_eight_cell_range_stub() -> void:
+	_shell = _open_shell()
+	assert_true(_shell.try_solo())
+	assert_true(_shell.offline.session.range_enabled)
+	assert_eq(_shell.offline.session.range_max_x, 8 * Fixed.SCALE)
+	_shell.offline.session.enable_play_range(Fixed.SCALE)
+	_shell.play_move_step = Fixed.SCALE
+	assert_false(_shell.try_sample_play_move(false, false, false, true).is_empty())
+	assert_false(_shell.try_sample_play_move(false, false, false, true).is_empty())
+	var pose: Dictionary = _shell.offline.session.player_pose(0)
+	var pose_x: int = pose.get("x", -1)
+	assert_eq(pose_x, 0)
+	assert_eq(_shell.offline.session.player_accepted_count(0), 1)
+
+
 func test_solo_reset_after_portal_returns_to_last_pad() -> void:
 	_shell = _open_shell()
 	assert_true(_shell.try_solo())

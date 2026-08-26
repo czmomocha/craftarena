@@ -7,7 +7,9 @@ extends RefCounted
 ## the local session tick is authoritative. Snapshots feed
 ## MatchSnapshotFollow so the lobby can interpolate presentation poses.
 ## The banner is always "离线试玩，成绩不上传". Web is refused.
-## No HTTP, sockets, settlement, ghosts, or online writes.
+## play_range_half is a caller stub copied into enable_play_range;
+## 0 keeps the session default (off). No HTTP, sockets, settlement,
+## ghosts, or online writes.
 
 const MatchCourseMapGd := preload("res://src/client/match_course_map.gd")
 const MatchFrameCodec := preload("res://src/shared/protocol/match_frame_codec.gd")
@@ -40,6 +42,7 @@ var play_use_item_reach_dy: int = 0
 var play_use_item_reach_dz: int = 0
 var play_shove_step: int = 0
 var play_shove_cooldown_ticks: int = 1
+var play_range_half: int = 0
 
 
 static func move_axes(forward: bool, back: bool, left: bool, right: bool, step: int) -> Dictionary:
@@ -77,6 +80,7 @@ func try_begin(path: String, web_platform: bool = false) -> bool:
 	created.use_item_reach_dz = play_use_item_reach_dz
 	created.shove_step = play_shove_step
 	created.shove_cooldown_ticks = play_shove_cooldown_ticks
+	created.enable_play_range(play_range_half)
 	session = created
 	follow = MatchSnapshotFollowGd.new()
 	last_command = PackedByteArray()
