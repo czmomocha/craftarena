@@ -53,26 +53,26 @@ Worktree 端口偏移见 README「并行工作区」；本文件不复述端口�
 
 ---
 
-## 本刀：官方赛道立足固体与 Jump
+## 本刀：权威下落接到对局 / Solo / Preview
 
-对应：当前完整章节 PR。锁的是三张官方课出生点**正下一格**的石色立足盒，以及 Solo / Preview / 对局进程出生点空格真跳。不是重力，不是产品跳跃高度。在线 overlay 仍不叠假跳跃。
+对应：当前完整章节 PR。锁的是调用方 `fall_dy` 经 `try_move_y_until_blocked` 接到对局心跳、Solo 每帧 advance、Preview **Advance tick**。占位每 tick 最多落一格，不是产品重力。官方赛道沿 +X **没有地板**；走离立足盒会掉是本章预期。在线 overlay 仍不叠假跳跃。
 
-### 1. Solo 出生点空格能跳起来
+### 1. Solo：空格 hop 后落到脚下石色盒；走离立足盒会掉
 
 前置：关掉上次运行。本刀不需要三后端。
 
-操作：仓库根 `"$GODOT4" --path game`（macOS）或 `& $env:GODOT4 --path game`（Windows）。出现 **Traprush** 窗后点 **Solo play**。看出生点脚下（镜头略朝下）有没有第二块石色盒。点窗口内部一次，按一次**空格**。
+操作：仓库根 `"$GODOT4" --path game`（macOS）或 `& $env:GODOT4 --path game`（Windows）。出现 **Traprush** 窗后点 **Solo play**。点窗口内部一次。先等一两秒看青色盒是否贴到脚下石色盒顶（可能略低于出生高度）。按一次**空格**，再等一两秒。然后按 **D**（或右）走出立足盒，再等一两秒。
 
-预期：开玩 HUD 含 `solids=2/2`；出生点正下方有一块石色盒（另一块在 −X）；按空格后本席青色盒明显离地（大约四分之一格），不是原地不动，也不是瞬移到 +X 传送门。失败：只有 −X 那块石色、HUD 仍是 `solids=1/1`、按空格盒子高度不变、或盒子一下子出现在 +X 传送门处。
+预期：开玩后不久青色盒贴在出生点正下方石色盒顶，不是停在半空。按空格后明显离地约四分之一格，随后落回盒顶，不是停空中。走出立足盒后继续往下掉（官方 +X 没有地板）。失败：一直停在出生高度不贴盒、按空格后停空中不落、或走离立足盒仍悬空。
 
-### 2. Preview 官方课同样能跳
+### 2. Preview：空格 hop 停空中，Advance tick 才落地
 
 前置：关掉上次运行。不需要三后端。
 
-操作：仓库根先 `"$GODOT4" --editor --path game`，再 **F6** 运行 `res://src/creator/course_sandbox.tscn`。Preview 窗点 **Play**，点窗口内部一次，按一次**空格**。
+操作：仓库根先 `"$GODOT4" --editor --path game`，再 **F6** 运行 `res://src/creator/course_sandbox.tscn`。Preview 窗点 **Play**，点窗口内部一次。先点一次 **Advance tick**（落到盒顶）。按一次**空格**。先看表现桩是否停在空中。再点 **Advance tick**。
 
-预期：出生点脚下有石色盒；按空格后玩家表现桩明显离地（大约四分之一格），不是原地不动、也不是瞬移。失败：Play 后空格完全不动，或脚下没有石色盒。
+预期：Play 后第一次 Advance tick 把表现桩贴到脚下石色盒。空格后明显离地约四分之一格，**在下一次 Advance tick 之前停在空中**。再点 Advance tick 才落回盒顶。失败：空格后立刻落地、或 Advance tick 后仍停空中。
 
 ### 本刀不测
 
-- 重力/下落（空中不会掉下来）、二段跳、在线 overlay 假跳、产品跳跃高度、预警动画。
+- 产品重力加速度、官方沿路地板、在线 overlay 假跳、二段跳、产品跳跃高度、预警动画。
