@@ -7,14 +7,15 @@ extends RefCounted
 ## try_start_play compiles the Preview world into a v1 TRAPRUSH topology
 ## bundle, loads SimulationWorld, and spawns on the lowest-order pad.
 ## Play enters tick so patches are refused until try_stop_play.
-## try_advance_play advances the sim tick then toggles compiled hazards
-## via TraprushHazardCycle (existing cooldown_ticks, not a new period).
+## try_advance_play applies caller play_fall_dy via try_move_y_until_blocked,
+## then advances the sim tick and toggles compiled hazards via
+## TraprushHazardCycle (existing cooldown_ticks, not a new period).
 ## try_apply_play_intent accepts MoveIntent (caller dx/dz),
 ## ResetToCheckpointIntent (compiled pad respawn table, no client
 ## coordinates), UseItemIntent (compiled destructible occupancy at
 ## caller reach), and JumpIntent (grounded caller play_jump_dy hop via
 ## IntentStepper; airborne keeps the pose and still reports ok).
-## Shove/Interact stay refused. Does not tick. No gravity or fall.
+## Shove/Interact stay refused. Does not tick. Fall is only on advance.
 ## Out-of-range reset uses caller AABB via TraprushOutOfRangeReset when
 ## play_range_enabled; default off. No drop-count N, no stun.
 ## Occupancy uses existing TraprushPadAccept: overlapping a checkpoint pad
@@ -29,8 +30,9 @@ extends RefCounted
 ## TraprushDestructibleBreak: caller reach pose must overlap a compiled
 ## solid crate; damage and reach are caller stubs. Destroyed boxes become
 ## non-solid. Jump uses existing TraprushJumpIntent plus the IntentStepper
-## grounded check; play_jump_dy / play_support_dy are caller stubs, not a
-## locked jump height or gravity. Never settlement or online writes.
+## grounded check; play_jump_dy / play_support_dy / play_fall_dy are caller
+## stubs, not a locked jump height or product gravity. Never settlement or
+## online writes.
 ## Capsule radius/height are caller-provided, not a locked product size.
 ## Window host is AuthoringPreviewShell.
 
@@ -61,6 +63,7 @@ var play_use_item_reach_dy: int = 0
 var play_use_item_reach_dz: int = 0
 var play_jump_dy: int = 0
 var play_support_dy: int = 0
+var play_fall_dy: int = 0
 var play_range_enabled: bool = false
 var play_range_min_x: int = 0
 var play_range_max_x: int = 0
@@ -216,6 +219,8 @@ func try_stop_play() -> bool:
 func try_advance_play() -> bool:
 	if not is_playing():
 		return false
+	play_world.try_move_y_until_blocked(player_id, play_fall_dy)
+	_reset_play_if_out_of_range()
 	play_world.tick()
 	HazardCycle.apply(play_world, play_hazard_cycle)
 	_reset_play_if_out_of_range()

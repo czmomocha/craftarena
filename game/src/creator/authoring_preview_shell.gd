@@ -7,15 +7,16 @@ extends Node
 ## Play compiles the connected Preview world into a SimulationBundle, loads
 ## it, and draws the player pose as a presentation stub. While playing and
 ## visible, WASD maps to world-space MoveIntent; play_move_step is a
-## presentation stub, not a product speed. Advance tick calls existing
-## try_advance_play so period hazards can open; intents still do not tick.
-## Reset button and R rising-edge
+## presentation stub, not a product speed. Reset button and R rising-edge
 ## encode ResetToCheckpointIntent; that sample is a stub, not a hold
 ## duration. Use item button and use_item rising-edge encode UseItemIntent;
 ## play_use_item_damage / reach are stubs, not a blast table. Jump button
 ## and jump rising-edge encode JumpIntent; play_jump_dy / play_support_dy
-## are stubs, not a locked jump height or gravity. Play copies an 8-cell
-## AABB stub onto Preview (not a product bound). Occupancy
+## / play_fall_dy are stubs, not a locked jump height or product gravity.
+## Advance tick falls then ticks so period hazards can open; intents still
+## do not tick. play_fall_dy is one cell per Advance click (manual tick),
+## not the match/Solo engine-tick stub. Play copies an 8-cell AABB stub onto Preview (not a product
+## bound). Occupancy
 ## accepts overlapping checkpoint pads through PadAccept and portal boxes
 ## through PortalLanding.try_land_exit; status shows pads=n/m, floor=n,
 ## finish=n, crates=n/m, hazards=n/m, and solids=n/m.
@@ -58,6 +59,7 @@ var play_use_item_reach_dy: int = 0
 var play_use_item_reach_dz: int = Fixed.SCALE
 var play_jump_dy: int = Fixed.SCALE / 4
 var play_support_dy: int = -Fixed.SCALE
+var play_fall_dy: int = -Fixed.SCALE
 var play_range_half: int = OutOfRangeReset.STUB_HALF
 var _status: Label = null
 var _reset_held: bool = false
@@ -145,6 +147,7 @@ func try_start_play(seed: int = 1, radius: int = 0, cylinder_height: int = 0) ->
 	_jump_held = false
 	_copy_use_item_stubs()
 	_copy_jump_stubs()
+	_copy_fall_stub()
 	_copy_play_range_stub()
 	_play_view_busy = true
 	var ok: bool = preview.try_start_play(seed, radius, cylinder_height)
@@ -442,6 +445,12 @@ func _copy_jump_stubs() -> void:
 		return
 	preview.play_jump_dy = play_jump_dy
 	preview.play_support_dy = play_support_dy
+
+
+func _copy_fall_stub() -> void:
+	if preview == null:
+		return
+	preview.play_fall_dy = play_fall_dy
 
 
 func _copy_play_range_stub() -> void:

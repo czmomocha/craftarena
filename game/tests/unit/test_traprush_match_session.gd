@@ -320,6 +320,82 @@ func test_enable_play_range_zero_disables() -> void:
 	assert_eq(pose_x, 2 * CELL)
 
 
+func test_zero_fall_dy_commit_keeps_spawn_y() -> void:
+	var session: TraprushMatchSession = _two_player_session()
+	assert_eq(session.fall_dy, 0)
+	var before: Dictionary = session.player_pose(0)
+	var before_y: int = before.get("y", 1)
+	session.commit_tick()
+	var after: Dictionary = session.player_pose(0)
+	var after_y: int = after.get("y", 2)
+	assert_eq(after_y, before_y)
+
+
+func test_fall_dy_settles_on_spawn_footing_then_jump_lands() -> void:
+	var session: TraprushMatchSession = _two_player_session()
+	session.jump_dy = CELL / 4
+	session.support_dy = -CELL
+	session.fall_dy = -CELL
+	session.commit_tick()
+	var rest: Dictionary = session.player_pose(0)
+	var rest_y: int = rest.get("y", 1)
+	assert_true(session.apply_player_intent(0, _jump()))
+	var hopped: Dictionary = session.player_pose(0)
+	var hopped_y: int = hopped.get("y", 2)
+	assert_eq(hopped_y, rest_y + CELL / 4)
+	session.commit_tick()
+	var landed: Dictionary = session.player_pose(0)
+	var landed_y: int = landed.get("y", 3)
+	assert_eq(landed_y, rest_y)
+
+
+func test_fall_off_spawn_footing_drops_y() -> void:
+	var session: TraprushMatchSession = _two_player_session()
+	session.fall_dy = -CELL
+	session.commit_tick()
+	var rest: Dictionary = session.player_pose(0)
+	var rest_y: int = rest.get("y", 1)
+	assert_true(session.apply_player_intent(0, _move(CELL, 0)))
+	session.commit_tick()
+	var dropped: Dictionary = session.player_pose(0)
+	var dropped_y: int = dropped.get("y", 2)
+	assert_lt(dropped_y, rest_y)
+
+
+func test_fall_off_spawn_footing_then_range_resets_to_spawn() -> void:
+	var session: TraprushMatchSession = _two_player_session()
+	session.fall_dy = -CELL
+	session.enable_play_range(8 * CELL)
+	session.commit_tick()
+	var rest: Dictionary = session.player_pose(0)
+	var rest_y: int = rest.get("y", 1)
+	assert_true(session.apply_player_intent(0, _move(CELL, 0)))
+	var walked: Dictionary = session.player_pose(0)
+	var walked_x: int = walked.get("x", -1)
+	assert_eq(walked_x, CELL)
+	var saw_drop: bool = false
+	var saw_reset: bool = false
+	for _step: int in range(16):
+		session.commit_tick()
+		var pose: Dictionary = session.player_pose(0)
+		var pose_y: int = pose.get("y", 2)
+		var pose_x: int = pose.get("x", -1)
+		if pose_y < rest_y:
+			saw_drop = true
+		if saw_drop and pose_x == 0:
+			saw_reset = true
+			break
+	assert_true(saw_drop)
+	assert_true(saw_reset)
+	var spawn: Dictionary = session.player_pose(0)
+	var spawn_x: int = spawn.get("x", -1)
+	assert_eq(spawn_x, 0)
+
+
+func _jump() -> Dictionary:
+	return {"intent": PlayerIntentNames.JUMP}
+
+
 func _run_tape(tape: Array) -> Array[String]:
 	var session: TraprushMatchSession = _two_player_session()
 	var hashes: Array[String] = []

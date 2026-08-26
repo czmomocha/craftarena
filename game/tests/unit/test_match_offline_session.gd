@@ -76,6 +76,26 @@ func test_move_updates_follow_and_advance_ticks() -> void:
 	assert_eq(offline.follow.tick, 1)
 
 
+func test_fall_dy_settles_then_jump_lands() -> void:
+	var offline: MatchOfflineSession = MatchOfflineSession.new()
+	offline.play_jump_dy = CELL / 4
+	offline.play_support_dy = -CELL
+	offline.play_fall_dy = -CELL
+	assert_true(offline.try_begin(COURSE_01))
+	assert_eq(offline.session.fall_dy, -CELL)
+	assert_true(offline.try_advance())
+	var rest: Dictionary = offline.session.player_pose(0)
+	var rest_y: int = rest.get("y", 1)
+	assert_false(offline.try_encode_intent(PlayerIntentNames.JUMP, 0, 0, 0).is_empty())
+	var hopped: Dictionary = offline.session.player_pose(0)
+	var hopped_y: int = hopped.get("y", 2)
+	assert_eq(hopped_y, rest_y + CELL / 4)
+	assert_true(offline.try_advance())
+	var landed: Dictionary = offline.session.player_pose(0)
+	var landed_y: int = landed.get("y", 3)
+	assert_eq(landed_y, rest_y)
+
+
 func test_wasd_and_unwired_intents() -> void:
 	var offline: MatchOfflineSession = MatchOfflineSession.new()
 	assert_true(offline.try_encode_move_axes(true, false, false, false, 16).is_empty())

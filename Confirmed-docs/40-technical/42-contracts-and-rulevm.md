@@ -203,7 +203,7 @@ Undo / Redo 是会话内对成功命令派生的反向 payload（`place`↔`remo
 | TRAPRUSH 拓扑编译 | `game/src/ugc/traprush_topology_compiler.gd` |
 | TRAPRUSH 拓扑加载 | `game/src/games/traprush/traprush_topology_loader.gd` |
 | 周期机关固体切换 | `game/src/games/traprush/hazard_cycle.gd` |
-| 对局进程多人仿真循环 | `game/src/games/traprush/match_session.gd` |
+| 对局进程多人仿真循环 | `game/src/games/traprush/match_session.gd`（`fall_dy` 默认 0；boot / Solo 占位 `-SCALE/16`） |
 | 对局二进制协议 v1 | `game/src/shared/protocol/match_frame_codec.gd` |
 | TRAPRUSH 直播名次 | `game/src/games/traprush/standing.gd` |
 | 对局大厅名次表现映射 | `game/src/client/match_standing_map.gd` |
@@ -226,7 +226,7 @@ Undo / Redo 是会话内对成功命令派生的反向 payload（`place`↔`remo
 | 对局本席移动预测 | `game/src/client/match_local_predict.gd` |
 | 匹配 / 房间码 HTTP 契约 | `backend/contracts/src/match_room.ts` |
 | 控制面票据校验器 | `backend/realtime-gateway/src/ticket.ts` |
-| Preview 试玩 | `game/src/creator/authoring_preview.gd`（`try_start_play` / `try_stop_play` / `try_advance_play` / `try_apply_play_intent` / `try_accept_play_checkpoint` / `try_land_exit` 占用扫门 / `try_cross_play_finish` 占用扫终点 / `ResetToCheckpointIntent` 复活表 / `UseItemIntent` 可破坏占用 / `JumpIntent` 接地跳跃 / `TraprushHazardCycle` 周期机关固体切换） |
+| Preview 试玩 | `game/src/creator/authoring_preview.gd`（`try_start_play` / `try_stop_play` / `try_advance_play` / `try_apply_play_intent` / `try_accept_play_checkpoint` / `try_land_exit` 占用扫门 / `try_cross_play_finish` 占用扫终点 / `ResetToCheckpointIntent` 复活表 / `UseItemIntent` 可破坏占用 / `JumpIntent` 接地跳跃 / `play_fall_dy` 经 `try_move_y_until_blocked` 下落（壳占位 `-SCALE`，每次 Advance 一格） / `TraprushHazardCycle` 周期机关固体切换） |
 | UseItem 打箱 | `game/src/games/traprush/destructible_break.gd` |
 | 编辑表面名 | `game/src/creator/authoring_surface_names.gd` |
 | 领域事件 | `game/src/shared/events/shared_domain_event.gd` |

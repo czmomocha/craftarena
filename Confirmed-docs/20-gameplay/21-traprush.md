@@ -56,6 +56,8 @@
 
 移动、扫掠、推挤和击退由定点 `SimulationCore` 按稳定顺序解算。Godot 物理只允许承担受控静态查询和表现，不决定竞速结果。
 
+实现落点（2026-08-26）：权威下落。`TraprushMatchSession.fall_dy` 默认 0（2 人 Headless 冲线夹具不走路板，不能默认下落）。对局进程 / Solo 占位 `-Fixed.SCALE / 16`（与大厅 `play_move_step` 同量；引擎 ~60 tick/s 时一格每 tick 会在约 8 帧内触发出界复位）。Preview 壳占位 `-Fixed.SCALE`（手动 Advance tick）。经已有 `try_move_y_until_blocked` 直到固体，不是产品重力加速度。会话 `commit_tick` 先下落再 `world.tick`（与灰盒相同）。`MatchRealtime.commit_tick` 把下落与 `world.tick` 拆开，中间按到达顺序应用排队意图，避免同一拍 Jump 被立刻落下。Preview 只在 `try_advance_play` 下落，意图不推进 tick。纯下落不续租。不铺官方沿路地板。落点见 [CD-32 §3](../30-ugc/32-editor-and-preview.md#3-从编辑到预览) 与 [CD-42 §3.4](../40-technical/42-contracts-and-rulevm.md#34-实现落点)。
+
 ## 4. 地图传送与立体移动
 
 ### 4.1 地图结构
@@ -114,7 +116,7 @@ UGC 权威碰撞形状约束见 [CD-42](../40-technical/42-contracts-and-rulevm.
 
 实现落点（2026-08-26）：官方赛道占用。三张官方 TRAPRUSH 赛道各含 1 个始终固体（entity 70，出生点 −X 一格，`zone.tags` 含 `solid`）与 1 个周期机关（entity 60，出生点 −Z 两格，已有 `hazard`，`cooldown_ticks=1` 开发桩；两格避开双人 Shove 邻域落点）。不挡 +X 必经检查点路，不改检查点/传送/终点/箱子布局。不锁产品秒数、预警动画、伤害/击退、重力/下落。落点见 [CD-32 §3](../30-ugc/32-editor-and-preview.md#3-从编辑到预览)。
 
-实现落点（2026-08-26）：官方赛道立足固体与 Jump。三张官方课各加 entity 80：出生点正下一格（`y = -cell`）的始终固体，不挡 +X 必经路，不改检查点/传送/终点/箱子/−X 固体/−Z 机关。对局 / Solo / Preview 壳 `support_dy = -Fixed.SCALE`（与灰盒相同，向下探测）；`jump_dy` 为 `Fixed.SCALE / 4` 占位桩（一格 hop 会与 `course_01` 出生点正上方 `two_way` 盒闭区间相交并落地）。出生点 Jump 接地 hop。在线 overlay `play_jump_dy` 仍为 0（不叠假跳跃）。不锁重力/下落、产品跳跃高度、预警动画。落点见 [CD-32 §3](../30-ugc/32-editor-and-preview.md#3-从编辑到预览)。
+实现落点（2026-08-26）：官方赛道立足固体与 Jump。三张官方课各加 entity 80：出生点正下一格（`y = -cell`）的始终固体，不挡 +X 必经路，不改检查点/传送/终点/箱子/−X 固体/−Z 机关。对局 / Solo / Preview 壳 `support_dy = -Fixed.SCALE`（与灰盒相同，向下探测）；`jump_dy` 为 `Fixed.SCALE / 4` 占位桩（一格 hop 会与 `course_01` 出生点正上方 `two_way` 盒闭区间相交并落地）。出生点 Jump 接地 hop。在线 overlay `play_jump_dy` 仍为 0（不叠假跳跃）。不锁产品跳跃高度、预警动画。权威下落见 [§3.3](#33-权威运动模型)。落点见 [CD-32 §3](../30-ugc/32-editor-and-preview.md#3-从编辑到预览)。
 
 ### 5.2 障碍破坏
 
@@ -219,7 +221,7 @@ UGC 权威碰撞形状约束见 [CD-42](../40-technical/42-contracts-and-rulevm.
 - 一键启动 1 个 Headless + 2～4 个客户端；
 - 从报错直接定位到对象或规则节点。
 
-吸附格、楼层查询、传送连线分类、发布前通路/循环、Preview Patch、共同 AuthoringDocument、Preview 窗口宿主、3D 占位映射、传送连线可视化、检查点顺序可视化、可达性叠加、内部开发编辑外壳、编辑窗口 3D 映射、TRAPRUSH 工具面板（检查点 / 传送门 / Place solid / Place hazard / Place crate / Place finish / 删除 / 楼层）、验证器详情（从报错定位）、三张官方赛道 JSON 与内部开发 EditorPlugin 与本地草稿恢复与 Preview 试玩与 Preview 试玩 MoveIntent 与 Preview 试玩检查点占用验收与 Preview 试玩传送占用落地与 Preview 试玩冲线占用与 Preview 试玩重置到检查点与 Preview 试玩 UseItemIntent 可破坏占用与 Preview 试玩 JumpIntent 接地跳跃的数据落点见 [CD-32 §2](../30-ugc/32-editor-and-preview.md#2-草稿持久化与协同) 与 [CD-32 §3](../30-ugc/32-editor-and-preview.md#3-从编辑到预览)。对局进程多人仿真循环（无网络）落点见 [CD-42 §3.4](../40-technical/42-contracts-and-rulevm.md#34-实现落点)。走路可达仍待。通用编辑器框架与预览行为见 [CD-32](../30-ugc/32-editor-and-preview.md)。
+吸附格、楼层查询、传送连线分类、发布前通路/循环、Preview Patch、共同 AuthoringDocument、Preview 窗口宿主、3D 占位映射、传送连线可视化、检查点顺序可视化、可达性叠加、内部开发编辑外壳、编辑窗口 3D 映射、TRAPRUSH 工具面板（检查点 / 传送门 / Place solid / Place hazard / Place crate / Place finish / 删除 / 楼层）、验证器详情（从报错定位）、三张官方赛道 JSON 与内部开发 EditorPlugin 与本地草稿恢复与 Preview 试玩与 Preview 试玩 MoveIntent 与 Preview 试玩检查点占用验收与 Preview 试玩传送占用落地与 Preview 试玩冲线占用与 Preview 试玩重置到检查点与 Preview 试玩 UseItemIntent 可破坏占用与 Preview 试玩 JumpIntent 接地跳跃与 Preview 试玩权威下落的数据落点见 [CD-32 §2](../30-ugc/32-editor-and-preview.md#2-草稿持久化与协同) 与 [CD-32 §3](../30-ugc/32-editor-and-preview.md#3-从编辑到预览)。对局进程多人仿真循环（无网络）落点见 [CD-42 §3.4](../40-technical/42-contracts-and-rulevm.md#34-实现落点)。走路可达仍待。通用编辑器框架与预览行为见 [CD-32](../30-ugc/32-editor-and-preview.md)。
 
 ## 8. 网络与仿真基线
 
@@ -254,7 +256,9 @@ ResetToCheckpointIntent
 
 实现落点（2026-08-26）：出界复位见 [§6](#6-胜负与排名)。对局 Move/Jump/Reset 步进后、传送早退、Shove 推中目标后、以及 `commit_tick` 在 `world.tick()` 之后、占用扫描之前，调用同一模块。Preview 试玩同样先复位再占用。
 
-实现落点（2026-08-26）：周期机关见 [§5.1](#51-障碍分类)。对局 `commit_tick` 在 `world.tick()` 之后经 `TraprushHazardCycle` 切换固体，再做出界复位与占用扫描；lease 比较仍在 tick 前。意图不推进 tick。官方赛道各 1 个机关。
+实现落点（2026-08-26）：周期机关见 [§5.1](#51-障碍分类)。对局 `advance_sim_tick` 在 `world.tick()` 之后经 `TraprushHazardCycle` 切换固体，再做出界复位与占用扫描；lease 比较仍在 tick 前。意图不推进 tick。官方赛道各 1 个机关。
+
+实现落点（2026-08-26）：权威下落见 [§3.3](#33-权威运动模型)。`MatchRealtime.commit_tick` 先 `apply_player_falls`，再应用排队意图，再 `advance_sim_tick`。Solo `_process` 先 `try_advance` 再采样空格。Preview 意图不下落。
 
 实现落点（2026-08-25）：在线大厅本席 `MatchLocalPredict` 只叠加已有 Move/Jump 的 Q48.16 位移到最新权威位姿；本席不插值。更新的快照 tick 硬贴权威（不是平滑对账）。传送、重置、道具、冲线不预测。预测位姿若与最新活箱或最新远端胶囊或最新固体周期机关重叠，本帧不叠 overlay（权威胶囊/箱/机关几何，不是 1 米表现盒）；远端不外推。垫 / 门 / 终点不是固体。在线 `play_jump_dy` 仍为 0（不叠假跳跃 overlay）；对局进程 `jump_dy` 已是 Preview 占位桩，`support_dy = -Fixed.SCALE`。官方赛道出生点正下一格有立足固体，权威 Jump 接地 hop。在线 `play_jump_dy` 仍为 0（不叠假跳跃 overlay）。对局进程 UseItem 伤害/触达与 Preview 对齐，官方 `course_01` 出生点可打碎 +Z 箱。大厅 SnapshotCamera 跟随本席表现位姿（线上预测 overlay / Solo 本地权威），偏移与 Preview 相同；远端不拉镜头。大厅 WASD 把 8 向离散水平 `yaw_bam` 写入已有 Move 命令（W=0 为世界 -Z；省略哨兵仍是 -1，0 是合法朝前）；线上 overlay 立即改本席朝向，Solo 走本地权威；立方体玩家盒加 local -Z 面向标记。不发明 atan2，不锁产品转向速度，不改 Preview WASD。大厅 `follow_slot` 把本席玩家盒涂成 `OWN_ALBEDO`（青），远端仍 `REMOTE_ALBEDO`；名次标本席前缀 `*`。不是产品皮肤或槽位色盘。大厅用本席 `accepted_count` 给检查点垫分色（已验收 / 当前目标 / 未到）；未开玩保持原垫色。大厅用本席 `finish_tick` 给终点分色（未到金 / 垫齐后当前目标 / 已冲线暗金）；HUD 写 `pads=n/m`、`floor=n`（本席权威 `y / Fixed.SCALE` 向零）、`finish=n`、`crates=n/m`（活着的箱 / 编译袋总数）与 `hazards=n/m`（固体机关 / 编译袋总数），快照全员 `finish_tick>=0` 时加 `result=`。线上全员冲线后大厅 GET 控制面结算记录，200 后 HUD 加 `settled=`；Solo 不 GET。R 上升沿把已有 ResetToCheckpointIntent 接到可见复位（传送后回到最近已验收垫，进度不回退）。不是走路可达、合法路径距离或结算写库。客户端不 POST。落点见 [CD-43 §2](../40-technical/43-networking-and-replay.md#2-传输) 与 [CD-12 §1](../10-product/12-product-structure.md#1-入口结构)。
 

@@ -44,6 +44,8 @@ extends Node
 ## is a read-only GET. The client never POSTs settlement.
 ## WASD encodes Move plus discrete 8-way yaw_bam; Jump / Reset / Use item
 ## encode existing intents. F rising-edge encodes ShoveIntent (no target id).
+## Solo copies the match-server jump/support/fall stubs; _process advances
+## (falls) before sampling Space so a hop is not landed in the same frame.
 ## Solo opens an 8-cell play-range stub (not a product bound).
 ## play_move_step is a presentation stub, not a product speed.
 ## HUD buttons use FOCUS_NONE so Space stays jump, not Solo play.
@@ -716,6 +718,8 @@ func _process(delta: float) -> void:
 		_poll_gateway()
 	if window == null or not window.visible:
 		return
+	if _offline_playing():
+		offline.try_advance()
 	try_sample_play_move(
 		Input.is_action_pressed(_MOVE_FORWARD),
 		Input.is_action_pressed(_MOVE_BACK),
@@ -726,8 +730,6 @@ func _process(delta: float) -> void:
 	try_sample_play_use_item(Input.is_action_pressed(_USE_ITEM))
 	try_sample_play_jump(Input.is_action_pressed(_JUMP))
 	try_sample_play_shove(Input.is_physical_key_pressed(KEY_F))
-	if _offline_playing():
-		offline.try_advance()
 	try_advance_interp()
 	if _offline_playing():
 		_apply_snapshot_map()
@@ -1279,6 +1281,9 @@ func _prepare_offline_stubs() -> void:
 		return
 	offline.play_jump_dy = Fixed.SCALE / 4
 	offline.play_support_dy = -Fixed.SCALE
+	## Same stub as match_server STUB_FALL_DY: one move-step per tick so a
+	## 60 Hz _process does not drop eight cells and OOB-reset in a blink.
+	offline.play_fall_dy = -Fixed.SCALE / 16
 	offline.play_use_item_damage = 1
 	offline.play_use_item_reach_dx = 0
 	offline.play_use_item_reach_dy = 0

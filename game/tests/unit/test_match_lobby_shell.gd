@@ -992,6 +992,29 @@ func test_solo_jump_hops_on_spawn_footing() -> void:
 	assert_eq(after_y, before_y + Fixed.SCALE / 4)
 	assert_almost_eq(_shell.map.player_node(0).position.y, 0.25, 0.0001)
 	assert_true(_shell.try_sample_play_jump(true).is_empty())
+	assert_true(_shell.offline.try_advance())
+	var landed: Dictionary = _shell.offline.session.player_pose(0)
+	var landed_y: int = landed.get("y", 3)
+	assert_lt(landed_y, after_y)
+
+
+func test_solo_walk_off_spawn_footing_drops_y() -> void:
+	_shell = _open_shell()
+	assert_true(_shell.try_solo())
+	assert_eq(_shell.offline.session.fall_dy, -Fixed.SCALE / 16)
+	for _settle: int in range(8):
+		assert_true(_shell.offline.try_advance())
+	var rest: Dictionary = _shell.offline.session.player_pose(0)
+	var rest_y: int = rest.get("y", 1)
+	_shell.play_move_step = Fixed.SCALE
+	assert_false(_shell.try_sample_play_move(false, false, false, true).is_empty())
+	for _drop: int in range(8):
+		assert_true(_shell.offline.try_advance())
+	var dropped: Dictionary = _shell.offline.session.player_pose(0)
+	var dropped_y: int = dropped.get("y", 2)
+	assert_lt(dropped_y, rest_y)
+	var dropped_x: int = dropped.get("x", 0)
+	assert_eq(dropped_x, Fixed.SCALE)
 
 
 func test_solo_opens_eight_cell_range_stub() -> void:

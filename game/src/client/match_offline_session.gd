@@ -7,9 +7,10 @@ extends RefCounted
 ## the local session tick is authoritative. Snapshots feed
 ## MatchSnapshotFollow so the lobby can interpolate presentation poses.
 ## The banner is always "离线试玩，成绩不上传". Web is refused.
-## play_range_half is a caller stub copied into enable_play_range;
-## 0 keeps the session default (off). No HTTP, sockets, settlement,
-## ghosts, or online writes.
+## play_jump_dy / play_support_dy / play_fall_dy are caller stubs copied
+## into the session; 0 keeps the session default. play_range_half is a
+## caller stub copied into enable_play_range; 0 keeps the session default
+## (off). No HTTP, sockets, settlement, ghosts, or online writes.
 
 const MatchCourseMapGd := preload("res://src/client/match_course_map.gd")
 const MatchFrameCodec := preload("res://src/shared/protocol/match_frame_codec.gd")
@@ -36,6 +37,7 @@ var follow: MatchSnapshotFollowGd = MatchSnapshotFollowGd.new()
 var session: TraprushMatchSessionGd = null
 var play_jump_dy: int = 0
 var play_support_dy: int = 0
+var play_fall_dy: int = 0
 var play_use_item_damage: int = 0
 var play_use_item_reach_dx: int = 0
 var play_use_item_reach_dy: int = 0
@@ -74,6 +76,7 @@ func try_begin(path: String, web_platform: bool = false) -> bool:
 		return false
 	created.jump_dy = play_jump_dy
 	created.support_dy = play_support_dy
+	created.fall_dy = play_fall_dy
 	created.use_item_damage = play_use_item_damage
 	created.use_item_reach_dx = play_use_item_reach_dx
 	created.use_item_reach_dy = play_use_item_reach_dy

@@ -12,7 +12,10 @@ extends RefCounted
 ## 远离施术者用调用方 shove_step 推开。shove_step 不得超过 SHOVE_STEP_MAX。
 ## 冷却是调用方 tick，不是产品秒数。力度不从命令帧读取。
 ## 出界复位：range_enabled 时用调用方 AABB（闭区间）经 TraprushOutOfRangeReset
-## 写回最近检查点落点。不计数 N，不接重力，不写硬直。默认关闭。
+## 写回最近检查点落点。不计数 N，不写硬直。默认关闭。
+## 下落：调用方 fall_dy 经 try_move_y_until_blocked。默认 0。commit_tick 先下落
+## 再 world.tick（与灰盒相同）。MatchRealtime 在下落与 world.tick 之间应用意图，
+## 避免同一拍 Jump 被立刻落下。不锁产品重力。
 ## 周期机关：commit_tick 在 world.tick() 之后按已有 cooldown_ticks 切换固体。
 ## 意图不推进 tick，故不切换。不读 damage/knockback，不发明 period。
 ## 语义与 AuthoringPreview 试玩逐字对齐：同一 IntentStepper、同一占用扫描
@@ -48,6 +51,7 @@ const SHOVE_REACH_MAX: int = Fixed.SCALE
 
 var jump_dy: int = 0
 var support_dy: int = 0
+var fall_dy: int = 0
 var use_item_damage: int = 0
 var use_item_reach_dx: int = 0
 var use_item_reach_dy: int = 0
@@ -304,7 +308,16 @@ func apply_player_intent(slot: int, payload: Dictionary) -> bool:
 	return true
 
 
-func commit_tick() -> void:
+func apply_player_falls() -> void:
+	if _world == null:
+		return
+	for player: Dictionary in _players:
+		var capsule_id: int = player["capsule_id"]
+		_world.try_move_y_until_blocked(capsule_id, fall_dy)
+		_reset_player_if_out_of_range(player)
+
+
+func advance_sim_tick() -> void:
 	if _world == null:
 		return
 	_world.tick()
@@ -315,6 +328,11 @@ func commit_tick() -> void:
 		_resolve_player_portals(player)
 		_accept_player_pads(player)
 		_accept_player_finish(player)
+
+
+func commit_tick() -> void:
+	apply_player_falls()
+	advance_sim_tick()
 
 
 func enable_play_range(half: int) -> void:

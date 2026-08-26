@@ -14,7 +14,7 @@ extends RefCounted
 ## 最近一次「已入队、apply 成功、且应用后权威标记相对应用前变化」的权威 tick 记在
 ## `last_valid_input_tick`（从未发生为 -1），供心跳上报；MatchHost 只在该值前进
 ## 时续租。权威标记 = 会话 `hash_state`（位姿/进度/门闩）+ 箱耐久。心跳、被拒
-## 命令、未改变权威状态的命令不更新它（CD-44 §3）。
+## 命令、未改变权威状态的命令、以及纯下落不更新它（CD-44 §3）。
 ## 本类不碰 socket：传输是 match_server.gd 的薄层；网络正确性测试保持手动
 ## （CD-91 D.8 manual_network_tests）。全员冲线后允许生成结算 payload；
 ## 不在线写入、不 HTTP。
@@ -136,14 +136,16 @@ func accept_command(slot: int, bytes: PackedByteArray) -> bool:
 	return true
 
 
-## 按到达顺序应用已排队命令，然后推进会话 tick（含占用扫描）。
-## 只在至少一条命令 apply 成功且应用后权威标记相对应用前变化时更新续租 tick。
-## 比较发生在 `session.commit_tick`（世界步进）之前，避免周期机关单独续租。
-## 会话 `hash_state` 不含箱耐久，故标记另拼 `destructible_states`。
+## 先下落（上一拍空中），再按到达顺序应用已排队命令，再推进会话 tick。
+## 下落与 world.tick 分开，避免同一拍 Jump 被立刻落下。只在至少一条命令
+## apply 成功且应用后权威标记相对应用前变化时更新续租 tick。比较发生在
+## world.tick（周期机关）之前，避免机关单独续租。会话 `hash_state` 不含箱
+## 耐久，故标记另拼 `destructible_states`。纯下落不续租。
 func commit_tick() -> void:
 	if session == null:
 		return
 	var before_mark: String = _lease_state_mark()
+	session.apply_player_falls()
 	var applied_ok: bool = false
 	var pending: Array[Dictionary] = _queue
 	_queue = []
@@ -155,7 +157,7 @@ func commit_tick() -> void:
 		if session.apply_player_intent(slot, payload):
 			applied_ok = true
 	var changed: bool = applied_ok and _lease_state_mark() != before_mark
-	session.commit_tick()
+	session.advance_sim_tick()
 	if changed:
 		_last_valid_input_tick = session.tick_index()
 
