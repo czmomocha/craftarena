@@ -53,26 +53,19 @@ Worktree 端口偏移见 README「并行工作区」；本文件不复述端口�
 
 ---
 
-## 本刀：权威下落接到对局 / Solo / Preview
+## 本刀：纠偏 C0 立刻闸门
 
-对应：当前完整章节 PR。锁的是调用方 `fall_dy` 经 `try_move_y_until_blocked` 接到对局心跳、Solo 每帧 advance、Preview **Advance tick**。对局 / Solo 占位每 tick 十六分之一格（跟移动步进同量），避免每帧一格在眨眼间掉出 ±8 出界桩；Preview 每次 Advance 仍落一格。不是产品重力。官方赛道沿 +X **没有地板**；走离立足盒会掉是本章预期。在线 overlay 仍不叠假跳跃。
+对应：当前完整章节 PR。
 
-### 1. Solo：空格 hop 后落到脚下石色盒；走离立足盒会掉
+**本章无开发机可见行为**。原因：C0 只动治理面——`.github/CODEOWNERS`、`.cursor/rules/`、`docs/plans/` 与 `docs/audits/`，不改 `game/` 与 `backend/` 任何代码，窗口里看不到任何差异。
 
-前置：关掉上次运行。本刀不需要三后端。
+### 人类需要做的两项非真机核查
 
-操作：仓库根 `"$GODOT4" --path game`（macOS）或 `& $env:GODOT4 --path game`（Windows）。出现 **Traprush** 窗后点 **Solo play**。点窗口内部一次。先等一两秒看青色盒是否贴到脚下石色盒顶（可能略低于出生高度）。按一次**空格**，再等一两秒。然后按 **D**（或右）走出立足盒，盯着青色盒和脚下石色盒的相对高度，再等一两秒。
+这两项不是窗口走查，但只有人类能确认，请在合并前完成。
 
-预期：开玩后不久青色盒贴在出生点正下方石色盒顶，不是停在半空。按空格后明显离地约四分之一格，随后落回盒顶，不是停空中。走出立足盒后青色盒相对石色盒**往下掉**。掉出开发桩 ±8 格后会弹回出生点（出界复位，画面会突然上去）——请先确认有下落。失败：走出去没有下落、或一走出去就往上飞。
-
-### 2. Preview：空格 hop 停空中，Advance tick 才落地
-
-前置：关掉上次运行。不需要三后端。
-
-操作：仓库根先 `"$GODOT4" --editor --path game`，再 **F6** 运行 `res://src/creator/course_sandbox.tscn`。Preview 窗点 **Play**，点窗口内部一次。先点一次 **Advance tick**（落到盒顶）。按一次**空格**。先看表现桩是否停在空中。再点 **Advance tick**。
-
-预期：Play 后第一次 Advance tick 把表现桩贴到脚下石色盒。空格后明显离地约四分之一格，**在下一次 Advance tick 之前停在空中**。再点 Advance tick 才落回盒顶。失败：空格后立刻落地、或 Advance tick 后仍停空中。
+1. **GitHub 上确认 code owner 审查真的会拦。** 打开仓库 Settings → Branches → `main` 的保护规则，确认 "Require review from Code Owners" 处于开启。预期：本 PR 的 Reviewers 里出现由 `CODEOWNERS` 自动请求的 `@czmomocha`。失败：PR 没有自动请求 code owner，说明规则未开，`CODEOWNERS` 只是一份注释文件。
+2. **新开一个 Agent 会话，不给它任何提示，问它「现在可以开工做什么」。** 预期：它能自己说出冻结范围（不做 M4 / BASTION / 表现层增强）和占位常量不得扩散，来源是 `.cursor/rules/`。失败：它开始规划 M4 或新表现层章节——说明规则文件没有对新会话生效。
 
 ### 本刀不测
 
-- 产品重力加速度、官方沿路地板、在线 overlay 假跳、二段跳、产品跳跃高度、预警动画。
+- 任何窗口行为、任何仿真数值。C0 不改代码。

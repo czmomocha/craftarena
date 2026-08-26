@@ -5,3 +5,9 @@
 /backend/contracts/ @czmomocha
 /Confirmed-docs/ @czmomocha
 /.github/ @czmomocha
+
+# Course correction C0 (docs/plans/course-correction-2026-08.md §3 C0 item 2).
+# Audit finding 8.4: drift happened exactly in the paths ownership did not cover.
+/game/src/client/ @czmomocha
+/game/src/games/ @czmomocha
+/.cursor/rules/ @czmomocha
