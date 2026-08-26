@@ -53,10 +53,11 @@ func test_official_courses_compile_distinct_topology() -> void:
 	assert_eq(second.destructibles.size(), 1)
 	assert_eq(first.hazards.size(), 1)
 	assert_eq(second.hazards.size(), 1)
-	assert_eq(first.solids.size(), 1)
-	assert_eq(second.solids.size(), 1)
+	assert_eq(first.solids.size(), 2)
+	assert_eq(second.solids.size(), 2)
 	var first_hazard: Dictionary = _hazard(first, 60)
 	var first_solid: Dictionary = _solid(first, 70)
+	var first_footing: Dictionary = _solid(first, 80)
 	var first_hazard_z: int = first_hazard.get("z", 1)
 	var first_hazard_cd: int = first_hazard.get("cooldown_ticks", -1)
 	var first_solid_x: int = first_solid.get("x", 1)
@@ -65,6 +66,10 @@ func test_official_courses_compile_distinct_topology() -> void:
 	assert_eq(first_hazard_z, -2 * CELL)
 	assert_eq(first_hazard_cd, 1)
 	assert_eq(first_solid_x, -CELL)
+	var first_footing_y: int = first_footing.get("y", 1)
+	assert_eq(first_footing_y, -CELL)
+	var second_footing_y: int = _solid(second, 80).get("y", 1)
+	assert_eq(second_footing_y, -CELL)
 	assert_eq(second_hazard_z, -2 * CELL)
 	assert_eq(second_solid_x, -CELL)
 	var first_crate: Dictionary = _destructible(first, 40)
@@ -242,7 +247,7 @@ func test_loaded_pads_are_non_solid_occupancy_and_world_ticks() -> void:
 	var hazard_ids: Dictionary = loaded["hazard_ids"]
 	assert_eq(hazard_ids.size(), 1)
 	var solid_ids: Dictionary = loaded["solid_ids"]
-	assert_eq(solid_ids.size(), 1)
+	assert_eq(solid_ids.size(), 2)
 	var box_id: int = pad_ids[1]
 	assert_false(world.is_static_box_solid(box_id))
 	var portal_box_id: int = portal_ids[10]
@@ -255,6 +260,8 @@ func test_loaded_pads_are_non_solid_occupancy_and_world_ticks() -> void:
 	assert_true(world.is_static_box_solid(hazard_box_id))
 	var solid_box_id: int = solid_ids[70]
 	assert_true(world.is_static_box_solid(solid_box_id))
+	var footing_box_id: int = solid_ids[80]
+	assert_true(world.is_static_box_solid(footing_box_id))
 	var capsule_id: int = world.spawn_capsule(0, 0, 0, 0, 1, 1)
 	var overlapping: PackedInt32Array = world.overlapping_static_boxes(capsule_id)
 	assert_true(_has_id(overlapping, box_id))

@@ -31,8 +31,9 @@ var follow: MatchSnapshotFollowGd = MatchSnapshotFollowGd.new()
 var predict: MatchLocalPredictGd = MatchLocalPredictGd.new()
 var last_command: PackedByteArray = PackedByteArray()
 ## Online overlay jump stays 0 so snapshots are not stacked with a fake hop.
-## Match-server jump_dy is the Preview placeholder. Official courses have
-## no solid footing, so Jump is still an airborne no-op there. Not a product height.
+## Match-server / Solo jump_dy is the Preview placeholder. Official courses
+## have spawn-underfoot solids so authority Jump hops; overlay still does not.
+## Not a product height.
 var play_jump_dy: int = 0
 
 

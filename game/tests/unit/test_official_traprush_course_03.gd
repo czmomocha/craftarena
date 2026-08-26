@@ -39,8 +39,8 @@ func test_official_course_03_loads_and_is_publish_ready() -> void:
 	var world: AuthoringWorld = AuthoringDocument.load_from_path(COURSE_03_PATH)
 	assert_not_null(world)
 	assert_eq(world.grid.cell, CELL)
-	assert_eq(world.revision, 2)
-	assert_eq(world.entity_ids(), [1, 2, 3, 4, 10, 11, 12, 30, 40, 60, 70])
+	assert_eq(world.revision, 3)
+	assert_eq(world.entity_ids(), [1, 2, 3, 4, 10, 11, 12, 30, 40, 60, 70, 80])
 	var result: Dictionary = AuthoringReachability.evaluate(world)
 	assert_true(_ok(result))
 	var issues: Array = result.get("issues", [1])
@@ -89,15 +89,18 @@ func test_course_03_compiles_and_loads() -> void:
 	assert_eq(bundle.finish.size(), 1)
 	assert_eq(bundle.destructibles.size(), 1)
 	assert_eq(bundle.hazards.size(), 1)
-	assert_eq(bundle.solids.size(), 1)
+	assert_eq(bundle.solids.size(), 2)
 	var occupancy_hazard: Dictionary = _hazard(bundle, 60)
 	var occupancy_solid: Dictionary = _solid(bundle, 70)
+	var occupancy_footing: Dictionary = _solid(bundle, 80)
 	var occupancy_hazard_z: int = occupancy_hazard.get("z", 1)
 	var occupancy_hazard_cd: int = occupancy_hazard.get("cooldown_ticks", -1)
 	var occupancy_solid_x: int = occupancy_solid.get("x", 1)
 	assert_eq(occupancy_hazard_z, -2 * CELL)
 	assert_eq(occupancy_hazard_cd, 1)
 	assert_eq(occupancy_solid_x, -CELL)
+	var occupancy_footing_y: int = occupancy_footing.get("y", 1)
+	assert_eq(occupancy_footing_y, -CELL)
 	var crate: Dictionary = _destructible(bundle, 40)
 	var crate_x: int = crate.get("x", -1)
 	var crate_durability: int = crate.get("durability", -1)
@@ -117,13 +120,15 @@ func test_course_03_compiles_and_loads() -> void:
 	var hazard_ids: Dictionary = loaded["hazard_ids"]
 	assert_eq(hazard_ids.size(), 1)
 	var solid_ids: Dictionary = loaded["solid_ids"]
-	assert_eq(solid_ids.size(), 1)
+	assert_eq(solid_ids.size(), 2)
 	var pad_box: int = pad_ids[1]
 	assert_false(sim.is_static_box_solid(pad_box))
 	var crate_box: int = destructible_ids[40]
 	assert_true(sim.is_static_box_solid(crate_box))
 	var solid_box: int = solid_ids[70]
 	assert_true(sim.is_static_box_solid(solid_box))
+	var footing_box: int = solid_ids[80]
+	assert_true(sim.is_static_box_solid(footing_box))
 
 
 func test_course_03_preview_play_full_run() -> void:

@@ -29,8 +29,8 @@ func test_official_course_02_loads_and_is_publish_ready() -> void:
 	var world: AuthoringWorld = AuthoringDocument.load_from_path(COURSE_02_PATH)
 	assert_not_null(world)
 	assert_eq(world.grid.cell, CELL)
-	assert_eq(world.revision, 8)
-	assert_eq(world.entity_ids(), [1, 2, 3, 20, 21, 30, 40, 60, 70])
+	assert_eq(world.revision, 9)
+	assert_eq(world.entity_ids(), [1, 2, 3, 20, 21, 30, 40, 60, 70, 80])
 	var result: Dictionary = AuthoringReachability.evaluate(world)
 	assert_true(_ok(result))
 	var issues: Array = result.get("issues", [1])
@@ -53,6 +53,7 @@ func test_course_02_is_lateral_two_way_not_course_01() -> void:
 			continue
 		assert_eq(_entity_z(first, entity_id), 0)
 	assert_eq(_entity_x(first, 70), -CELL)
+	assert_eq(_entity_y(first, 80), -CELL)
 	var links: Array[Dictionary] = second.portal_links()
 	assert_eq(links.size(), 2)
 	var saw_right_lane: bool = false
@@ -122,6 +123,10 @@ func test_cross_floor_without_portals_is_unreachable() -> void:
 
 func _entity_x(world: AuthoringWorld, entity_id: int) -> int:
 	return _entity_axis(world, entity_id, "x")
+
+
+func _entity_y(world: AuthoringWorld, entity_id: int) -> int:
+	return _entity_axis(world, entity_id, "y")
 
 
 func _entity_z(world: AuthoringWorld, entity_id: int) -> int:

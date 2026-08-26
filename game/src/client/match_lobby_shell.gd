@@ -1277,8 +1277,8 @@ func _online_busy() -> bool:
 func _prepare_offline_stubs() -> void:
 	if offline == null:
 		return
-	offline.play_jump_dy = Fixed.SCALE
-	offline.play_support_dy = Fixed.SCALE
+	offline.play_jump_dy = Fixed.SCALE / 4
+	offline.play_support_dy = -Fixed.SCALE
 	offline.play_use_item_damage = 1
 	offline.play_use_item_reach_dx = 0
 	offline.play_use_item_reach_dy = 0

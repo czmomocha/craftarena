@@ -22,7 +22,7 @@
 
 ## 共用启动（大厅窗口）
 
-机关狂奔匹配大厅是代码创建的 `Window`，标题 **Traprush**。第一行是状态 Label。按钮（从左到右）：**Quick play**、**Create room**、**Join room**、**Solo play**、**Cancel**、**Poll**。其下三个输入框：房间码（placeholder `Room code`）、课程 id（默认 `course_01`）、人数（默认 `2`）。窗口里的 3D：本席玩家盒是青色（`OWN_ALBEDO`），远端玩家盒仍是海军蓝（`REMOTE_ALBEDO`）；橙色盒是可破坏箱；洋红盒是周期机关（固体半周期才出现；官方赛道出生点 −Z 1 个）；石色盒是固定固体占用（始终显示；官方赛道出生点 −X 1 个）；垫 / 门 / 终点是赛道占位盒（未开玩时垫是原绿、终点是原金；开玩后本席已验收垫是暗绿，当前目标垫是亮薄荷；全部垫完成后终点变亮金，冲线后变暗金）；条是传送连线与检查点顺序 gizmos。玩家盒上方有名次 Label；本席名次标以 `*` 开头。开玩时状态行含 `pads=n/m`、`floor=n`、`finish=n`、`crates=n/m`、`hazards=n/m` 与 `solids=n/m`。
+机关狂奔匹配大厅是代码创建的 `Window`，标题 **Traprush**。第一行是状态 Label。按钮（从左到右）：**Quick play**、**Create room**、**Join room**、**Solo play**、**Cancel**、**Poll**。其下三个输入框：房间码（placeholder `Room code`）、课程 id（默认 `course_01`）、人数（默认 `2`）。窗口里的 3D：本席玩家盒是青色（`OWN_ALBEDO`），远端玩家盒仍是海军蓝（`REMOTE_ALBEDO`）；橙色盒是可破坏箱；洋红盒是周期机关（固体半周期才出现；官方赛道出生点 −Z 1 个）；石色盒是固定固体占用（始终显示；官方赛道出生点 −X 1 个、正下方 1 个）；垫 / 门 / 终点是赛道占位盒（未开玩时垫是原绿、终点是原金；开玩后本席已验收垫是暗绿，当前目标垫是亮薄荷；全部垫完成后终点变亮金，冲线后变暗金）；条是传送连线与检查点顺序 gizmos。玩家盒上方有名次 Label；本席名次标以 `*` 开头。开玩时状态行含 `pads=n/m`、`floor=n`、`finish=n`、`crates=n/m`、`hazards=n/m` 与 `solids=n/m`。
 
 ### 0.1 后端（本刀需要在线入场时）
 
@@ -53,26 +53,26 @@ Worktree 端口偏移见 README「并行工作区」；本文件不复述端口�
 
 ---
 
-## 本刀：编辑器 Place finish
+## 本刀：官方赛道立足固体与 Jump
 
-对应：当前完整章节 PR。锁的是工具条 **Place finish**：已有 `place` 写出 `zone.tags` 含 `finish` 的终点占用盒。Editor / Preview 是金色占位，盒上有 `finish` 字。第二份终点仍能摆上去，但编译会拒绝整份世界。不是预警动画，不是产品秒数。
+对应：当前完整章节 PR。锁的是三张官方课出生点**正下一格**的石色立足盒，以及 Solo / Preview / 对局进程出生点空格真跳。不是重力，不是产品跳跃高度。在线 overlay 仍不叠假跳跃。
 
-### 1. 工具条能摆带 finish 字的金色终点盒
+### 1. Solo 出生点空格能跳起来
 
 前置：关掉上次运行。本刀不需要三后端。
 
-操作：仓库根先 `"$GODOT4" --editor --path game`（macOS）或 `& $env:GODOT4 --editor --path game`（Windows），再 **F6** 运行 `res://src/creator/editor_sandbox.tscn`。Editor 窗已有一块检查点垫和一扇悬空传送门（偏琥珀的默认占位，垫上有绿色 `0`）。点占用行的 **Place finish**。看状态行 `entities`。
+操作：仓库根 `"$GODOT4" --path game`（macOS）或 `& $env:GODOT4 --path game`（Windows）。出现 **Traprush** 窗后点 **Solo play**。看出生点脚下（镜头略朝下）有没有第二块石色盒。点窗口内部一次，按一次**空格**。
 
-预期：状态行变成 `entities=3`；沿 +X 出现一块金色盒，盒上方有 `finish` 字；镜头对到这块新盒。失败：没有 Place finish 按钮、状态仍是 `entities=2`、点了没盒、或只有一块琥珀盒上看不到 `finish` 字。
+预期：开玩 HUD 含 `solids=2/2`；出生点正下方有一块石色盒（另一块在 −X）；按空格后本席青色盒明显离地（大约四分之一格），不是原地不动，也不是瞬移到 +X 传送门。失败：只有 −X 那块石色、HUD 仍是 `solids=1/1`、按空格盒子高度不变、或盒子一下子出现在 +X 传送门处。
 
-### 2. Preview 跟随同一块金色，关掉或点没后能再打开
+### 2. Preview 官方课同样能跳
 
-前置：步骤 1 的 Editor 仍开着。
+前置：关掉上次运行。不需要三后端。
 
-操作：点 Editor 的 **Preview**。看独立 Preview 窗里同样一块金色盒和 `finish` 字。然后点 Editor 3D 区或 Preview 标题栏关闭，Preview 会消失或被压到后面。再点 Editor 的 **Preview**。
+操作：仓库根先 `"$GODOT4" --editor --path game`，再 **F6** 运行 `res://src/creator/course_sandbox.tscn`。Preview 窗点 **Play**，点窗口内部一次，按一次**空格**。
 
-预期：第一次 Preview 里位置与 Editor 一致，有 `finish` 字。再点 Preview 后窗口再次出现在前台，同一块金色仍在。失败：Preview 没有这块、没有 `finish` 字、或第二次再点 Preview 再也出不来。
+预期：出生点脚下有石色盒；按空格后玩家表现桩明显离地（大约四分之一格），不是原地不动、也不是瞬移。失败：Play 后空格完全不动，或脚下没有石色盒。
 
 ### 本刀不测
 
-- 连点两次 Place finish 后 Preview Play 失败（编译拒绝两份终点；自动化已覆盖）、预警动画、产品秒数、伤害/击退、重力/下落。
+- 重力/下落（空中不会掉下来）、二段跳、在线 overlay 假跳、产品跳跃高度、预警动画。
