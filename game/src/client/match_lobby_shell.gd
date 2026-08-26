@@ -44,6 +44,9 @@ extends Node
 ## encode existing intents. F rising-edge encodes ShoveIntent (no target id).
 ## Solo opens an 8-cell play-range stub (not a product bound).
 ## play_move_step is a presentation stub, not a product speed.
+## HUD buttons use FOCUS_NONE so Space stays jump, not Solo play.
+## The window defaults to 1280×720 maximized; that is a developer
+## run size, not a locked product FOV.
 ## Unexpected socket close while connecting or in-match reissues the
 ## consumed ticket and follows the latest snapshot again.
 ## Cancel stops solo play, cancels a waiting queue, and locally leaves
@@ -71,6 +74,8 @@ const OutOfRangeResetGd := preload("res://src/games/traprush/out_of_range_reset.
 const PlayerIntentNames := preload("res://src/shared/commands/player_intent_names.gd")
 
 const TITLE: String = "Traprush"
+const WINDOW_SIZE: Vector2i = Vector2i(1280, 720)
+const WINDOW_MIN_SIZE: Vector2i = Vector2i(960, 540)
 const DEFAULT_COURSE: String = "res://content/official/traprush/course_01.json"
 const DEFAULT_CONTROL_PLANE: String = "http://127.0.0.1:8080"
 const DEFAULT_GATEWAY: String = "ws://127.0.0.1:8090"
@@ -726,7 +731,9 @@ func _ensure_window() -> void:
 			host_viewport.gui_embed_subwindows = true
 	window = Window.new()
 	window.title = TITLE
-	window.size = Vector2i(640, 400)
+	window.size = WINDOW_SIZE
+	window.min_size = WINDOW_MIN_SIZE
+	window.mode = Window.MODE_MAXIMIZED
 	window.exclusive = false
 	window.transient = false
 	window.own_world_3d = true
@@ -755,18 +762,21 @@ func _ensure_window() -> void:
 	_room_edit.name = ROOM_NAME
 	_room_edit.placeholder_text = "Room code"
 	_room_edit.max_length = 6
+	_room_edit.focus_mode = Control.FOCUS_CLICK
 	root.add_child(_room_edit)
 	_course_edit = LineEdit.new()
 	_course_edit.name = COURSE_ID_NAME
 	_course_edit.placeholder_text = OfficialTraprushCoursesGd.DEFAULT_ID
 	_course_edit.text = OfficialTraprushCoursesGd.DEFAULT_ID
 	_course_edit.max_length = 32
+	_course_edit.focus_mode = Control.FOCUS_CLICK
 	root.add_child(_course_edit)
 	_seats_edit = LineEdit.new()
 	_seats_edit.name = SEATS_NAME
 	_seats_edit.placeholder_text = str(OfficialTraprushCoursesGd.DEFAULT_SEATS)
 	_seats_edit.text = str(OfficialTraprushCoursesGd.DEFAULT_SEATS)
 	_seats_edit.max_length = 1
+	_seats_edit.focus_mode = Control.FOCUS_CLICK
 	root.add_child(_seats_edit)
 	map = MatchSnapshotMapGd.new()
 	map.name = _MAP_NAME
@@ -792,6 +802,7 @@ func _ensure_window() -> void:
 	add_child(window)
 	map.ensure_rig()
 	_apply_course_document(course_path)
+	window.gui_release_focus()
 
 
 func _apply_join_course() -> void:
@@ -831,6 +842,7 @@ func _add_button(row: BoxContainer, node_name: String, text: String, handler: Ca
 	button.name = node_name
 	button.text = text
 	button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	button.focus_mode = Control.FOCUS_NONE
 	button.pressed.connect(handler)
 	row.add_child(button)
 

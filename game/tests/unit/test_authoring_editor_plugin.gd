@@ -10,6 +10,7 @@ const PLUGIN_CFG: String = "res://addons/authoring_editor/plugin.cfg"
 const PLUGIN_SCRIPT: String = "res://addons/authoring_editor/plugin.gd"
 const GUT_CFG: String = "res://addons/gut/plugin.cfg"
 const GODOT_AI_CFG: String = "res://addons/godot_ai/plugin.cfg"
+const GodotAiEnable := preload("res://addons/authoring_editor/godot_ai_enable.gd")
 
 var _host: AuthoringEditorPluginHost = null
 
@@ -35,6 +36,8 @@ func test_plugin_cfg_points_at_editor_plugin_script() -> void:
 	assert_eq(source.contains("_write_draft_text"), true)
 	assert_eq(source.contains("FileAccess.open"), true)
 	assert_eq(source.contains("world_committed"), true)
+	assert_eq(source.contains("GodotAiEnableGd"), true)
+	assert_eq(source.contains("set_plugin_enabled"), true)
 
 
 func test_project_enables_gut_and_authoring_not_godot_ai() -> void:
@@ -43,6 +46,15 @@ func test_project_enables_gut_and_authoring_not_godot_ai() -> void:
 	assert_eq(enabled.has(PLUGIN_CFG), true)
 	assert_eq(enabled.has(GODOT_AI_CFG), false)
 	assert_eq(ProjectSettings.has_setting("autoload/_mcp_game_helper"), false)
+
+
+func test_local_godot_ai_enables_only_when_installed_and_off() -> void:
+	assert_eq(GodotAiEnable.CFG_PATH, GODOT_AI_CFG)
+	assert_eq(GodotAiEnable.PLUGIN_ID, "godot_ai")
+	assert_eq(GodotAiEnable.should_enable(true, false), true)
+	assert_eq(GodotAiEnable.should_enable(true, true), false)
+	assert_eq(GodotAiEnable.should_enable(false, false), false)
+	assert_eq(GodotAiEnable.should_enable(false, true), false)
 
 
 func test_host_opens_internal_dev_shell_and_never_settles() -> void:

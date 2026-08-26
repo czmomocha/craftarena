@@ -26,6 +26,9 @@ func test_open_window_keeps_authoring_session() -> void:
 	assert_true(_shell.open_from(session))
 	assert_true(_shell.is_window_visible())
 	assert_eq(_shell.window.title, AuthoringPreviewShell.TITLE)
+	assert_eq(_shell.window.size, AuthoringPreviewShell.WINDOW_SIZE)
+	assert_eq(_shell.window.min_size, AuthoringPreviewShell.WINDOW_MIN_SIZE)
+	assert_eq(_shell.window.mode, Window.MODE_MAXIMIZED)
 	assert_false(_shell.window.exclusive)
 	assert_false(_shell.window.transient)
 	assert_true(_shell.preview.world.has_entity(1))
@@ -41,6 +44,17 @@ func test_open_window_keeps_authoring_session() -> void:
 	assert_eq(preview_revision, 0)
 	assert_true(_shell.window.own_world_3d)
 	assert_eq(_shell.map.mapped_count(), 0)
+
+
+func test_play_buttons_do_not_steal_space() -> void:
+	var session: AuthoringSession = AuthoringSession.new()
+	_shell = AuthoringPreviewShell.create(AuthoringPreviewHostKinds.WINDOW)
+	add_child(_shell)
+	assert_true(_shell.open_from(session))
+	var play: Button = _shell.window.find_child(AuthoringPreviewShell.PLAY_NAME, true, false)
+	assert_not_null(play)
+	assert_eq(play.focus_mode, Control.FOCUS_NONE)
+	assert_false(play.has_focus())
 
 
 func test_patch_updates_status_without_settlement() -> void:

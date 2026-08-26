@@ -37,6 +37,9 @@ func after_each() -> void:
 func test_open_window_quick_play_ready_begins_play() -> void:
 	_shell = _open_shell()
 	assert_eq(_shell.window.title, MatchLobbyShell.TITLE)
+	assert_eq(_shell.window.size, MatchLobbyShell.WINDOW_SIZE)
+	assert_eq(_shell.window.min_size, MatchLobbyShell.WINDOW_MIN_SIZE)
+	assert_eq(_shell.window.mode, Window.MODE_MAXIMIZED)
 	assert_false(_shell.window.exclusive)
 	assert_false(_shell.window.transient)
 	assert_true(_shell.window.own_world_3d)
@@ -132,6 +135,22 @@ func test_open_window_quick_play_ready_begins_play() -> void:
 	assert_true(_shell.status_label_text().contains("room=ABCD23"))
 	assert_false(_shell.allows_settlement())
 	assert_false(_shell.allows_online_writes())
+
+
+func test_hud_buttons_do_not_steal_space_and_window_is_dev_default() -> void:
+	_shell = _open_shell()
+	assert_eq(_shell.window.size, MatchLobbyShell.WINDOW_SIZE)
+	assert_eq(_shell.window.min_size, MatchLobbyShell.WINDOW_MIN_SIZE)
+	assert_eq(_shell.window.mode, Window.MODE_MAXIMIZED)
+	var solo: Button = _shell.window.find_child(MatchLobbyShell.SOLO_NAME, true, false)
+	assert_not_null(solo)
+	assert_eq(solo.focus_mode, Control.FOCUS_NONE)
+	assert_false(solo.has_focus())
+	assert_true(_shell.try_solo())
+	assert_false(solo.has_focus())
+	var room: LineEdit = _shell.window.find_child(MatchLobbyShell.ROOM_NAME, true, false)
+	assert_not_null(room)
+	assert_eq(room.focus_mode, Control.FOCUS_CLICK)
 
 
 func test_wss_gateway_base_shows_tls_on() -> void:

@@ -135,7 +135,7 @@ MCP 的正式主场是内容生产平面里的**编辑器侧**工作，不是对
 另外三条本项目专属：
 
 8. **遥测**：首次启用插件之前就写入 `GODOT_AI_DISABLE_TELEMETRY=true`；Dock 设置里 Telemetry 为关；Cursor 的 attach 参数含 `--disable-telemetry`；重启服务后本机不出现 `customer_uuid.txt`；
-9. **`project.godot` 卫生**：启用插件往往会写入插件列表和 `_mcp_game_helper` autoload。烟测结束后必须把这两处从待提交变更里丢掉，已提交副本只保留 GUT；
+9. **`project.godot` 卫生**：启用插件往往会写入插件列表和 `_mcp_game_helper` autoload。烟测结束后必须把这两处从待提交变更里丢掉，已提交副本只保留 GUT 与 `authoring_editor`。打开编辑器时 Authoring Editor 可在本机已安装插件的情况下再次启用 Godot AI，这不授权把 `godot_ai` 写入已提交 `editor_plugins`（CI `--import` 缺目录会从列表摘掉该项）；
 10. **不替代权威仿真**：MCP 改的是 PresentationWorld / 编辑器对象。位置、命中、胜负仍只由服务端 `SimulationWorld` 裁决。
 
 ## 拍板结果

@@ -212,7 +212,7 @@ frontmatter 只有 `name`、`description`、`model`、`readonly`、`is_backgroun
 
 ### 7.3 提交前
 
-若本机为了开 MCP 改脏了 `game/project.godot`，提交前必须还原 `godot_ai` 插件项与 `_mcp_game_helper` autoload。已提交插件列表只保留 GUT 与 `authoring_editor`。工作区里出现 `game/addons/godot_ai/` 是 gitignore 预期内的本机文件，不得 `git add`。
+若本机为了开 MCP 改脏了 `game/project.godot`，提交前必须还原 `godot_ai` 插件项与 `_mcp_game_helper` autoload。已提交插件列表只保留 GUT 与 `authoring_editor`。打开编辑器时 Authoring Editor 会在本机已安装 `game/addons/godot_ai/` 的情况下再次启用该插件，因此不要把自动启用产生的 `project.godot` 脏写入提交。工作区里出现 `game/addons/godot_ai/` 是 gitignore 预期内的本机文件，不得 `git add`。
 
 `.cursor/` 入库边界：
 

@@ -21,10 +21,14 @@ extends Node
 ## finish=n, crates=n/m, and hazards=n/m.
 ## Tab host
 ## is reserved and refused.
+## The window defaults to 1280×720 maximized; HUD buttons use
+## FOCUS_NONE so Space stays jump, not Play. Not a product FOV.
 ## Never settlement.
 
 const OutOfRangeReset := preload("res://src/games/traprush/out_of_range_reset.gd")
 const TITLE: String = "Preview"
+const WINDOW_SIZE: Vector2i = Vector2i(1280, 720)
+const WINDOW_MIN_SIZE: Vector2i = Vector2i(960, 540)
 const PLAY_NAME: String = "Play"
 const STOP_NAME: String = "Stop"
 const RESET_NAME: String = "Reset"
@@ -332,7 +336,9 @@ func _ensure_window() -> void:
 		host_viewport.gui_embed_subwindows = true
 	window = Window.new()
 	window.title = TITLE
-	window.size = Vector2i(640, 360)
+	window.size = WINDOW_SIZE
+	window.min_size = WINDOW_MIN_SIZE
+	window.mode = Window.MODE_MAXIMIZED
 	window.exclusive = false
 	window.transient = false
 	window.own_world_3d = true
@@ -361,6 +367,7 @@ func _ensure_window() -> void:
 	window.add_child(map)
 	add_child(window)
 	map.ensure_rig()
+	window.gui_release_focus()
 
 
 func _on_close_requested() -> void:
@@ -444,6 +451,7 @@ func _add_button(row: BoxContainer, node_name: String, text: String, handler: Ca
 	button.name = node_name
 	button.text = text
 	button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	button.focus_mode = Control.FOCUS_NONE
 	button.pressed.connect(handler)
 	row.add_child(button)
 
