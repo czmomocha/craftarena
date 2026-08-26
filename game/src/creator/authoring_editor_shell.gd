@@ -212,6 +212,10 @@ func open_preview() -> bool:
 		if preview == null:
 			return false
 		add_child(preview)
+	if preview_follows and preview.preview != null and preview.preview.connected:
+		if preview.show_window():
+			_refresh_status()
+			return true
 	preview_follows = preview.open_from(session)
 	_refresh_status()
 	return preview_follows

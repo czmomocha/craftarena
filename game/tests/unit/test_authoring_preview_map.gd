@@ -171,6 +171,10 @@ func test_finish_placeholder_uses_finish_albedo() -> void:
 	assert_eq(_placeholder_albedo(node), AuthoringPreviewMap.FINISH_ALBEDO)
 	assert_ne(_placeholder_albedo(node), AuthoringPreviewMap.SOLID_ALBEDO)
 	assert_true(node.visible)
+	assert_eq(_map.finish_count(), 1)
+	var mark: Label3D = _map.finish_node(30)
+	assert_not_null(mark)
+	assert_eq(mark.text, "finish")
 
 
 func _record_transform(entity_id: int, x: int, y: int, z: int, yaw_bam: int) -> SharedComponentRecord:

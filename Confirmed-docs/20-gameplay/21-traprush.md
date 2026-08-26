@@ -114,7 +114,7 @@ UGC 权威碰撞形状约束见 [CD-42](../40-technical/42-contracts-and-rulevm.
 
 实现落点（2026-08-26）：官方赛道占用。三张官方 TRAPRUSH 赛道各含 1 个始终固体（entity 70，出生点 −X 一格，`zone.tags` 含 `solid`）与 1 个周期机关（entity 60，出生点 −Z 两格，已有 `hazard`，`cooldown_ticks=1` 开发桩；两格避开双人 Shove 邻域落点）。不挡 +X 必经检查点路，不改检查点/传送/终点/箱子布局。不锁产品秒数、预警动画、伤害/击退、重力/下落。落点见 [CD-32 §3](../30-ugc/32-editor-and-preview.md#3-从编辑到预览)。
 
-实现落点（2026-08-26）：编辑器 Place finish。`TraprushEditorPanel` 用已有 EDIT `place` 摆 `zone.tags` 含 `finish` 的终点占用盒（与 solid 同一套 zone 形状，不新增 Component Schema 字段）。不新增 `op`。Editor / Preview 占位金色（`FINISH_ALBEDO`，与大厅 pending 金同色）。第二份终点仍可写入（不是写入门禁），编译整份拒绝。不改官方赛道。不锁预警动画、产品秒数、伤害/击退、重力/下落。落点见 [CD-32 §3](../30-ugc/32-editor-and-preview.md#3-从编辑到预览)。
+实现落点（2026-08-26）：编辑器 Place finish。`TraprushEditorPanel` 用已有 EDIT `place` 摆 `zone.tags` 含 `finish` 的终点占用盒（与 solid 同一套 zone 形状，不新增 Component Schema 字段）。不新增 `op`。Editor / Preview 占位金色（`FINISH_ALBEDO`，与大厅 pending 金同色），并标 Label3D `finish`；Place finish 成功后相机对到新盒。占用 id 跳过悬空传送预留槽，F6 沙箱已有悬空门时仍能写入。第二份终点仍可写入（不是写入门禁），编译整份拒绝。不改官方赛道。不锁预警动画、产品秒数、伤害/击退、重力/下落。落点见 [CD-32 §3](../30-ugc/32-editor-and-preview.md#3-从编辑到预览)。
 
 ### 5.2 障碍破坏
 

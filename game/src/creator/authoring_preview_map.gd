@@ -4,8 +4,8 @@ extends Node3D
 ## Presentation mapping for AuthoringWorld (CD-32 §3). Used by Preview and Editor.
 ## Authority stays on AuthoringWorld Q48.16; float conversion happens only here.
 ## One 1×1×1 m BoxMesh per entity with transform; portal_link, checkpoint-order,
-## and reachability-issue gizmos. Hazard entities use HAZARD_ALBEDO. Solid
-## zone tags use SOLID_ALBEDO. Finish zone tags use FINISH_ALBEDO.
+## finish Label3D, and reachability-issue gizmos. Hazard entities use HAZARD_ALBEDO. Solid
+## zone tags use SOLID_ALBEDO. Finish zone tags use FINISH_ALBEDO and a "finish" mark.
 ## Destructible entities use CRATE_ALBEDO.
 ## During Preview play, non-solid period hazards
 ## are hidden. Always-solid placeholders stay visible. Preview play draws the
@@ -22,6 +22,7 @@ const LINK_PREFIX: String = "portal_link_"
 const DANGLE_PREFIX: String = "portal_dangle_"
 const DIR_PREFIX: String = "portal_dir_"
 const CHECKPOINT_PREFIX: String = "checkpoint_mark_"
+const FINISH_PREFIX: String = "finish_mark_"
 const SEQUENCE_PREFIX: String = "checkpoint_seq_"
 const REACH_MARK_PREFIX: String = "reach_mark_"
 const REACH_SEG_PREFIX: String = "reach_seg_"
@@ -31,6 +32,7 @@ const DANGLE_SIZE: Vector3 = Vector3(0.35, 0.35, 0.35)
 const DIR_SIZE: Vector3 = Vector3(0.2, 0.2, 0.2)
 const DANGLE_LIFT: float = 0.7
 const CHECKPOINT_LIFT: float = 1.15
+const FINISH_LIFT: float = 1.15
 const SEQUENCE_LIFT: float = 0.25
 const REACH_LIFT: float = 1.7
 const REACH_SEG_LIFT: float = 0.45
@@ -130,6 +132,10 @@ static func checkpoint_name(entity_id: int) -> String:
 	return "%s%d" % [CHECKPOINT_PREFIX, entity_id]
 
 
+static func finish_name(entity_id: int) -> String:
+	return "%s%d" % [FINISH_PREFIX, entity_id]
+
+
 static func sequence_name(from_id: int, to_id: int) -> String:
 	return "%s%d_%d" % [SEQUENCE_PREFIX, from_id, to_id]
 
@@ -175,6 +181,7 @@ func rebuild(world: AuthoringWorld) -> void:
 		_spawn_placeholder(entity_id, pose, record)
 	_spawn_portal_gizmos(world)
 	_spawn_checkpoint_gizmos(world)
+	_spawn_finish_gizmos(world)
 	_spawn_reachability_overlay(world)
 
 
@@ -235,6 +242,14 @@ func checkpoint_count() -> int:
 	return count
 
 
+func finish_count() -> int:
+	var count: int = 0
+	for child: Node in get_children():
+		if child is Label3D and str(child.name).begins_with(FINISH_PREFIX):
+			count += 1
+	return count
+
+
 func sequence_count() -> int:
 	return _count_mesh_prefix(SEQUENCE_PREFIX)
 
@@ -278,6 +293,10 @@ func direction_node(source_id: int) -> MeshInstance3D:
 
 func checkpoint_node(entity_id: int) -> Label3D:
 	return get_node_or_null(checkpoint_name(entity_id)) as Label3D
+
+
+func finish_node(entity_id: int) -> Label3D:
+	return get_node_or_null(finish_name(entity_id)) as Label3D
 
 
 func mark_accepted_checkpoints(entity_ids: PackedInt32Array) -> void:
@@ -565,6 +584,31 @@ func _spawn_checkpoint_mark(entity_id: int, order: int, from: Vector3, duplicate
 	else:
 		label.modulate = _CHECKPOINT_ALBEDO
 	label.position = from + Vector3(0.0, CHECKPOINT_LIFT, 0.0)
+	add_child(label)
+
+
+func _spawn_finish_gizmos(world: AuthoringWorld) -> void:
+	var ids: Array[int] = world.entity_ids()
+	for entity_id: int in ids:
+		var record: SharedComponentRecord = world.get_record(entity_id)
+		if record == null or not _record_has_finish_tag(record):
+			continue
+		var pose: Dictionary = pose_from_record(record)
+		if pose.is_empty():
+			continue
+		_spawn_finish_mark(entity_id, meters_from_pose(pose))
+
+
+func _spawn_finish_mark(entity_id: int, from: Vector3) -> void:
+	var label: Label3D = Label3D.new()
+	label.name = finish_name(entity_id)
+	label.text = "finish"
+	label.font_size = 48
+	label.pixel_size = 0.02
+	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	label.outline_size = 12
+	label.modulate = FINISH_ALBEDO
+	label.position = from + Vector3(0.0, FINISH_LIFT, 0.0)
 	add_child(label)
 
 

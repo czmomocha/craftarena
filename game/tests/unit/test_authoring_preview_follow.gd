@@ -127,6 +127,27 @@ func test_hidden_preview_window_keeps_following() -> void:
 	assert_true(_shell.preview_follows)
 
 
+func test_open_preview_after_hide_shows_window_again() -> void:
+	_open_shell()
+	assert_true(_shell.open_preview())
+	_shell.preview.window.close_requested.emit()
+	assert_false(_shell.preview.is_window_visible())
+	assert_true(_shell.preview_follows)
+	assert_true(_shell.open_preview())
+	assert_true(_shell.preview.is_window_visible())
+	assert_true(_shell.preview_follows)
+
+
+func test_open_preview_rebuilds_freed_window() -> void:
+	_open_shell()
+	assert_true(_shell.open_preview())
+	_shell.preview.window.free()
+	assert_true(_shell.open_preview())
+	assert_true(_shell.preview.is_window_visible())
+	assert_true(is_instance_valid(_shell.preview.window))
+	assert_true(_shell.preview_follows)
+
+
 func test_status_label_reports_follow_state() -> void:
 	_open_shell()
 	assert_true(_shell.status_label_text().contains("follow=false"))

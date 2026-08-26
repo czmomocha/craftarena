@@ -90,6 +90,18 @@ func test_close_hides_window_and_keeps_preview() -> void:
 	assert_eq(_shell.preview.preview_revision, 1)
 
 
+func test_show_window_rebuilds_freed_instance() -> void:
+	var session: AuthoringSession = AuthoringSession.new()
+	_shell = AuthoringPreviewShell.create(AuthoringPreviewHostKinds.WINDOW)
+	add_child(_shell)
+	assert_true(_shell.open_from(session))
+	_shell.window.free()
+	assert_true(_shell.show_window())
+	assert_true(_shell.is_window_visible())
+	assert_true(is_instance_valid(_shell.window))
+	assert_true(_shell.preview.connected)
+
+
 func test_tab_kind_is_refused() -> void:
 	assert_null(AuthoringPreviewShell.create("mobile"))
 	_shell = AuthoringPreviewShell.create(AuthoringPreviewHostKinds.TAB)

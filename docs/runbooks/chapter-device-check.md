@@ -55,23 +55,23 @@ Worktree 端口偏移见 README「并行工作区」；本文件不复述端口�
 
 ## 本刀：编辑器 Place finish
 
-对应：当前完整章节 PR。锁的是工具条 **Place finish**：已有 `place` 写出 `zone.tags` 含 `finish` 的终点占用盒。Editor / Preview 是偏亮的金色（比检查点/传送门的琥珀占位更黄）。第二份终点仍能摆上去，但编译会拒绝整份世界。不是预警动画，不是产品秒数。
+对应：当前完整章节 PR。锁的是工具条 **Place finish**：已有 `place` 写出 `zone.tags` 含 `finish` 的终点占用盒。Editor / Preview 是金色占位，盒上有 `finish` 字。第二份终点仍能摆上去，但编译会拒绝整份世界。不是预警动画，不是产品秒数。
 
-### 1. 工具条能摆金色终点盒
+### 1. 工具条能摆带 finish 字的金色终点盒
 
 前置：关掉上次运行。本刀不需要三后端。
 
-操作：仓库根先 `"$GODOT4" --editor --path game`（macOS）或 `& $env:GODOT4 --editor --path game`（Windows），再 **F6** 运行 `res://src/creator/editor_sandbox.tscn`。Editor 窗已有一块检查点垫和一扇悬空传送门（偏琥珀的默认占位）。点占用行的 **Place finish**。
+操作：仓库根先 `"$GODOT4" --editor --path game`（macOS）或 `& $env:GODOT4 --editor --path game`（Windows），再 **F6** 运行 `res://src/creator/editor_sandbox.tscn`。Editor 窗已有一块检查点垫和一扇悬空传送门（偏琥珀的默认占位，垫上有绿色 `0`）。点占用行的 **Place finish**。看状态行 `entities`。
 
-预期：沿 +X 出现一块比垫/门更亮、更黄的金色盒。失败：没有 Place finish 按钮、点了没盒、或金色与垫/门完全同色（分不出终点）。
+预期：状态行变成 `entities=3`；沿 +X 出现一块金色盒，盒上方有 `finish` 字；镜头对到这块新盒。失败：没有 Place finish 按钮、状态仍是 `entities=2`、点了没盒、或只有一块琥珀盒上看不到 `finish` 字。
 
-### 2. Preview 跟随同一块金色
+### 2. Preview 跟随同一块金色，关掉或点没后能再打开
 
 前置：步骤 1 的 Editor 仍开着。
 
-操作：点 Editor 的 **Preview**。看独立 Preview 窗。
+操作：点 Editor 的 **Preview**。看独立 Preview 窗里同样一块金色盒和 `finish` 字。然后点 Editor 3D 区或 Preview 标题栏关闭，Preview 会消失或被压到后面。再点 Editor 的 **Preview**。
 
-预期：Preview 里同样一块亮金色盒，位置与 Editor 一致。失败：Preview 没有这块，或颜色对不上。
+预期：第一次 Preview 里位置与 Editor 一致，有 `finish` 字。再点 Preview 后窗口再次出现在前台，同一块金色仍在。失败：Preview 没有这块、没有 `finish` 字、或第二次再点 Preview 再也出不来。
 
 ### 本刀不测
 
