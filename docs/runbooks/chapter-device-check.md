@@ -22,7 +22,7 @@
 
 ## 共用启动（大厅窗口）
 
-机关狂奔匹配大厅是代码创建的 `Window`，标题 **Traprush**。第一行是状态 Label。按钮（从左到右）：**Quick play**、**Create room**、**Join room**、**Solo play**、**Cancel**、**Poll**。其下三个输入框：房间码（placeholder `Room code`）、课程 id（默认 `course_01`）、人数（默认 `2`）。窗口里的 3D：本席玩家盒是青色（`OWN_ALBEDO`），远端玩家盒仍是海军蓝（`REMOTE_ALBEDO`）；橙色盒是可破坏箱；洋红盒是周期机关（固体半周期才出现；官方赛道 0 个）；垫 / 门 / 终点是赛道占位盒（未开玩时垫是原绿、终点是原金；开玩后本席已验收垫是暗绿，当前目标垫是亮薄荷；全部垫完成后终点变亮金，冲线后变暗金）；条是传送连线与检查点顺序 gizmos。玩家盒上方有名次 Label；本席名次标以 `*` 开头。开玩时状态行含 `pads=n/m`、`floor=n`、`finish=n`、`crates=n/m` 与 `hazards=n/m`。
+机关狂奔匹配大厅是代码创建的 `Window`，标题 **Traprush**。第一行是状态 Label。按钮（从左到右）：**Quick play**、**Create room**、**Join room**、**Solo play**、**Cancel**、**Poll**。其下三个输入框：房间码（placeholder `Room code`）、课程 id（默认 `course_01`）、人数（默认 `2`）。窗口里的 3D：本席玩家盒是青色（`OWN_ALBEDO`），远端玩家盒仍是海军蓝（`REMOTE_ALBEDO`）；橙色盒是可破坏箱；洋红盒是周期机关（固体半周期才出现；官方赛道 0 个）；石色盒是固定固体占用（始终显示；官方赛道 0 个）；垫 / 门 / 终点是赛道占位盒（未开玩时垫是原绿、终点是原金；开玩后本席已验收垫是暗绿，当前目标垫是亮薄荷；全部垫完成后终点变亮金，冲线后变暗金）；条是传送连线与检查点顺序 gizmos。玩家盒上方有名次 Label；本席名次标以 `*` 开头。开玩时状态行含 `pads=n/m`、`floor=n`、`finish=n`、`crates=n/m`、`hazards=n/m` 与 `solids=n/m`。
 
 ### 0.1 后端（本刀需要在线入场时）
 
@@ -53,34 +53,26 @@ Worktree 端口偏移见 README「并行工作区」；本文件不复述端口�
 
 ---
 
-## 本刀：开发机运行窗口、空格跳跃与 Godot AI 自动启用
+## 本刀：固定固体占用
 
-对应：当前完整章节 PR。锁的是 **空格不再点大厅 Solo play / Preview Play**、**F5/F6 外框与内嵌 Traprush/Preview 窗默认更大并最大化**、**打开编辑器时若本机已安装 Godot AI 则自动启用**。已提交 `project.godot` 仍不含 `godot_ai` 插件项与 `_mcp_game_helper`。不是产品镜头/FOV。
+对应：当前完整章节 PR。锁的是 **`zone.tags` 含 `solid` 编进 v1 可空 `solids` 袋**、**始终固体静态盒**、**大厅/Preview 石色 1 米占位**、**HUD `solids=n/m`**、**本席 overlay 挡住始终固体**。官方三张赛道 0 个 solid。不新增 Component Schema 字段。不是编辑器 Place solid，不是官方赛道地板，不是重力。
 
-### 1. 大厅空格是跳跃，不是 Solo play
-
-前置：共用启动 0.2。本刀不需要三后端。
-
-操作：点 **Solo play**，点 3D 区域一次，再按 **空格**。不要再点 Solo play。
-
-预期：不会重新点一次 Solo play（对局不会被按钮再点一遍）；空格走 `jump` 动作。官方赛道无立足点时跳跃仍可能是空操作，但按钮不得被空格点亮。失败：每按一次空格都像又点了 Solo play。
-
-### 2. 运行外框与 Preview 窗默认够大
+### 1. Preview 沙箱能看见石色盒
 
 前置：关掉上次运行。本刀不需要三后端。
 
-操作：在编辑器 **F6** 运行 `res://src/creator/preview_sandbox.tscn`。看外层游戏窗和里面的 **Preview** 窗。不要先手动拖大。
+操作：在编辑器 **F6** 运行 `res://src/creator/preview_sandbox.tscn`。看 Preview 窗里出生点（原点）正下一格。点 **Play**，看状态行。
 
-预期：外框接近最大化；Preview 窗也是大窗（默认 1280×720 并最大化），不用先拖外框才能看清 3D。失败：仍是约 640×360 小窗，必须拖外框才看得见。
+预期：出生点正下一格有一块石色（偏灰棕）1 米盒，不是洋红；Play 后状态行含 `solids=1/1`；出生点 +X 仍有洋红机关。失败：没有石色盒、`solids=` 缺失或不是 `1/1`、或石色盒被涂成洋红。
 
-### 3. 重开编辑器后 Godot AI 仍启用
+### 2. 官方 Solo 赛道没有石色盒
 
-前置：本机已按 [CD-51 §7](../../Confirmed-docs/50-engineering/51-dev-environment.md) 把 `game/addons/godot_ai/` 装在工程里。
+前置：共用启动 0.2。本刀不需要三后端。
 
-操作：完全退出 Godot，再打开本工程编辑器。看 **项目 → 项目设置 → 插件**（或 Project Settings → Plugins）里 **Godot AI**。
+操作：点 **Solo play**（默认 `course_01`）。看 3D 与状态行。
 
-预期：Godot AI 为启用，不必再勾一次。失败：每次重开都是未启用。
+预期：状态行含 `solids=0/0`；看不见石色 1 米盒。失败：出现石色盒，或 HUD 写了非零 `solids=`。
 
 ### 本刀不测
 
-- 产品镜头/FOV、把 `godot_ai` 目录或 `_mcp_game_helper` 提交进 Git、官方赛道真正跳起来（无固体立足点）。
+- 官方赛道真正跳起来（无固体立足点）、编辑器 Place solid、重力/下落、产品镜头/FOV、伤害/击退。

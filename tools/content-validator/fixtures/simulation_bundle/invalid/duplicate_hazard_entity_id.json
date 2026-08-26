@@ -21,5 +21,6 @@
 			"z": 0,
 			"cooldown_ticks": 2
 		}
-	]
+	],
+	"solids": []
 }

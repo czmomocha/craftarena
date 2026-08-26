@@ -7,5 +7,6 @@
 	"finish": [],
 	"destructibles": [],
 	"hazards": [],
+	"solids": [],
 	"signed": false
 }

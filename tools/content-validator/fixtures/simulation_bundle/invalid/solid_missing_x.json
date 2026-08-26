@@ -7,5 +7,11 @@
 	"finish": [],
 	"destructibles": [],
 	"hazards": [],
-	"solids": []
+	"solids": [
+		{
+			"entity_id": 70,
+			"y": 0,
+			"z": 0
+		}
+	]
 }

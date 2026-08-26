@@ -6,8 +6,8 @@ extends GutTest
 ## airborne keeps the pose and still reports ok. Client height fields are
 ## ignored. Shove / Interact stay refused. No gravity or fall, no tick, no
 ## settlement. Official courses have no solid footing at spawn, so jump is
-## an airborne no-op there; displacement is proven on a synthetic footing
-## (a solid crate one cell below the spawn pad, reached by support_dy).
+## an airborne no-op there; displacement is proven on synthetic footing
+## (a solid crate one cell below the spawn pad, and a compiled solids bag).
 
 const AuthoringDocument := preload("res://src/creator/authoring_document.gd")
 const AuthoringPreview := preload("res://src/creator/authoring_preview.gd")
@@ -23,6 +23,7 @@ const CELL: int = 65536
 const PLAY_RADIUS: int = CELL / 8
 const PAD_ID: int = 1
 const CRATE_ID: int = 8
+const SOLID_ID: int = 70
 const STAND_Y: int = CELL
 const SUPPORT_DY: int = -CELL / 2
 const JUMP_DY: int = CELL / 2
@@ -59,6 +60,26 @@ func test_grounded_jump_moves_up_by_caller_dy() -> void:
 	assert_eq(preview.play_destructible_alive_count(), 1)
 	assert_false(preview.allows_settlement())
 	assert_false(preview.allows_online_writes())
+
+
+func test_grounded_jump_on_compiled_solid_moves_up() -> void:
+	var preview: AuthoringPreview = _grounded_solid_preview()
+	assert_true(preview.try_start_play(1, PLAY_RADIUS, PLAY_RADIUS))
+	assert_eq(preview.play_accepted_count(), 1)
+	preview.play_jump_dy = JUMP_DY
+	preview.play_support_dy = SUPPORT_DY
+	assert_true(preview.try_apply_play_intent(_jump()))
+	var pose: Dictionary = preview.play_world.get_pose(preview.player_id)
+	var pose_x: int = pose.get("x", -1)
+	var pose_y: int = pose.get("y", -1)
+	var pose_z: int = pose.get("z", -1)
+	assert_eq(pose_x, 0)
+	assert_eq(pose_y, STAND_Y + JUMP_DY)
+	assert_eq(pose_z, 0)
+	assert_eq(preview.play_solid_count(), 1)
+	var box_id: int = preview.play_solid_ids[SOLID_ID]
+	assert_true(preview.play_world.is_static_box_solid(box_id))
+	assert_false(preview.allows_settlement())
 
 
 func test_airborne_jump_on_official_courses_keeps_pose() -> void:
@@ -196,6 +217,15 @@ func _grounded_preview() -> AuthoringPreview:
 	return preview
 
 
+func _grounded_solid_preview() -> AuthoringPreview:
+	var session: AuthoringSession = AuthoringSession.new()
+	assert_true(session.world.put(_checkpoint(PAD_ID, 0, 0, STAND_Y, 0)))
+	assert_true(session.world.put(_solid(SOLID_ID, 0, 0, 0)))
+	var preview: AuthoringPreview = AuthoringPreview.new()
+	assert_true(preview.connect_from(session))
+	return preview
+
+
 func _connected_course(path: String) -> AuthoringPreview:
 	var session: AuthoringSession = AuthoringSession.new()
 	assert_true(session.import_document(AuthoringDocument.load_json(path)))
@@ -228,5 +258,16 @@ func _crate(entity_id: int, x: int, y: int, z: int, durability: int) -> SharedCo
 		"destructible": {
 			"durability": durability,
 			"regen_policy_id": 0,
+		},
+	})
+
+
+func _solid(entity_id: int, x: int, y: int, z: int) -> SharedComponentRecord:
+	var half: int = CELL / 2
+	return SharedComponentRecord.create(entity_id, {
+		"transform": {"x": x, "y": y, "z": z, "yaw_bam": 0},
+		"zone": {
+			"shape": {"kind": "box", "hx": half, "hy": half, "hz": half},
+			"tags": ["solid"],
 		},
 	})

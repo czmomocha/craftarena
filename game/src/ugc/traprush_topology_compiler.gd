@@ -9,12 +9,15 @@ extends RefCounted
 ## a zone whose tags include "finish"; missing transform or two finish
 ## zones fail the whole compile. Checkpoint or portal on the same entity
 ## as a finish zone also fails. Destructible bags need transform and
-## durability; sharing an entity with checkpoint, portal, finish, or hazard
-## fails. Hazard bags need transform and cooldown_ticks; sharing an entity
-## with checkpoint, portal, finish, or destructible fails. Not a new EDIT
-## op. Never settlement.
+## durability; sharing an entity with checkpoint, portal, finish, hazard, or
+## solid fails. Hazard bags need transform and cooldown_ticks; sharing an
+## entity with checkpoint, portal, finish, destructible, or solid fails.
+## Solid bags need transform and zone.tags including "solid"; sharing an
+## entity with checkpoint, portal, finish, destructible, or hazard fails.
+## Finish and solid tags together fail. Not a new EDIT op. Never settlement.
 
 const FINISH_ZONE_TAG: String = "finish"
+const SOLID_ZONE_TAG: String = "solid"
 
 
 static func compile(world: AuthoringWorld) -> SimulationBundle:
@@ -24,12 +27,15 @@ static func compile(world: AuthoringWorld) -> SimulationBundle:
 	var finish_list: Array[Dictionary] = []
 	var destructible_list: Array[Dictionary] = []
 	var hazard_list: Array[Dictionary] = []
+	var solid_list: Array[Dictionary] = []
 	var ids: Array[int] = world.entity_ids()
 	for entity_id: int in ids:
 		var record: SharedComponentRecord = world.get_record(entity_id)
 		if record == null:
 			return null
 		if _has_finish_tag(record):
+			if _has_solid_tag(record):
+				return null
 			if record.components.has(SharedComponentNames.CHECKPOINT):
 				return null
 			if record.components.has(SharedComponentNames.PORTAL):
@@ -46,6 +52,25 @@ static func compile(world: AuthoringWorld) -> SimulationBundle:
 				"x": finish_pose["x"],
 				"y": finish_pose["y"],
 				"z": finish_pose["z"],
+			})
+			continue
+		if _has_solid_tag(record):
+			if record.components.has(SharedComponentNames.CHECKPOINT):
+				return null
+			if record.components.has(SharedComponentNames.PORTAL):
+				return null
+			if record.components.has(SharedComponentNames.DESTRUCTIBLE):
+				return null
+			if record.components.has(SharedComponentNames.HAZARD):
+				return null
+			var solid_pose: Dictionary = _transform_xyz(record)
+			if solid_pose.is_empty():
+				return null
+			solid_list.append({
+				"entity_id": entity_id,
+				"x": solid_pose["x"],
+				"y": solid_pose["y"],
+				"z": solid_pose["z"],
 			})
 			continue
 		if record.components.has(SharedComponentNames.DESTRUCTIBLE):
@@ -160,6 +185,7 @@ static func compile(world: AuthoringWorld) -> SimulationBundle:
 		SimulationBundle.FIELD_FINISH: finish_list,
 		SimulationBundle.FIELD_DESTRUCTIBLES: destructible_list,
 		SimulationBundle.FIELD_HAZARDS: hazard_list,
+		SimulationBundle.FIELD_SOLIDS: solid_list,
 	}
 	return SimulationBundle.from_dictionary(body)
 
@@ -231,6 +257,14 @@ static func _hazard_body(record: SharedComponentRecord) -> Dictionary:
 
 
 static func _has_finish_tag(record: SharedComponentRecord) -> bool:
+	return _has_zone_tag(record, FINISH_ZONE_TAG)
+
+
+static func _has_solid_tag(record: SharedComponentRecord) -> bool:
+	return _has_zone_tag(record, SOLID_ZONE_TAG)
+
+
+static func _has_zone_tag(record: SharedComponentRecord, tag: String) -> bool:
 	if not record.components.has(SharedComponentNames.ZONE):
 		return false
 	var raw: Variant = record.components[SharedComponentNames.ZONE]
@@ -244,7 +278,7 @@ static func _has_finish_tag(record: SharedComponentRecord) -> bool:
 	for item: Variant in tags:
 		if typeof(item) != TYPE_STRING:
 			continue
-		var tag: String = item
-		if tag == FINISH_ZONE_TAG:
+		var value: String = item
+		if value == tag:
 			return true
 	return false

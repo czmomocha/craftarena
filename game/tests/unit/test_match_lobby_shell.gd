@@ -94,6 +94,7 @@ func test_open_window_quick_play_ready_begins_play() -> void:
 	assert_false(idle_tls)
 	assert_true(_shell.status_label_text().contains("crates_mapped=1"))
 	assert_true(_shell.status_label_text().contains("hazards_mapped=0"))
+	assert_true(_shell.status_label_text().contains("solids_mapped=0"))
 	assert_true(_shell.status_label_text().contains("links_mapped=2"))
 	assert_true(_shell.status_label_text().contains("orders_mapped=3/2"))
 	assert_true(_shell.try_quick())
@@ -129,6 +130,7 @@ func test_open_window_quick_play_ready_begins_play() -> void:
 	assert_true(_shell.status_label_text().contains("course=3/2/1"))
 	assert_true(_shell.status_label_text().contains("crates_mapped=0"))
 	assert_true(_shell.status_label_text().contains("hazards_mapped=0"))
+	assert_true(_shell.status_label_text().contains("solids_mapped=0"))
 	assert_true(_shell.status_label_text().contains("links_mapped=2"))
 	assert_true(_shell.status_label_text().contains("orders_mapped=3/2"))
 	assert_true(_shell.status_label_text().contains("standings=#1s0 mvp=-"))
@@ -626,6 +628,23 @@ func test_online_overlay_stops_on_solid_hazard_then_passes_when_open() -> void:
 	assert_gt(_shell.map.player_node(0).position.x, 1.0)
 
 
+func test_online_overlay_stops_on_always_solid() -> void:
+	_shell = _open_shell()
+	assert_true(_shell.try_quick())
+	assert_true(_shell.accept_http(201, _join("ABCD23", "ticket-solid-block")))
+	assert_true(_shell.on_socket_open())
+	assert_true(_shell.on_binary(_snapshot(0, 0, [_crate(40, 1)])))
+	assert_true(_shell.solids.apply_bundle(_one_solid_bundle()))
+	assert_eq(_shell.solids.solid_count(), 1)
+	assert_eq(_shell.solids.live_solid_boxes().size(), 1)
+	var steps: int = 0
+	while steps < 20:
+		assert_false(_shell.try_sample_play_move(false, false, false, true).is_empty())
+		steps += 1
+	assert_gt(_shell.play.predict.dx, 0)
+	assert_almost_eq(_shell.map.player_node(0).position.x, 0.0, 0.0001)
+
+
 func test_offline_solo_does_not_stack_local_predict_overlay() -> void:
 	_shell = _open_shell()
 	assert_true(_shell.try_solo())
@@ -767,6 +786,7 @@ func test_solo_own_progress_tints_pads_and_cancel_restores() -> void:
 	assert_true(_shell.status_label_text().contains("finish=-1"))
 	assert_true(_shell.status_label_text().contains("crates=1/1"))
 	assert_true(_shell.status_label_text().contains("hazards=0/0"))
+	assert_true(_shell.status_label_text().contains("solids=0/0"))
 	assert_false(_shell.status_label_text().contains("result="))
 	assert_true(_shell.try_cancel())
 	assert_eq(_shell.course.own_accepted_count(), -1)
@@ -778,6 +798,7 @@ func test_solo_own_progress_tints_pads_and_cancel_restores() -> void:
 	assert_false(_shell.status_label_text().contains("floor="))
 	assert_false(_shell.status_label_text().contains("crates=1/1"))
 	assert_false(_shell.status_label_text().contains("hazards="))
+	assert_false(_shell.status_label_text().contains("solids="))
 	assert_false(_shell.status_label_text().contains("result="))
 
 
@@ -1072,6 +1093,15 @@ func _one_hazard_bundle(cooldown_ticks: int) -> SimulationBundle:
 	return bundle
 
 
+func _one_solid_bundle() -> SimulationBundle:
+	var world: AuthoringWorld = AuthoringWorld.new()
+	assert_true(world.put(_checkpoint_record(1, 0, 0, 0, 0)))
+	assert_true(world.put(_solid_record(70, Fixed.SCALE, 0, 0)))
+	var bundle: SimulationBundle = TraprushTopologyCompiler.compile(world)
+	assert_not_null(bundle)
+	return bundle
+
+
 func _checkpoint_record(entity_id: int, order: int, x: int, y: int, z: int) -> SharedComponentRecord:
 	return SharedComponentRecord.create(entity_id, {
 		"transform": {"x": x, "y": y, "z": z, "yaw_bam": 0},
@@ -1094,6 +1124,17 @@ func _hazard_record(
 	return SharedComponentRecord.create(entity_id, {
 		"transform": {"x": x, "y": y, "z": z, "yaw_bam": 0},
 		"hazard": {"damage": 0, "knockback": 0, "cooldown_ticks": cooldown_ticks},
+	})
+
+
+func _solid_record(entity_id: int, x: int, y: int, z: int) -> SharedComponentRecord:
+	var half: int = Fixed.SCALE / 2
+	return SharedComponentRecord.create(entity_id, {
+		"transform": {"x": x, "y": y, "z": z, "yaw_bam": 0},
+		"zone": {
+			"shape": {"kind": "box", "hx": half, "hy": half, "hz": half},
+			"tags": [TraprushTopologyCompiler.SOLID_ZONE_TAG],
+		},
 	})
 
 

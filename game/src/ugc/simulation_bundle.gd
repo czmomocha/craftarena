@@ -3,11 +3,13 @@ extends RefCounted
 
 ## v1 TRAPRUSH topology compile of AuthoringWorld. Field list owner: CD-42 §3.4.
 ## Pads, two_way / one_way portals, at most one finish occupancy bag,
-## destructible occupancy bags, and hazard occupancy bags. Dangling portals
-## are omitted. Portal bags include source occupancy x/y/z and dest landing
-## pose. Finish bags are entity_id plus occupancy x/y/z. Destructible bags
-## add durability. Hazard bags add cooldown_ticks (existing component field,
-## used as a half-period; not a new period key, not damage/knockback).
+## destructible occupancy bags, hazard occupancy bags, and always-solid
+## occupancy bags. Dangling portals are omitted. Portal bags include source
+## occupancy x/y/z and dest landing pose. Finish bags are entity_id plus
+## occupancy x/y/z. Destructible bags add durability. Hazard bags add
+## cooldown_ticks (existing component field, used as a half-period; not a
+## new period key, not damage/knockback). Solid bags are entity_id plus
+## occupancy x/y/z from zone.tags including "solid"; always solid, no period.
 ## Godot JSON.parse_string may yield whole-number floats; decode coerces those
 ## that round-trip through int. Not a signed binary. Not a Rule VM graph.
 
@@ -20,6 +22,7 @@ const FIELD_PORTALS: String = "portals"
 const FIELD_FINISH: String = "finish"
 const FIELD_DESTRUCTIBLES: String = "destructibles"
 const FIELD_HAZARDS: String = "hazards"
+const FIELD_SOLIDS: String = "solids"
 
 var cell: int = 0
 var source_revision: int = 0
@@ -28,6 +31,7 @@ var portals: Array[Dictionary] = []
 var finish: Array[Dictionary] = []
 var destructibles: Array[Dictionary] = []
 var hazards: Array[Dictionary] = []
+var solids: Array[Dictionary] = []
 
 
 static func from_dictionary(data: Dictionary) -> SimulationBundle:
@@ -35,7 +39,7 @@ static func from_dictionary(data: Dictionary) -> SimulationBundle:
 	if typeof(coerced) != TYPE_DICTIONARY:
 		return null
 	var body: Dictionary = coerced
-	if body.size() != 8:
+	if body.size() != 9:
 		return null
 	if not body.has(FIELD_SCHEMA_VERSION) or typeof(body[FIELD_SCHEMA_VERSION]) != TYPE_INT:
 		return null
@@ -154,6 +158,33 @@ static func from_dictionary(data: Dictionary) -> SimulationBundle:
 				return null
 		hazard_ids[hazard_id] = true
 		hazard_list.append(parsed_hazard)
+	if not body.has(FIELD_SOLIDS) or typeof(body[FIELD_SOLIDS]) != TYPE_ARRAY:
+		return null
+	var solid_list: Array[Dictionary] = []
+	var solid_ids: Dictionary[int, bool] = {}
+	var raw_solids: Array = body[FIELD_SOLIDS]
+	for item: Variant in raw_solids:
+		if typeof(item) != TYPE_DICTIONARY:
+			return null
+		var solid_bag: Dictionary = item
+		var parsed_solid: Dictionary = _parse_solid(solid_bag)
+		if parsed_solid.is_empty():
+			return null
+		var solid_id: int = parsed_solid["entity_id"]
+		if (
+			solid_ids.has(solid_id)
+			or pad_ids.has(solid_id)
+			or portal_ids.has(solid_id)
+			or destructible_ids.has(solid_id)
+			or hazard_ids.has(solid_id)
+		):
+			return null
+		for finish_item: Dictionary in finish_list:
+			var finish_entity: int = finish_item["entity_id"]
+			if finish_entity == solid_id:
+				return null
+		solid_ids[solid_id] = true
+		solid_list.append(parsed_solid)
 	var bundle: SimulationBundle = SimulationBundle.new()
 	bundle.cell = cell
 	bundle.source_revision = source_revision
@@ -162,6 +193,7 @@ static func from_dictionary(data: Dictionary) -> SimulationBundle:
 	bundle.finish = finish_list
 	bundle.destructibles = destructible_list
 	bundle.hazards = hazard_list
+	bundle.solids = solid_list
 	return bundle
 
 
@@ -181,6 +213,9 @@ func to_dictionary() -> Dictionary:
 	var hazard_list: Array = []
 	for item: Dictionary in hazards:
 		hazard_list.append(item.duplicate(true))
+	var solid_list: Array = []
+	for item: Dictionary in solids:
+		solid_list.append(item.duplicate(true))
 	return {
 		FIELD_SCHEMA_VERSION: SCHEMA_VERSION,
 		FIELD_CELL: cell,
@@ -190,6 +225,7 @@ func to_dictionary() -> Dictionary:
 		FIELD_FINISH: finish_list,
 		FIELD_DESTRUCTIBLES: destructible_list,
 		FIELD_HAZARDS: hazard_list,
+		FIELD_SOLIDS: solid_list,
 	}
 
 
@@ -324,6 +360,25 @@ static func _parse_hazard(body: Dictionary) -> Dictionary:
 		"y": body["y"],
 		"z": body["z"],
 		"cooldown_ticks": body["cooldown_ticks"],
+	}
+
+
+static func _parse_solid(body: Dictionary) -> Dictionary:
+	if body.size() != 4:
+		return {}
+	if not _int_at_least(body, "entity_id", 1):
+		return {}
+	if not _is_int_field(body, "x"):
+		return {}
+	if not _is_int_field(body, "y"):
+		return {}
+	if not _is_int_field(body, "z"):
+		return {}
+	return {
+		"entity_id": body["entity_id"],
+		"x": body["x"],
+		"y": body["y"],
+		"z": body["z"],
 	}
 
 

@@ -2,7 +2,7 @@
 	"$schema": "https://json-schema.org/draft/2020-12/schema",
 	"$id": "https://craftarena.local/contracts/simulation_bundle.schema.json",
 	"title": "SimulationBundle",
-	"description": "v1 TRAPRUSH topology compile of AuthoringWorld. Field list owner: CD-42 §3.4. Pads, two_way/one_way portals, at most one finish occupancy bag, destructible occupancy bags, and hazard occupancy bags (cooldown_ticks is the existing component field used as a half-period). Dangling portals are omitted. Not a signed binary, not a Rule VM graph.",
+	"description": "v1 TRAPRUSH topology compile of AuthoringWorld. Field list owner: CD-42 §3.4. Pads, two_way/one_way portals, at most one finish occupancy bag, destructible occupancy bags, hazard occupancy bags (cooldown_ticks is the existing component field used as a half-period), and always-solid occupancy bags (zone.tags includes solid). Dangling portals are omitted. Not a signed binary, not a Rule VM graph.",
 	"type": "object",
 	"additionalProperties": false,
 	"required": [
@@ -13,7 +13,8 @@
 		"portals",
 		"finish",
 		"destructibles",
-		"hazards"
+		"hazards",
+		"solids"
 	],
 	"properties": {
 		"schema_version": { "type": "integer", "const": 1 },
@@ -39,6 +40,10 @@
 		"hazards": {
 			"type": "array",
 			"items": { "$ref": "#/$defs/hazard" }
+		},
+		"solids": {
+			"type": "array",
+			"items": { "$ref": "#/$defs/solid" }
 		}
 	},
 	"$defs": {
@@ -116,6 +121,22 @@
 				"y": { "type": "integer" },
 				"z": { "type": "integer" },
 				"cooldown_ticks": { "type": "integer", "minimum": 0 }
+			}
+		},
+		"solid": {
+			"type": "object",
+			"additionalProperties": false,
+			"required": [
+				"entity_id",
+				"x",
+				"y",
+				"z"
+			],
+			"properties": {
+				"entity_id": { "type": "integer", "minimum": 1 },
+				"x": { "type": "integer" },
+				"y": { "type": "integer" },
+				"z": { "type": "integer" }
 			}
 		},
 		"portal": {

@@ -4,8 +4,9 @@ extends Node3D
 ## Presentation mapping for AuthoringWorld (CD-32 §3). Used by Preview and Editor.
 ## Authority stays on AuthoringWorld Q48.16; float conversion happens only here.
 ## One 1×1×1 m BoxMesh per entity with transform; portal_link, checkpoint-order,
-## and reachability-issue gizmos. Hazard entities use HAZARD_ALBEDO. During
-## Preview play, non-solid period hazards are hidden. Preview play draws the
+## and reachability-issue gizmos. Hazard entities use HAZARD_ALBEDO. Solid
+## zone tags use SOLID_ALBEDO. During Preview play, non-solid period hazards
+## are hidden. Always-solid placeholders stay visible. Preview play draws the
 ## sim player pose as a presentation stub and marks accepted checkpoint labels
 ## with *. Placeholders and gizmos are not hitboxes.
 ## Rebuild after every editor write or preview patch. Overlay reads evaluate();
@@ -36,6 +37,7 @@ const _CAMERA_POS: Vector3 = Vector3(6.0, 8.0, 6.0)
 const _LIGHT_ROT_DEG: Vector3 = Vector3(-50.0, -30.0, 0.0)
 const _STUB_ALBEDO: Color = Color(0.85, 0.7, 0.25)
 const HAZARD_ALBEDO: Color = Color(0.82, 0.18, 0.48)
+const SOLID_ALBEDO: Color = Color(0.52, 0.48, 0.42)
 const _PLAYER_ALBEDO: Color = Color(0.2, 0.45, 0.95)
 const _TWO_WAY_ALBEDO: Color = Color(0.2, 0.75, 0.95)
 const _ONE_WAY_ALBEDO: Color = Color(0.95, 0.55, 0.15)
@@ -356,10 +358,32 @@ func apply_hazard_visibility(solid_by_entity: Dictionary) -> void:
 		node.visible = solid
 
 
+func _record_has_solid_tag(record: SharedComponentRecord) -> bool:
+	if not record.components.has(SharedComponentNames.ZONE):
+		return false
+	var raw: Variant = record.components[SharedComponentNames.ZONE]
+	if typeof(raw) != TYPE_DICTIONARY:
+		return false
+	var zone: Dictionary = raw
+	var tags_raw: Variant = zone.get("tags", [])
+	if typeof(tags_raw) != TYPE_ARRAY:
+		return false
+	var tags: Array = tags_raw
+	for item: Variant in tags:
+		if typeof(item) != TYPE_STRING:
+			continue
+		var tag: String = item
+		if tag == "solid":
+			return true
+	return false
+
+
 func _spawn_placeholder(entity_id: int, pose: Dictionary, record: SharedComponentRecord) -> void:
 	var albedo: Color = _STUB_ALBEDO
 	if record != null and record.components.has(SharedComponentNames.HAZARD):
 		albedo = HAZARD_ALBEDO
+	elif record != null and _record_has_solid_tag(record):
+		albedo = SOLID_ALBEDO
 	var mesh: BoxMesh = BoxMesh.new()
 	mesh.size = PLACEHOLDER_SIZE
 	mesh.material = _unshaded(albedo)

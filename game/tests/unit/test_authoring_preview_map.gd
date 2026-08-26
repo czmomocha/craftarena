@@ -136,6 +136,18 @@ func test_hazard_placeholder_uses_hazard_albedo() -> void:
 	assert_true(node.visible)
 
 
+func test_solid_placeholder_uses_solid_albedo() -> void:
+	var world: AuthoringWorld = AuthoringWorld.new()
+	assert_true(world.put(_record_solid(7, 0, -CELL, 0)))
+	_map = AuthoringPreviewMap.new()
+	add_child(_map)
+	_map.rebuild(world)
+	var node: MeshInstance3D = _map.placeholder_node(7)
+	assert_not_null(node)
+	assert_eq(_placeholder_albedo(node), AuthoringPreviewMap.SOLID_ALBEDO)
+	assert_true(node.visible)
+
+
 func _record_transform(entity_id: int, x: int, y: int, z: int, yaw_bam: int) -> SharedComponentRecord:
 	return SharedComponentRecord.create(entity_id, {
 		"transform": {"x": x, "y": y, "z": z, "yaw_bam": yaw_bam},
@@ -152,6 +164,17 @@ func _record_hazard(entity_id: int, x: int, y: int, z: int) -> SharedComponentRe
 	return SharedComponentRecord.create(entity_id, {
 		"transform": {"x": x, "y": y, "z": z, "yaw_bam": 0},
 		"hazard": {"damage": 0, "knockback": 0, "cooldown_ticks": 1},
+	})
+
+
+func _record_solid(entity_id: int, x: int, y: int, z: int) -> SharedComponentRecord:
+	var half: int = CELL / 2
+	return SharedComponentRecord.create(entity_id, {
+		"transform": {"x": x, "y": y, "z": z, "yaw_bam": 0},
+		"zone": {
+			"shape": {"kind": "box", "hx": half, "hy": half, "hz": half},
+			"tags": ["solid"],
+		},
 	})
 
 

@@ -7,8 +7,10 @@ extends Node
 ## Occupancy accepts checkpoint pads; walking into a portal marker lands
 ## through try_land_exit. Overlapping the finish box after every pad records
 ## finish=n. Reset or R snaps back to the last accepted pad. Status shows
-## pads=n/m, floor=n, finish=n, and hazards=n/m. Entity 6 is a period-1
-## magenta hazard on +X so Play then D hits a wall; Advance tick opens it.
+## pads=n/m, floor=n, finish=n, crates=n/m, hazards=n/m, and solids=n/m.
+## Entity 6 is a period-1 magenta hazard on +X so Play then D hits a wall;
+## Advance tick opens it. Entity 7 is an always-solid stone box one cell
+## below origin.
 
 const CELL: int = 65536
 
@@ -21,6 +23,7 @@ func _ready() -> void:
 	session.try_apply(_edit(4, 3, _place_portal(4, 99, 2 * CELL, 0, 2 * CELL)))
 	session.try_apply(_edit(5, 4, _place_checkpoint(5, 3, 0, CELL, 0)))
 	session.try_apply(_edit(6, 5, _place_hazard(6, CELL, 0, 0, 1)))
+	session.try_apply(_edit(7, 6, _place_solid(7, 0, -CELL, 0)))
 	var shell: AuthoringPreviewShell = AuthoringPreviewShell.create(AuthoringPreviewHostKinds.WINDOW)
 	add_child(shell)
 	shell.open_from(session)
@@ -63,6 +66,24 @@ func _place_hazard(entity_id: int, x: int, y: int, z: int, cooldown_ticks: int) 
 			"components": {
 				"transform": {"x": x, "y": y, "z": z, "yaw_bam": 0},
 				"hazard": {"damage": 0, "knockback": 0, "cooldown_ticks": cooldown_ticks},
+			},
+		},
+	}
+
+
+func _place_solid(entity_id: int, x: int, y: int, z: int) -> Dictionary:
+	var half: int = CELL / 2
+	return {
+		"op": "place",
+		"record": {
+			"schema_version": 1,
+			"entity_id": entity_id,
+			"components": {
+				"transform": {"x": x, "y": y, "z": z, "yaw_bam": 0},
+				"zone": {
+					"shape": {"kind": "box", "hx": half, "hy": half, "hz": half},
+					"tags": ["solid"],
+				},
 			},
 		},
 	}
