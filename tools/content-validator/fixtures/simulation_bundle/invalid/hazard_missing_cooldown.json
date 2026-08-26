@@ -6,6 +6,12 @@
 	"portals": [],
 	"finish": [],
 	"destructibles": [],
-	"hazards": [],
-	"signed": false
+	"hazards": [
+		{
+			"entity_id": 50,
+			"x": 65536,
+			"y": 0,
+			"z": 0
+		}
+	]
 }

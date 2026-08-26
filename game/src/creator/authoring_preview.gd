@@ -7,6 +7,8 @@ extends RefCounted
 ## try_start_play compiles the Preview world into a v1 TRAPRUSH topology
 ## bundle, loads SimulationWorld, and spawns on the lowest-order pad.
 ## Play enters tick so patches are refused until try_stop_play.
+## try_advance_play advances the sim tick then toggles compiled hazards
+## via TraprushHazardCycle (existing cooldown_ticks, not a new period).
 ## try_apply_play_intent accepts MoveIntent (caller dx/dz),
 ## ResetToCheckpointIntent (compiled pad respawn table, no client
 ## coordinates), UseItemIntent (compiled destructible occupancy at
@@ -32,6 +34,7 @@ extends RefCounted
 ## Capsule radius/height are caller-provided, not a locked product size.
 ## Window host is AuthoringPreviewShell.
 
+const HazardCycle := preload("res://src/games/traprush/hazard_cycle.gd")
 const OutOfRangeReset := preload("res://src/games/traprush/out_of_range_reset.gd")
 
 var world: AuthoringWorld = null
@@ -45,6 +48,8 @@ var play_portal_ids: Dictionary = {}
 var play_finish_ids: Dictionary = {}
 var play_destructible_ids: Dictionary = {}
 var play_destructible_health: Dictionary = {}
+var play_hazard_ids: Dictionary = {}
+var play_hazard_cycle: Array[Dictionary] = []
 var play_track: TraprushCheckpointTrack = null
 var play_spawn: TraprushCheckpointSpawn = null
 var play_cell: int = 0
@@ -136,6 +141,7 @@ func try_start_play(seed: int, radius: int = 0, cylinder_height: int = 0) -> boo
 	var portals_raw: Variant = loaded.get("portal_ids", {})
 	var finish_raw: Variant = loaded.get("finish_ids", {})
 	var crates_raw: Variant = loaded.get("destructible_ids", {})
+	var hazards_raw: Variant = loaded.get("hazard_ids", {})
 	if not (world_raw is SimulationWorld):
 		return false
 	if not (graph_raw is TraprushPortalGraph):
@@ -148,14 +154,20 @@ func try_start_play(seed: int, radius: int = 0, cylinder_height: int = 0) -> boo
 		return false
 	if typeof(crates_raw) != TYPE_DICTIONARY:
 		return false
+	if typeof(hazards_raw) != TYPE_DICTIONARY:
+		return false
 	var sim: SimulationWorld = world_raw
 	var graph: TraprushPortalGraph = graph_raw
 	var pad_ids: Dictionary = pads_raw
 	var portal_ids: Dictionary = portals_raw
 	var finish_ids: Dictionary = finish_raw
 	var crate_ids: Dictionary = crates_raw
+	var hazard_ids: Dictionary = hazards_raw
 	var crate_health: Dictionary = _destructible_ledgers(bundle, crate_ids)
 	if crate_health.size() != _durable_crate_count(bundle):
+		return false
+	var cycle: Array[Dictionary] = HazardCycle.entries_from(bundle.hazards, hazard_ids)
+	if cycle.size() != bundle.hazards.size():
 		return false
 	var start_x: int = start["x"]
 	var start_y: int = start["y"]
@@ -172,6 +184,8 @@ func try_start_play(seed: int, radius: int = 0, cylinder_height: int = 0) -> boo
 	play_finish_ids = finish_ids
 	play_destructible_ids = crate_ids
 	play_destructible_health = crate_health
+	play_hazard_ids = hazard_ids
+	play_hazard_cycle = cycle
 	play_track = TraprushCheckpointTrack.new(_ordered_checkpoint_ids(bundle))
 	play_spawn = spawn
 	play_cell = bundle.cell
@@ -197,6 +211,7 @@ func try_advance_play() -> bool:
 	if not is_playing():
 		return false
 	play_world.tick()
+	HazardCycle.apply(play_world, play_hazard_cycle)
 	_reset_play_if_out_of_range()
 	_accept_overlapping_play_pads()
 	_resolve_play_portals()
@@ -324,6 +339,24 @@ func play_destructible_count() -> int:
 	if not is_playing():
 		return 0
 	return play_destructible_ids.size()
+
+
+func play_hazard_count() -> int:
+	if not is_playing():
+		return 0
+	return play_hazard_ids.size()
+
+
+func play_is_hazard_solid(entity_id: int) -> bool:
+	if not is_playing() or play_world == null:
+		return false
+	if not play_hazard_ids.has(entity_id):
+		return false
+	var box_raw: Variant = play_hazard_ids[entity_id]
+	if typeof(box_raw) != TYPE_INT:
+		return false
+	var box_id: int = box_raw
+	return play_world.is_static_box_solid(box_id)
 
 
 func play_destructible_alive_count() -> int:
@@ -466,6 +499,8 @@ func _clear_play() -> void:
 	play_finish_ids = {}
 	play_destructible_ids = {}
 	play_destructible_health = {}
+	play_hazard_ids = {}
+	play_hazard_cycle = []
 	play_track = null
 	play_spawn = null
 	play_cell = 0

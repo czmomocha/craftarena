@@ -30,6 +30,7 @@ func test_empty_world_compiles_to_empty_bundle() -> void:
 	assert_eq(bundle.portals.size(), 0)
 	assert_eq(bundle.finish.size(), 0)
 	assert_eq(bundle.destructibles.size(), 0)
+	assert_eq(bundle.hazards.size(), 0)
 	var encoded: Dictionary = bundle.to_dictionary()
 	var decoded: SimulationBundle = SimulationBundle.from_dictionary(encoded)
 	assert_not_null(decoded)
@@ -49,6 +50,8 @@ func test_official_courses_compile_distinct_topology() -> void:
 	assert_eq(second.finish.size(), 1)
 	assert_eq(first.destructibles.size(), 1)
 	assert_eq(second.destructibles.size(), 1)
+	assert_eq(first.hazards.size(), 0)
+	assert_eq(second.hazards.size(), 0)
 	var first_crate: Dictionary = _destructible(first, 40)
 	var second_crate: Dictionary = _destructible(second, 40)
 	var first_crate_z: int = first_crate.get("z", -1)
@@ -149,6 +152,7 @@ func test_portal_bag_without_source_pose_is_rejected() -> void:
 		],
 		"finish": [],
 		"destructibles": [],
+		"hazards": [],
 	}
 	assert_null(SimulationBundle.from_dictionary(data))
 
@@ -199,6 +203,7 @@ func test_dangling_kind_in_bundle_is_rejected() -> void:
 		],
 		"finish": [],
 		"destructibles": [],
+		"hazards": [],
 	}
 	assert_null(SimulationBundle.from_dictionary(data))
 
@@ -217,6 +222,8 @@ func test_loaded_pads_are_non_solid_occupancy_and_world_ticks() -> void:
 	assert_eq(portal_ids.size(), 2)
 	assert_eq(finish_ids.size(), 1)
 	assert_eq(destructible_ids.size(), 1)
+	var hazard_ids: Dictionary = loaded["hazard_ids"]
+	assert_eq(hazard_ids.size(), 0)
 	var box_id: int = pad_ids[1]
 	assert_false(world.is_static_box_solid(box_id))
 	var portal_box_id: int = portal_ids[10]
@@ -335,6 +342,7 @@ func test_two_finish_bags_are_rejected() -> void:
 			{"entity_id": 31, "x": CELL, "y": 0, "z": 0},
 		],
 		"destructibles": [],
+		"hazards": [],
 	}
 	assert_null(SimulationBundle.from_dictionary(data))
 
@@ -375,6 +383,63 @@ func test_bundle_without_destructibles_key_is_rejected() -> void:
 	assert_null(SimulationBundle.from_dictionary(data))
 
 
+func test_bundle_without_hazards_key_is_rejected() -> void:
+	var world: AuthoringWorld = AuthoringWorld.new()
+	var bundle: SimulationBundle = TraprushTopologyCompiler.compile(world)
+	assert_not_null(bundle)
+	var data: Dictionary = bundle.to_dictionary()
+	data.erase(SimulationBundle.FIELD_HAZARDS)
+	assert_null(SimulationBundle.from_dictionary(data))
+
+
+func test_hazard_without_transform_fails_compile() -> void:
+	var world: AuthoringWorld = AuthoringWorld.new()
+	var record: SharedComponentRecord = SharedComponentRecord.create(50, {
+		"hazard": {"damage": 0, "knockback": 0, "cooldown_ticks": 1},
+	})
+	assert_not_null(record)
+	assert_true(world.put(record))
+	assert_null(TraprushTopologyCompiler.compile(world))
+
+
+func test_hazard_on_checkpoint_fails_compile() -> void:
+	var world: AuthoringWorld = AuthoringWorld.new()
+	var record: SharedComponentRecord = SharedComponentRecord.create(1, {
+		"transform": {"x": 0, "y": 0, "z": 0, "yaw_bam": 0},
+		"checkpoint": {
+			"order": 0,
+			"respawn_dx": 0,
+			"respawn_dy": 0,
+			"respawn_dz": 0,
+		},
+		"hazard": {"damage": 0, "knockback": 0, "cooldown_ticks": 1},
+	})
+	assert_not_null(record)
+	assert_true(world.put(record))
+	assert_null(TraprushTopologyCompiler.compile(world))
+
+
+func test_hazard_compiles_and_loads_solid_at_tick_zero() -> void:
+	var world: AuthoringWorld = AuthoringWorld.new()
+	assert_true(world.put(_checkpoint_record(1, 0, 0, 0, 0)))
+	assert_true(world.put(_hazard_record(50, CELL, 0, 0, 1)))
+	var bundle: SimulationBundle = TraprushTopologyCompiler.compile(world)
+	assert_not_null(bundle)
+	assert_eq(bundle.hazards.size(), 1)
+	var hazard: Dictionary = _hazard(bundle, 50)
+	var hazard_x: int = hazard.get("x", -1)
+	var hazard_period: int = hazard.get("cooldown_ticks", -1)
+	assert_eq(hazard_x, CELL)
+	assert_eq(hazard_period, 1)
+	var loaded: Dictionary = TraprushTopologyLoader.try_load(bundle, 1)
+	assert_true(_flag(loaded))
+	var sim: SimulationWorld = loaded["world"]
+	var hazard_ids: Dictionary = loaded["hazard_ids"]
+	assert_eq(hazard_ids.size(), 1)
+	var box_id: int = hazard_ids[50]
+	assert_true(sim.is_static_box_solid(box_id))
+
+
 func _compile_path(path: String) -> SimulationBundle:
 	var world: AuthoringWorld = AuthoringDocument.load_from_path(path)
 	if world == null:
@@ -408,6 +473,32 @@ func _destructible(bundle: SimulationBundle, entity_id: int) -> Dictionary:
 		if item.get("entity_id", 0) == entity_id:
 			return item
 	return {}
+
+
+func _hazard(bundle: SimulationBundle, entity_id: int) -> Dictionary:
+	for item: Dictionary in bundle.hazards:
+		if item.get("entity_id", 0) == entity_id:
+			return item
+	return {}
+
+
+func _checkpoint_record(entity_id: int, order: int, x: int, y: int, z: int) -> SharedComponentRecord:
+	return SharedComponentRecord.create(entity_id, {
+		"transform": {"x": x, "y": y, "z": z, "yaw_bam": 0},
+		"checkpoint": {
+			"order": order,
+			"respawn_dx": 0,
+			"respawn_dy": 0,
+			"respawn_dz": 0,
+		},
+	})
+
+
+func _hazard_record(entity_id: int, x: int, y: int, z: int, cooldown_ticks: int) -> SharedComponentRecord:
+	return SharedComponentRecord.create(entity_id, {
+		"transform": {"x": x, "y": y, "z": z, "yaw_bam": 0},
+		"hazard": {"damage": 0, "knockback": 0, "cooldown_ticks": cooldown_ticks},
+	})
 
 
 func _portal_record(entity_id: int, target_id: int, x: int, yaw_bam: int) -> SharedComponentRecord:

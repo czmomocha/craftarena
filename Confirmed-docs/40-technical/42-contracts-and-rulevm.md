@@ -202,6 +202,7 @@ Undo / Redo 是会话内对成功命令派生的反向 payload（`place`↔`remo
 | SimulationBundle | `game/src/ugc/simulation_bundle.gd` |
 | TRAPRUSH 拓扑编译 | `game/src/ugc/traprush_topology_compiler.gd` |
 | TRAPRUSH 拓扑加载 | `game/src/games/traprush/traprush_topology_loader.gd` |
+| 周期机关固体切换 | `game/src/games/traprush/hazard_cycle.gd` |
 | 对局进程多人仿真循环 | `game/src/games/traprush/match_session.gd` |
 | 对局二进制协议 v1 | `game/src/shared/protocol/match_frame_codec.gd` |
 | TRAPRUSH 直播名次 | `game/src/games/traprush/standing.gd` |
@@ -223,7 +224,7 @@ Undo / Redo 是会话内对成功命令派生的反向 payload（`place`↔`remo
 | 对局本席移动预测 | `game/src/client/match_local_predict.gd` |
 | 匹配 / 房间码 HTTP 契约 | `backend/contracts/src/match_room.ts` |
 | 控制面票据校验器 | `backend/realtime-gateway/src/ticket.ts` |
-| Preview 试玩 | `game/src/creator/authoring_preview.gd`（`try_start_play` / `try_stop_play` / `try_advance_play` / `try_apply_play_intent` / `try_accept_play_checkpoint` / `try_land_exit` 占用扫门 / `try_cross_play_finish` 占用扫终点 / `ResetToCheckpointIntent` 复活表 / `UseItemIntent` 可破坏占用 / `JumpIntent` 接地跳跃） |
+| Preview 试玩 | `game/src/creator/authoring_preview.gd`（`try_start_play` / `try_stop_play` / `try_advance_play` / `try_apply_play_intent` / `try_accept_play_checkpoint` / `try_land_exit` 占用扫门 / `try_cross_play_finish` 占用扫终点 / `ResetToCheckpointIntent` 复活表 / `UseItemIntent` 可破坏占用 / `JumpIntent` 接地跳跃 / `TraprushHazardCycle` 周期机关固体切换） |
 | UseItem 打箱 | `game/src/games/traprush/destructible_break.gd` |
 | 编辑表面名 | `game/src/creator/authoring_surface_names.gd` |
 | 领域事件 | `game/src/shared/events/shared_domain_event.gd` |
@@ -247,4 +248,4 @@ JSON Schema 落点：
 | SimulationBundle | `backend/contracts/schemas/simulation_bundle.schema.json` |
 | 正反例与校验 | `tools/content-validator/`（由根目录 `npm test` 收集） |
 
-`payload` 只允许 nil / bool / int / String / Array / Dictionary（字符串键）；禁止 float、Object、Callable。PLAYER 命令必须带白名单 `intent` 字符串。EDIT 命令必须带白名单 `op` 字符串，payload 形状见 [§3.3](#33-服务端处理管线)。SYSTEM 命令允许 `actor_id = 0`。Component Schema v1 字段见 [§1.2](#12-字段标识符v1)。AuthoringDocument 字段见 [CD-32 §1.4](../30-ugc/32-editor-and-preview.md#14-共同数据模型)。SimulationBundle v1 字段见本表与 [CD-32 §3](../30-ugc/32-editor-and-preview.md#3-从编辑到预览)「TRAPRUSH 拓扑编译」。Preview 试玩、MoveIntent、检查点占用验收、传送占用落地、冲线占用、重置到检查点、UseItemIntent 可破坏占用与 JumpIntent 接地跳跃见 [CD-32 §3](../30-ugc/32-editor-and-preview.md#3-从编辑到预览)「Preview 试玩」。对局票据 HTTP JSON Schema 在 `backend/contracts/src/match_ticket.ts`，由控制面 Fastify 路由挂载（含 `POST /match-sessions/:matchId/tickets/reconnect`）。单局结算 HTTP JSON Schema 在 `backend/contracts/src/match_settlement.ts`。Rule VM 图的 JSON Schema 仍未落地。OpenAPI 仍未落地。签名二进制包仍待。
+`payload` 只允许 nil / bool / int / String / Array / Dictionary（字符串键）；禁止 float、Object、Callable。PLAYER 命令必须带白名单 `intent` 字符串。EDIT 命令必须带白名单 `op` 字符串，payload 形状见 [§3.3](#33-服务端处理管线)。SYSTEM 命令允许 `actor_id = 0`。Component Schema v1 字段见 [§1.2](#12-字段标识符v1)。AuthoringDocument 字段见 [CD-32 §1.4](../30-ugc/32-editor-and-preview.md#14-共同数据模型)。SimulationBundle v1 字段见本表与 [CD-32 §3](../30-ugc/32-editor-and-preview.md#3-从编辑到预览)「TRAPRUSH 拓扑编译」（含可空 `hazards` 袋）。Preview 试玩、MoveIntent、检查点占用验收、传送占用落地、冲线占用、重置到检查点、UseItemIntent 可破坏占用、JumpIntent 接地跳跃与周期机关固体切换见 [CD-32 §3](../30-ugc/32-editor-and-preview.md#3-从编辑到预览)「Preview 试玩」。对局票据 HTTP JSON Schema 在 `backend/contracts/src/match_ticket.ts`，由控制面 Fastify 路由挂载（含 `POST /match-sessions/:matchId/tickets/reconnect`）。单局结算 HTTP JSON Schema 在 `backend/contracts/src/match_settlement.ts`。Rule VM 图的 JSON Schema 仍未落地。OpenAPI 仍未落地。签名二进制包仍待。

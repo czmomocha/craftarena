@@ -26,5 +26,6 @@
 	],
 	"portals": [],
 	"finish": [],
-	"destructibles": []
+	"destructibles": [],
+	"hazards": []
 }
