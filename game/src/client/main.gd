@@ -9,12 +9,14 @@ extends Node
 ## Live HTTP/WS stays off in headless
 ## so CI --quit does not call localhost.
 ## `-- --package-check` short-circuits all of that and prints the exported
-## package self report instead (course correction C1).
+## package self report instead (course correction C1). `-- --bot-run` likewise
+## short-circuits into the walkability probe over the official courses (C2).
 ## `-- --server=HOST` (or --control-plane= / --gateway=, or the matching
 ## CRAFTARENA_* variables) points the lobby at a deployed test server instead
 ## of a local npm run dev.
 
 const BOOT_EVENT: String = "client_boot"
+const BotRunCliGd := preload("res://src/games/traprush/bot_run_cli.gd")
 const MatchLobbyShellGd := preload("res://src/client/match_lobby_shell.gd")
 const PackageCheckGd := preload("res://src/client/package_check.gd")
 const ServerEndpointGd := preload("res://src/client/server_endpoint.gd")
@@ -23,8 +25,12 @@ var lobby: MatchLobbyShellGd = null
 
 
 func _ready() -> void:
-	if PackageCheckGd.requested(OS.get_cmdline_user_args()):
+	var user_args: PackedStringArray = OS.get_cmdline_user_args()
+	if PackageCheckGd.requested(user_args):
 		get_tree().quit(PackageCheckGd.run_and_print())
+		return
+	if BotRunCliGd.requested(user_args):
+		get_tree().quit(BotRunCliGd.run_and_print(user_args))
 		return
 	print(_format_log_line(BOOT_EVENT, {
 		"project": ProjectSettings.get_setting("application/config/name", ""),
@@ -37,7 +43,7 @@ func _ready() -> void:
 	if lobby == null:
 		return
 	lobby.live_io = DisplayServer.get_name() != "headless"
-	lobby.apply_endpoint(ServerEndpointGd.from_os(OS.get_cmdline_user_args()))
+	lobby.apply_endpoint(ServerEndpointGd.from_os(user_args))
 	add_child(lobby)
 	lobby.open()
 

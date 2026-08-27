@@ -29,6 +29,7 @@ extends Node
 ## Never settlement.
 
 const OutOfRangeReset := preload("res://src/games/traprush/out_of_range_reset.gd")
+const PlayStubs := preload("res://src/games/traprush/play_stubs.gd")
 const TITLE: String = "Preview"
 const WINDOW_SIZE: Vector2i = Vector2i(1280, 720)
 const WINDOW_MIN_SIZE: Vector2i = Vector2i(960, 540)
@@ -53,13 +54,14 @@ var preview: AuthoringPreview = null
 var window: Window = null
 var map: AuthoringPreviewMap = null
 var play_move_step: int = Fixed.SCALE / 16
-var play_use_item_damage: int = 1
-var play_use_item_reach_dx: int = 0
-var play_use_item_reach_dy: int = 0
-var play_use_item_reach_dz: int = Fixed.SCALE
-var play_jump_dy: int = Fixed.SCALE / 4
-var play_support_dy: int = -Fixed.SCALE
-var play_fall_dy: int = -Fixed.SCALE
+var play_use_item_damage: int = PlayStubs.USE_ITEM_DAMAGE
+var play_use_item_reach_dx: int = PlayStubs.USE_ITEM_REACH_DX
+var play_use_item_reach_dy: int = PlayStubs.USE_ITEM_REACH_DY
+var play_use_item_reach_dz: int = PlayStubs.USE_ITEM_REACH_DZ
+var play_jump_dy: int = PlayStubs.JUMP_DY
+var play_support_dy: int = PlayStubs.SUPPORT_DY
+## Advance tick is a click, not a frame, so Preview falls a whole cell per step.
+var play_fall_dy: int = PlayStubs.PREVIEW_FALL_DY
 var play_range_half: int = OutOfRangeReset.STUB_HALF
 var _status: Label = null
 var _reset_held: bool = false

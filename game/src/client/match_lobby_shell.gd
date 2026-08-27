@@ -81,6 +81,7 @@ const MatchSnapshotMapGd := preload("res://src/client/match_snapshot_map.gd")
 const MatchStandingMapGd := preload("res://src/client/match_standing_map.gd")
 const OfficialTraprushCoursesGd := preload("res://src/shared/official_traprush_courses.gd")
 const OutOfRangeResetGd := preload("res://src/games/traprush/out_of_range_reset.gd")
+const PlayStubsGd := preload("res://src/games/traprush/play_stubs.gd")
 const PlayerIntentNames := preload("res://src/shared/commands/player_intent_names.gd")
 const ServerEndpointGd := preload("res://src/client/server_endpoint.gd")
 
@@ -1369,17 +1370,18 @@ func _online_busy() -> bool:
 func _prepare_offline_stubs() -> void:
 	if offline == null:
 		return
-	offline.play_jump_dy = Fixed.SCALE / 4
-	offline.play_support_dy = -Fixed.SCALE
-	## Same stub as match_server STUB_FALL_DY: one move-step per tick so a
-	## 60 Hz _process does not drop eight cells and OOB-reset in a blink.
-	offline.play_fall_dy = -Fixed.SCALE / 16
-	offline.play_use_item_damage = 1
-	offline.play_use_item_reach_dx = 0
-	offline.play_use_item_reach_dy = 0
-	offline.play_use_item_reach_dz = Fixed.SCALE
-	offline.play_shove_step = Fixed.SCALE / 4
-	offline.play_shove_cooldown_ticks = 1
+	## Values come from TraprushPlayStubs so Solo, the match process and the
+	## bot runner cannot drift apart. The shell only owns `play_*` fields, so
+	## it reads the constants instead of handing the session over.
+	offline.play_jump_dy = PlayStubsGd.JUMP_DY
+	offline.play_support_dy = PlayStubsGd.SUPPORT_DY
+	offline.play_fall_dy = PlayStubsGd.FALL_DY
+	offline.play_use_item_damage = PlayStubsGd.USE_ITEM_DAMAGE
+	offline.play_use_item_reach_dx = PlayStubsGd.USE_ITEM_REACH_DX
+	offline.play_use_item_reach_dy = PlayStubsGd.USE_ITEM_REACH_DY
+	offline.play_use_item_reach_dz = PlayStubsGd.USE_ITEM_REACH_DZ
+	offline.play_shove_step = PlayStubsGd.SHOVE_STEP
+	offline.play_shove_cooldown_ticks = PlayStubsGd.SHOVE_COOLDOWN_TICKS
 	offline.play_range_half = OutOfRangeResetGd.STUB_HALF
 
 

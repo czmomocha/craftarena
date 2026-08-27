@@ -17,6 +17,7 @@ const MatchFrameCodec := preload("res://src/shared/protocol/match_frame_codec.gd
 const MatchMoveFacingGd := preload("res://src/client/match_move_facing.gd")
 const MatchSnapshotFollowGd := preload("res://src/client/match_snapshot_follow.gd")
 const PlayerIntentNames := preload("res://src/shared/commands/player_intent_names.gd")
+const PlayStubsGd := preload("res://src/games/traprush/play_stubs.gd")
 const TraprushMatchSessionGd := preload("res://src/games/traprush/match_session.gd")
 
 const BANNER: String = "离线试玩，成绩不上传"
@@ -24,9 +25,6 @@ const DEFAULT_COURSE: String = "res://content/official/traprush/course_01.json"
 const STATE_IDLE: String = "idle"
 const STATE_PLAYING: String = "playing"
 const _YAW_OMITTED: int = -1
-## Capsule stubs match the match-server placeholders; not product sizes.
-const CAPSULE_RADIUS: int = 8192
-const CAPSULE_HEIGHT: int = 8192
 const MATCH_SEED: int = 1
 
 var state: String = STATE_IDLE
@@ -68,8 +66,8 @@ func try_begin(path: String, web_platform: bool = false) -> bool:
 		MATCH_SEED,
 		1,
 		offsets,
-		CAPSULE_RADIUS,
-		CAPSULE_HEIGHT
+		PlayStubsGd.CAPSULE_RADIUS,
+		PlayStubsGd.CAPSULE_HEIGHT
 	)
 	if created == null:
 		last_error = "compile_failed"
