@@ -158,8 +158,7 @@ func test_boot_session_jump_hops_on_course_01_spawn_footing() -> void:
 	var hopped_y: int = hopped.get("y", 2)
 	assert_eq(hopped_y, rest_y + Fixed.SCALE / 4)
 	assert_eq(realtime.last_valid_input_tick(), session.tick_index())
-	# PlayStubs 加速度下，SCALE/4 冲量的上升弧会碰到 course_01 出生点
-	# 正上方 two_way，不能再要求 8 拍内落回立足盒。落地与弧线由
+	# 出生点 hop 不再撞上楼 two_way（上层已偏到 z=-3*CELL）。落地与弧线由
 	# test_traprush_gravity.gd 的合成地板覆盖。
 
 

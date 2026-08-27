@@ -12,7 +12,8 @@ extends GutTest
 ## 灰盒 PLAYER/SYSTEM 磁带回放仍在 `tests/unit/test_traprush_graybox_course.gd`；
 ## 本目录收的是对局会话这一层。
 ##
-## `--bot-run` 的 45 秒搜索不进这里，也不进 CI。
+## `--bot-run` 的搜索不进这里，也不进 CI。沿路地板后三张课的 completable
+## 由 `tests/unit/test_traprush_official_path_floors.gd` 覆盖。
 
 const AuthoringDocument := preload("res://src/creator/authoring_document.gd")
 const AuthoringWorld := preload("res://src/creator/authoring_world.gd")

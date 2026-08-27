@@ -4,8 +4,8 @@ extends GutTest
 ## 反例覆盖三种「走不通」：没有终点、检查点够不到、预算先耗尽。
 ##
 ## 最后一条是本组测试的重点。探针的价值在于它**不谎报**：预算用完时必须说
-## budget_exhausted，而不是把「没搜完」说成「走不通」。三张官方课的完整验证在
-## BotRunner CLI 里跑（course_03 单张约 35 秒），不放进 GUT。
+## budget_exhausted，而不是把「没搜完」说成「走不通」。三张官方课在沿路地板
+## 章里用 GUT 断言 completable；本文件只锁 course_01 的正反例形状。
 
 const AuthoringDocument := preload("res://src/creator/authoring_document.gd")
 const CourseCompletionProbe := preload("res://src/games/traprush/course_completion_probe.gd")

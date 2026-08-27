@@ -29,7 +29,7 @@ const SOLID_ID: int = 70
 const STAND_Y: int = CELL
 const SUPPORT_DY: int = -CELL / 2
 const JUMP_DY: int = CELL / 2
-## Official spawn hop must stay below the upstairs two_way box (course_01).
+## Official spawn hop. course_01 upstairs portal is offset to z=-3*CELL.
 const SPAWN_JUMP_DY: int = CELL / 4
 
 
@@ -276,7 +276,7 @@ func _assert_spawn_jump_moves_up(preview: AuthoringPreview) -> void:
 	assert_eq(after_y, before_y + SPAWN_JUMP_DY)
 	assert_eq(after_z, before_z)
 	assert_eq(preview.play_world.tick_index, 0)
-	assert_eq(preview.play_solid_count(), 2)
+	assert_true(preview.play_solid_count() >= 8)
 	assert_false(preview.allows_settlement())
 
 

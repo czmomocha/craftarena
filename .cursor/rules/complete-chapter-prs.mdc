@@ -15,10 +15,10 @@ alwaysApply: true
 
 真机：PR Test plan 与 [章节真机清单](docs/runbooks/chapter-device-check.md) 本刀必须是编号步骤（怎么开、点什么、期望 / 失败）；禁止只写「真机再看一眼」。无 GUI 的章写「无」加原因。人工检查，不是 CI 门禁。口径见 [CD-52 §3.2](Confirmed-docs/50-engineering/52-ai-workflow.md)。
 
-- 做（本刀 = 纠偏 C3 第 1 章：权威重力积分、跳跃弧线与落地）：`SimulationWorld` 胶囊 `vy` 进入 `hash_state`；`TraprushGravity.integrate` / `apply_jump`；对局 / Solo / Preview / 灰盒 `commit_tick` 走积分而不是恒定位移；Jump 写冲量；落地/顶棚/`set_vy(0)`；灰盒磁带回放同一条弧哈希一致。`fall_dy` 语义改为每 tick 加速度，数值仍从 `TraprushPlayStubs` 注入。不改 `Confirmed-docs/`（CD-21 §3.3 仍由 C5 覆盖写）。
-- 不做：铺官方沿路地板；把 ±8 出界桩从兜底改成真正边界；道具拾取/爆破球/冲刺；机关伤害与击退；锁定 Tick / 快照 / 插值（不得用 C1 近端 ICMP）；复活硬直产品秒数；新增冻结常量引用点。
-- 仍欠着（不因本章合入而消失）：官方赛道沿路立足面；`course_03` 在重力下 BotRunner `budget_exhausted`（`course_01` / `02` 仍 `completable`）；24 小时 ICMP；协议层 RTT；C3 网络参数锁定；D5 复活硬直三候选待人类选（不阻塞本章）。
-- 仍不做：把 C3 重力与道具/新赛道塞进同一个 PR。
+- 做（本刀 = 纠偏 C3 第 2 章：官方沿路立足面与 ±8 出界降级）：三张官方课必经路铺始终固体；`course_01` 上层偏到 `z=-3*CELL`（1 米占用盒夹不进上下叠层，且避开席 1 出生偏移与 z=-2 机关）；`course_03` 箱子旁有绕行立足面；走路上不掉进 ±8；走下路面才复位；BotRunner 三张 `completable`。不改 `Confirmed-docs/`（CD-21 / CD-32 仍由 C5 覆盖写）。
+- 不做：道具拾取/爆破球/冲刺；机关伤害与击退；锁定 Tick / 快照 / 插值（不得用 C1 近端 ICMP）；复活硬直产品秒数；第 4 张官方赛道；90 秒语义关；新增冻结常量引用点（`STUB_HALF` 仍从 `TraprushOutOfRangeReset` 注入）。
+- 仍欠着（不因本章合入而消失）：道具最小集；机关伤害/击退；D5 复活硬直三候选待人类选；24 小时 ICMP；协议层 RTT；C3 网络参数锁定；符合 CD-61 §4.1 语义的赛道。
+- 仍不做：把 C3 道具与新语义赛道塞进同一个 PR。
 
 纠偏归属：C3
 是否新增冻结常量引用：否

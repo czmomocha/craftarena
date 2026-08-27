@@ -43,7 +43,7 @@ func test_official_course_01_maps_occupancy_and_skips_crates() -> void:
 	assert_almost_eq(pad.position.z, 0.0, EPS)
 	assert_almost_eq(finish.position.x, 2.0, EPS)
 	assert_almost_eq(finish.position.y, 1.0, EPS)
-	assert_almost_eq(finish.position.z, 0.0, EPS)
+	assert_almost_eq(finish.position.z, -3.0, EPS)
 	var box: BoxMesh = pad.mesh as BoxMesh
 	assert_not_null(box)
 	assert_almost_eq(box.size.x, 1.0, EPS)

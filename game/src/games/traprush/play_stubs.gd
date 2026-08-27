@@ -23,14 +23,15 @@ extends RefCounted
 const OutOfRangeReset := preload("res://src/games/traprush/out_of_range_reset.gd")
 const TraprushMatchSession := preload("res://src/games/traprush/match_session.gd")
 
-## 一格 hop 的竖直冲量：会与 course_01 出生点正上方的 two_way 盒闭区间相交并落地。
-## apply_jump 把本拍位移和 vy 都写成这个值，后续各拍由重力加速度拉回。
+## 一格 hop 的竖直冲量。course_01 上层传送已偏到 z=-3*CELL，出生点 hop
+## 不再撞上楼 two_way。apply_jump 把本拍位移和 vy 都写成这个值，后续各拍由重力加速度拉回。
+## 数值仍是占位桩，不是产品跳跃高度。
 const JUMP_DY: int = Fixed.SCALE / 4
 ## 向下探测立足固体，与灰盒同向。
 const SUPPORT_DY: int = -Fixed.SCALE
 ## 与大厅 play_move_step 同量级的开发期重力加速度（每 tick 加到 vy）。
 ## 不是恒定位移：从静止开始第一拍位移等于本值，之后越落越快。
-## 引擎约 60 physics tick/s 时，走下出生点立足盒后大约十几拍触发出界复位。
+## 引擎约 60 physics tick/s 时，走下沿路立足面后大约十几拍触发出界复位。
 const FALL_DY: int = -Fixed.SCALE / 16
 ## Preview 手动 Advance tick：一次点击的加速度。从静止开始第一下仍落一整格。
 const PREVIEW_FALL_DY: int = -Fixed.SCALE

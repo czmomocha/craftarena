@@ -39,8 +39,8 @@ func test_official_course_03_loads_and_is_publish_ready() -> void:
 	var world: AuthoringWorld = AuthoringDocument.load_from_path(COURSE_03_PATH)
 	assert_not_null(world)
 	assert_eq(world.grid.cell, CELL)
-	assert_eq(world.revision, 3)
-	assert_eq(world.entity_ids(), [1, 2, 3, 4, 10, 11, 12, 30, 40, 60, 70, 80])
+	assert_eq(world.revision, 5)
+	assert_eq(world.entity_ids(), [1, 2, 3, 4, 10, 11, 12, 30, 40, 60, 70, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92])
 	var result: Dictionary = AuthoringReachability.evaluate(world)
 	assert_true(_ok(result))
 	var issues: Array = result.get("issues", [1])
@@ -89,7 +89,7 @@ func test_course_03_compiles_and_loads() -> void:
 	assert_eq(bundle.finish.size(), 1)
 	assert_eq(bundle.destructibles.size(), 1)
 	assert_eq(bundle.hazards.size(), 1)
-	assert_eq(bundle.solids.size(), 2)
+	assert_eq(bundle.solids.size(), 14)
 	var occupancy_hazard: Dictionary = _hazard(bundle, 60)
 	var occupancy_solid: Dictionary = _solid(bundle, 70)
 	var occupancy_footing: Dictionary = _solid(bundle, 80)
@@ -120,7 +120,7 @@ func test_course_03_compiles_and_loads() -> void:
 	var hazard_ids: Dictionary = loaded["hazard_ids"]
 	assert_eq(hazard_ids.size(), 1)
 	var solid_ids: Dictionary = loaded["solid_ids"]
-	assert_eq(solid_ids.size(), 2)
+	assert_eq(solid_ids.size(), 14)
 	var pad_box: int = pad_ids[1]
 	assert_false(sim.is_static_box_solid(pad_box))
 	var crate_box: int = destructible_ids[40]
