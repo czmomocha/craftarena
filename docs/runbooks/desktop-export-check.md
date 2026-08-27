@@ -119,7 +119,7 @@ python -m http.server 8060 --directory export\web
 
 **已知边界**：当前 Web 预设 `variant/thread_support=false`（nothreads 构建），因此不需要服务端配 `Cross-Origin-Opener-Policy` / `Cross-Origin-Embedder-Policy`。改成有线程版本时这两个响应头必须一起加，否则页面白屏。
 
-联机走 `wss://` 需要真域名 + 受信证书；浏览器不接受自签。这是 D2 选 A 的直接后果，属 C1 部署那一章。
+联机与远端部署属 C1 第 2 章（`docs/runbooks/server-deploy.md`）。测试开发阶段走明文 `http`/`ws`，不把域名、Let's Encrypt 或 `wss://` 当作导出核查的前提。浏览器 HTTPS 页不能混用 `ws://`、也不接受自签证书——那是公开 Web 联机 / 正式运营前的事，不是本章。
 
 ---
 

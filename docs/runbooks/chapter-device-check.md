@@ -96,7 +96,7 @@ python -m http.server 8060 --directory export\web
 
 ### 本刀不测
 
-- 联机：`wss://` 需要真域名 + 受信证书，属 C1 部署那一章；
-- Linux 包在真机上跑：需要香港 VPS，同上；
+- 联机：属 C1 部署那一章（`docs/runbooks/server-deploy.md`）。测试期远端走明文 `http`/`ws`，不把域名或 `wss://` 当本章前提；
+- Linux Headless 包在测试机上跑：同上，不绑定某台机器的 IP；
 - 移动端导出、代码签名、安装器、自动更新；
 - 任何玩法数值、重力、道具——那是 C3。

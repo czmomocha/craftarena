@@ -48,3 +48,4 @@
 | 多 Agent 并行放大 review 负担 | 高，已缓解 | 启用判据 A1–A4 与并行度上限见 [CD-52 §5](../50-engineering/52-ai-workflow.md)。门禁覆盖率不足时禁止并行 |
 | Cursor 托管 worktree 自动清理可能丢失未提交产出 | 中，已缓解 | 任务粒度半天到两天；任务结束即开 PR。隔离分支提交须等分支保护落地后才允许，见 [CD-52 §1.1](../50-engineering/52-ai-workflow.md) |
 | Bugbot / Cloud Agent 需要仓库读写权限 | 中，已接受 | 属安全边界扩大，随 [ADR-0004](../../docs/adr/0004-multi-agent-adoption-timing-and-architecture.md) 批准。GitHub PR 侧 Bugbot 已跳过（SCM 安装对不上）；合入靠 CI + 人类批准。不启用 fail-on-unresolved-issues。Cloud Agent 仍须分支保护 |
+| 测试期把明文 `http`/`ws` 打到远端测试机 | 高，已接受 | 纠偏 D11（2026-08-27）：C1 不配域名与 Let's Encrypt。不得对外表述为已具备 TLS。正式公开运营前必须回到宪法第二十二条。手册不写死 IP/域名，见 [纠偏方案 §4.0.1](../../docs/plans/course-correction-2026-08.md) |
