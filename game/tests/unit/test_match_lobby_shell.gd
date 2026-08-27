@@ -994,9 +994,9 @@ func test_solo_jump_hops_on_spawn_footing() -> void:
 	assert_almost_eq(_shell.map.player_node(0).position.y, 0.25, 0.0001)
 	assert_true(_shell.try_sample_play_jump(true).is_empty())
 	assert_true(_shell.offline.try_advance())
-	var landed: Dictionary = _shell.offline.session.player_pose(0)
-	var landed_y: int = landed.get("y", 3)
-	assert_lt(landed_y, after_y)
+	var after_arc: Dictionary = _shell.offline.session.player_pose(0)
+	var after_arc_y: int = after_arc.get("y", 3)
+	assert_ne(after_arc_y, after_y)
 
 
 func test_solo_walk_off_spawn_footing_drops_y() -> void:

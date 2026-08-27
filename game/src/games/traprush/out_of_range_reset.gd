@@ -4,7 +4,7 @@ extends RefCounted
 ## 出界复位：胶囊 y 低于/高于调用方闭区间，或 XZ 落在调用方闭区间外时，
 ## 用已有 CheckpointSpawn.pose_for 写回最近检查点落点（尚无进度则回起点）。
 ## 依据 CD-21 §6：环境失败后无限复活到最近检查点。不计数掉出次数 N，
-## 不接重力/下落，不写复活硬直。边界由调用方传入，不是产品场地尺寸。
+## 复位后 set_vy(0)，不写复活硬直。边界由调用方传入，不是产品场地尺寸。
 ## 不 tick。查询走 SimulationWorld 已有 is_below_min_y / is_above_max_y /
 ## is_outside_xz。空区间（min > max）拒绝，避免「永远出界」。
 
@@ -50,4 +50,5 @@ static func try_apply(
 	var yaw_bam: int = respawn.get("yaw_bam", 0)
 	if not world.set_pose(entity_id, x, y, z, yaw_bam):
 		return failed
+	world.set_vy(entity_id, 0)
 	return {"ok": true, "reset": true}

@@ -2,8 +2,11 @@ class_name SimulationWorld
 extends RefCounted
 
 ## Authoritative simulation skeleton. Tick is a counter, not a wall-clock duration.
-## Pose fields are Q48.16; yaw is BAM. Hash order: tick_index, then id,x,y,z,yaw by id.
+## Pose fields are Q48.16; yaw is BAM; vy is Q48.16 vertical speed in units per tick.
+## Hash order: tick_index, then id,x,y,z,yaw,vy by id.
 ## Radius, cylinder_height, and static AABBs are Q48.16 geometry and are not part of hash_state.
+## set_pose / try_set_pose keep vy so a yaw rewrite is not a landing. Teleports that
+## should kill a jump (reset, portal, out-of-range) call set_vy(0) themselves.
 ## set_static_box_solid toggles whether a static AABB blocks occupancy; ids stay
 ## 1-based and non-solid boxes stay in the array. Solidity is not part of hash_state.
 ## is_static_box_solid reports that flag; unknown ids are false. Queries are not hashed.
@@ -62,6 +65,7 @@ var _x: Array[int] = []
 var _y: Array[int] = []
 var _z: Array[int] = []
 var _yaw: Array[int] = []
+var _vy: Array[int] = []
 var _radius: Array[int] = []
 var _cylinder_height: Array[int] = []
 var _boxes: Array[StaticAabb] = []
@@ -81,6 +85,7 @@ func spawn_capsule(x: int, y: int, z: int, yaw: int, radius: int = 0, cylinder_h
 	_y.append(y)
 	_z.append(z)
 	_yaw.append(yaw)
+	_vy.append(0)
 	_radius.append(radius)
 	_cylinder_height.append(cylinder_height)
 	return _x.size()
@@ -375,6 +380,19 @@ func get_pose(entity_id: int) -> Dictionary:
 	}
 
 
+func get_vy(entity_id: int) -> int:
+	if not _has_entity(entity_id):
+		return 0
+	return _vy[entity_id - 1]
+
+
+func set_vy(entity_id: int, vy: int) -> bool:
+	if not _has_entity(entity_id):
+		return false
+	_vy[entity_id - 1] = vy
+	return true
+
+
 ## dx/dz are this-tick displacement in Q48.16 internal units, not metres per second.
 func try_move_xz(entity_id: int, dx: int, dz: int) -> bool:
 	if not _has_entity(entity_id):
@@ -459,6 +477,7 @@ func hash_state() -> PackedByteArray:
 		values.append(_y[pose_index])
 		values.append(_z[pose_index])
 		values.append(_yaw[pose_index])
+		values.append(_vy[pose_index])
 	if not hasher.write_canonical(values):
 		return PackedByteArray()
 	var digest_hex: String = hasher.digest_hex()

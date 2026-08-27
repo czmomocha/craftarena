@@ -66,5 +66,6 @@ static func _try_set_dest(
 	var dest_yaw: int = dest.get("dest_yaw_bam", 0)
 	var dest_id: int = dest.get("dest_id", 0)
 	if world.try_set_pose(entity_id, dest_x, dest_y, dest_z, dest_yaw):
+		world.set_vy(entity_id, 0)
 		return {"ok": true, "landed": true, "dest_id": dest_id}
 	return {"ok": true, "landed": false, "dest_id": dest_id}

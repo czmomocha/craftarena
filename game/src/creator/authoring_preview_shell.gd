@@ -13,11 +13,10 @@ extends Node
 ## play_use_item_damage / reach are stubs, not a blast table. Jump button
 ## and jump rising-edge encode JumpIntent; play_jump_dy / play_support_dy
 ## / play_fall_dy are stubs, not a locked jump height or product gravity.
-## Advance tick falls then ticks so period hazards can open; intents still
-## do not tick. play_fall_dy is one cell per Advance click (manual tick),
-## not the match/Solo engine-tick stub. Play copies an 8-cell AABB stub onto Preview (not a product
-## bound). Occupancy
-## accepts overlapping checkpoint pads through PadAccept and portal boxes
+## Advance tick 按调用方加速度积分（TraprushGravity），意图仍不 tick。
+## play_fall_dy 默认一整格/点击的加速度：从静止第一下仍落一格，之后加速。
+## Play copies an 8-cell AABB stub onto Preview (not a product bound).
+## Occupancy accepts overlapping checkpoint pads through PadAccept and portal boxes
 ## through PortalLanding.try_land_exit; status shows pads=n/m, floor=n,
 ## finish=n, crates=n/m, hazards=n/m, and solids=n/m.
 ## Tab host

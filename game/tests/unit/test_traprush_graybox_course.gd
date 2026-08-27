@@ -4,7 +4,7 @@ extends GutTest
 ## CD-21 §4.2 / §5.2 / §8 与 CD-61 M1：有序检查点、占用垫盒、上下/侧向传送、墙阻挡、打掉箱子后开路、周期 hazard stub、爆破道具 stub、可选第二胶囊基础推击。
 ## Move / Jump 经 IntentStepper 走直到阻挡：撞墙/箱/天花停在最后未阻挡样本，不是整段拒绝。Shove 走 try_shove / ShoveApply，不经 IntentStepper。
 ## 成功 PLAYER 意图写入 SimReplayBuffer（CD-43）；成功占用、成功 try_commit_tick 与成功 try_apply_fall 写入 SYSTEM。PLAYER + SYSTEM 磁带由 TraprushGrayboxTapeReplay 回放到新 course。
-## assemble 记录 tick 0 关键快照；layout 可选 shove_target 生成第二胶囊。try_commit_tick(fall_dy) 先 fall 再 tick，再按调用方周期切换 hazard 阻挡，成功入 SYSTEM 带。
+## assemble 记录 tick 0 关键快照；layout 可选 shove_target 生成第二胶囊。try_commit_tick(fall_dy) 先重力积分再 tick，再按调用方周期切换 hazard 阻挡，成功入 SYSTEM 带。
 ## try_step_intent(payload, jump_dy, support_dy) 把 support_dy 传给 apply；成功 PLAYER 意图入带。Shove 仍失败。
 ## try_shove 委托 ShoveApply；ok 入 PLAYER 带；无目标、解码失败不入带。冷却未就绪 ok 且入带但不位移。不 tick。
 ## try_apply_fall(fall_dy) 委托 try_move_y_until_blocked；成功入 SYSTEM 带，不 tick、不 record。
@@ -1675,6 +1675,45 @@ func test_tape_replay_commit_tick_matches_source_hashes() -> void:
 	_assert_pose(dest, _start_x(), -_whole(2), 0, START_YAW)
 	assert_eq(dest.tape.size(), 1)
 	assert_eq(dest.world.tick_index, 1)
+
+
+func test_tape_replay_jump_arc_matches_source_hashes() -> void:
+	var source: GrayboxCourse = GrayboxCourse.assemble(_valid_layout())
+	var stand_y: int = _whole(4)
+	var jump_dy: int = _whole(2)
+	var support_dy: int = -_whole(1)
+	var accel: int = -_whole(1)
+	_set_pose(source, _start_x(), stand_y, 0, START_YAW)
+	assert_eq(
+		source.world.spawn_static_box(_start_x(), 0, 0, _whole(1), _whole(1), _whole(1)),
+		8
+	)
+	assert_true(_ok(_step_intent(source, {"intent": PlayerIntentNames.JUMP}, jump_dy, support_dy)))
+	_assert_pose(source, _start_x(), stand_y + jump_dy, 0, START_YAW)
+	assert_eq(source.world.get_vy(source.entity_id), jump_dy)
+	var saw_apex: bool = false
+	for _step: int in range(8):
+		assert_true(source.try_commit_tick(accel))
+		var pose: Dictionary = source.world.get_pose(source.entity_id)
+		var pose_y: int = pose.get("y", 0)
+		if pose_y > stand_y + jump_dy:
+			saw_apex = true
+	assert_true(saw_apex)
+	_assert_pose(source, _start_x(), stand_y, 0, START_YAW)
+	assert_eq(source.world.get_vy(source.entity_id), 0)
+	var dest: GrayboxCourse = GrayboxCourse.assemble(_valid_layout())
+	_set_pose(dest, _start_x(), stand_y, 0, START_YAW)
+	assert_eq(
+		dest.world.spawn_static_box(_start_x(), 0, 0, _whole(1), _whole(1), _whole(1)),
+		8
+	)
+	var script: Dictionary = _replay_script(source.world.tick_index)
+	script["jump_dy"] = jump_dy
+	script["support_dy"] = support_dy
+	script["fall_dy"] = 0
+	assert_true(_ok(GrayboxTapeReplay.try_replay(dest, source.tape, script)))
+	_assert_replay_matches(source, dest)
+	assert_eq(dest.world.get_vy(dest.entity_id), 0)
 
 
 func test_tape_replay_apply_fall_matches_source_hashes() -> void:
