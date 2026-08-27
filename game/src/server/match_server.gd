@@ -15,17 +15,15 @@ extends Node
 ## 停止前写库、跨进程核对，以及仅在 `valid_input_tick` 前进时续租。
 ## 心跳本身不续租（CD-44 §3）。
 ## --max-ticks 到达后打印最终心跳并 exit 0；配置非法打印错误事件并 exit 1。
-## 出生偏移、胶囊尺寸、心跳/快照节奏与动作数值（跳跃/支撑/道具伤害与触达/推击）
-## 以及出界 AABB 半宽均为进程内占位桩，不锁产品出生布局、数值或场地尺寸。
-## 跳跃/支撑/道具/推击占位与大厅 Solo / Preview 同值；下落占位与 Solo 同值
-## （Preview 手动 Advance 仍用一格）。
+## 出生偏移、胶囊尺寸与心跳/快照节奏是进程内占位桩，不锁产品出生布局或尺寸。
+## 动作数值（跳跃/支撑/下落/道具伤害与触达/推击）与出界 AABB 半宽来自
+## TraprushPlayStubs，本进程不再自带副本。
 
 const AuthoringDocument := preload("res://src/creator/authoring_document.gd")
 const AuthoringWorld := preload("res://src/creator/authoring_world.gd")
-const Fixed := preload("res://src/shared/fixed/fixed.gd")
 const MatchRealtime := preload("res://src/server/match_realtime.gd")
 const SimulationBundle := preload("res://src/ugc/simulation_bundle.gd")
-const OutOfRangeReset := preload("res://src/games/traprush/out_of_range_reset.gd")
+const PlayStubs := preload("res://src/games/traprush/play_stubs.gd")
 const TraprushMatchSession := preload("res://src/games/traprush/match_session.gd")
 const TraprushMatchSettlement := preload("res://src/games/traprush/match_settlement.gd")
 const TraprushTopologyCompiler := preload("res://src/ugc/traprush_topology_compiler.gd")
@@ -39,24 +37,10 @@ const ERROR_EVENT: String = "match_server_error"
 const HEARTBEAT_EVERY_TICKS: int = 60
 ## 占位快照广播节奏（每 2 个 tick 一帧），不是产品快照频率（CD-43 §4）。
 const SNAPSHOT_EVERY_TICKS: int = 2
-## 占位胶囊半径/身高与出生间隔，不锁产品尺寸或出生布局。
-const CAPSULE_RADIUS: int = 8192
-const CAPSULE_HEIGHT: int = 8192
+## 占位出生间隔，不锁产品出生布局。胶囊尺寸来自 TraprushPlayStubs。
 const SPAWN_STRIDE: int = 32768
 ## 占位仿真种子；对局种子由控制面下发是后续章节。
 const MATCH_SEED: int = 1
-## 占位动作数值，与大厅 Solo / Preview 壳对齐，不是产品跳跃高度、重力或爆破表。
-## support_dy 为负：与灰盒相同，向下探测立足固体。
-## jump_dy 为 SCALE/4：一格 hop 会与 course_01 出生点正上方 two_way 盒闭区间相交并落地。
-## fall_dy 为 -SCALE/16：与大厅 play_move_step 同量。引擎 ~60 physics tick/s，
-## 一格每 tick 会在约 8 帧内触发出界复位，看起来像往上弹回出生点。Preview 壳
-## 仍用 -SCALE（手动 Advance tick）。不是产品重力。
-const STUB_JUMP_DY: int = Fixed.SCALE / 4
-const STUB_SUPPORT_DY: int = -Fixed.SCALE
-const STUB_FALL_DY: int = -Fixed.SCALE / 16
-const STUB_USE_ITEM_DAMAGE: int = 1
-## 占位推击步长（四分之一格）与冷却 tick，不是产品力度或冷却秒数。
-const STUB_SHOVE_COOLDOWN_TICKS: int = 1
 
 var _session: TraprushMatchSession = null
 var _realtime: MatchRealtime = null
@@ -263,22 +247,13 @@ static func boot_session(config: Dictionary) -> TraprushMatchSession:
 		MATCH_SEED,
 		players,
 		_spawn_offsets(players),
-		CAPSULE_RADIUS,
-		CAPSULE_HEIGHT
+		PlayStubs.CAPSULE_RADIUS,
+		PlayStubs.CAPSULE_HEIGHT
 	)
 	if session == null:
 		return null
-	session.jump_dy = STUB_JUMP_DY
-	session.support_dy = STUB_SUPPORT_DY
-	session.fall_dy = STUB_FALL_DY
-	session.use_item_damage = STUB_USE_ITEM_DAMAGE
-	session.use_item_reach_dx = 0
-	session.use_item_reach_dy = 0
-	session.use_item_reach_dz = Fixed.SCALE
-	session.shove_step = Fixed.SCALE / 4
-	session.shove_cooldown_ticks = STUB_SHOVE_COOLDOWN_TICKS
-	## 开发桩半宽 ±8 格，不是产品场地尺寸。官方赛道最大约 4 格。
-	session.enable_play_range(OutOfRangeReset.STUB_HALF)
+	## 动作占位数值与出界半宽都来自单一配置源；本进程不再自带一份副本。
+	PlayStubs.apply_match(session)
 	return session
 
 

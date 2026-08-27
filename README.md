@@ -4,7 +4,7 @@ Godot 4 + UGC 双玩法（TRAPRUSH / BASTION）项目 Monorepo。代码与仓库
 
 - 工程规则入口：[AGENTS.md](AGENTS.md)
 - 规范唯一事实源：[Confirmed-docs](Confirmed-docs/README.md)
-- 当前阶段：**纠偏冻结中**。2026-08-26 第三方审视（[docs/audits/2026-08-26-audit.md](docs/audits/2026-08-26-audit.md)）判定「工程纪律罕见优秀，但已经跑偏了赛道」，人类已拍板：纠偏完成前不进行原计划中新的功能开发。可开工范围、占位常量冻结清单与解除条件 E1–E14 见 [纠偏方案 2026-08](docs/plans/course-correction-2026-08.md)，对 Agent 生效的版本在 `.cursor/rules/`。C0 闸门已落地；C1 已产出 Windows / Linux Headless / Web 三个导出预设与[导出包核查清单](docs/runbooks/desktop-export-check.md)。本刀是 C1 第二章：`infra/compose/` 的远端部署产物、客户端指向远端服务器的三条入口与[远端部署手册](docs/runbooks/server-deploy.md)；**实际部署与网络 / 资源基线待人类在自备测试机执行**，compose 尚未真构建过。
+- 当前阶段：**纠偏冻结中**。2026-08-26 第三方审视（[docs/audits/2026-08-26-audit.md](docs/audits/2026-08-26-audit.md)）判定「工程纪律罕见优秀，但已经跑偏了赛道」，人类已拍板：纠偏完成前不进行原计划中新的功能开发。可开工范围、占位常量冻结清单与解除条件 E1–E14 见 [纠偏方案 2026-08](docs/plans/course-correction-2026-08.md)，对 Agent 生效的版本在 `.cursor/rules/`。C0 闸门已落地；C1 已产出 Windows / Linux Headless / Web 三个导出预设、[导出包核查清单](docs/runbooks/desktop-export-check.md)、`infra/compose/` 的远端部署产物、客户端指向远端服务器的三条入口与[远端部署手册](docs/runbooks/server-deploy.md)，但**实际部署与网络 / 资源基线仍待人类在自备测试机执行**，compose 尚未真构建过。本刀是 C2 第一章：`--bot-run` 让 bot 在权威仿真上真的走一遍三张官方课并给出可重放的路线，同时把散在四处的动作与胶囊占位桩收敛进 `game/src/games/traprush/play_stubs.gd`（冻结令 §3 的配套义务）。
 - 冻结前进度：M3 进行中（2026-08-24 启动）。已落地对局多人仿真循环、二进制协议 v1、对局进程仿真入口、实时回路、网关代理、控制面真票据、MatchHost 自动登记、等待 listen 后登记、停止后注销、真匹配/房间码、FIFO 等待队列、客户端匹配入场、权威快照与赛道几何 / 可破坏箱 / 传送连线 / 检查点顺序 / 直播名次表现映射、机关狂奔离线单人试玩、对局命令门禁、全员冲线单局结算写库、断线重连补票、官方赛道选择、人数按场下发、对局快照插值、对局本席移动预测、对局进程动作数值占位桩、对局大厅本席摄像机跟随、对局大厅本席移动朝向、对局大厅本席分色、对局大厅本席检查点占用高亮、对局大厅本席冲线闭环表现、对局大厅本席复位与楼层/箱子 HUD、大厅只读结算面板、对局大厅本席预测避开最新权威固体、真人命令才续租、网关进程内 TLS、权威 Move 位移门禁、对局基础推击（无线上目标 id，服务端推最近其它胶囊，大厅 F）、出界复位（Preview + 对局，开发桩 ±8 格，环境失败后无限复活到最近检查点）；周期机关已进 v1 拓扑（`hazards` 袋用已有 `cooldown_ticks` 切换固体）；对局大厅周期机关表现映射（洋红占位盒，显隐跟固体半周期，HUD `hazards=n/m`）；开发机运行体验（空格走 `jump` 而不是点 Solo play / Play；F5/F6 外框与 Traprush/Preview 窗默认更大并最大化；打开编辑器时若本机已安装 Godot AI 则自动启用）；固定固体占用（`zone.tags` 含 `solid` 编进 v1 可空 `solids` 袋；大厅/Preview 石色 1 米占位；HUD `solids=n/m`）；官方赛道占用（三张课各 1 个石色固体与 1 个洋红周期机关；不挡必经路）；编辑器 Place finish（工具条用已有 `place` 摆金色终点占用；第二份终点仍写入、编译拒绝）；官方赛道立足固体与 Jump（出生点正下一格石色盒；空格在 Solo / Preview 真跳约四分之一格）。本刀为权威下落接到对局 / Solo / Preview（对局/Solo 占位每 tick 十六分之一格；Preview Advance 才落地；同一拍 Jump 不被立刻落下；不锁产品重力）。进度见 [CD-61](Confirmed-docs/60-plan/61-milestones.md)。
 
 ## 目录
@@ -79,6 +79,21 @@ export GODOT_AI_DISABLE_TELEMETRY=true
 | Headless 启动主场景 | `& $env:GODOT4_CONSOLE --headless --path game --quit` | `"$GODOT4" --headless --path game --quit` |
 | 单文件语法与类型检查 | `& $env:GODOT4_CONSOLE --headless --path game --check-only -s res://src/client/main.gd` | `"$GODOT4" --headless --path game --check-only -s res://src/client/main.gd` |
 | 运行 GUT 单元测试 | `& $env:GODOT4_CONSOLE --headless --path game -s res://addons/gut/gut_cmdln.gd -gdir=res://tests/unit -gexit` | `"$GODOT4" --headless --path game -s res://addons/gut/gut_cmdln.gd -gdir=res://tests/unit -gexit` |
+| 官方赛道能不能走通 | `& $env:GODOT4_CONSOLE --headless --path game -- --bot-run` | `"$GODOT4" --headless --path game -- --bot-run` |
+
+### 赛道能不能走通（BotRunner）
+
+`--bot-run` 让一个 bot 在权威仿真上真的走一遍官方赛道，每张课打印一行 JSON，最后一行汇总，任一张走不通就 exit 1。
+
+```powershell
+& $env:GODOT4_CONSOLE --headless --path game -- --bot-run                       # 三张官方课
+& $env:GODOT4_CONSOLE --headless --path game -- --bot-run --course=course_03    # 只跑一张
+& $env:GODOT4_CONSOLE --headless --path game -- --bot-run --max-ticks=6000      # 放宽预算
+```
+
+`outcome=completable` 时同时给出走通用的动作序列，可以照着重放复验。**`not_completable` 不等于「人也过不去」**：bot 的动作集是离散的（八向各走一整格、跳、用道具、等一 tick），`reason` 会说明是搜索穷尽（`search_exhausted`，较强）还是预算先用完（`budget_exhausted`，只说明没搜完）。完整边界见 `game/src/games/traprush/course_completion_probe.gd` 文件头。
+
+跑得不快，这是权威仿真本身的开销：开发机上一次 `commit_tick` 约 8 ms，一次整格移动约 27 ms（胶囊半径决定扫掠要走八步）。会话没有快照/恢复接口，搜索每展开一步都要从头重放。当前三张课分别约 6 / 4 / 36 秒。这些是 Windows 开发机 debug 解释器的数字，不是产品性能指标，也还没在导出包或 Linux 服务器上量过。
 
 ### 导出
 

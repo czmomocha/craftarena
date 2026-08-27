@@ -14,10 +14,12 @@ extends RefCounted
 ## items, finish, pads, and doors are not predicted and are not solids.
 ## Overflow snaps to latest.
 
+const PlayStubsGd := preload("res://src/games/traprush/play_stubs.gd")
+
 const MAX_SLOT: int = 7
 const YAW_OMITTED: int = -1
-const CAPSULE_RADIUS: int = 8192
-const CAPSULE_HEIGHT: int = 8192
+const CAPSULE_RADIUS: int = PlayStubsGd.CAPSULE_RADIUS
+const CAPSULE_HEIGHT: int = PlayStubsGd.CAPSULE_HEIGHT
 
 var own_slot: int = -1
 var origin_tick: int = -1
