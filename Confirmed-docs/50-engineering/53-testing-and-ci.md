@@ -253,6 +253,8 @@ AI 生成代码必须比普通手写代码有**更强的自动化证据**，因�
 | 语法与类型检查 | 已启用 | 逐个 `.gd` 文件跑 `--check-only`（`game/src`、`game/tests`、`game/addons/authoring_editor`；不含 GUT）；`backend/`、`tools/` 跑 `tsc --noEmit` |
 | 核心目录警告视为错误 | 已启用 | GDScript 由 `project.godot` 全局配置（[ADR-0001](../../docs/adr/0001-strict-gdscript-typing-gate.md)）并由 GUT 断言守护；TypeScript 由 `tsconfig.json` 的 strict 系列保证 |
 | 单元测试 | 已启用（全量，非"受影响"） | GUT 跑 `res://tests/unit`；后端跑 `node --test` |
+| 集成测试 | 已启用（每次 PR，非独立 daily） | GUT 跑 `res://tests/integration`：AuthoringWorld 编译进双人 Headless 冲线、Preview 安全 Tick、离线不写库、进程内断线再占。不是多 OS 进程、不是真 socket |
+| 回放测试 | 已启用（每次 PR，非独立 daily） | GUT 跑 `res://tests/replay`：官方课同磁带同哈希 / 同快照字节；改磁带或换课则分叉。环形缓冲只存哈希，**不能**从快照恢复世界再继续 |
 | Schema 验证 | 已启用（L0 信封 + Component Schema v1 + AuthoringDocument + SimulationBundle） | `tools/content-validator/` 对 `backend/contracts/schemas/` 做正反例（含 `component_record`、`authoring_document` 与 `simulation_bundle`），并由根目录 `npm test` 收集。未覆盖 Rule VM 图。未引入 Ajv（新依赖属宪法第十八条人类门禁）。字段名单见 [CD-42 §1.2](../40-technical/42-contracts-and-rulevm.md#12-字段标识符v1)、[CD-32 §1.4](../30-ugc/32-editor-and-preview.md#14-共同数据模型) 与 [CD-42 §3.4](../40-technical/42-contracts-and-rulevm.md#34-实现落点) |
 | 禁止 API 和依赖检查 | 已启用（宪法红线子集） | `tools/redline-scanner/` + CI step `npm run redline-scan`：`simulation/` 禁 SceneTree/`float`、共享核心禁 `.gdextension`、`game/src` 禁 Godot 3 高信号符号、`game/` 禁 `.cs`/`.csproj`/`.sln`（GUT 仍保留同一条）。Godot 3 黑名单是[官方更名表](https://docs.godotengine.org/en/stable/tutorials/migrating/upgrading_to_godot_4.html)的高信号子集，不是穷尽。第二十三条仍由 ADR-0001 覆盖 |
 | 编辑文件的 linter 诊断 | 未实现 | 依赖开发机 IDE，未进 CI |
@@ -271,11 +273,32 @@ AI 生成代码必须比普通手写代码有**更强的自动化证据**，因�
 - 固定回放；
 - UGC Golden Content。
 
+#### 当前实现状态
+
+上面是目标清单。仓库**没有**独立的每日 cron；下面每项是否被每次 PR 的 CI 覆盖，以本表为准。按宪法第二十四条，未标「已启用」的不得描述为已覆盖。
+
+| 门禁项 | 状态 | 实现方式 |
+|---|---|---|
+| 全量 GUT | 已启用（每次 PR，不是每日定时） | 与 [§4.1](#41-每次变更) 同一 GUT 步骤，目录为 `unit` + `integration` + `replay`。没有 nightly workflow |
+| Headless 多客户端集成 | 部分 | `game/tests/integration/test_traprush_authoring_to_match.gd` 用进程内 `MatchRealtime` 跑官方 `course_01` 双人冲线。不是两个 OS 客户端、不是真 WebSocket。真多机仍是 [§2.5](#25-网络仿真人工清单非门禁) 人工清单 |
+| 固定回放 | 部分 | `game/tests/replay/test_traprush_official_tape_replay.gd`：同课同种子同磁带 → 同 `hash_state` 与同快照字节。没有独立回放文件格式；`SimSnapshotRing` 只存哈希，不能恢复执行 |
+| UGC Golden Content | 未实现 | 官方三张课有 unit 解码 / 编译断言，没有独立 `tests/content/` golden 门禁。C2 不把 `--bot-run` 接进 CI |
+
 ### 4.3 每周
 
 - 依赖与许可证变化检查；
 - Windows/Android 导出烟测；
 - 内容发布和回滚演练。
+
+#### 当前实现状态
+
+没有 weekly workflow。新依赖仍属宪法第十八条人类门禁。
+
+| 门禁项 | 状态 | 实现方式 |
+|---|---|---|
+| 依赖与许可证变化检查 | 未实现 | 无自动化 diff。引入依赖必须人类批准；许可证不进 CI |
+| Windows/Android 导出烟测 | 未实现 | C1 有 Windows / Linux Headless / Web 导出预设与[包内核查清单](../../docs/runbooks/desktop-export-check.md)，人工跑，不在 CI。不做 Android 导出（纠偏方案 C1 不做移动端） |
+| 内容发布和回滚演练 | 未实现 | M4 冻结；无签名发布管线、无 `latest` 指针演练 |
 
 ### 4.4 发布候选
 
@@ -286,6 +309,20 @@ AI 生成代码必须比普通手写代码有**更强的自动化证据**，因�
 - 回滚演练通过；
 - 项目负责人完成玩法清单签署；
 - 人类完成安全与发布确认。
+
+#### 当前实现状态
+
+没有发布候选流水线。一期尚未到可发布状态（[CD-63 §4](../60-plan/63-open-decisions.md) 阻断清单仍在）。
+
+| 门禁项 | 状态 | 实现方式 |
+|---|---|---|
+| 全量平台烟测 | 未实现 | CI 只跑 Linux runner。Windows / macOS 引擎行为靠开发机[环境烟测清单](../../docs/runbooks/environment-smoke-test.md) 人工执行 |
+| 零阻断级错误 | 未实现 | 无发布候选闸门；PR 合入只要求 §4.1 已启用项全绿 |
+| 回放一致 | 部分 | 与 §4.2「固定回放」同一批每次-PR 用例，不是发布专用回放包 |
+| 新旧内容版本并存 | 未实现 | 无内容平台、无双版本房 |
+| 回滚演练通过 | 未实现 | 同 §4.3 |
+| 玩法清单签署 | 未实现 | 重力与道具仍缺（C3）；人类可玩性结论尚未发生 |
+| 人类安全与发布确认 | 未实现 | 正式公开运营前阻断清单见 CD-63 §4 |
 
 ### 4.5 PR 合并规则
 
