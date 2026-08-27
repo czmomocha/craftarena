@@ -20,6 +20,7 @@ const MatchPlaySession := preload("res://src/client/match_play_session.gd")
 const MatchSnapshotMap := preload("res://src/client/match_snapshot_map.gd")
 const MatchStandingMap := preload("res://src/client/match_standing_map.gd")
 const MatchCourseMap := preload("res://src/client/match_course_map.gd")
+const ServerEndpointGd := preload("res://src/client/server_endpoint.gd")
 const SharedComponentRecord := preload("res://src/shared/schema/component_record.gd")
 const TraprushTopologyCompiler := preload("res://src/ugc/traprush_topology_compiler.gd")
 const AuthoringWorld := preload("res://src/creator/authoring_world.gd")
@@ -1088,6 +1089,86 @@ func test_online_floor_uses_authority_y_not_interp() -> void:
 	assert_true(_shell.try_cancel())
 	assert_false(_shell.status_label_text().contains("floor="))
 	assert_false(_shell.status_label_text().contains("crates=1/1"))
+
+
+func test_server_field_retargets_both_bases_while_idle() -> void:
+	_shell = _open_shell()
+	assert_eq(_shell.control_plane_base, ServerEndpointGd.DEFAULT_CONTROL_PLANE)
+	assert_eq(_shell.gateway_base, ServerEndpointGd.DEFAULT_GATEWAY)
+	assert_eq(_shell.server_host_text(), "127.0.0.1")
+	assert_true(_shell.status_label_text().contains("server=127.0.0.1"))
+	assert_false(_shell.status_label_text().contains("gw="))
+	_shell.set_server_host_text("203.0.113.9")
+	assert_true(_shell.try_apply_server_host())
+	assert_eq(_shell.control_plane_base, "http://203.0.113.9:8080")
+	assert_eq(_shell.gateway_base, "ws://203.0.113.9:8090")
+	assert_true(_shell.status_label_text().contains("server=203.0.113.9"))
+	assert_false(_shell.status_label_text().contains("server_error="))
+
+
+func test_rejected_server_host_keeps_current_bases_and_shows_error() -> void:
+	_shell = _open_shell()
+	_shell.set_server_host_text("203.0.113.9:9000")
+	assert_false(_shell.try_apply_server_host())
+	assert_eq(_shell.control_plane_base, ServerEndpointGd.DEFAULT_CONTROL_PLANE)
+	assert_eq(_shell.gateway_base, ServerEndpointGd.DEFAULT_GATEWAY)
+	assert_true(_shell.status_label_text().contains("server=127.0.0.1"))
+	assert_true(_shell.status_label_text().contains("server_error="))
+	assert_true(_shell.status_label_text().contains("--control-plane"))
+	_shell.set_server_host_text("203.0.113.9")
+	assert_true(_shell.try_apply_server_host())
+	assert_eq(_shell.control_plane_base, "http://203.0.113.9:8080")
+	assert_false(_shell.status_label_text().contains("server_error="))
+
+
+func test_server_field_refused_mid_session_and_allowed_after_cancel() -> void:
+	_shell = _open_shell()
+	assert_true(_shell.try_solo())
+	assert_false(_shell.try_apply_server_host("203.0.113.9"))
+	assert_eq(_shell.control_plane_base, ServerEndpointGd.DEFAULT_CONTROL_PLANE)
+	assert_eq(_shell.gateway_base, ServerEndpointGd.DEFAULT_GATEWAY)
+	assert_true(_shell.try_cancel())
+	assert_true(_shell.try_apply_server_host("203.0.113.9"))
+	assert_eq(_shell.control_plane_base, "http://203.0.113.9:8080")
+	assert_eq(_shell.gateway_base, "ws://203.0.113.9:8090")
+
+
+func test_server_field_refused_while_online_ticket_is_live() -> void:
+	_shell = _open_shell()
+	assert_true(_shell.try_quick())
+	assert_true(_shell.accept_http(201, _join("ABCD23", "ticket-endpoint")))
+	assert_eq(_shell.play.state, MatchPlaySession.STATE_CONNECTING)
+	assert_false(_shell.try_apply_server_host("203.0.113.9"))
+	assert_eq(_shell.control_plane_base, ServerEndpointGd.DEFAULT_CONTROL_PLANE)
+	assert_eq(_shell.play.websocket_url, "ws://127.0.0.1:8090/ws?ticket=ticket-endpoint")
+
+
+func test_apply_endpoint_syncs_bases_field_and_hud() -> void:
+	_shell = _open_shell()
+	var resolved: ServerEndpointGd = ServerEndpointGd.resolve(
+		PackedStringArray(["--server=198.51.100.7"])
+	)
+	assert_true(_shell.apply_endpoint(resolved))
+	assert_eq(_shell.control_plane_base, "http://198.51.100.7:8080")
+	assert_eq(_shell.gateway_base, "ws://198.51.100.7:8090")
+	assert_eq(_shell.server_host_text(), "198.51.100.7")
+	assert_true(_shell.status_label_text().contains("server=198.51.100.7"))
+	assert_false(_shell.status_label_text().contains("gw="))
+	assert_false(_shell.apply_endpoint(null))
+
+
+func test_split_endpoint_shows_gateway_host_separately() -> void:
+	_shell = _open_shell()
+	var resolved: ServerEndpointGd = ServerEndpointGd.resolve(
+		PackedStringArray(
+			["--server=198.51.100.7", "--gateway=ws://198.51.100.8:8090"]
+		)
+	)
+	assert_true(_shell.apply_endpoint(resolved))
+	assert_eq(_shell.control_plane_base, "http://198.51.100.7:8080")
+	assert_eq(_shell.gateway_base, "ws://198.51.100.8:8090")
+	assert_true(_shell.status_label_text().contains("server=198.51.100.7"))
+	assert_true(_shell.status_label_text().contains("gw=198.51.100.8"))
 
 
 func _open_shell() -> MatchLobbyShell:

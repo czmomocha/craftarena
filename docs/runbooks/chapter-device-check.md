@@ -22,7 +22,7 @@
 
 ## 共用启动（大厅窗口）
 
-机关狂奔匹配大厅是代码创建的 `Window`，标题 **Traprush**。第一行是状态 Label。按钮（从左到右）：**Quick play**、**Create room**、**Join room**、**Solo play**、**Cancel**、**Poll**。其下三个输入框：房间码（placeholder `Room code`）、课程 id（默认 `course_01`）、人数（默认 `2`）。窗口里的 3D：本席玩家盒是青色（`OWN_ALBEDO`），远端玩家盒仍是海军蓝（`REMOTE_ALBEDO`）；橙色盒是可破坏箱；洋红盒是周期机关（固体半周期才出现；官方赛道出生点 −Z 1 个）；石色盒是固定固体占用（始终显示；官方赛道出生点 −X 1 个、正下方 1 个）；垫 / 门 / 终点是赛道占位盒（未开玩时垫是原绿、终点是原金；开玩后本席已验收垫是暗绿，当前目标垫是亮薄荷；全部垫完成后终点变亮金，冲线后变暗金）；条是传送连线与检查点顺序 gizmos。玩家盒上方有名次 Label；本席名次标以 `*` 开头。开玩时状态行含 `pads=n/m`、`floor=n`、`finish=n`、`crates=n/m`、`hazards=n/m` 与 `solids=n/m`。
+机关狂奔匹配大厅是代码创建的 `Window`，标题 **Traprush**。第一行是状态 Label。按钮（从左到右）：**Quick play**、**Create room**、**Join room**、**Solo play**、**Cancel**、**Poll**。其下一行是服务器地址：输入框（placeholder `Server host`，默认填当前控制面主机）加 **Apply server** 按钮。再往下三个输入框：房间码（placeholder `Room code`）、课程 id（默认 `course_01`）、人数（默认 `2`）。窗口里的 3D：本席玩家盒是青色（`OWN_ALBEDO`），远端玩家盒仍是海军蓝（`REMOTE_ALBEDO`）；橙色盒是可破坏箱；洋红盒是周期机关（固体半周期才出现；官方赛道出生点 −Z 1 个）；石色盒是固定固体占用（始终显示；官方赛道出生点 −X 1 个、正下方 1 个）；垫 / 门 / 终点是赛道占位盒（未开玩时垫是原绿、终点是原金；开玩后本席已验收垫是暗绿，当前目标垫是亮薄荷；全部垫完成后终点变亮金，冲线后变暗金）；条是传送连线与检查点顺序 gizmos。玩家盒上方有名次 Label；本席名次标以 `*` 开头。开玩时状态行含 `pads=n/m`、`floor=n`、`finish=n`、`crates=n/m`、`hazards=n/m` 与 `solids=n/m`。
 
 ### 0.1 后端（本刀需要在线入场时）
 
@@ -47,56 +47,71 @@ Worktree 端口偏移见 README「并行工作区」；本文件不复述端口�
 
 也可以先 `& $env:GODOT4 --editor --path game` / `"$GODOT4" --editor --path game`，再在编辑器里运行主场景。
 
-预期：出现标题为 **Traprush** 的窗口；状态行含 `join=idle`、`play=idle`、`tls=off`、`course=3/2/1`（默认 `course_01` 的垫/门/终点占位）。失败：没有窗口、立刻退出、或只有 Headless 日志。
+预期：出现标题为 **Traprush** 的窗口；状态行含 `join=idle`、`play=idle`、`tls=off`、`server=127.0.0.1`、`course=3/2/1`（默认 `course_01` 的垫/门/终点占位）。失败：没有窗口、立刻退出、或只有 Headless 日志。
 
 操作：WASD 移动，空格跳跃（大厅按钮不抢空格），Q 或鼠标左键使用道具（打碎眼前箱），F 基础推击（推开邻座胶囊，无线上目标 id），R 重置到最近已验收检查点。点窗口内部一次，确保键盘焦点在游戏窗口而不是终端。
 
 ---
 
-## 本刀：纠偏 C1 第一章 — 导出预设与包内核查
+## 本刀：纠偏 C1 第二章 — 远端部署与客户端指向远端
 
-对应：当前完整章节 PR。这是本项目**第一次真正离开开发机**，所以「真机」在本刀里指**导出的安装包**，不是编辑器运行源码。
+对应：当前完整章节 PR。这一章闭合的是「服务器能被拉起 → 客户端能指过去 → 一局能打完并写库 → 基线能采下来」。
 
-前置：先按[导出包核查清单](desktop-export-check.md) §1 装好 4.7.2-stable 导出模板并核对 SHA512。本刀不需要三后端。
+分两段验：**A 段在开发机上就能做完**（客户端这一侧），**B 段需要你在自备测试机上部署**（服务端那一侧，走 [`server-deploy.md`](server-deploy.md)）。A 段全绿只证明客户端能指过去，不证明部署成立。
 
-### 1. 三个预设都能导出
+本刀 A 段不需要三后端，也不需要 Docker。
 
-仓库根依次执行（macOS 把 `& $env:GODOT4_CONSOLE` 换成 `"$GODOT4"`）：
-
-```powershell
-& $env:GODOT4_CONSOLE --headless --path game --export-release "Windows Desktop" "../export/windows/CraftArena.exe"
-& $env:GODOT4_CONSOLE --headless --path game --export-release "Linux Headless" "../export/linux-headless/craftarena-server.x86_64"
-& $env:GODOT4_CONSOLE --headless --path game --export-release "Web" "../export/web/index.html"
-```
-
-预期：三条退出码都是 0，`export/` 下出现 `CraftArena.exe` + `.pck`、`craftarena-server.x86_64` + `.pck`、以及 9 个 Web 文件。失败：出现 `Cannot export project with preset ... due to configuration errors`（引擎不会列出具体项，见核查清单 §5 第 2 条）。
-
-### 2. 包内自检必须 `ok=true`
+### A1. 大厅多了服务器地址一行
 
 ```powershell
-& "export\windows\CraftArena.exe" --headless -- --package-check
+& $env:GODOT4 --path game
 ```
 
-预期：打印一行 JSON，含 `"ok":true`、`"failures":[]`、`"template_build":true`、`"packed_addons":[]`，退出码 0。失败：`failures` 非空——尤其 `no_godot_ai_packed`，那意味着 Godot AI 插件又漏进了玩家包。
+预期：**Quick play** 那排按钮下面多一行：一个 placeholder 为 `Server host` 的输入框（已填 `127.0.0.1`）加一个 **Apply server** 按钮。状态行里出现 `server=127.0.0.1`，没有 `gw=`，没有 `server_error=`。
 
-### 3. 双击运行 Windows 包，开窗并能跳
+失败：看不到那一行（UI 没挂上），或状态行没有 `server=`（HUD 没接上）。
 
-1. 双击 `export\windows\CraftArena.exe`（**不加** `--headless`）。
-2. 预期：出现标题 **Traprush** 的窗口，状态行含 `join=idle`、`play=idle`、`tls=off`、`course=3/2/1`。失败：闪退、黑窗、或只有控制台。
-3. 点 **Solo play**，点窗口内部一次，按 WASD 移动、空格跳跃。预期：青色本席盒会动、会跳、会落回脚下石色盒，与编辑器里跑源码时一致。
-4. 与 `& $env:GODOT4 --path game` 的画面并排比一次颜色与明暗。预期：一致。失败：包里的盒子发白、发黑或颜色不同——那是 Compatibility 下运行时创建材质的问题，Headless 自检查不出来。
-
-### 4. Web 包能在浏览器里开到大厅
+### A2. 命令行能把它指到别处
 
 ```powershell
-python -m http.server 8060 --directory export\web
+& $env:GODOT4 --path game -- --server=203.0.113.9
 ```
 
-浏览器开 `http://127.0.0.1:8060/`。预期：加载条走完后出现同一个大厅画面，能点 **Solo play**。失败：白屏（多半是改了 `variant/thread_support` 却没给服务端配 COOP / COEP 响应头）。
+`203.0.113.9` 是文档保留地址，连不上是预期的——这一步只验地址有没有指过去，不验能不能连。
+
+预期：状态行 `server=203.0.113.9`，输入框里也变成同一个值。
+
+失败：仍是 `127.0.0.1`。最常见的原因是漏了中间那个 `--`，引擎会把参数当成自己的吃掉。
+
+### A3. 填错地址必须看得见，而且不改生效值
+
+1. 在 A1 那个窗口里，把输入框内容改成 `203.0.113.9:9000`（带端口），点 **Apply server**。
+2. 预期：状态行出现 `server_error=`，后面那句话里含 `--control-plane`（告诉你端口该怎么给），并且 `server=` **仍然是 `127.0.0.1`**。
+3. 失败：`server=` 变了。那意味着一个被拒的地址仍然生效了——真机排查时会表现为「服务器没反应」，而不是「地址写错了」，这正是本章要避免的那类误导。
+4. 再把输入框改成 `203.0.113.9`（不带端口），点 **Apply server**。预期：`server=203.0.113.9`，`server_error=` 消失。
+
+### A4. 对局途中不能换服务器
+
+1. 点 **Solo play** 开始离线试玩。
+2. 把输入框改成 `198.51.100.1`，点 **Apply server**。
+3. 预期：`server=` **不变**。切服务器会让 join 与 play 两个状态描述不同的机器，所以要先 **Cancel**。
+4. 点 **Cancel** 后再点 **Apply server**。预期：这次生效。
+
+### B. 远端部署与双机对局
+
+照 [`server-deploy.md`](server-deploy.md) 从 §1 走到 §12。那份手册里每一步都有预期与失败。要交回来的东西：
+
+1. §7 第 5 步那条 SQL 查询的输出（证明结算真的落库了，不只是客户端 GET 到了东西）；
+2. 两台机器各一张 `play=in_match` 截图；
+3. §8 的 RTT / 丢包 / 抖动统计输出；
+4. §9 的 `docker stats` 与容器内 `ps` 输出，附 `nproc`；
+5. **§12 那张表**——这是 C1 的主要产出，比前四条都重要。
+
+**已知**：`infra/compose/` 的 compose 与 Dockerfile **从未在任何机器上真构建过**（本开发机没有 Docker）。按 C1 第一章第一次真导出的经验，第一次真构建大概率会证伪一两个假设。构建失败**不算本章跑偏**，请把失败原因记下来——那和基线数据同样是产出。
 
 ### 本刀不测
 
-- 联机：属 C1 部署那一章（`docs/runbooks/server-deploy.md`）。测试期远端走明文 `http`/`ws`，不把域名或 `wss://` 当本章前提；
-- Linux Headless 包在测试机上跑：同上，不绑定某台机器的 IP；
-- 移动端导出、代码签名、安装器、自动更新；
+- 域名、Let's Encrypt、`wss://`：D11 已把它们移出 C1，公开运营前再做；
+- Web 包联机：浏览器不接受明文 `ws` 混用，属证书那一批；
+- 网络参数的实际修改：本章只**采集**并列出哪些不成立，改值是 C3；
 - 任何玩法数值、重力、道具——那是 C3。

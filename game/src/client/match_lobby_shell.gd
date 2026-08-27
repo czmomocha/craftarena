@@ -58,6 +58,11 @@ extends Node
 ## Quick play / create room send an official course id and seats;
 ## join-by-code follows the room's course and remounts maps from that response.
 ## Solo play reuses the course selector only (always one local player).
+## ServerEndpoint resolves the control-plane and gateway bases from the command
+## line and the environment; the server field retargets them at runtime while
+## idle. HUD shows server=host, gw=host when the two differ, and
+## server_error= for a rejected address, so a mistyped host reads as a bad
+## address instead of a dead server.
 ## No BASTION, accounts, settlement writes, ghosts, or offline writes.
 
 const MatchFrameCodec := preload("res://src/shared/protocol/match_frame_codec.gd")
@@ -77,13 +82,14 @@ const MatchStandingMapGd := preload("res://src/client/match_standing_map.gd")
 const OfficialTraprushCoursesGd := preload("res://src/shared/official_traprush_courses.gd")
 const OutOfRangeResetGd := preload("res://src/games/traprush/out_of_range_reset.gd")
 const PlayerIntentNames := preload("res://src/shared/commands/player_intent_names.gd")
+const ServerEndpointGd := preload("res://src/client/server_endpoint.gd")
 
 const TITLE: String = "Traprush"
 const WINDOW_SIZE: Vector2i = Vector2i(1280, 720)
 const WINDOW_MIN_SIZE: Vector2i = Vector2i(960, 540)
 const DEFAULT_COURSE: String = "res://content/official/traprush/course_01.json"
-const DEFAULT_CONTROL_PLANE: String = "http://127.0.0.1:8080"
-const DEFAULT_GATEWAY: String = "ws://127.0.0.1:8090"
+const DEFAULT_CONTROL_PLANE: String = ServerEndpointGd.DEFAULT_CONTROL_PLANE
+const DEFAULT_GATEWAY: String = ServerEndpointGd.DEFAULT_GATEWAY
 const DEFAULT_QUEUE_POLL_S: float = 1.0
 const QUICK_NAME: String = "QuickPlay"
 const CREATE_NAME: String = "CreateRoom"
@@ -94,6 +100,8 @@ const POLL_NAME: String = "Poll"
 const ROOM_NAME: String = "RoomCode"
 const COURSE_ID_NAME: String = "CourseId"
 const SEATS_NAME: String = "Seats"
+const SERVER_NAME: String = "ServerHost"
+const APPLY_SERVER_NAME: String = "ApplyServer"
 const _STATUS_NAME: String = "Status"
 const _MAP_NAME: String = "SnapshotMap"
 const _COURSE_NAME: String = "CourseMap"
@@ -129,6 +137,7 @@ var standings: MatchStandingMapGd = null
 var window: Window = null
 var live_io: bool = false
 var web_platform: bool = false
+var endpoint: ServerEndpointGd = null
 var control_plane_base: String = DEFAULT_CONTROL_PLANE
 var gateway_base: String = DEFAULT_GATEWAY
 var course_path: String = DEFAULT_COURSE
@@ -144,6 +153,7 @@ var _status: Label = null
 var _room_edit: LineEdit
 var _course_edit: LineEdit = null
 var _seats_edit: LineEdit = null
+var _server_edit: LineEdit = null
 var _http: HTTPRequest = null
 var _http_busy: bool = false
 var _peer: WebSocketPeer = null
@@ -161,6 +171,7 @@ static func create() -> MatchLobbyShell:
 	shell.join = MatchJoinSessionGd.create()
 	shell.play = MatchPlaySessionGd.new()
 	shell.offline = MatchOfflineSessionGd.new()
+	shell.endpoint = ServerEndpointGd.new()
 	shell.web_platform = OS.has_feature("web")
 	return shell
 
@@ -246,6 +257,55 @@ func selected_seats() -> int:
 	if not raw.is_valid_int():
 		return 0
 	return OfficialTraprushCoursesGd.normalize_seats(raw.to_int())
+
+
+## Boot-time injection. `main.gd` resolves the endpoint from the command line
+## and the environment; tests build one directly.
+func apply_endpoint(next: ServerEndpointGd) -> bool:
+	if next == null:
+		return false
+	endpoint = next
+	control_plane_base = next.control_plane
+	gateway_base = next.gateway
+	_sync_server_edit()
+	_refresh_status()
+	return true
+
+
+func server_host_text() -> String:
+	if _server_edit == null:
+		return ServerEndpointGd.host_of(control_plane_base)
+	return _server_edit.text
+
+
+func set_server_host_text(text: String) -> void:
+	if _server_edit != null:
+		_server_edit.text = text
+
+
+## Retargets both bases at another machine while idle. Refused mid-session on
+## purpose: swapping the control plane under a live ticket leaves the join and
+## play states describing two different servers, which reads as a bug rather
+## than as "you changed servers".
+func try_apply_server_host(raw_host: String = "") -> bool:
+	if endpoint == null:
+		return false
+	if _online_busy() or _offline_playing():
+		return false
+	var host: String = raw_host
+	if host == "" and _server_edit != null:
+		host = _server_edit.text
+	endpoint.clear_errors()
+	endpoint.control_plane = control_plane_base
+	endpoint.gateway = gateway_base
+	if not endpoint.try_apply_host(host):
+		_refresh_status()
+		return false
+	control_plane_base = endpoint.control_plane
+	gateway_base = endpoint.gateway
+	_sync_server_edit()
+	_refresh_status()
+	return true
 
 
 func try_quick() -> bool:
@@ -622,6 +682,9 @@ func status_view() -> Dictionary:
 		"seat": join_view.get("seat", -1),
 		"play_state": play_view.get("state", ""),
 		"tls": _tls_on(play_view),
+		"server_host": ServerEndpointGd.host_of(control_plane_base),
+		"gateway_host": ServerEndpointGd.host_of(gateway_base),
+		"server_error": "" if endpoint == null else endpoint.error_line(),
 		"offline_state": offline_view.get("state", ""),
 		"offline_banner": offline_view.get("banner", ""),
 		"offline_error": offline_view.get("error", ""),
@@ -772,6 +835,18 @@ func _ensure_window() -> void:
 	_add_button(row, SOLO_NAME, "Solo play", try_solo)
 	_add_button(row, CANCEL_NAME, "Cancel", try_cancel)
 	_add_button(row, POLL_NAME, "Poll", try_poll)
+	var server_row: HBoxContainer = HBoxContainer.new()
+	server_row.name = "ServerActions"
+	root.add_child(server_row)
+	_server_edit = LineEdit.new()
+	_server_edit.name = SERVER_NAME
+	_server_edit.placeholder_text = "Server host"
+	_server_edit.max_length = 64
+	_server_edit.focus_mode = Control.FOCUS_CLICK
+	_server_edit.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	server_row.add_child(_server_edit)
+	_add_button(server_row, APPLY_SERVER_NAME, "Apply server", try_apply_server_host)
+	_sync_server_edit()
 	_room_edit = LineEdit.new()
 	_room_edit.name = ROOM_NAME
 	_room_edit.placeholder_text = "Room code"
@@ -845,6 +920,12 @@ func _apply_course_document(path: String) -> void:
 		links.apply_path(path)
 	if orders != null:
 		orders.apply_path(path)
+
+
+func _sync_server_edit() -> void:
+	if _server_edit == null:
+		return
+	_server_edit.text = ServerEndpointGd.host_of(control_plane_base)
 
 
 func _ensure_http() -> void:
@@ -1040,6 +1121,15 @@ func _refresh_status() -> void:
 	parts.append("play=%s" % play_state)
 	var tls_on: bool = view.get("tls", false)
 	parts.append("tls=%s" % ("on" if tls_on else "off"))
+	var server_host: String = str(view.get("server_host", ""))
+	if server_host != "":
+		parts.append("server=%s" % server_host)
+	var gateway_host: String = str(view.get("gateway_host", ""))
+	if gateway_host != "" and gateway_host != server_host:
+		parts.append("gw=%s" % gateway_host)
+	var server_error: String = str(view.get("server_error", ""))
+	if server_error != "":
+		parts.append("server_error=%s" % server_error)
 	var offline_state: String = str(view.get("offline_state", ""))
 	if offline_state != "":
 		parts.append("offline=%s" % offline_state)

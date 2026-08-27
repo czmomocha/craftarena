@@ -1,0 +1,36 @@
+# 构建上下文裁剪（纠偏 C1 第 2 章，infra/compose/Dockerfile）。
+#
+# 第一条是硬性的：node_modules 必须排除。开发机上装的是 Windows / macOS 平台的
+# 依赖树，拷进 Linux 镜像会让 npm ci 之后仍然残留错平台的产物。
+
+node_modules
+**/node_modules
+
+# 本机产物与数据，进镜像只会让层变大且可能带进过期状态
+export
+build
+data
+**/*.sqlite
+**/*.sqlite-wal
+**/*.sqlite-shm
+**/*.log
+
+# 凭据绝不进镜像层（CD-51 §3）
+**/.env
+**/.env.*
+!**/.env.example
+**/*.pem
+**/*.key
+
+# Godot 本机缓存与不入库的 MCP 插件（CD-51 §7.3）
+game/.godot
+game/addons/godot_ai
+
+# 版本控制、CI 与文档：运行时用不到
+.git
+.github
+.cursor
+docs
+Confirmed-docs
+early-docs
+early-concepts
