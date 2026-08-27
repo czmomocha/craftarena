@@ -622,8 +622,8 @@ cell = Fixed.SCALE 与由其推导的一切 cell/2 占用半长
 | 批次 | 状态 | 落点 |
 |---|---|---|
 | C0 立刻闸门 | 已合入 | `.github/CODEOWNERS`、`.cursor/rules/course-correction-freeze.mdc`、`.cursor/rules/chapter-granularity-and-review.mdc`、[docs/audits/2026-08-26-audit.md](../audits/2026-08-26-audit.md)、本文件 §4.0 |
-| C1 真机与真网络 | 第 1、2 章 A 段已合入；B 段部署与双机 **人类已于 2026-08-27 验证** | 导出预设 + 包内核查 + compose + `server-deploy.md` + 客户端 `--server=`。§12 实测格子仍空，C3 锁定 Tick / 快照 / 插值前必须回填。不写死 IP/域名，不配 Let's Encrypt |
-| C2 度量与自动可玩性 | 第 1 章已合入（`--bot-run`）；第 2 章进行中 | 第 1 章：走路可达探针 + 占位桩收敛。第 2 章：`tests/integration/` 与 `tests/replay/` 真实用例 + CI 收集、CD-53 §4.2–§4.4 状态列、[返工率首份数据](../audits/2026-08-27-ai-rework-rate.md)。不做 Node 包装、不把 `--bot-run` 接进 CI |
-| C3 核心玩法前提 | 未开工 | 阻塞于 C1 真网络结论 + D5 复活硬直秒数（C3 开工时给候选） |
+| C1 真机与真网络 | 第 1、2 章已合入；B 段部署、双机与 §12 数字 **人类已于 2026-08-27 采、已回填** | 导出预设 + 包内核查 + compose + `server-deploy.md` + 客户端 `--server=` + [§12 表](../runbooks/server-deploy.md#12-本批必须回填的结论)。结论：近端 ICMP 未证伪快照/插值桩；7 局空转证实 CPU 先于内存。不写死 IP/域名，不配 Let's Encrypt。24h 采样与协议层 RTT 仍未做 |
+| C2 度量与自动可玩性 | 第 1、2 章已合入 | 第 1 章：走路可达探针 + 占位桩收敛。第 2 章：`tests/integration/` 与 `tests/replay/` 真实用例 + CI 收集、CD-53 §4.2–§4.4 状态列、[返工率首份数据](../audits/2026-08-27-ai-rework-rate.md)。不做 Node 包装、不把 `--bot-run` 接进 CI |
+| C3 核心玩法前提 | 未开工 | §12 空表不再阻塞。重力可开工。**不得**用 2026-08-27 的 ~3ms ICMP 样本锁定 Tick / 快照 / 插值（CD-43 §4 / CD-63 §1.5）。道具与机关伤害仍等 D5 候选（开工时给 2–3 个） |
 | C4 资产契约与美术规格 | 未开工 | D4 主数值已拍（字体已补答）；BASTION 色板不阻塞 |
 | C5 治理与里程碑重排 | 未开工 | 需 C1–C4 实测结论作输入 |

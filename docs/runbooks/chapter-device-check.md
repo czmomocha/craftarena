@@ -53,39 +53,37 @@ Worktree 端口偏移见 README「并行工作区」；本文件不复述端口�
 
 ---
 
-## 本刀：纠偏 C2 第二章 — 测试目录不再空转，门禁状态与返工率可核对
+## 本刀：纠偏 C1 基线回填 — §12 有数字，且不把近端 ICMP 当成公网锁定依据
 
-对应：当前完整章节 PR。这一章闭合的是「文档写了集成 / 回放 / 每日门禁，目录和 CI 却是空的」：`game/tests/integration/` 与 `game/tests/replay/` 各有真实用例，CI 的 GUT 步骤收集这三个目录，CD-53 §4.2–§4.4 每项都有状态列，返工率第一份数据在 [docs/audits/2026-08-27-ai-rework-rate.md](../audits/2026-08-27-ai-rework-rate.md)。
+对应：当前完整章节 PR。这一章闭合的是 C1 的主要产出：[`server-deploy.md`](server-deploy.md) §12 不再空白，并写明哪些零延迟假设被证实 / 证伪 / 本样本碰不到。
 
-**不需要大厅窗口，不需要三后端。** 第 1 步是命令行；第 2 步是打开两份文档核对「已启用」没有说成「每日 cron」。
+**不需要大厅窗口，不需要三后端。** 数字已由人类在测试机上采过；本刀只核对回填有没有写错、有没有把地址写进仓库、有没有把 600 次说成 24 小时。
 
-### 1. 本地 GUT 跑 unit + integration + replay
+### 1. §12 表与你交的采样一致
 
-```powershell
-& $env:GODOT4_CONSOLE --headless --path game -s res://addons/gut/gut_cmdln.gd -gdir=res://tests/unit,res://tests/integration,res://tests/replay -gexit
-echo $LASTEXITCODE
-```
+打开 [`server-deploy.md`](server-deploy.md) §12。
 
-预期：输出里能看到 `res://tests/integration/test_traprush_authoring_to_match.gd` 与 `res://tests/replay/test_traprush_official_tape_replay.gd`；`---- All tests passed! ----`；退出码 `0`。
+预期：
 
-失败：缺这两个脚本、只跑了 `tests/unit`、或非 0 退出。不要用旧的「只跑 unit」命令冒充本章。
+- ICMP：sent/received 600，loss 0%，P50/P90 3ms，P95 4ms，max 18ms，IPDV 0.16ms；
+- 七次建房全 `201`；负载后 match-host **198.92% / 422.2 MiB**；
+- 结论行写明：CPU 先于内存成立；3 GB 空转推导偏高；快照 / 心跳 / 插值 / 对账**未被证伪**；C3 不得用本表锁 CD-43 §4。
 
-### 2. 门禁状态表没有把「每次 PR」写成「每日 / 每周流水线」
+失败：格子仍空、把 3ms 写成「公网基线已够 C3」、或把 600 次写成 24 小时。
 
-打开 [CD-53](../../Confirmed-docs/50-engineering/53-testing-and-ci.md) §4.2 / §4.3 / §4.4 的「当前实现状态」表。
+### 2. 仓库没有对端地址
 
-预期：§4.2 写明没有独立每日 cron，集成是进程内 `MatchRealtime`、回放不能从环形缓冲恢复世界；§4.3 / §4.4 未实现项标「未实现」。返工率文件 §2 的 R1 对 `game/src` 是 4.8%、R2 是 0%。
+在仓库根搜索 `server-deploy.md`、本清单、README、纠偏方案 §9.1：不应出现公网 IP 或测试机域名。
 
-失败：表里出现「已覆盖每日全量」或「已有 weekly workflow」，或把 4.8% 读成「AI 质量已经够好」。
+预期：只有占位符 `<SERVER_HOST>` 与容器名 `craftarena-*-1`。失败：回填把 ping 目标或 `match-id` 写进了文件。
 
 ### 本刀不测
 
-- 大厅 / Preview / 对局窗口：本章不改表现，无开发机可见行为；
-- `--bot-run`：上一章已有，本章不接进 CI；
-- `tests/content/` 与 `tests/security/`：C2 明确不做 UGC 安全全集，golden 仍未实现；
-- 真多 OS 客户端、真 socket、从快照恢复世界再继续：尚未实现，状态表已标明。
+- 再跑一遍 600 次 ping 或再拉 7 局：本章是回填，不是重采；
+- 改 `SNAPSHOT_EVERY_TICKS` 等冻结常量：明确不做；
+- 大厅 / Preview / 对局窗口：无代码变更。
 
-### 仍然欠着：C1 §12 的实测数字
+### 仍然欠着（不因本章消失）
 
-C1 远端部署与双机对局已由人类于 2026-08-27 验证。[`server-deploy.md`](server-deploy.md) §12 那张「哪些零延迟参数不成立」的表在数字回填前仍是空的。没有这张表，C3 不得锁定 Tick / 快照 / 插值。本章与它互不依赖。
+24 小时 ICMP、协议层 RTT、`nproc`、真人输入下的 7 局资源。C3 锁定 Tick / 快照 / 插值仍不可。道具 / 机关伤害仍等 D5。
 

@@ -15,7 +15,10 @@ alwaysApply: true
 
 真机：PR Test plan 与 [章节真机清单](docs/runbooks/chapter-device-check.md) 本刀必须是编号步骤（怎么开、点什么、期望 / 失败）；禁止只写「真机再看一眼」。无 GUI 的章写「无」加原因。人工检查，不是 CI 门禁。口径见 [CD-52 §3.2](Confirmed-docs/50-engineering/52-ai-workflow.md)。
 
-- 做（本刀 = 纠偏 C2 第二章：测试目录诚实化 + 返工率首份数据）：`game/tests/integration/` 与 `game/tests/replay/` 各至少一条真实用例（AuthoringWorld 编译进双人 Headless、Preview 安全 Tick、离线不写库、进程内断线再占；官方课同磁带同哈希 / 换磁带或换课则分叉），CI GUT 收集 `unit,integration,replay`；[CD-53](Confirmed-docs/50-engineering/53-testing-and-ci.md) §4.2–§4.4 每项补「当前实现状态」列（§4.1 同步写上集成 / 回放已进每次 PR）；[docs/audits/2026-08-27-ai-rework-rate.md](docs/audits/2026-08-27-ai-rework-rate.md) 给出 R1–R4 口径与第一组数。本章改 CD-53 是 C2 自己的产出，不是提前做 C5 的文档去追加化。
-- 不做：一切被 [纠偏冻结令](.cursor/rules/course-correction-freeze.mdc) §1 列为「不得开工」的内容；不做 `tests/security/` 全集、不做 `tests/content/` golden 门禁、不把 `--bot-run` 接进 CI、不做独立 daily/weekly cron、不实现从 `SimSnapshotRing` 恢复世界、不按返工率改玩法或拆大厅壳（那是 C3 / C5）、不为了填表把未实现项标成已覆盖。
-- 仍欠着（不因本章合入而消失）：C1 远端部署与双机对局已由人类于 2026-08-27 验证；[`server-deploy.md`](docs/runbooks/server-deploy.md) §12 的 RTT / 丢包 / 资源数字尚未回填，C3 不能把「跑通了」当成网络参数依据。C3 另阻塞于 D5 复活硬直秒数（开工时给候选）。
+- 做（本刀 = 纠偏 C1 基线回填：把人类 2026-08-27 的 ICMP / 7 局空转数字写入 [`server-deploy.md`](docs/runbooks/server-deploy.md) §12）：表里有 P50/P90/P95、丢包、IPDV、容器 CPU/内存与进程形态；结论诚实区分「容量推导被证实 / 证伪」和「网络占位桩本样本未证伪」。`.gitignore` 排除 `rtt-raw.txt`。不改 `Confirmed-docs/`（CD-43 / CD-44 仍由 C3 / C5 写）。
+- 不做：一切被 [纠偏冻结令](.cursor/rules/course-correction-freeze.mdc) §1 列为「不得开工」的内容；不改 `SNAPSHOT_EVERY_TICKS` 等冻结常量；不把 ICMP 写成协议层 RTT；不把 600 次写成 24 小时；不把 ~3ms 近端当成公网弱网去锁 CD-43 §4；不入库 IP / 域名 / `match-id`；不开工 C3。
+- 仍欠着（不因本章合入而消失）：24 小时 ICMP；协议层 RTT；`nproc`；真人输入下的 7 局资源。C3 锁定 Tick / 快照 / 插值仍不可。道具 / 机关伤害仍等 D5 复活硬直候选（开工时给 2–3 个）。
 - 仍不做：把 C0 与 C1 / C2 塞进同一个 PR；不为了两域并行而各交半章。
+
+纠偏归属：C1
+是否新增冻结常量引用：否
