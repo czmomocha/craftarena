@@ -4,7 +4,7 @@ Godot 4 + UGC 双玩法（TRAPRUSH / BASTION）项目 Monorepo。代码与仓库
 
 - 工程规则入口：[AGENTS.md](AGENTS.md)
 - 规范唯一事实源：[Confirmed-docs](Confirmed-docs/README.md)
-- 当前阶段：**纠偏冻结中**。2026-08-26 第三方审视（[docs/audits/2026-08-26-audit.md](docs/audits/2026-08-26-audit.md)）判定「工程纪律罕见优秀，但已经跑偏了赛道」，人类已拍板：纠偏完成前不进行原计划中新的功能开发。可开工范围、占位常量冻结清单与解除条件 E1–E14 见 [纠偏方案 2026-08](docs/plans/course-correction-2026-08.md)，对 Agent 生效的版本在 `.cursor/rules/`。C0 闸门已落地；C1 已产出 Windows / Linux Headless / Web 三个导出预设与[导出包核查清单](docs/runbooks/desktop-export-check.md)。
+- 当前阶段：**纠偏冻结中**。2026-08-26 第三方审视（[docs/audits/2026-08-26-audit.md](docs/audits/2026-08-26-audit.md)）判定「工程纪律罕见优秀，但已经跑偏了赛道」，人类已拍板：纠偏完成前不进行原计划中新的功能开发。可开工范围、占位常量冻结清单与解除条件 E1–E14 见 [纠偏方案 2026-08](docs/plans/course-correction-2026-08.md)，对 Agent 生效的版本在 `.cursor/rules/`。C0 闸门已落地；C1 已产出 Windows / Linux Headless / Web 三个导出预设与[导出包核查清单](docs/runbooks/desktop-export-check.md)。本刀是 C1 第二章：`infra/compose/` 的远端部署产物、客户端指向远端服务器的三条入口与[远端部署手册](docs/runbooks/server-deploy.md)；**实际部署与网络 / 资源基线待人类在自备测试机执行**，compose 尚未真构建过。
 - 冻结前进度：M3 进行中（2026-08-24 启动）。已落地对局多人仿真循环、二进制协议 v1、对局进程仿真入口、实时回路、网关代理、控制面真票据、MatchHost 自动登记、等待 listen 后登记、停止后注销、真匹配/房间码、FIFO 等待队列、客户端匹配入场、权威快照与赛道几何 / 可破坏箱 / 传送连线 / 检查点顺序 / 直播名次表现映射、机关狂奔离线单人试玩、对局命令门禁、全员冲线单局结算写库、断线重连补票、官方赛道选择、人数按场下发、对局快照插值、对局本席移动预测、对局进程动作数值占位桩、对局大厅本席摄像机跟随、对局大厅本席移动朝向、对局大厅本席分色、对局大厅本席检查点占用高亮、对局大厅本席冲线闭环表现、对局大厅本席复位与楼层/箱子 HUD、大厅只读结算面板、对局大厅本席预测避开最新权威固体、真人命令才续租、网关进程内 TLS、权威 Move 位移门禁、对局基础推击（无线上目标 id，服务端推最近其它胶囊，大厅 F）、出界复位（Preview + 对局，开发桩 ±8 格，环境失败后无限复活到最近检查点）；周期机关已进 v1 拓扑（`hazards` 袋用已有 `cooldown_ticks` 切换固体）；对局大厅周期机关表现映射（洋红占位盒，显隐跟固体半周期，HUD `hazards=n/m`）；开发机运行体验（空格走 `jump` 而不是点 Solo play / Play；F5/F6 外框与 Traprush/Preview 窗默认更大并最大化；打开编辑器时若本机已安装 Godot AI 则自动启用）；固定固体占用（`zone.tags` 含 `solid` 编进 v1 可空 `solids` 袋；大厅/Preview 石色 1 米占位；HUD `solids=n/m`）；官方赛道占用（三张课各 1 个石色固体与 1 个洋红周期机关；不挡必经路）；编辑器 Place finish（工具条用已有 `place` 摆金色终点占用；第二份终点仍写入、编译拒绝）；官方赛道立足固体与 Jump（出生点正下一格石色盒；空格在 Solo / Preview 真跳约四分之一格）。本刀为权威下落接到对局 / Solo / Preview（对局/Solo 占位每 tick 十六分之一格；Preview Advance 才落地；同一拍 Jump 不被立刻落下；不锁产品重力）。进度见 [CD-61](Confirmed-docs/60-plan/61-milestones.md)。
 
 ## 目录
@@ -74,6 +74,7 @@ export GODOT_AI_DISABLE_TELEMETRY=true
 | 查看引擎版本 | `& $env:GODOT4_CONSOLE --version` | `"$GODOT4" --version` |
 | 打开编辑器 | `& $env:GODOT4 --editor --path game` | `"$GODOT4" --editor --path game` |
 | 运行主场景（窗口，真机） | `& $env:GODOT4 --path game` | `"$GODOT4" --path game` |
+| 运行并指向远端服务器 | `& $env:GODOT4 --path game -- --server=<主机>` | `"$GODOT4" --path game -- --server=<主机>` |
 | Headless 导入检查 | `& $env:GODOT4_CONSOLE --headless --path game --import` | `"$GODOT4" --headless --path game --import` |
 | Headless 启动主场景 | `& $env:GODOT4_CONSOLE --headless --path game --quit` | `"$GODOT4" --headless --path game --quit` |
 | 单文件语法与类型检查 | `& $env:GODOT4_CONSOLE --headless --path game --check-only -s res://src/client/main.gd` | `"$GODOT4" --headless --path game --check-only -s res://src/client/main.gd` |
@@ -115,6 +116,33 @@ macOS 把 `& $env:GODOT4_CONSOLE` 换成 `"$GODOT4"`。包内自检也能对源�
 DevLauncher 只管本地开发编排，不做守护、重启和资源限制；测试环境的编排见 [CD-44](Confirmed-docs/40-technical/44-deployment.md)。
 
 默认端口、数据库位置等配置项由各服务自己的 `src/config.ts` 通过环境变量读取，默认值写在那里，本文件不复述。网关可选 `GATEWAY_TLS_CERT` / `GATEWAY_TLS_KEY`（必须成对指向 PEM）；未设置时明文 `ws`。`npm run dev` 默认不启用 TLS，DevLauncher 的 `/readyz` 探测仍走 http。
+
+### 客户端指向哪台服务器
+
+客户端默认连 `127.0.0.1`。三种改法，优先级从高到低：
+
+| 方式 | 写法 | 说明 |
+|---|---|---|
+| 命令行 | `-- --server=<主机>` | 只换主机，端口沿用默认；`--` 不能省 |
+| 命令行（分别指定） | `-- --control-plane=http://<主机>:8080 --gateway=ws://<主机>:8090` | 端口或协议也要换时用 |
+| 环境变量 | `CRAFTARENA_SERVER` / `CRAFTARENA_CONTROL_PLANE` / `CRAFTARENA_GATEWAY` | 双击 exe 时生效 |
+| 大厅输入框 | `Server host` 一行加 **Apply server** | 运行中改；对局进行中会被拒 |
+
+地址被拒时状态行出现 `server_error=`，**当前生效值不变**。解析与校验在 `game/src/client/server_endpoint.gd`。
+
+### 远端测试环境（Docker Compose）
+
+产物在 `infra/compose/`，逐步操作、基线采集与云上差异见[远端部署手册](docs/runbooks/server-deploy.md)。命令在测试机的 `infra/compose/` 目录下执行：
+
+| 用途 | 命令 |
+|---|---|
+| 构建镜像（`GODOT_SHA512` 必填） | `docker compose build` |
+| 拉起三服务 | `docker compose up -d` |
+| 看状态与健康 | `docker compose ps` |
+| 跟日志 | `docker compose logs -f` |
+| 停止并清理 | `docker compose down` |
+
+`match-host` 不发布任何端口，只在 compose 内网被网关访问；对外只开控制面与网关两个端口。测试期传输是明文 `http` / `ws`（人类 2026-08-27 拍板 D11，[CD-62](Confirmed-docs/60-plan/62-risk-register.md) 已登记），**不是产品形态**。
 
 ## 持续集成
 

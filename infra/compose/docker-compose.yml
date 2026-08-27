@@ -1,0 +1,108 @@
+# Craft Arena 测试环境编排（纠偏 C1 第 2 章）。
+#
+# 这里没有任何一台真实机器的地址、规格或凭据（D11）。主机由部署者在自己的
+# .env 里给，或者根本不给——默认值就能在一台干净机器上跑起来。
+#
+# 传输是明文 http / ws：测试期人类已接受的风险（CD-43 §2 2026-08-27），
+# 不是产品能力。公开运营前必须回到宪法第二十二条的 TLS 网关。
+#
+# 端口发布上唯一不可放宽的一条：match-host 不发布任何端口。对局进程只在
+# compose 内网被网关拨到，公网到不了它（宪法第二十二条）。
+
+name: craftarena
+
+x-backend-build: &backend-build
+  context: ../..
+  dockerfile: infra/compose/Dockerfile
+  target: backend
+
+services:
+  control-plane:
+    build: *backend-build
+    command: ["node", "backend/control-plane/src/main.ts"]
+    environment:
+      CONTROL_PLANE_HOST: "0.0.0.0"
+      CONTROL_PLANE_PORT: "8080"
+      CONTROL_PLANE_DB_PATH: "/data/control-plane.sqlite"
+      MATCH_HOST_URL: "http://match-host:8100"
+      CONTROL_PLANE_LOG_LEVEL: "${CONTROL_PLANE_LOG_LEVEL:-info}"
+      CRAFTARENA_VERSION: "${CRAFTARENA_VERSION:-0.0.0-dev}"
+    volumes:
+      - control-plane-data:/data
+    ports:
+      - "${CONTROL_PLANE_PUBLISH:-8080}:8080"
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - fetch('http://127.0.0.1:8080/readyz').then(r=>process.exit(r.ok?0:1),()=>process.exit(1))
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
+    restart: unless-stopped
+
+  gateway:
+    build: *backend-build
+    command: ["node", "backend/realtime-gateway/src/main.ts"]
+    environment:
+      GATEWAY_HOST: "0.0.0.0"
+      GATEWAY_PORT: "8090"
+      CONTROL_PLANE_URL: "http://control-plane:8080"
+      GATEWAY_LOG_LEVEL: "${GATEWAY_LOG_LEVEL:-info}"
+      CRAFTARENA_VERSION: "${CRAFTARENA_VERSION:-0.0.0-dev}"
+    ports:
+      - "${GATEWAY_PUBLISH:-8090}:8090"
+    depends_on:
+      control-plane:
+        condition: service_healthy
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - fetch('http://127.0.0.1:8090/readyz').then(r=>process.exit(r.ok?0:1),()=>process.exit(1))
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
+    restart: unless-stopped
+
+  match-host:
+    build:
+      context: ../..
+      dockerfile: infra/compose/Dockerfile
+      target: match-host
+      args:
+        GODOT_VERSION: "${GODOT_VERSION:-4.7.2-stable}"
+        GODOT_SHA512: "${GODOT_SHA512:?set GODOT_SHA512 in infra/compose/.env, see docs/runbooks/server-deploy.md}"
+    command: ["node", "backend/match-host/src/main.ts"]
+    environment:
+      MATCH_HOST_HOST: "0.0.0.0"
+      MATCH_HOST_PORT: "8100"
+      CONTROL_PLANE_URL: "http://control-plane:8080"
+      # 网关按这个主机名拨对局上游。默认 127.0.0.1 是同机开发用的，
+      # 在 compose 里会让网关拨到自己容器里去。
+      MATCH_HOST_UPSTREAM_HOST: "match-host"
+      MATCH_HOST_PORT_RANGE_MIN: "${MATCH_HOST_PORT_RANGE_MIN:-42000}"
+      MATCH_HOST_PORT_RANGE_MAX: "${MATCH_HOST_PORT_RANGE_MAX:-42099}"
+      MATCH_HOST_LOG_LEVEL: "${MATCH_HOST_LOG_LEVEL:-info}"
+      CRAFTARENA_VERSION: "${CRAFTARENA_VERSION:-0.0.0-dev}"
+    depends_on:
+      control-plane:
+        condition: service_healthy
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - fetch('http://127.0.0.1:8100/readyz').then(r=>process.exit(r.ok?0:1),()=>process.exit(1))
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
+    restart: unless-stopped
+
+volumes:
+  control-plane-data:
