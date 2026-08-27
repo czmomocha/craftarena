@@ -8,5 +8,6 @@
 	"destructibles": [],
 	"hazards": [],
 	"solids": [],
-	"signed": false
+	"signed": false,
+	"pickups": []
 }

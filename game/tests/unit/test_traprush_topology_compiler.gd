@@ -174,6 +174,7 @@ func test_portal_bag_without_source_pose_is_rejected() -> void:
 		"destructibles": [],
 		"hazards": [],
 		"solids": [],
+		"pickups": [],
 	}
 	assert_null(SimulationBundle.from_dictionary(data))
 
@@ -226,6 +227,7 @@ func test_dangling_kind_in_bundle_is_rejected() -> void:
 		"destructibles": [],
 		"hazards": [],
 		"solids": [],
+		"pickups": [],
 	}
 	assert_null(SimulationBundle.from_dictionary(data))
 
@@ -248,6 +250,8 @@ func test_loaded_pads_are_non_solid_occupancy_and_world_ticks() -> void:
 	assert_eq(hazard_ids.size(), 1)
 	var solid_ids: Dictionary = loaded["solid_ids"]
 	assert_eq(solid_ids.size(), 8)
+	var pickup_ids: Dictionary = loaded["pickup_ids"]
+	assert_eq(pickup_ids.size(), 2)
 	var box_id: int = pad_ids[1]
 	assert_false(world.is_static_box_solid(box_id))
 	var portal_box_id: int = portal_ids[10]
@@ -262,6 +266,8 @@ func test_loaded_pads_are_non_solid_occupancy_and_world_ticks() -> void:
 	assert_true(world.is_static_box_solid(solid_box_id))
 	var footing_box_id: int = solid_ids[80]
 	assert_true(world.is_static_box_solid(footing_box_id))
+	var pickup_box_id: int = pickup_ids[100]
+	assert_false(world.is_static_box_solid(pickup_box_id))
 	var capsule_id: int = world.spawn_capsule(0, 0, 0, 0, 1, 1)
 	var overlapping: PackedInt32Array = world.overlapping_static_boxes(capsule_id)
 	assert_true(_has_id(overlapping, box_id))
@@ -374,6 +380,7 @@ func test_two_finish_bags_are_rejected() -> void:
 		"destructibles": [],
 		"hazards": [],
 		"solids": [],
+		"pickups": [],
 	}
 	assert_null(SimulationBundle.from_dictionary(data))
 
@@ -429,6 +436,15 @@ func test_bundle_without_solids_key_is_rejected() -> void:
 	assert_not_null(bundle)
 	var data: Dictionary = bundle.to_dictionary()
 	data.erase(SimulationBundle.FIELD_SOLIDS)
+	assert_null(SimulationBundle.from_dictionary(data))
+
+
+func test_bundle_without_pickups_key_is_rejected() -> void:
+	var world: AuthoringWorld = AuthoringWorld.new()
+	var bundle: SimulationBundle = TraprushTopologyCompiler.compile(world)
+	assert_not_null(bundle)
+	var data: Dictionary = bundle.to_dictionary()
+	data.erase(SimulationBundle.FIELD_PICKUPS)
 	assert_null(SimulationBundle.from_dictionary(data))
 
 
@@ -552,6 +568,63 @@ func test_solid_compiles_and_loads_always_solid() -> void:
 	assert_true(sim.is_static_box_solid(box_id))
 
 
+func test_pickup_without_transform_fails_compile() -> void:
+	var world: AuthoringWorld = AuthoringWorld.new()
+	var record: SharedComponentRecord = SharedComponentRecord.create(100, {
+		"inventory": {"item_state": "bomb"},
+	})
+	assert_not_null(record)
+	assert_true(world.put(record))
+	assert_null(TraprushTopologyCompiler.compile(world))
+
+
+func test_pickup_on_checkpoint_fails_compile() -> void:
+	var world: AuthoringWorld = AuthoringWorld.new()
+	var record: SharedComponentRecord = SharedComponentRecord.create(1, {
+		"transform": {"x": 0, "y": 0, "z": 0, "yaw_bam": 0},
+		"checkpoint": {
+			"order": 0,
+			"respawn_dx": 0,
+			"respawn_dy": 0,
+			"respawn_dz": 0,
+		},
+		"inventory": {"item_state": "bomb"},
+	})
+	assert_not_null(record)
+	assert_true(world.put(record))
+	assert_null(TraprushTopologyCompiler.compile(world))
+
+
+func test_unknown_pickup_kind_fails_compile() -> void:
+	var world: AuthoringWorld = AuthoringWorld.new()
+	var record: SharedComponentRecord = SharedComponentRecord.create(100, {
+		"transform": {"x": 0, "y": 0, "z": 0, "yaw_bam": 0},
+		"inventory": {"item_state": "shield"},
+	})
+	assert_not_null(record)
+	assert_true(world.put(record))
+	assert_null(TraprushTopologyCompiler.compile(world))
+
+
+func test_pickup_compiles_and_loads_non_solid() -> void:
+	var world: AuthoringWorld = AuthoringWorld.new()
+	assert_true(world.put(_checkpoint_record(1, 0, 0, 0, 0)))
+	assert_true(world.put(_pickup_record(100, 0, 0, 0, "bomb")))
+	var bundle: SimulationBundle = TraprushTopologyCompiler.compile(world)
+	assert_not_null(bundle)
+	assert_eq(bundle.pickups.size(), 1)
+	var pickup: Dictionary = _pickup(bundle, 100)
+	var pickup_kind: String = pickup.get("kind", "")
+	assert_eq(pickup_kind, "bomb")
+	var loaded: Dictionary = TraprushTopologyLoader.try_load(bundle, 1)
+	assert_true(_flag(loaded))
+	var sim: SimulationWorld = loaded["world"]
+	var pickup_ids: Dictionary = loaded["pickup_ids"]
+	assert_eq(pickup_ids.size(), 1)
+	var box_id: int = pickup_ids[100]
+	assert_false(sim.is_static_box_solid(box_id))
+
+
 func _compile_path(path: String) -> SimulationBundle:
 	var world: AuthoringWorld = AuthoringDocument.load_from_path(path)
 	if world == null:
@@ -596,6 +669,13 @@ func _hazard(bundle: SimulationBundle, entity_id: int) -> Dictionary:
 
 func _solid(bundle: SimulationBundle, entity_id: int) -> Dictionary:
 	for item: Dictionary in bundle.solids:
+		if item.get("entity_id", 0) == entity_id:
+			return item
+	return {}
+
+
+func _pickup(bundle: SimulationBundle, entity_id: int) -> Dictionary:
+	for item: Dictionary in bundle.pickups:
 		if item.get("entity_id", 0) == entity_id:
 			return item
 	return {}
@@ -646,6 +726,13 @@ func _solid_record(entity_id: int, x: int, y: int, z: int) -> SharedComponentRec
 			"shape": {"kind": "box", "hx": half, "hy": half, "hz": half},
 			"tags": [TraprushTopologyCompiler.SOLID_ZONE_TAG],
 		},
+	})
+
+
+func _pickup_record(entity_id: int, x: int, y: int, z: int, kind: String) -> SharedComponentRecord:
+	return SharedComponentRecord.create(entity_id, {
+		"transform": {"x": x, "y": y, "z": z, "yaw_bam": 0},
+		"inventory": {"item_state": kind},
 	})
 
 

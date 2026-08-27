@@ -105,6 +105,8 @@ func test_boot_session_from_config() -> void:
 	assert_eq(session.use_item_reach_dz, Fixed.SCALE)
 	assert_eq(session.shove_step, Fixed.SCALE / 4)
 	assert_eq(session.shove_cooldown_ticks, 1)
+	assert_eq(session.sprint_step, Fixed.SCALE)
+	assert_eq(session.item_cooldown_ticks, 1)
 	assert_true(session.range_enabled)
 	assert_eq(session.range_max_x, 8 * Fixed.SCALE)
 	assert_eq(session.range_min_x, -8 * Fixed.SCALE)

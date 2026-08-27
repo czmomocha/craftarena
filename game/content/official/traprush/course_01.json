@@ -1,7 +1,7 @@
 {
 	"schema_version": 1,
 	"cell": 65536,
-	"revision": 11,
+	"revision": 12,
 	"entities": [
 		{
 			"schema_version": 1,
@@ -328,6 +328,36 @@
 					"tags": [
 						"solid"
 					]
+				}
+			}
+		},
+		{
+			"schema_version": 1,
+			"entity_id": 100,
+			"components": {
+				"transform": {
+					"x": 0,
+					"y": 0,
+					"z": 0,
+					"yaw_bam": 0
+				},
+				"inventory": {
+					"item_state": "bomb"
+				}
+			}
+		},
+		{
+			"schema_version": 1,
+			"entity_id": 101,
+			"components": {
+				"transform": {
+					"x": 0,
+					"y": 0,
+					"z": 0,
+					"yaw_bam": 0
+				},
+				"inventory": {
+					"item_state": "dash"
 				}
 			}
 		}

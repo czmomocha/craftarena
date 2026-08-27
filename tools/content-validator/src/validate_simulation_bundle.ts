@@ -16,6 +16,7 @@ export function validateSimulationBundle(instance: unknown): JsonSchemaError[] {
 	pushDuplicateIds(errors, instance.destructibles, "$.destructibles");
 	pushDuplicateIds(errors, instance.hazards, "$.hazards");
 	pushDuplicateIds(errors, instance.solids, "$.solids");
+	pushDuplicateIds(errors, instance.pickups, "$.pickups");
 	return errors;
 }
 

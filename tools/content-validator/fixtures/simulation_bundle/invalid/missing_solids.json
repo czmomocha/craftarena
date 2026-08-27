@@ -6,5 +6,6 @@
 	"portals": [],
 	"finish": [],
 	"destructibles": [],
-	"hazards": []
+	"hazards": [],
+	"pickups": []
 }

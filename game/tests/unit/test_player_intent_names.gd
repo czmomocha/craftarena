@@ -10,6 +10,7 @@ func test_traprush_intents_are_present() -> void:
 	assert_true(PlayerIntentNames.contains("JumpIntent"))
 	assert_true(PlayerIntentNames.contains("ShoveIntent"))
 	assert_true(PlayerIntentNames.contains("UseItemIntent"))
+	assert_true(PlayerIntentNames.contains("SprintIntent"))
 	assert_true(PlayerIntentNames.contains("InteractIntent"))
 	assert_true(PlayerIntentNames.contains("ResetToCheckpointIntent"))
 
@@ -28,4 +29,4 @@ func test_unknown_intent_is_rejected() -> void:
 
 
 func test_intent_list_size_matches_locked_catalog() -> void:
-	assert_eq(PlayerIntentNames.ALL.size(), 11)
+	assert_eq(PlayerIntentNames.ALL.size(), 12)

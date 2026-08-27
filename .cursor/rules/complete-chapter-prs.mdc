@@ -15,11 +15,11 @@ alwaysApply: true
 
 真机：PR Test plan 与 [章节真机清单](docs/runbooks/chapter-device-check.md) 本刀必须是编号步骤（怎么开、点什么、期望 / 失败）；禁止只写「真机再看一眼」。无 GUI 的章写「无」加原因。人工检查，不是 CI 门禁。口径见 [CD-52 §3.2](Confirmed-docs/50-engineering/52-ai-workflow.md)。
 
-- 做（本刀 = 纠偏 C3 第 2 章：官方沿路立足面与 ±8 出界降级）：三张官方课必经路铺始终固体；`course_01` 上层偏到 `z=-3*CELL`（1 米占用盒夹不进上下叠层，且避开席 1 出生偏移与 z=-2 机关）；`course_03` 箱子旁有绕行立足面；走路上不掉进 ±8；走下路面才复位；BotRunner 三张 `completable`。不改 `Confirmed-docs/`（CD-21 / CD-32 仍由 C5 覆盖写）。
-- 不做：道具拾取/爆破球/冲刺；机关伤害与击退；锁定 Tick / 快照 / 插值（不得用 C1 近端 ICMP）；复活硬直产品秒数；第 4 张官方赛道；90 秒语义关；新增冻结常量引用点（`STUB_HALF` 仍从 `TraprushOutOfRangeReset` 注入）。
-- 仍欠着（不因本章合入而消失）：道具最小集；机关伤害/击退；D5 复活硬直三候选待人类选；24 小时 ICMP；协议层 RTT；C3 网络参数锁定；符合 CD-61 §4.1 语义的赛道。
-- 仍不做：把 C3 道具与新语义赛道塞进同一个 PR。
+- 做（本刀 = 纠偏 C3 第 3 章：爆破球 + 冲刺最小集）：服务端裁决拾取、使用、冷却、命中。Authoring 已有 `inventory.item_state`（`bomb` / `dash`）编进 v1 可空 `pickups` 袋；拾取盒非固体；每种最多持有 1 个；每个 pickup 实体每玩家只拾一次；已持有该 kind 时不标记 taken。UseItem 无弹拒绝，未命中不扣弹，不读客户端命中断言；SprintIntent（`intent_id=6`）无冲刺拒绝，有则沿胶囊 yaw 做 8 向水平位移且不穿固体。冷却与步长从 `TraprushPlayStubs` 注入。官方三张课出生点叠放 entity 100/101。大厅 Left Shift + Sprint 按钮；不要把 Interact/E 接成冲刺。灰盒 `try_use_item` 保持无背包。BotRunner `_state_key` 含 bomb/dash 持有量，不加 sprint 动作。不改 `Confirmed-docs/`（CD-21 意图清单仍由 C5 覆盖写）。
+- 不做：机关伤害与击退（阻塞于 D5 复活硬直秒数）；锁定 Tick / 快照 / 插值（不得用 C1 近端 ICMP）；复活硬直产品秒数；第 4 张官方赛道；90 秒语义关；编辑器 Place pickup；道具 HUD / 新颜色；道具栏 UI；刷新重生；产品伤害 / 冲刺距离；新增冻结常量引用点。
+- 仍欠着（不因本章合入而消失）：机关伤害/击退；D5 复活硬直三候选待人类选；24 小时 ICMP；协议层 RTT；C3 网络参数锁定；符合 CD-61 §4.1 语义的赛道。
+- 仍不做：把 C3 机关伤害与网络参数锁定塞进同一个 PR。
 
 纠偏归属：C3
 是否新增冻结常量引用：否
-审查级别：常审
+审查级别：深审

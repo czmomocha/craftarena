@@ -45,6 +45,9 @@ const USE_ITEM_REACH_DZ: int = Fixed.SCALE
 ## 四分之一格推击步长与 1 tick 冷却，不是产品力度或冷却秒数。
 const SHOVE_STEP: int = Fixed.SCALE / 4
 const SHOVE_COOLDOWN_TICKS: int = 1
+## 一格冲刺步长与 1 tick 道具冷却，不是产品冲刺距离或冷却秒数。
+const SPRINT_STEP: int = Fixed.SCALE
+const ITEM_COOLDOWN_TICKS: int = 1
 
 ## 占位胶囊尺寸（八分之一格），不是产品角色比例——那要等 D4 的美术规格表。
 ## 改半径会连带改赛道布局、Shove 邻域、UseItem reach 与全部占用相交断言，
@@ -68,4 +71,6 @@ static func apply_match(session: TraprushMatchSession) -> void:
 	session.use_item_reach_dz = USE_ITEM_REACH_DZ
 	session.shove_step = SHOVE_STEP
 	session.shove_cooldown_ticks = SHOVE_COOLDOWN_TICKS
+	session.sprint_step = SPRINT_STEP
+	session.item_cooldown_ticks = ITEM_COOLDOWN_TICKS
 	session.enable_play_range(OutOfRangeReset.STUB_HALF)

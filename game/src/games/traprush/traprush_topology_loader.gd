@@ -6,9 +6,9 @@ extends RefCounted
 ## non-solid static boxes. Destructibles become solid boxes (durability 0
 ## loads already open). Hazards become solid boxes (tick 0 is the solid half
 ## of the cooldown_ticks cycle). Always-solid bags become solid boxes that
-## never toggle. Half-extents are cell / 2 (derived from the
-## authoring lattice, not a new product budget). Does not spawn a player.
-## Does not tick. Never settlement.
+## never toggle. Pickup bags become non-solid occupancy boxes. Half-extents
+## are cell / 2 (derived from the authoring lattice, not a new product
+## budget). Does not spawn a player. Does not tick. Never settlement.
 
 static func try_load(bundle: SimulationBundle, seed: int) -> Dictionary:
 	var failed: Dictionary = {"ok": false}
@@ -24,6 +24,7 @@ static func try_load(bundle: SimulationBundle, seed: int) -> Dictionary:
 	var destructible_ids: Dictionary = {}
 	var hazard_ids: Dictionary = {}
 	var solid_ids: Dictionary = {}
+	var pickup_ids: Dictionary = {}
 	var half: int = bundle.cell / 2
 	for pad: Dictionary in bundle.pads:
 		var entity_id: int = pad["entity_id"]
@@ -114,6 +115,19 @@ static func try_load(bundle: SimulationBundle, seed: int) -> Dictionary:
 		if solid_box_id < 1:
 			return failed
 		solid_ids[solid_id] = solid_box_id
+	for item: Dictionary in bundle.pickups:
+		var pickup_id: int = item["entity_id"]
+		var pickup_x: int = item["x"]
+		var pickup_y: int = item["y"]
+		var pickup_z: int = item["z"]
+		var pickup_box_id: int = world.spawn_static_box(
+			pickup_x, pickup_y, pickup_z, half, half, half
+		)
+		if pickup_box_id < 1:
+			return failed
+		if not world.set_static_box_solid(pickup_box_id, false):
+			return failed
+		pickup_ids[pickup_id] = pickup_box_id
 	return {
 		"ok": true,
 		"world": world,
@@ -124,4 +138,5 @@ static func try_load(bundle: SimulationBundle, seed: int) -> Dictionary:
 		"destructible_ids": destructible_ids,
 		"hazard_ids": hazard_ids,
 		"solid_ids": solid_ids,
+		"pickup_ids": pickup_ids,
 	}

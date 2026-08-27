@@ -14,7 +14,12 @@ extends RefCounted
 ## entity with checkpoint, portal, finish, destructible, or solid fails.
 ## Solid bags need transform and zone.tags including "solid"; sharing an
 ## entity with checkpoint, portal, finish, destructible, or hazard fails.
-## Finish and solid tags together fail. Not a new EDIT op. Never settlement.
+## Pickup bags need transform and inventory.item_state of bomb or dash;
+## sharing an entity with checkpoint, portal, finish, destructible, hazard,
+## or solid fails. Finish and solid tags together fail. Not a new EDIT op.
+## Never settlement.
+
+const PickupKinds := preload("res://src/ugc/traprush_pickup_kinds.gd")
 
 const FINISH_ZONE_TAG: String = "finish"
 const SOLID_ZONE_TAG: String = "solid"
@@ -28,11 +33,39 @@ static func compile(world: AuthoringWorld) -> SimulationBundle:
 	var destructible_list: Array[Dictionary] = []
 	var hazard_list: Array[Dictionary] = []
 	var solid_list: Array[Dictionary] = []
+	var pickup_list: Array[Dictionary] = []
 	var ids: Array[int] = world.entity_ids()
 	for entity_id: int in ids:
 		var record: SharedComponentRecord = world.get_record(entity_id)
 		if record == null:
 			return null
+		if record.components.has(SharedComponentNames.INVENTORY):
+			if _has_finish_tag(record):
+				return null
+			if _has_solid_tag(record):
+				return null
+			if record.components.has(SharedComponentNames.CHECKPOINT):
+				return null
+			if record.components.has(SharedComponentNames.PORTAL):
+				return null
+			if record.components.has(SharedComponentNames.DESTRUCTIBLE):
+				return null
+			if record.components.has(SharedComponentNames.HAZARD):
+				return null
+			var pickup_pose: Dictionary = _transform_xyz(record)
+			if pickup_pose.is_empty():
+				return null
+			var pickup_kind: String = _inventory_kind(record)
+			if pickup_kind.is_empty():
+				return null
+			pickup_list.append({
+				"entity_id": entity_id,
+				"x": pickup_pose["x"],
+				"y": pickup_pose["y"],
+				"z": pickup_pose["z"],
+				"kind": pickup_kind,
+			})
+			continue
 		if _has_finish_tag(record):
 			if _has_solid_tag(record):
 				return null
@@ -186,6 +219,7 @@ static func compile(world: AuthoringWorld) -> SimulationBundle:
 		SimulationBundle.FIELD_DESTRUCTIBLES: destructible_list,
 		SimulationBundle.FIELD_HAZARDS: hazard_list,
 		SimulationBundle.FIELD_SOLIDS: solid_list,
+		SimulationBundle.FIELD_PICKUPS: pickup_list,
 	}
 	return SimulationBundle.from_dictionary(body)
 
@@ -254,6 +288,20 @@ static func _hazard_body(record: SharedComponentRecord) -> Dictionary:
 	if cooldown_ticks < 0:
 		return {}
 	return {"cooldown_ticks": cooldown_ticks}
+
+
+static func _inventory_kind(record: SharedComponentRecord) -> String:
+	var raw: Variant = record.components[SharedComponentNames.INVENTORY]
+	if typeof(raw) != TYPE_DICTIONARY:
+		return ""
+	var body: Dictionary = raw
+	var state_raw: Variant = body.get("item_state", null)
+	if typeof(state_raw) != TYPE_STRING:
+		return ""
+	var kind: String = state_raw
+	if not PickupKinds.contains(kind):
+		return ""
+	return kind
 
 
 static func _has_finish_tag(record: SharedComponentRecord) -> bool:

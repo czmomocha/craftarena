@@ -39,6 +39,7 @@ func test_command_round_trip_all_intents() -> void:
 		PlayerIntentNames.RESET_TO_CHECKPOINT,
 		PlayerIntentNames.USE_ITEM,
 		PlayerIntentNames.SHOVE,
+		PlayerIntentNames.SPRINT,
 	]:
 		var decoded: Dictionary = MatchFrameCodec.decode_command(
 			MatchFrameCodec.encode_command(9, intent, 0, 0, 0)

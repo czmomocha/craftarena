@@ -25,8 +25,9 @@ extends RefCounted
 ## 会话没有快照/恢复 API，所以每次展开都从头重建会话并重放动作序列。官方赛道的解
 ## 是个位数到十几步，重放比为此引入一套快照机制便宜得多。
 ##
-## 状态按四分之一格量化去重，并带上已验收检查点数、箱存活位图与机关固体位图。
-## 后两者不能省：省掉箱就无法表达「打开一条路」，省掉机关就无法表达「等它开」。
+## 状态按四分之一格量化去重，并带上已验收检查点数、箱存活位图、机关固体位图
+## 与爆破球/冲刺持有量。后几项不能省：省掉箱就无法表达「打开一条路」，省掉机关
+## 就无法表达「等它开」，省掉道具持有量会把「用掉爆破球后的同格」当成已访问。
 
 const AuthoringDocument := preload("res://src/creator/authoring_document.gd")
 const AuthoringWorld := preload("res://src/creator/authoring_world.gd")
@@ -417,13 +418,15 @@ static func _state_key(session: TraprushMatchSession, bundle: SimulationBundle) 
 	var x: int = pose.get("x", 0)
 	var y: int = pose.get("y", 0)
 	var z: int = pose.get("z", 0)
-	return "%d,%d,%d,%d,%d,%d" % [
+	return "%d,%d,%d,%d,%d,%d,%d,%d" % [
 		_bucket(x),
 		_bucket(y),
 		_bucket(z),
 		session.player_accepted_count(0),
 		crates,
 		hazards,
+		session.player_bomb_count(0),
+		session.player_dash_count(0),
 	]
 
 

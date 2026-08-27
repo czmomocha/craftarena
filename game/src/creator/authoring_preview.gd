@@ -13,8 +13,10 @@ extends RefCounted
 ## try_apply_play_intent accepts MoveIntent (caller dx/dz),
 ## ResetToCheckpointIntent (compiled pad respawn table, no client
 ## coordinates), UseItemIntent (compiled destructible occupancy at
-## caller reach), and JumpIntent (grounded caller play_jump_dy impulse via
-## IntentStepper / TraprushGravity.apply_jump; airborne keeps pose and vy).
+## caller reach, gated by a granted bomb), SprintIntent (8-way yaw
+## dash, gated by a granted dash), and JumpIntent (grounded caller
+## play_jump_dy impulse via IntentStepper / TraprushGravity.apply_jump;
+## airborne keeps pose and vy).
 ## Shove/Interact stay refused. Does not tick. Fall is only on advance.
 ## Out-of-range reset uses caller AABB via TraprushOutOfRangeReset when
 ## play_range_enabled; default off. No drop-count N, no stun.
@@ -40,6 +42,9 @@ extends RefCounted
 const Gravity := preload("res://src/games/traprush/gravity.gd")
 const HazardCycle := preload("res://src/games/traprush/hazard_cycle.gd")
 const OutOfRangeReset := preload("res://src/games/traprush/out_of_range_reset.gd")
+const PickupAccept := preload("res://src/games/traprush/pickup_accept.gd")
+const ShoveGate := preload("res://src/games/traprush/shove_gate.gd")
+const SprintApply := preload("res://src/games/traprush/sprint_apply.gd")
 
 var world: AuthoringWorld = null
 var preview_revision: int = 0
@@ -55,6 +60,13 @@ var play_destructible_health: Dictionary = {}
 var play_hazard_ids: Dictionary = {}
 var play_hazard_cycle: Array[Dictionary] = []
 var play_solid_ids: Dictionary = {}
+var play_pickup_ids: Dictionary = {}
+var play_pickup_kinds: Dictionary = {}
+var play_bomb: int = 0
+var play_dash: int = 0
+var play_taken: Dictionary = {}
+var play_last_use_item_tick: int = -1
+var play_last_sprint_tick: int = -1
 var play_track: TraprushCheckpointTrack = null
 var play_spawn: TraprushCheckpointSpawn = null
 var play_cell: int = 0
@@ -66,6 +78,8 @@ var play_use_item_reach_dz: int = 0
 var play_jump_dy: int = 0
 var play_support_dy: int = 0
 var play_fall_dy: int = 0
+var play_sprint_step: int = 0
+var play_item_cooldown_ticks: int = 1
 var play_range_enabled: bool = false
 var play_range_min_x: int = 0
 var play_range_max_x: int = 0
@@ -149,6 +163,7 @@ func try_start_play(seed: int, radius: int = 0, cylinder_height: int = 0) -> boo
 	var crates_raw: Variant = loaded.get("destructible_ids", {})
 	var hazards_raw: Variant = loaded.get("hazard_ids", {})
 	var solids_raw: Variant = loaded.get("solid_ids", {})
+	var pickups_raw: Variant = loaded.get("pickup_ids", {})
 	if not (world_raw is SimulationWorld):
 		return false
 	if not (graph_raw is TraprushPortalGraph):
@@ -165,6 +180,8 @@ func try_start_play(seed: int, radius: int = 0, cylinder_height: int = 0) -> boo
 		return false
 	if typeof(solids_raw) != TYPE_DICTIONARY:
 		return false
+	if typeof(pickups_raw) != TYPE_DICTIONARY:
+		return false
 	var sim: SimulationWorld = world_raw
 	var graph: TraprushPortalGraph = graph_raw
 	var pad_ids: Dictionary = pads_raw
@@ -173,6 +190,7 @@ func try_start_play(seed: int, radius: int = 0, cylinder_height: int = 0) -> boo
 	var crate_ids: Dictionary = crates_raw
 	var hazard_ids: Dictionary = hazards_raw
 	var solid_ids: Dictionary = solids_raw
+	var pickup_ids: Dictionary = pickups_raw
 	var crate_health: Dictionary = _destructible_ledgers(bundle, crate_ids)
 	if crate_health.size() != _durable_crate_count(bundle):
 		return false
@@ -197,6 +215,13 @@ func try_start_play(seed: int, radius: int = 0, cylinder_height: int = 0) -> boo
 	play_hazard_ids = hazard_ids
 	play_hazard_cycle = cycle
 	play_solid_ids = solid_ids
+	play_pickup_ids = pickup_ids
+	play_pickup_kinds = _pickup_kinds_from_bundle(bundle)
+	play_bomb = 0
+	play_dash = 0
+	play_taken = {}
+	play_last_use_item_tick = -1
+	play_last_sprint_tick = -1
 	play_track = TraprushCheckpointTrack.new(_ordered_checkpoint_ids(bundle))
 	play_spawn = spawn
 	play_cell = bundle.cell
@@ -207,6 +232,7 @@ func try_start_play(seed: int, radius: int = 0, cylinder_height: int = 0) -> boo
 	_accept_overlapping_play_pads()
 	_resolve_play_portals()
 	_accept_overlapping_play_finish()
+	_grant_play_pickups()
 	return true
 
 
@@ -230,6 +256,7 @@ func try_advance_play() -> bool:
 	_resolve_play_portals()
 	_accept_overlapping_play_pads()
 	_accept_overlapping_play_finish()
+	_grant_play_pickups()
 	return true
 
 
@@ -240,6 +267,10 @@ func try_apply_play_intent(payload: Dictionary) -> bool:
 	var use_ok: bool = use_decoded.get("ok", false)
 	if use_ok:
 		return _try_use_item_play(payload)
+	var sprint_decoded: Dictionary = TraprushSprintIntent.decode(payload)
+	var sprint_ok: bool = sprint_decoded.get("ok", false)
+	if sprint_ok:
+		return _try_sprint_play(payload)
 	var move_decoded: Dictionary = TraprushMoveIntent.decode(payload)
 	var move_ok: bool = move_decoded.get("ok", false)
 	var jump_decoded: Dictionary = TraprushJumpIntent.decode(payload)
@@ -249,6 +280,7 @@ func try_apply_play_intent(payload: Dictionary) -> bool:
 		return false
 	if move_ok and _resolve_play_portals():
 		_reset_play_if_out_of_range()
+		_grant_play_pickups()
 		return true
 	if play_spawn == null or play_track == null:
 		return false
@@ -271,6 +303,7 @@ func try_apply_play_intent(payload: Dictionary) -> bool:
 	_resolve_play_portals()
 	_accept_overlapping_play_pads()
 	_accept_overlapping_play_finish()
+	_grant_play_pickups()
 	return true
 
 
@@ -534,6 +567,13 @@ func _clear_play() -> void:
 	play_hazard_ids = {}
 	play_hazard_cycle = []
 	play_solid_ids = {}
+	play_pickup_ids = {}
+	play_pickup_kinds = {}
+	play_bomb = 0
+	play_dash = 0
+	play_taken = {}
+	play_last_use_item_tick = -1
+	play_last_sprint_tick = -1
 	play_track = null
 	play_spawn = null
 	play_cell = 0
@@ -593,6 +633,7 @@ func _resolve_play_portals() -> bool:
 				_portal_latch[dest_id] = true
 		_accept_overlapping_play_pads()
 		_accept_overlapping_play_finish()
+		_grant_play_pickups()
 		return false
 	return false
 
@@ -601,8 +642,27 @@ func _accept_overlapping_play_finish() -> void:
 	try_cross_play_finish()
 
 
+func play_bomb_count() -> int:
+	if not is_playing():
+		return 0
+	return play_bomb
+
+
+func play_dash_count() -> int:
+	if not is_playing():
+		return 0
+	return play_dash
+
+
 func _try_use_item_play(payload: Dictionary) -> bool:
 	if not is_playing():
+		return false
+	if play_item_cooldown_ticks < 1:
+		return false
+	var now_tick: int = play_world.tick_index
+	if not ShoveGate.can_shove(now_tick, play_last_use_item_tick, play_item_cooldown_ticks):
+		return true
+	if play_bomb < 1:
 		return false
 	var ids: Array[int] = []
 	for key: Variant in play_destructible_ids.keys():
@@ -635,8 +695,82 @@ func _try_use_item_play(payload: Dictionary) -> bool:
 		)
 		var broken_ok: bool = broken.get("ok", false)
 		if broken_ok:
+			play_bomb -= 1
+			play_last_use_item_tick = now_tick
 			return true
 	return false
+
+
+func _try_sprint_play(payload: Dictionary) -> bool:
+	if not is_playing():
+		return false
+	if play_sprint_step < 0 or play_sprint_step > Fixed.SCALE:
+		return false
+	if play_item_cooldown_ticks < 1:
+		return false
+	if play_dash < 1:
+		return false
+	var now_tick: int = play_world.tick_index
+	var result: Dictionary = SprintApply.apply(
+		play_world,
+		player_id,
+		payload,
+		now_tick,
+		play_last_sprint_tick,
+		play_item_cooldown_ticks,
+		play_sprint_step
+	)
+	var result_ok: bool = result.get("ok", false)
+	if not result_ok:
+		return false
+	var sprinted: bool = result.get("sprinted", false)
+	if sprinted:
+		play_dash -= 1
+		play_last_sprint_tick = now_tick
+		_reset_play_if_out_of_range()
+		_accept_overlapping_play_pads()
+		_resolve_play_portals()
+		_accept_overlapping_play_pads()
+		_accept_overlapping_play_finish()
+		_grant_play_pickups()
+	return true
+
+
+func _grant_play_pickups() -> void:
+	if not is_playing():
+		return
+	var granted: Dictionary = PickupAccept.try_grant(
+		play_world,
+		player_id,
+		play_pickup_ids,
+		play_pickup_kinds,
+		play_taken,
+		play_bomb,
+		play_dash
+	)
+	var granted_ok: bool = granted.get("ok", false)
+	if not granted_ok:
+		return
+	var next_bomb_raw: Variant = granted.get("bomb", play_bomb)
+	if typeof(next_bomb_raw) == TYPE_INT:
+		play_bomb = next_bomb_raw
+	var next_dash_raw: Variant = granted.get("dash", play_dash)
+	if typeof(next_dash_raw) == TYPE_INT:
+		play_dash = next_dash_raw
+	var next_taken_raw: Variant = granted.get("taken", play_taken)
+	if typeof(next_taken_raw) == TYPE_DICTIONARY:
+		play_taken = next_taken_raw
+
+
+static func _pickup_kinds_from_bundle(bundle: SimulationBundle) -> Dictionary:
+	var kinds: Dictionary = {}
+	if bundle == null:
+		return kinds
+	for item: Dictionary in bundle.pickups:
+		var entity_id: int = item["entity_id"]
+		var kind: String = item["kind"]
+		kinds[entity_id] = kind
+	return kinds
 
 
 func _destructible_ledgers(bundle: SimulationBundle, crate_ids: Dictionary) -> Dictionary:

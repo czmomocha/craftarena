@@ -4,7 +4,8 @@ extends GutTest
 ## name through TraprushDestructibleBreak. Reach pose must overlap a
 ## compiled solid destructible. Damage and reach are caller stubs, not a
 ## product blast table. Destroyed boxes become non-solid. Interact / Shove
-## stay refused. No gravity, inventory, regen, or settlement.
+## stay refused. Official courses grant a bomb at spawn. Custom worlds
+## that need a break must place an inventory pickup. No regen or settlement.
 
 const AuthoringDocument := preload("res://src/creator/authoring_document.gd")
 const AuthoringPreview := preload("res://src/creator/authoring_preview.gd")
@@ -86,6 +87,7 @@ func test_blocked_move_opens_after_break() -> void:
 	var session: AuthoringSession = AuthoringSession.new()
 	assert_true(session.world.put(_checkpoint(1, 0, 0, 0, 0)))
 	assert_true(session.world.put(_crate(8, 0, 0, CELL, 1)))
+	assert_true(session.world.put(_pickup(100, 0, 0, 0, "bomb")))
 	var preview: AuthoringPreview = AuthoringPreview.new()
 	assert_true(preview.connect_from(session))
 	assert_true(preview.try_start_play(1, PLAY_RADIUS, PLAY_RADIUS))
@@ -184,8 +186,11 @@ func _assert_break_official_crate(preview: AuthoringPreview) -> void:
 	assert_true(preview.try_apply_play_intent(_use_item()))
 	assert_eq(preview.play_destructible_alive_count(), 0)
 	assert_false(preview.play_world.is_static_box_solid(box_id))
+	assert_true(preview.try_apply_play_intent(_use_item()))
+	assert_eq(preview.play_destructible_alive_count(), 0)
+	assert_true(preview.try_advance_play())
 	assert_false(preview.try_apply_play_intent(_use_item()))
-	assert_eq(preview.play_world.tick_index, 0)
+	assert_eq(preview.play_world.tick_index, 1)
 	assert_false(preview.allows_settlement())
 
 
@@ -230,4 +235,11 @@ func _crate(entity_id: int, x: int, y: int, z: int, durability: int) -> SharedCo
 			"durability": durability,
 			"regen_policy_id": 0,
 		},
+	})
+
+
+func _pickup(entity_id: int, x: int, y: int, z: int, kind: String) -> SharedComponentRecord:
+	return SharedComponentRecord.create(entity_id, {
+		"transform": {"x": x, "y": y, "z": z, "yaw_bam": 0},
+		"inventory": {"item_state": kind},
 	})
