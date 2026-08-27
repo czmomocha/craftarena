@@ -13,9 +13,10 @@ extends RefCounted
 ## 冷却是调用方 tick，不是产品秒数。力度不从命令帧读取。
 ## 出界复位：range_enabled 时用调用方 AABB（闭区间）经 TraprushOutOfRangeReset
 ## 写回最近检查点落点。不计数 N，不写硬直。默认关闭。
-## 下落：调用方 fall_dy 经 try_move_y_until_blocked。默认 0。commit_tick 先下落
-## 再 world.tick（与灰盒相同）。MatchRealtime 在下落与 world.tick 之间应用意图，
-## 避免同一拍 Jump 被立刻落下。不锁产品重力。
+## 下落：调用方 fall_dy 是每 tick 重力加速度，经 TraprushGravity.integrate
+## 写入胶囊 vy。默认 0（2 人 Headless 冲线夹具不走路板，不能默认下落）。
+## commit_tick 先积分再 world.tick（与灰盒相同）。MatchRealtime 在积分与
+## world.tick 之间应用意图，避免同一拍 Jump 被立刻落下。不锁产品重力。
 ## 周期机关：commit_tick 在 world.tick() 之后按已有 cooldown_ticks 切换固体。
 ## 意图不推进 tick，故不切换。不读 damage/knockback，不发明 period。
 ## 语义与 AuthoringPreview 试玩逐字对齐：同一 IntentStepper、同一占用扫描
@@ -28,6 +29,7 @@ const CheckpointSpawn := preload("res://src/games/traprush/checkpoint_spawn.gd")
 const CheckpointTrack := preload("res://src/games/traprush/checkpoint_track.gd")
 const DestructibleBreak := preload("res://src/games/traprush/destructible_break.gd")
 const FinishAccept := preload("res://src/games/traprush/finish_accept.gd")
+const Gravity := preload("res://src/games/traprush/gravity.gd")
 const HazardCycle := preload("res://src/games/traprush/hazard_cycle.gd")
 const IntentStepper := preload("res://src/games/traprush/intent_stepper.gd")
 const JumpIntent := preload("res://src/games/traprush/jump_intent.gd")
@@ -313,7 +315,7 @@ func apply_player_falls() -> void:
 		return
 	for player: Dictionary in _players:
 		var capsule_id: int = player["capsule_id"]
-		_world.try_move_y_until_blocked(capsule_id, fall_dy)
+		Gravity.integrate(_world, capsule_id, fall_dy)
 		_reset_player_if_out_of_range(player)
 
 

@@ -15,22 +15,24 @@ extends RefCounted
 ##
 ## 分成两组是因为语义不同，不是因为有人抄错了：
 ## MATCH 组给随引擎 tick 连续推进的场景（对局进程、Solo、BotRunner）；
-## PREVIEW 组给手动点 Advance tick 的编辑器 Preview，那里一次点击代表一大步，
-## 每次落一整格，否则要点十六下才看得出在下落。
+## PREVIEW 组给手动点 Advance tick 的编辑器 Preview，加速度更大，从静止
+## 开始第一下仍落一整格。后续点击会加速，这是积分而不是每下重置位移。
 ##
 ## 出界半宽不在这里复制，直接用 TraprushOutOfRangeReset.STUB_HALF。
 
 const OutOfRangeReset := preload("res://src/games/traprush/out_of_range_reset.gd")
 const TraprushMatchSession := preload("res://src/games/traprush/match_session.gd")
 
-## 一格 hop：会与 course_01 出生点正上方的 two_way 盒闭区间相交并落地。
+## 一格 hop 的竖直冲量：会与 course_01 出生点正上方的 two_way 盒闭区间相交并落地。
+## apply_jump 把本拍位移和 vy 都写成这个值，后续各拍由重力加速度拉回。
 const JUMP_DY: int = Fixed.SCALE / 4
 ## 向下探测立足固体，与灰盒同向。
 const SUPPORT_DY: int = -Fixed.SCALE
-## 与大厅 play_move_step 同量。引擎约 60 physics tick/s，一格每 tick 会在约 8 帧内
-## 触发出界复位，看起来像往上弹回出生点。
+## 与大厅 play_move_step 同量级的开发期重力加速度（每 tick 加到 vy）。
+## 不是恒定位移：从静止开始第一拍位移等于本值，之后越落越快。
+## 引擎约 60 physics tick/s 时，走下出生点立足盒后大约十几拍触发出界复位。
 const FALL_DY: int = -Fixed.SCALE / 16
-## Preview 手动 Advance tick：一次点击落一整格。
+## Preview 手动 Advance tick：一次点击的加速度。从静止开始第一下仍落一整格。
 const PREVIEW_FALL_DY: int = -Fixed.SCALE
 
 const USE_ITEM_DAMAGE: int = 1

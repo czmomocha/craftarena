@@ -5,7 +5,7 @@ extends RefCounted
 ## 依据 CD-43：相同种子与输入必须得到相同关键状态哈希。本夹具走 course API，不让 SimulationWorld 解码意图。
 ## Move / Jump / ResetToCheckpoint 走 try_step_intent；Interact 走 try_interact；UseItem 走 try_use_item；Shove 走 try_shove。
 ## SYSTEM 的 place_pose / accept_checkpoint / land_portal / cross_finish / reset_if_out_of_range / break_crate / commit_tick / apply_fall 走对应 course API；land_portal 必须落地；复位必须真正 reset；commit 必须推进到 command.target_tick。
-## commit_tick 与 apply_fall 的 fall_dy 从 SYSTEM payload 读取。其余 PLAYER 的 jump_dy / support_dy / 伤害 / reach / shove cooldown 与 dx/dz 仍由调用方脚本传入，不锁定 CD-63 数值。
+## commit_tick 的 fall_dy 是重力加速度（经 TraprushGravity.integrate）；apply_fall 仍是原始位移、不改 vy。
 ## 非 commit 命令若 target_tick 大于当前 tick，用脚本 fall_dy 做 try_commit_tick 追上；结尾再追到 until_tick。commit_tick 本身不先 catch_up，避免重复 tick。
 ## BASTION 意图、EDIT / ADMIN、未知 SYSTEM op、已有磁带或非 tick 0 的 course 一律失败。磁带类型本身仍不应用意图。
 

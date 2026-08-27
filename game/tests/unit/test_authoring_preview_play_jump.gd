@@ -4,11 +4,11 @@ extends GutTest
 ## through TraprushIntentStepper with caller play_jump_dy / play_support_dy
 ## stubs. Grounded (solid support inside the probe) moves up until blocked;
 ## airborne keeps the pose and still reports ok. Client height fields are
-## ignored. Shove / Interact stay refused. Fall is caller play_fall_dy on
-## try_advance_play only (intents do not tick). Official courses have
-## spawn-underfoot solids, so jump hops at spawn and advance can land.
-## Displacement is also proven on synthetic footing (a solid crate one cell
-## below the spawn pad, and a compiled solids bag).
+## ignored. Shove / Interact stay refused. Fall is caller play_fall_dy accel on
+## try_advance_play only (intents do not tick; leftover vy coasts if accel=0).
+## Official courses have spawn-underfoot solids, so jump hops at spawn and
+## advance can land. Displacement is also proven on synthetic footing (a solid
+## crate one cell below the spawn pad, and a compiled solids bag).
 
 const AuthoringDocument := preload("res://src/creator/authoring_document.gd")
 const AuthoringPreview := preload("res://src/creator/authoring_preview.gd")
@@ -142,20 +142,22 @@ func test_shell_official_jump_stays_until_advance_lands() -> void:
 	assert_eq(_preview_shell.preview.play_world.tick_index, 2)
 
 
-func test_zero_fall_dy_advance_keeps_hop() -> void:
-	var preview: AuthoringPreview = _connected_course(COURSE_01_PATH)
+func test_zero_accel_advance_coasts_jump_vy() -> void:
+	var preview: AuthoringPreview = _grounded_preview()
 	assert_true(preview.try_start_play(1, PLAY_RADIUS, PLAY_RADIUS))
-	preview.play_jump_dy = SPAWN_JUMP_DY
-	preview.play_support_dy = -CELL
+	preview.play_jump_dy = JUMP_DY
+	preview.play_support_dy = SUPPORT_DY
 	preview.play_fall_dy = 0
 	assert_true(preview.try_apply_play_intent(_jump()))
 	var hopped: Dictionary = preview.play_world.get_pose(preview.player_id)
 	var hopped_y: int = hopped.get("y", 1)
-	assert_eq(hopped_y, SPAWN_JUMP_DY)
+	assert_eq(hopped_y, STAND_Y + JUMP_DY)
+	assert_eq(preview.play_world.get_vy(preview.player_id), JUMP_DY)
 	assert_true(preview.try_advance_play())
 	var after: Dictionary = preview.play_world.get_pose(preview.player_id)
 	var after_y: int = after.get("y", 2)
-	assert_eq(after_y, hopped_y)
+	assert_eq(after_y, hopped_y + JUMP_DY)
+	assert_eq(preview.play_world.get_vy(preview.player_id), JUMP_DY)
 
 
 func test_zero_jump_dy_keeps_pose() -> void:

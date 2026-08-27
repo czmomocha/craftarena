@@ -8,7 +8,8 @@ extends RefCounted
 ## MatchSnapshotFollow so the lobby can interpolate presentation poses.
 ## The banner is always "离线试玩，成绩不上传". Web is refused.
 ## play_jump_dy / play_support_dy / play_fall_dy are caller stubs copied
-## into the session; 0 keeps the session default. play_range_half is a
+## into the session; play_fall_dy is gravity accel. 0 keeps the session
+## default (no accel; leftover vy still coasts). play_range_half is a
 ## caller stub copied into enable_play_range; 0 keeps the session default
 ## (off). No HTTP, sockets, settlement, ghosts, or online writes.
 

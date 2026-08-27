@@ -8,10 +8,10 @@ extends RefCounted
 ## finish_tick 是权威 world.tick_index，未冲线哨兵为 -1；不写入 SimulationWorld.hash_state。
 ## 位移、jump_dy、support_dy、fall_dy、范围边界、max_hops、max_health、period、snapshot capacity 均由调用方传入，不锁定 Tick/快照 Hz、重力或掉出次数 N（CD-63）。
 ## 成功 PLAYER 意图写入 SimReplayBuffer（CD-43 命令日志 + 种子）。成功的 place_pose / 检查点 / 落地传送 / 冲线 / 出界复位 / try_break_crate / try_commit_tick / try_apply_fall 写入 SYSTEM 记录（actor_id = 0），不是 FinishIntent。
-## assemble 记录 tick 0 关键快照；layout 可选 shove_target 时在盒之后再生成第二胶囊，缺省 shove_target_id = 0。try_commit_tick(fall_dy) 先内部下落（不经 try_apply_fall），成功后再推进 tick、按调用方周期切换 hazard 阻挡、再 record，成功入 SYSTEM 带。
-## try_step_intent(payload, jump_dy, support_dy) 把 support_dy 传给 apply；Jump 走直到阻挡；成功 PLAYER 意图入带。Shove 不经 IntentStepper。
+## assemble 记录 tick 0 关键快照；layout 可选 shove_target 时在盒之后再生成第二胶囊，缺省 shove_target_id = 0。try_commit_tick(fall_dy) 先 TraprushGravity.integrate（fall_dy 是加速度）再推进 tick、按调用方周期切换 hazard 阻挡、再 record，成功入 SYSTEM 带。
+## try_step_intent(payload, jump_dy, support_dy) 把 support_dy 传给 apply；Jump 走 apply_jump；成功 PLAYER 意图入带。Shove 不经 IntentStepper。
 ## try_shove(payload, cooldown_ticks, dx, dz) 委托 ShoveApply；dx/dz/冷却由调用方传入，不从 payload 读 impulse。ok 则 PLAYER 入带；shoved 才更新 last_shove_tick。无目标、解码失败不入带。不 tick。
-## try_apply_fall(fall_dy) 只调用 world.try_move_y_until_blocked；成功入 SYSTEM 带，不 tick、不 record。
+## try_apply_fall(fall_dy) 只调用 world.try_move_y_until_blocked，不改 vy；成功入 SYSTEM 带，不 tick、不 record。
 ## try_reset_if_out_of_range 用已合入的只读范围查询；出界则 set_pose 到最近检查点复活落点（CD-21 §6），成功复位入 SYSTEM 带，不 tick，不计数 N。
 ## try_interact / try_use_item / 成功 try_shove 入 PLAYER 带；try_place_pose / 成功检查点 / 成功落地传送 / 首次冲线 / 成功出界复位 / 成功 try_break_crate / 成功 try_commit_tick / 成功 try_apply_fall 入 SYSTEM 带。world.set_pose 仍不入带。
 ## try_interact 仅在 overlapping_static_boxes 含 crate 时按调用方 damage 走 Destructible；摧毁则关闭 crate 盒阻挡。
@@ -31,6 +31,7 @@ const CheckpointSpawn := preload("res://src/games/traprush/checkpoint_spawn.gd")
 const Destructible := preload("res://src/games/traprush/destructible.gd")
 const PadAccept := preload("res://src/games/traprush/pad_accept.gd")
 const FinishAccept := preload("res://src/games/traprush/finish_accept.gd")
+const Gravity := preload("res://src/games/traprush/gravity.gd")
 const ShoveApply := preload("res://src/games/traprush/shove_apply.gd")
 const SystemOps := preload("res://src/games/traprush/graybox_system_ops.gd")
 
@@ -322,6 +323,7 @@ func try_reset_if_out_of_range(
 	var yaw_bam: int = pose.get("yaw_bam", 0)
 	if not world.set_pose(entity_id, x, y, z, yaw_bam):
 		return failed
+	world.set_vy(entity_id, 0)
 	_append_command(
 		{
 			"op": SystemOps.RESET_IF_OUT_OF_RANGE,
@@ -409,7 +411,7 @@ func try_use_item(
 func try_commit_tick(fall_dy: int) -> bool:
 	if world == null or snapshots == null:
 		return false
-	if not _move_y_until_blocked(fall_dy):
+	if not Gravity.integrate(world, entity_id, fall_dy):
 		return false
 	world.tick()
 	var solid: bool = ((world.tick_index / _hazard_period_ticks) % 2) == 0
@@ -439,6 +441,7 @@ func try_place_pose(x: int, y: int, z: int, yaw_bam: int) -> bool:
 		return false
 	if not world.set_pose(entity_id, x, y, z, yaw_bam):
 		return false
+	world.set_vy(entity_id, 0)
 	_append_command(
 		{
 			"op": SystemOps.PLACE_POSE,

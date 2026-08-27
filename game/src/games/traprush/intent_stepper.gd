@@ -7,15 +7,16 @@ extends RefCounted
 ## Move 只调用 try_move_xz_until_blocked：停在最后未阻挡 XZ 样本，剩余位移丢弃，非贴墙滑行。
 ## 解码成功的 Move 仍 {ok: true}，不因接触或整段扫掠失败改为 false。不调用 try_move_xz。
 ## Jump 仅当 world.is_supported_by_solid(entity_id, support_dy) 为 true 时才
-## try_move_y_until_blocked：停在最后未阻挡 Y 样本，剩余位移丢弃。不调用 try_move_y。
-## 解码成功的 Jump 仍 {ok: true}，不因接触或整段扫掠失败改为 false。
-## 未支撑仍 {ok: true} 且不位移。Move / Reset 不读 support_dy。无二段跳缓冲。
-## 可选 yaw 在 XZ 接触推进之后 set_pose。不调用 world.tick()；Tick 仍由调用方推进。
+## TraprushGravity.apply_jump：按 jump_dy 冲量位移并把 vy 写成冲量（顶棚则 vy=0）。
+## 不调用 try_move_y。解码成功的 Jump 仍 {ok: true}。未支撑仍 {ok: true} 且不位移、不改 vy。
+## Move / Reset 不读 support_dy。无二段跳缓冲。Reset 写回落点后 set_vy(0)。
+## 可选 yaw 在 XZ 接触推进之后 set_pose（保留 vy，转身不是落地）。不调用 world.tick()；Tick 仍由调用方推进。
 ## Shove 不在本步进器应用。不处理传送落地等待或道具。
 
 const MoveIntent := preload("res://src/games/traprush/move_intent.gd")
 const JumpIntent := preload("res://src/games/traprush/jump_intent.gd")
 const CheckpointSpawn := preload("res://src/games/traprush/checkpoint_spawn.gd")
+const Gravity := preload("res://src/games/traprush/gravity.gd")
 
 ## Matches TraprushMoveIntent omitted-yaw sentinel. Do not read the private const.
 const _YAW_BAM_OMITTED: int = -1
@@ -45,7 +46,7 @@ static func apply(
 	var jump_ok: bool = jump_decoded.get("ok", false)
 	if jump_ok:
 		if world.is_supported_by_solid(entity_id, support_dy):
-			world.try_move_y_until_blocked(entity_id, jump_dy)
+			Gravity.apply_jump(world, entity_id, jump_dy)
 		return {"ok": true}
 	if CheckpointSpawn.is_reset_intent(payload):
 		return _apply_reset(world, entity_id, spawn, track)
@@ -84,4 +85,5 @@ static func _apply_reset(
 	var z: int = pose.get("z", 0)
 	var yaw_bam: int = pose.get("yaw_bam", 0)
 	world.set_pose(entity_id, x, y, z, yaw_bam)
+	world.set_vy(entity_id, 0)
 	return {"ok": true}

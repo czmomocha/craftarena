@@ -168,6 +168,21 @@ func test_hash_state_ignores_capsule_radius_and_height() -> void:
 	assert_eq(posed.hash_state().hex_encode(), sized.hash_state().hex_encode())
 
 
+func test_hash_state_includes_vy() -> void:
+	var left: SimulationWorld = SimulationWorld.new(1)
+	left.spawn_capsule(_whole(3), _whole(4), _whole(5), 16)
+	var right: SimulationWorld = SimulationWorld.new(1)
+	right.spawn_capsule(_whole(3), _whole(4), _whole(5), 16)
+	assert_eq(left.hash_state().hex_encode(), right.hash_state().hex_encode())
+	assert_true(left.set_vy(1, 1))
+	assert_ne(left.hash_state().hex_encode(), right.hash_state().hex_encode())
+	var posed: Dictionary = left.get_pose(1)
+	var posed_y: int = posed.get("y", -1)
+	assert_eq(posed_y, _whole(4))
+	assert_false(left.set_vy(99, 1))
+	assert_eq(left.get_vy(99), 0)
+
+
 func test_try_move_xz_in_open_space_changes_x_z_not_y_or_yaw() -> void:
 	var world: SimulationWorld = SimulationWorld.new(1)
 	var y: int = _whole(4)
