@@ -48,7 +48,7 @@ func test_official_course_01_maps_unique_orders() -> void:
 	assert_almost_eq(first.position.z, 0.0, EPS)
 	assert_almost_eq(third.position.x, 1.0, EPS)
 	assert_almost_eq(third.position.y, 2.15, EPS)
-	assert_almost_eq(third.position.z, 0.0, EPS)
+	assert_almost_eq(third.position.z, -3.0, EPS)
 	var seq: MeshInstance3D = _map.sequence_node(1, 2)
 	assert_not_null(seq)
 	assert_almost_eq(seq.position.x, 1.0, EPS)
@@ -60,6 +60,7 @@ func test_official_course_01_maps_unique_orders() -> void:
 	assert_not_null(_map.sequence_node(2, 3))
 	assert_almost_eq(_map.sequence_node(2, 3).position.x, 1.5, EPS)
 	assert_almost_eq(_map.sequence_node(2, 3).position.y, 0.75, EPS)
+	assert_almost_eq(_map.sequence_node(2, 3).position.z, -1.5, EPS)
 	assert_false(_map.allows_settlement())
 	assert_false(_map.allows_online_writes())
 
@@ -68,8 +69,8 @@ func test_official_courses_map_distinct_layouts_and_no_ghosts() -> void:
 	_map = MatchCheckpointOrderMap.new()
 	add_child(_map)
 	assert_true(_map.apply_path(COURSE_01_PATH))
-	assert_almost_eq(_map.checkpoint_node(3).position.z, 0.0, EPS)
-	assert_almost_eq(_map.sequence_node(2, 3).position.z, 0.0, EPS)
+	assert_almost_eq(_map.checkpoint_node(3).position.z, -3.0, EPS)
+	assert_almost_eq(_map.sequence_node(2, 3).position.z, -1.5, EPS)
 	assert_true(_map.apply_path(COURSE_02_PATH))
 	assert_eq(_map.checkpoint_count(), 3)
 	assert_eq(_map.sequence_count(), 2)
@@ -113,7 +114,7 @@ func test_null_or_missing_path_keeps_previous_map() -> void:
 	assert_false(_map.apply_path(""))
 	assert_eq(_map.checkpoint_count(), 3)
 	assert_eq(_map.sequence_count(), 2)
-	assert_almost_eq(_map.checkpoint_node(3).position.z, 0.0, EPS)
+	assert_almost_eq(_map.checkpoint_node(3).position.z, -3.0, EPS)
 
 
 func test_malformed_order_keeps_previous_map() -> void:
@@ -131,7 +132,7 @@ func test_malformed_order_keeps_previous_map() -> void:
 	bundle.pads[2]["order"] = -1
 	assert_false(_map.apply_bundle(bundle))
 	assert_eq(_map.sequence_count(), 2)
-	assert_almost_eq(_map.sequence_node(2, 3).position.z, 0.0, EPS)
+	assert_almost_eq(_map.sequence_node(2, 3).position.z, -1.5, EPS)
 
 
 func test_duplicate_order_marks_without_sequence() -> void:

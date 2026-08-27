@@ -34,7 +34,7 @@ func after_each() -> void:
 func test_official_courses_walk_onto_finish_after_last_pad() -> void:
 	var first: AuthoringPreview = _connected_course(COURSE_01_PATH)
 	var second: AuthoringPreview = _connected_course(COURSE_02_PATH)
-	_assert_official_finish_run(first, 0)
+	_assert_official_finish_run(first, -3 * CELL)
 	_assert_official_finish_run(second, 2 * CELL)
 
 
@@ -42,7 +42,7 @@ func test_finish_without_all_checkpoints_is_refused() -> void:
 	var preview: AuthoringPreview = _connected_course(COURSE_01_PATH)
 	assert_true(preview.try_start_play(1, PLAY_RADIUS, PLAY_RADIUS))
 	assert_eq(preview.play_accepted_count(), 1)
-	assert_true(preview.play_world.try_set_pose(preview.player_id, 2 * CELL, CELL, 0, 0))
+	assert_true(preview.play_world.try_set_pose(preview.player_id, 2 * CELL, CELL, -3 * CELL, 0))
 	var blocked_box: int = _finish_box_id(preview)
 	assert_true(preview.play_world.overlaps_static_box(preview.player_id, blocked_box))
 	assert_false(preview.try_cross_play_finish())

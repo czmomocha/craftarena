@@ -60,8 +60,8 @@ func test_reset_after_first_pad_returns_to_start_pad() -> void:
 func test_reset_after_second_pad_returns_to_second_pad() -> void:
 	var first: AuthoringPreview = _connected_course(COURSE_01_PATH)
 	var second: AuthoringPreview = _connected_course(COURSE_02_PATH)
-	_assert_reset_to_second_pad(first, 0)
-	_assert_reset_to_second_pad(second, 0)
+	_assert_reset_to_second_pad(first, 0, CELL)
+	_assert_reset_to_second_pad(second, 0, -CELL)
 
 
 func test_unaccepted_track_resets_to_offset_start() -> void:
@@ -148,7 +148,7 @@ func test_reset_after_finish_keeps_finish_tick() -> void:
 	var pose_z: int = pose.get("z", -1)
 	assert_eq(pose_x, CELL)
 	assert_eq(pose_y, CELL)
-	assert_eq(pose_z, 0)
+	assert_eq(pose_z, -3 * CELL)
 	assert_eq(preview.play_finish_tick(), 0)
 	assert_eq(preview.play_accepted_count(), 3)
 	assert_false(preview.allows_settlement())
@@ -216,16 +216,16 @@ func test_shell_reset_moves_marker_and_hidden_window_does_not_sample() -> void:
 	assert_almost_eq(marker.position.x, 0.0, EPS)
 
 
-func _assert_reset_to_second_pad(preview: AuthoringPreview, dest_z: int) -> void:
+func _assert_reset_to_second_pad(preview: AuthoringPreview, dest_z: int, away_dz: int) -> void:
 	assert_true(preview.try_start_play(1, PLAY_RADIUS, PLAY_RADIUS))
 	assert_true(preview.try_apply_play_intent(_move(CELL, 0)))
 	assert_true(preview.try_apply_play_intent(_move(CELL, 0)))
 	assert_eq(preview.play_accepted_count(), 2)
 	assert_eq(preview.play_last_accepted_id(), SECOND_PAD)
-	assert_true(preview.try_apply_play_intent(_move(0, -CELL)))
+	assert_true(preview.try_apply_play_intent(_move(0, away_dz)))
 	var away: Dictionary = preview.play_world.get_pose(preview.player_id)
 	var away_z: int = away.get("z", 1)
-	assert_eq(away_z, dest_z - CELL)
+	assert_eq(away_z, dest_z + away_dz)
 	assert_true(preview.try_apply_play_intent(_reset()))
 	var pose: Dictionary = preview.play_world.get_pose(preview.player_id)
 	var pose_x: int = pose.get("x", -1)

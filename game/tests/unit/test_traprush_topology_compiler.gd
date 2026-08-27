@@ -53,8 +53,8 @@ func test_official_courses_compile_distinct_topology() -> void:
 	assert_eq(second.destructibles.size(), 1)
 	assert_eq(first.hazards.size(), 1)
 	assert_eq(second.hazards.size(), 1)
-	assert_eq(first.solids.size(), 2)
-	assert_eq(second.solids.size(), 2)
+	assert_eq(first.solids.size(), 8)
+	assert_eq(second.solids.size(), 8)
 	var first_hazard: Dictionary = _hazard(first, 60)
 	var first_solid: Dictionary = _solid(first, 70)
 	var first_footing: Dictionary = _solid(first, 80)
@@ -88,7 +88,7 @@ func test_official_courses_compile_distinct_topology() -> void:
 	var second_finish_z: int = second_finish.get("z", -1)
 	assert_eq(first_finish_x, 2 * CELL)
 	assert_eq(first_finish_y, CELL)
-	assert_eq(first_finish_z, 0)
+	assert_eq(first_finish_z, -3 * CELL)
 	assert_eq(second_finish_z, 2 * CELL)
 	var first_pad_x: int = _pad(first, 1).get("x", -1)
 	var first_pad_z: int = _pad(first, 1).get("z", -1)
@@ -111,7 +111,7 @@ func test_official_courses_compile_distinct_topology() -> void:
 	assert_eq(first_source_z, 0)
 	assert_eq(first_dest_x, 0)
 	assert_eq(first_dest_y, CELL)
-	assert_eq(first_dest_z, 0)
+	assert_eq(first_dest_z, -3 * CELL)
 	assert_eq(second_kind, AuthoringPortalKinds.TWO_WAY)
 	assert_eq(second_dest_z, 2 * CELL)
 	assert_ne(first_dest_z, second_dest_z)
@@ -247,7 +247,7 @@ func test_loaded_pads_are_non_solid_occupancy_and_world_ticks() -> void:
 	var hazard_ids: Dictionary = loaded["hazard_ids"]
 	assert_eq(hazard_ids.size(), 1)
 	var solid_ids: Dictionary = loaded["solid_ids"]
-	assert_eq(solid_ids.size(), 2)
+	assert_eq(solid_ids.size(), 8)
 	var box_id: int = pad_ids[1]
 	assert_false(world.is_static_box_solid(box_id))
 	var portal_box_id: int = portal_ids[10]
@@ -270,7 +270,7 @@ func test_loaded_pads_are_non_solid_occupancy_and_world_ticks() -> void:
 	var at_portal: int = world.spawn_capsule(3 * CELL, 0, 0, 0, 1, 1)
 	var portal_overlap: PackedInt32Array = world.overlapping_static_boxes(at_portal)
 	assert_true(_has_id(portal_overlap, portal_box_id))
-	var at_finish: int = world.spawn_capsule(2 * CELL, CELL, 0, 0, 1, 1)
+	var at_finish: int = world.spawn_capsule(2 * CELL, CELL, -3 * CELL, 0, 1, 1)
 	var finish_overlap: PackedInt32Array = world.overlapping_static_boxes(at_finish)
 	assert_true(_has_id(finish_overlap, finish_box_id))
 	assert_eq(world.tick_index, 0)

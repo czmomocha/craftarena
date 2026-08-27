@@ -356,6 +356,7 @@ func test_fall_off_spawn_footing_drops_y() -> void:
 	var rest: Dictionary = session.player_pose(0)
 	var rest_y: int = rest.get("y", 1)
 	assert_true(session.apply_player_intent(0, _move(CELL, 0)))
+	assert_true(session.apply_player_intent(0, _move(0, CELL)))
 	session.commit_tick()
 	var dropped: Dictionary = session.player_pose(0)
 	var dropped_y: int = dropped.get("y", 2)
@@ -370,9 +371,12 @@ func test_fall_off_spawn_footing_then_range_resets_to_spawn() -> void:
 	var rest: Dictionary = session.player_pose(0)
 	var rest_y: int = rest.get("y", 1)
 	assert_true(session.apply_player_intent(0, _move(CELL, 0)))
+	assert_true(session.apply_player_intent(0, _move(0, CELL)))
 	var walked: Dictionary = session.player_pose(0)
 	var walked_x: int = walked.get("x", -1)
+	var walked_z: int = walked.get("z", -1)
 	assert_eq(walked_x, CELL)
+	assert_eq(walked_z, CELL)
 	var saw_drop: bool = false
 	var saw_reset: bool = false
 	for _step: int in range(16):
@@ -389,7 +393,9 @@ func test_fall_off_spawn_footing_then_range_resets_to_spawn() -> void:
 	assert_true(saw_reset)
 	var spawn: Dictionary = session.player_pose(0)
 	var spawn_x: int = spawn.get("x", -1)
+	var spawn_z: int = spawn.get("z", -1)
 	assert_eq(spawn_x, 0)
+	assert_eq(spawn_z, 0)
 
 
 func _jump() -> Dictionary:

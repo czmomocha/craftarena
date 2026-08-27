@@ -11,7 +11,8 @@ extends RefCounted
 const CheckpointSpawn := preload("res://src/games/traprush/checkpoint_spawn.gd")
 const CheckpointTrack := preload("res://src/games/traprush/checkpoint_track.gd")
 
-## 开发期占位半宽：±8 格。官方三张赛道最大约 4 格。不是产品边界。
+## 开发期占位半宽：±8 格。官方三张赛道沿路有立足固体后，这是真正的坑边界
+## （走下路面才碰到），不是缺地板时的兜底。不是产品场地尺寸。
 const STUB_HALF: int = 8 * Fixed.SCALE
 
 

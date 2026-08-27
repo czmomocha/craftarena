@@ -37,7 +37,7 @@ func test_official_course_01_maps_two_way_links() -> void:
 	assert_not_null(link)
 	assert_almost_eq(link.position.x, 1.5, EPS)
 	assert_almost_eq(link.position.y, 0.5, EPS)
-	assert_almost_eq(link.position.z, 0.0, EPS)
+	assert_almost_eq(link.position.z, -1.5, EPS)
 	var box: BoxMesh = link.mesh as BoxMesh
 	assert_not_null(box)
 	assert_almost_eq(box.size.x, 0.08, EPS)
@@ -109,4 +109,4 @@ func test_malformed_dest_keeps_previous_map() -> void:
 	bundle.portals[0].erase("dest_x")
 	assert_false(_map.apply_bundle(bundle))
 	assert_eq(_map.link_count(), 2)
-	assert_almost_eq(_map.link_node(10).position.z, 0.0, EPS)
+	assert_almost_eq(_map.link_node(10).position.z, -1.5, EPS)

@@ -1,7 +1,8 @@
 extends GutTest
 
 ## Second official TRAPRUSH course: lateral + upper two_way AuthoringDocument.
-## Distinct from course_01 (pads/portals/finish stay z=0; both have a +Z crate).
+## Distinct from course_01 (course_01 upper lane is z=-3 so 1 m floors fit
+## without overlapping the seat-1 spawn offset); this course's upper lane is z=+2.
 ## Publish reachability is ok. Tampering is not a write gate. Never settlement.
 
 const AuthoringDocument := preload("res://src/creator/authoring_document.gd")
@@ -29,8 +30,8 @@ func test_official_course_02_loads_and_is_publish_ready() -> void:
 	var world: AuthoringWorld = AuthoringDocument.load_from_path(COURSE_02_PATH)
 	assert_not_null(world)
 	assert_eq(world.grid.cell, CELL)
-	assert_eq(world.revision, 9)
-	assert_eq(world.entity_ids(), [1, 2, 3, 20, 21, 30, 40, 60, 70, 80])
+	assert_eq(world.revision, 10)
+	assert_eq(world.entity_ids(), [1, 2, 3, 20, 21, 30, 40, 60, 70, 80, 81, 82, 83, 84, 85, 86])
 	var result: Dictionary = AuthoringReachability.evaluate(world)
 	assert_true(_ok(result))
 	var issues: Array = result.get("issues", [1])
@@ -43,17 +44,17 @@ func test_course_02_is_lateral_two_way_not_course_01() -> void:
 	assert_not_null(first)
 	assert_not_null(second)
 	assert_ne(first.hash_state().hex_encode(), second.hash_state().hex_encode())
-	var first_ids: Array[int] = first.entity_ids()
-	for entity_id: int in first_ids:
-		if entity_id == 40:
-			assert_eq(_entity_z(first, entity_id), CELL)
-			continue
-		if entity_id == 60:
-			assert_eq(_entity_z(first, entity_id), -2 * CELL)
-			continue
-		assert_eq(_entity_z(first, entity_id), 0)
+	assert_eq(_entity_z(first, 1), 0)
+	assert_eq(_entity_z(first, 2), 0)
+	assert_eq(_entity_z(first, 10), 0)
+	assert_eq(_entity_z(first, 3), -3 * CELL)
+	assert_eq(_entity_z(first, 11), -3 * CELL)
+	assert_eq(_entity_z(first, 30), -3 * CELL)
+	assert_eq(_entity_z(first, 40), CELL)
+	assert_eq(_entity_z(first, 60), -2 * CELL)
 	assert_eq(_entity_x(first, 70), -CELL)
 	assert_eq(_entity_y(first, 80), -CELL)
+	assert_eq(_entity_z(first, 84), -3 * CELL)
 	var links: Array[Dictionary] = second.portal_links()
 	assert_eq(links.size(), 2)
 	var saw_right_lane: bool = false

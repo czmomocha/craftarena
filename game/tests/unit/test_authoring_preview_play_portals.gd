@@ -38,7 +38,7 @@ func after_each() -> void:
 func test_official_courses_walk_through_portal_to_last_pad() -> void:
 	var first: AuthoringPreview = _connected_course(COURSE_01_PATH)
 	var second: AuthoringPreview = _connected_course(COURSE_02_PATH)
-	_assert_official_portal_run(first, 0)
+	_assert_official_portal_run(first, -3 * CELL)
 	_assert_official_portal_run(second, 2 * CELL)
 
 
@@ -52,7 +52,7 @@ func test_two_way_dest_is_latched_until_capsule_leaves() -> void:
 	var landed_z: int = landed.get("z", -1)
 	assert_eq(landed_x, 0)
 	assert_eq(landed_y, CELL)
-	assert_eq(landed_z, 0)
+	assert_eq(landed_z, -3 * CELL)
 	assert_true(preview.try_advance_play())
 	var still: Dictionary = preview.play_world.get_pose(preview.player_id)
 	var still_x: int = still.get("x", -1)
@@ -60,16 +60,15 @@ func test_two_way_dest_is_latched_until_capsule_leaves() -> void:
 	var still_z: int = still.get("z", -1)
 	assert_eq(still_x, 0)
 	assert_eq(still_y, CELL)
-	assert_eq(still_z, 0)
-	assert_true(preview.try_apply_play_intent(_move(CELL, 0)))
+	assert_eq(still_z, -3 * CELL)
 	assert_true(preview.try_apply_play_intent(_move(-CELL, 0)))
 	var reversed: Dictionary = preview.play_world.get_pose(preview.player_id)
 	var reversed_x: int = reversed.get("x", -1)
 	var reversed_y: int = reversed.get("y", -1)
 	var reversed_z: int = reversed.get("z", -1)
-	assert_eq(reversed_x, 3 * CELL)
-	assert_eq(reversed_y, 0)
-	assert_eq(reversed_z, 0)
+	assert_eq(reversed_x, -CELL)
+	assert_eq(reversed_y, CELL)
+	assert_eq(reversed_z, -3 * CELL)
 
 
 func test_portal_does_not_accept_skipped_checkpoint() -> void:
@@ -99,7 +98,7 @@ func test_portal_does_not_accept_skipped_checkpoint() -> void:
 func test_occupied_dest_waits_then_lands_when_clear() -> void:
 	var preview: AuthoringPreview = _connected_course(COURSE_01_PATH)
 	assert_true(preview.try_start_play(1, PLAY_RADIUS, PLAY_RADIUS))
-	var occupant_id: int = preview.play_world.spawn_capsule(0, CELL, 0, 0, 1, 1)
+	var occupant_id: int = preview.play_world.spawn_capsule(0, CELL, -3 * CELL, 0, 1, 1)
 	assert_gt(occupant_id, 0)
 	_walk_onto_ground_portal(preview)
 	var waiting: Dictionary = preview.play_world.get_pose(preview.player_id)
@@ -122,7 +121,7 @@ func test_occupied_dest_waits_then_lands_when_clear() -> void:
 	var landed_z: int = landed.get("z", -1)
 	assert_eq(landed_x, 0)
 	assert_eq(landed_y, CELL)
-	assert_eq(landed_z, 0)
+	assert_eq(landed_z, -3 * CELL)
 	assert_eq(preview.play_floor_index(), 1)
 	assert_eq(preview.play_world.tick_index, 1)
 
@@ -155,7 +154,7 @@ func test_follow_cannot_land_official_two_way_but_exit_can() -> void:
 	var pose_z: int = pose.get("z", -1)
 	assert_eq(pose_x, 0)
 	assert_eq(pose_y, CELL)
-	assert_eq(pose_z, 0)
+	assert_eq(pose_z, -3 * CELL)
 
 
 func test_shell_status_floor_follows_portal_land() -> void:
