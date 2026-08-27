@@ -9,7 +9,7 @@
 - 本文件**不写死**任何 IP、域名、VPS 规格、发行版或 SSH 落点。真实值由你在执行时代入。
 - 云主机上的额外差异（安全组、数据盘）见 [`infra/tencent-cloud/README.md`](../../infra/tencent-cloud/README.md)。
 
-> **状态：人类已于 2026-08-27 在自备测试机构建 compose，并完成远端双机对局。** 仓库仍不写 IP / 域名。§12 的实测格子在数字回填之前保持空白——「跑通了」不等于 E3（哪些零延迟参数不成立）。
+> **状态：人类已于 2026-08-27 在自备测试机构建 compose，完成远端双机对局，并按 §8–§9 回填了 §12。** 仓库仍不写 IP / 域名。§12 的结论是：本条链路的 ICMP 近端样本**没有**证伪快照 / 心跳 / 插值占位桩；7 局空转**证实** CPU 先于内存。C3 不得把这张表当成锁定 [CD-43 §4](../../Confirmed-docs/40-technical/43-networking-and-replay.md#4-未锁定项) 的依据。
 
 ## 占位符
 
@@ -221,6 +221,8 @@ for ($i = 1; $i -lt $samples.Count; $i++) {
 
 ICMP 与游戏用的 TCP/WebSocket 走的不是同一条队列，拥塞时表现可能不同。它是**下限估计**，不是协议层 RTT。协议层 RTT 需要帧里带时间戳，那不在本章。
 
+2026-08-27 已按上面的 600 次流程采过一回（约 10 分钟，不是 24 小时）。数字与结论在 §12。原始 `rtt-raw.txt` 含对端地址，**不要提交**。
+
 ---
 
 ## 9. 资源基线
@@ -260,6 +262,8 @@ nproc   # 记下核数，CPU 百分比脱离核数没有意义
 
 **注意**：这七局没有真人输入。它测的是空转 tick 循环 + 广播的底噪，**不是**满载。真人输入下的数字只能靠 §7 那种真实对局采，样本量小得多。记录时必须写清楚是哪一种，否则下一次审视会把底噪当成容量结论。
 
+2026-08-27 已按本节采过一次 7 局空转（七行均 `201`）。数字与结论在 §12。该次未跑 `nproc`，CPU 百分比只按 Docker / `ps` 相对单核来读。
+
 采完清掉：
 
 ```bash
@@ -298,24 +302,61 @@ docker compose down -v       # 连数据库一起删。会丢结算记录，确�
 
 **这一节才是 C1 的主要产出。** 跑通只是前提，结论是「哪些在零延迟下做的决定不成立」。
 
-跑完 §7–§9 后回填下表，并把它带进 PR：
+采样边界（必须和数字一起读，缺一条就把对应结论降级）：
 
-| 项 | 零延迟下的现状 | 真链路实测 | 结论 |
+- ICMP **600** 次（手册允许的流程长度），约 10 分钟，**不是** 24 小时。
+- ICMP 是下限估计，**不是** WebSocket / 命令帧 / 快照帧 RTT。
+- P50 = 3ms 说明这条客户端→测试机路径是**近端 / 同区域**量级，不能当成跨省公网弱网。
+- 7 局是 `POST /matchmaking/rooms` 拉起后的**空转 tick**，没有真人输入，不是满载。
+- 该次未跑 `nproc`。Docker `CPU %` 与 `ps` `%CPU` 都按相对单核来读；`198.92%` ≈ 两核打满，不能换算成「打满整机」。
+- 不入库 IP、域名、SSH 落点、对局 `match-id`。
+
+| 项 | 零延迟下的现状 | 真链路实测（2026-08-27） | 结论 |
 |---|---|---|---|
-| RTT P50 / P90 / P95 | 无数据（全在 127.0.0.1） | | |
-| 丢包率 | 无数据 | | |
-| 抖动（IPDV） | 无数据 | | |
-| 快照频率 `SNAPSHOT_EVERY_TICKS` | 占位桩 | | |
-| 心跳频率 `HEARTBEAT_EVERY_TICKS` | 占位桩 | | |
-| 插值窗口 `play_interp_step` | 表现桩，非插值窗口 | | |
-| 本席预测与对账 | 无对账，overlay 直接贴最新权威 | | |
-| 7 局并发 CPU（空转） | 推导「CPU 先崩」，未实测 | | |
-| 7 局并发内存 | 推导约 3 GB，未实测 | | |
+| RTT P50 / P90 / P95 | 无数据（全在 127.0.0.1） | ICMP：min 3 / P50 3 / P90 3 / P95 4 / max 18（ms）；sent=received=600 | 近端。3ms 仍远小于 60Hz 一拍（~16.7ms）。**不能**当「真公网」去改快照 / 插值。 |
+| 丢包率 | 无数据 | 0% | 本窗口未观察到 ICMP 丢包。不证明 24h 稳定，也不证明游戏协议不丢。 |
+| 抖动（IPDV） | 无数据 | 0.16ms | 可忽略。约束范围同 ICMP 本条路径。 |
+| 快照频率 `SNAPSHOT_EVERY_TICKS` | 占位桩 = 2（每 2 个引擎 tick 一帧） | 无协议层到达间隔 | **本样本未证伪。** C3 不得据此改值或写入 [CD-43 §4](../../Confirmed-docs/40-technical/43-networking-and-replay.md#4-未锁定项)。 |
+| 心跳频率 `HEARTBEAT_EVERY_TICKS` | 占位桩 = 60 | 7 局均拉起；空转无真人输入，心跳本就不续租 | **本样本未证伪。** |
+| 插值窗口 `play_interp_step` | 表现桩 `Fixed.SCALE / 2`，不是插值窗口 | 无 | **本样本未提供把桩换成窗口的依据。** |
+| 本席预测与对账 | 无对账；新快照 tick 清 overlay，硬贴最新权威 | 无预测误差 / 快照到达延迟 | **本样本未证伪，也未证明需要平滑对账。** |
+| 7 局并发 CPU（空转） | 推导「CPU 先崩」，未实测 | 七行 `201`。负载后 `match-host` 容器 **198.92%**；7 个 Godot Headless 各约 27–30% CPU；node MatchHost ~0%。`control-plane` 7.05%，`gateway` 0.00%（无客户端连入） | **证实 CPU 先于内存。** 7 局空转已约两核。缺 `nproc`，不得把百分比写成整机利用率。 |
+| 7 局并发内存 | 推导约 3 GB，未实测 | 空载 → 7 局：gateway 63.02→64.5 MiB；match-host 66.89→**422.2 MiB** / 3.339 GiB；control-plane 93.54→108.1 MiB。容器内 `ps` RSS：Godot 各约 114 MiB，node ~122 MiB，合计 ~920 MiB | **3 GB 推导对空转偏高。** 内存远未到限。cgroup（422 MiB）与 RSS（~920 MiB）不一致，并列记录，不得只取更乐观的那个。 |
 
-网络参数的所有者文档是 [CD-43 §4](../../Confirmed-docs/40-technical/43-networking-and-replay.md)，容量是 [CD-44 §2](../../Confirmed-docs/40-technical/44-deployment.md)。**本手册不改那两处**——实测值由 C3 那一批按结论一次性写入，避免占位数字在冻结期反复搬家。
+网络参数的所有者文档是 [CD-43 §4](../../Confirmed-docs/40-technical/43-networking-and-replay.md#4-未锁定项)，容量是 [CD-44 §2](../../Confirmed-docs/40-technical/44-deployment.md#2-容量与排队)。**本手册不改那两处**——即使以后要改占位数字，也由 C3 按结论一次性写入，避免冻结期反复搬家。
+
+### 对纠偏退出条件的含义
+
+- **E2**（有 RTT / 丢包 / 资源基线）：本表填了数。双机对局与写库已在同日验证。C1 产出 6 写的 **24 小时**采样仍未做。
+- **E3**（列出并修正零延迟下做错的网络参数）：本表**列出**了。被证实的是容量推导「CPU 先于内存」；被证伪的是「7 局空转大约要 3 GB」。快照 / 心跳 / 插值 / 对账占位桩在这条 ~3ms ICMP 路径上**没有**被证伪，因此**不修正**那些代码常量。E3 的「修正」仍留给 C3，且需要更像公网的样本或人类另行拍板，不能用本表锁 [CD-63 §1.5](../../Confirmed-docs/60-plan/63-open-decisions.md)。
+
+### 资源摘录（空转）
+
+空载 `docker stats --no-stream`：
+
+```text
+NAME                         CPU %     MEM USAGE / LIMIT
+craftarena-gateway-1         0.00%     63.02MiB / 3.339GiB
+craftarena-match-host-1      0.00%     66.89MiB / 3.339GiB
+craftarena-control-plane-1   0.00%     93.54MiB / 3.339GiB
+```
+
+七次 `POST /matchmaking/rooms`（`course_01` / `seats=2`）HTTP 状态：`201` × 7。
+
+约 30 秒后：
+
+```text
+NAME                         CPU %     MEM USAGE / LIMIT
+craftarena-gateway-1         0.00%     64.5MiB / 3.339GiB
+craftarena-match-host-1      198.92%   422.2MiB / 3.339GiB
+craftarena-control-plane-1   7.05%     108.1MiB / 3.339GiB
+```
+
+`match-host` 容器内 `ps`：1 个 node MatchHost（RSS ~122 MiB，%CPU ~0）+ 7 个 Godot Headless（`match_server.tscn`，官方 `course_01`，`--players=2`；各约 27–30% CPU、RSS ~114 MiB）。不记录 `match-id`。
 
 ### 执行记录
 
 | 日期 | 执行人 | 结果 |
 |---|---|---|
-| 2026-08-27 | 人类 | 远端部署与双机对局已跑通。§8–§9 的 RTT / 丢包 / 7 局资源数字未写入上表，C3 锁定网络参数前必须回填 |
+| 2026-08-27 | 人类 | 远端部署与双机对局已跑通 |
+| 2026-08-27 | 人类采数，AI 回填本表 | ICMP 600：P50/P90=3ms，P95=4ms，丢包 0%，IPDV 0.16ms。7 局空转全 `201`；match-host 198.92% / 422.2 MiB。结论见上表：CPU 先于内存成立；网络占位桩未被证伪；C3 不得用本样本锁定 CD-43 §4 |
