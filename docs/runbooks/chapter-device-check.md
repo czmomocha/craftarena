@@ -53,64 +53,39 @@ Worktree 端口偏移见 README「并行工作区」；本文件不复述端口�
 
 ---
 
-## 本刀：纠偏 C2 第一章 — 赛道能不能走通，占位桩收敛到一处
+## 本刀：纠偏 C2 第二章 — 测试目录不再空转，门禁状态与返工率可核对
 
-对应：当前完整章节 PR。这一章闭合的是「有没有办法知道一张赛道能不能通关」：`--bot-run` 让一个 bot 在权威仿真上真的走一遍官方课，走通就给出一串可以照着重放的动作。
+对应：当前完整章节 PR。这一章闭合的是「文档写了集成 / 回放 / 每日门禁，目录和 CI 却是空的」：`game/tests/integration/` 与 `game/tests/replay/` 各有真实用例，CI 的 GUT 步骤收集这三个目录，CD-53 §4.2–§4.4 每项都有状态列，返工率第一份数据在 [docs/audits/2026-08-27-ai-rework-rate.md](../audits/2026-08-27-ai-rework-rate.md)。
 
-同时做了一件必须一起验的事。动作与胶囊占位桩原先抄在对局进程、大厅 Solo、Preview、本地预测四处，现在收敛进 `game/src/games/traprush/play_stubs.gd`（冻结令 §3 要求新增消费方从单一配置源注入，而 bot 就是第五个消费方）。**收敛的验收标准是「手感一点没变」**，所以第 2、3、4 步全都在问「和合入前是不是一样」。任何一处不一样都是回归，不是改进。
+**不需要大厅窗口，不需要三后端。** 第 1 步是命令行；第 2 步是打开两份文档核对「已启用」没有说成「每日 cron」。
 
-第 1 步是命令行，第 2、3 步是窗口且不需要后端，第 4 步需要三后端。
-
-### 1. 三张官方课都能走通
+### 1. 本地 GUT 跑 unit + integration + replay
 
 ```powershell
-& $env:GODOT4_CONSOLE --headless --path game -- --bot-run
+& $env:GODOT4_CONSOLE --headless --path game -s res://addons/gut/gut_cmdln.gd -gdir=res://tests/unit,res://tests/integration,res://tests/replay -gexit
 echo $LASTEXITCODE
 ```
 
-约 45 秒，其中 `course_03` 一张就占 36 秒左右——慢是权威仿真本身的开销，不是卡死。
+预期：输出里能看到 `res://tests/integration/test_traprush_authoring_to_match.gd` 与 `res://tests/replay/test_traprush_official_tape_replay.gd`；`---- All tests passed! ----`；退出码 `0`。
 
-预期：三行 `"event":"bot_run_course"`，每行 `"outcome":"completable"`；`course_03` 那行的 `actions` 里能看到一个 `use_item`（那张课有箱挡路，bot 自己发现要先打掉）。最后一行 `"event":"bot_run_summary"` 含 `"ok":true`，退出码 `0`。
+失败：缺这两个脚本、只跑了 `tests/unit`、或非 0 退出。不要用旧的「只跑 unit」命令冒充本章。
 
-失败：任何一行是 `"not_completable"`。**先看 `reason` 再下结论**——`budget_exhausted` 只说明预算先用完了，加 `--max-ticks=6000` 重试；`search_exhausted` 才是「在 bot 的动作集内确实没路」。两者都不等于「人也过不去」。
+### 2. 门禁状态表没有把「每次 PR」写成「每日 / 每周流水线」
 
-### 2. Solo：跳跃与下落和合入前一样
+打开 [CD-53](../../Confirmed-docs/50-engineering/53-testing-and-ci.md) §4.2 / §4.3 / §4.4 的「当前实现状态」表。
 
-前置：关掉上次运行。不需要后端。
+预期：§4.2 写明没有独立每日 cron，集成是进程内 `MatchRealtime`、回放不能从环形缓冲恢复世界；§4.3 / §4.4 未实现项标「未实现」。返工率文件 §2 的 R1 对 `game/src` 是 4.8%、R2 是 0%。
 
-操作：仓库根 `& $env:GODOT4 --path game`（macOS `"$GODOT4" --path game`）。出现 **Traprush** 窗后点 **Solo play**，点窗口内部一次。先等一两秒看青色盒是否贴到脚下石色盒顶。按一下**空格**，再等一两秒。然后按 **D** 走出立足盒，再等一两秒。
-
-预期：开玩后不久青色盒贴在出生点正下方石色盒顶，不是停在半空；按空格后明显离地约四分之一格，随后落回盒顶；走出立足盒后继续往下掉（官方赛道沿 +X 没有地板）。
-
-失败：跳得比以前明显高或低、落得比以前明显快或慢、一直停在出生高度不贴盒、或走离立足盒仍悬空。这一步是在验收敛没有改动数值。
-
-### 3. Preview：Advance tick 才落，一次落一整格
-
-前置：关掉上次运行。不需要后端。
-
-操作：仓库根 `& $env:GODOT4 --editor --path game`，**F6** 运行 `res://src/creator/course_sandbox.tscn`。Preview 窗点 **Play**，点窗口内部一次。先点一次 **Advance tick**，按一下**空格**，观察，再点 **Advance tick**。
-
-预期：Play 后第一次 Advance tick 把表现桩贴到脚下石色盒；空格后明显离地约四分之一格并**停在空中**直到下一次 Advance tick；再点才落回盒顶。
-
-失败：空格后立刻落地，或 Advance tick 后仍停空中。Preview 的下落比对局大一档（一次点击落一整格，对局是每 tick 十六分之一格），这个差异是有意保留的——收敛后两者仍应不同。
-
-### 4. 在线对局：跳跃与下落也没变
-
-前置：`npm run dev`，等三个 `/readyz` 都就绪。
-
-操作：开窗口化主场景，把人数输入框从 `2` 改成 `1`，点 **Create room**，等进对局。点窗口内部一次，按空格，再按 **D** 走出立足盒。
-
-预期：与第 2 步相同的跳跃高度与下落速度。状态行 `play=in_match`。
-
-失败：跳跃或下落与 Solo 明显不同。对局进程和 Solo 现在读同一份配置源，不一致说明 `PlayStubs.apply_match` 没接上。
+失败：表里出现「已覆盖每日全量」或「已有 weekly workflow」，或把 4.8% 读成「AI 质量已经够好」。
 
 ### 本刀不测
 
-- BotRunner 的 Node 包装（`tools/bot-runner/`）：本章没做，`--bot-run` 自身已经给出结论与退出码，再加一层只是转发；
-- 把 `--bot-run` 接进 CI：本章不改 CI，跑一次 45 秒的东西要不要进门禁是单独的决定；
-- 第 4 张及以后的赛道、UGC 赛道：冻结令 §1 不得开工；
-- 任何玩法数值调整（跳跃高度、重力、道具伤害）：收敛只搬家不改值，改值是 C3。
+- 大厅 / Preview / 对局窗口：本章不改表现，无开发机可见行为；
+- `--bot-run`：上一章已有，本章不接进 CI；
+- `tests/content/` 与 `tests/security/`：C2 明确不做 UGC 安全全集，golden 仍未实现；
+- 真多 OS 客户端、真 socket、从快照恢复世界再继续：尚未实现，状态表已标明。
 
-### 仍然欠着：C1 的远端部署与基线
+### 仍然欠着：C1 §12 的实测数字
 
-上一章（C1 第二章）的 **B 段从未执行**：`infra/compose/` 的 compose 与 Dockerfile 到今天仍未在任何机器上真构建过，双机对局与网络 / 资源基线也没采。那部分照 [`server-deploy.md`](server-deploy.md) 从 §1 走到 §12，要交回的东西列在该章 PR 正文里，其中 §12 那张「哪些零延迟参数不成立」的表是 C1 的主要产出。本章与它互不依赖，但它不会因为本章合入而消失。
+C1 远端部署与双机对局已由人类于 2026-08-27 验证。[`server-deploy.md`](server-deploy.md) §12 那张「哪些零延迟参数不成立」的表在数字回填前仍是空的。没有这张表，C3 不得锁定 Tick / 快照 / 插值。本章与它互不依赖。
+

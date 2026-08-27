@@ -1,8 +1,10 @@
 name: CI
 
-# CD-53 §4.1「每次变更」门禁的当前可实现子集：语法与类型检查、单元测试、L0 Schema 正反例、宪法红线扫描。
+# CD-53 §4.1「每次变更」门禁的当前可实现子集：语法与类型检查、单元测试、
+# 集成测试、回放测试、L0 Schema 正反例、宪法红线扫描。
 # L0 Schema 由根目录 `npm test` 收集。红线扫描另有 `npm run redline-scan` step。
 # PR Web 预览仍未落地。不要把本流水线描述成"已覆盖 §4.1 全部门禁"（宪法第二十四条）。
+# `--bot-run` 不进 CI（C2 第一章明确不做；45 秒搜索不是每次变更门禁）。
 
 on:
   push:
@@ -99,5 +101,5 @@ jobs:
       - name: Headless boot smoke test
         run: "\"$GODOT4\" --headless --path game --quit"
 
-      - name: GUT unit tests
-        run: "\"$GODOT4\" --headless --path game -s res://addons/gut/gut_cmdln.gd -gdir=res://tests/unit -gexit"
+      - name: GUT unit, integration, and replay tests
+        run: "\"$GODOT4\" --headless --path game -s res://addons/gut/gut_cmdln.gd -gdir=res://tests/unit,res://tests/integration,res://tests/replay -gexit"
