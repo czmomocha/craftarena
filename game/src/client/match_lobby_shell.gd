@@ -44,6 +44,7 @@ extends Node
 ## is a read-only GET. The client never POSTs settlement.
 ## WASD encodes Move plus discrete 8-way yaw_bam; Jump / Reset / Use item
 ## encode existing intents. F rising-edge encodes ShoveIntent (no target id).
+## Shift rising-edge encodes SprintIntent (consumes a granted dash).
 ## Solo copies the match-server jump/support/fall stubs; _process advances
 ## (falls) before sampling Space so a hop is not landed in the same frame.
 ## Solo opens an 8-cell play-range stub (not a product bound).
@@ -98,6 +99,7 @@ const JOIN_NAME: String = "JoinRoom"
 const CANCEL_NAME: String = "Cancel"
 const SOLO_NAME: String = "SoloPlay"
 const POLL_NAME: String = "Poll"
+const SPRINT_NAME: String = "Sprint"
 const ROOM_NAME: String = "RoomCode"
 const COURSE_ID_NAME: String = "CourseId"
 const SEATS_NAME: String = "Seats"
@@ -164,6 +166,7 @@ var _reset_held: bool = false
 var _use_item_held: bool = false
 var _jump_held: bool = false
 var _shove_held: bool = false
+var _sprint_held: bool = false
 var _opened_socket: bool = false
 
 
@@ -605,6 +608,24 @@ func try_sample_play_shove(pressed: bool) -> PackedByteArray:
 	return bytes
 
 
+func try_sample_play_sprint(pressed: bool) -> PackedByteArray:
+	var rising: bool = pressed and not _sprint_held
+	_sprint_held = pressed
+	if not rising or window == null or not window.visible:
+		return PackedByteArray()
+	if _offline_playing():
+		var offline_bytes: PackedByteArray = offline.try_encode_intent(
+			PlayerIntentNames.SPRINT, 0, 0, 0
+		)
+		_apply_snapshot_map()
+		return offline_bytes
+	if play == null:
+		return PackedByteArray()
+	var bytes: PackedByteArray = play.try_encode_intent(PlayerIntentNames.SPRINT, 0, 0, 0)
+	_note_command(bytes)
+	return bytes
+
+
 func status_view() -> Dictionary:
 	var join_view: Dictionary = {}
 	var play_view: Dictionary = {}
@@ -794,6 +815,7 @@ func _process(delta: float) -> void:
 	try_sample_play_use_item(Input.is_action_pressed(_USE_ITEM))
 	try_sample_play_jump(Input.is_action_pressed(_JUMP))
 	try_sample_play_shove(Input.is_physical_key_pressed(KEY_F))
+	try_sample_play_sprint(Input.is_physical_key_pressed(KEY_SHIFT))
 	try_advance_interp()
 	if _offline_playing():
 		_apply_snapshot_map()
@@ -836,6 +858,7 @@ func _ensure_window() -> void:
 	_add_button(row, SOLO_NAME, "Solo play", try_solo)
 	_add_button(row, CANCEL_NAME, "Cancel", try_cancel)
 	_add_button(row, POLL_NAME, "Poll", try_poll)
+	_add_button(row, SPRINT_NAME, "Sprint", _on_sprint)
 	var server_row: HBoxContainer = HBoxContainer.new()
 	server_row.name = "ServerActions"
 	root.add_child(server_row)
@@ -1382,8 +1405,15 @@ func _prepare_offline_stubs() -> void:
 	offline.play_use_item_reach_dz = PlayStubsGd.USE_ITEM_REACH_DZ
 	offline.play_shove_step = PlayStubsGd.SHOVE_STEP
 	offline.play_shove_cooldown_ticks = PlayStubsGd.SHOVE_COOLDOWN_TICKS
+	offline.play_sprint_step = PlayStubsGd.SPRINT_STEP
+	offline.play_item_cooldown_ticks = PlayStubsGd.ITEM_COOLDOWN_TICKS
 	offline.play_range_half = OutOfRangeResetGd.STUB_HALF
 
 
 func _on_close_requested() -> void:
 	hide_window()
+
+
+func _on_sprint() -> void:
+	try_sample_play_sprint(true)
+	try_sample_play_sprint(false)

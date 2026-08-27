@@ -43,6 +43,8 @@ var play_use_item_reach_dy: int = 0
 var play_use_item_reach_dz: int = 0
 var play_shove_step: int = 0
 var play_shove_cooldown_ticks: int = 1
+var play_sprint_step: int = 0
+var play_item_cooldown_ticks: int = 1
 var play_range_half: int = 0
 
 
@@ -82,6 +84,8 @@ func try_begin(path: String, web_platform: bool = false) -> bool:
 	created.use_item_reach_dz = play_use_item_reach_dz
 	created.shove_step = play_shove_step
 	created.shove_cooldown_ticks = play_shove_cooldown_ticks
+	created.sprint_step = play_sprint_step
+	created.item_cooldown_ticks = play_item_cooldown_ticks
 	created.enable_play_range(play_range_half)
 	session = created
 	follow = MatchSnapshotFollowGd.new()

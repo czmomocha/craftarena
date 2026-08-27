@@ -8,6 +8,7 @@ const MOVE: String = "MoveIntent"
 const JUMP: String = "JumpIntent"
 const SHOVE: String = "ShoveIntent"
 const USE_ITEM: String = "UseItemIntent"
+const SPRINT: String = "SprintIntent"
 const INTERACT: String = "InteractIntent"
 const RESET_TO_CHECKPOINT: String = "ResetToCheckpointIntent"
 const BUILD_TOWER: String = "BuildTowerIntent"
@@ -21,6 +22,7 @@ const ALL: PackedStringArray = [
 	JUMP,
 	SHOVE,
 	USE_ITEM,
+	SPRINT,
 	INTERACT,
 	RESET_TO_CHECKPOINT,
 	BUILD_TOWER,

@@ -11,6 +11,9 @@ extends RefCounted
 ## Shove 无线上目标 id：服务端在 SHOVE_REACH_MAX 邻域内选最近其它胶囊，沿 XZ
 ## 远离施术者用调用方 shove_step 推开。shove_step 不得超过 SHOVE_STEP_MAX。
 ## 冷却是调用方 tick，不是产品秒数。力度不从命令帧读取。
+## UseItem 要有爆破球；Sprint 要有冲刺。拾取由服务端占用扫描授予，每种最多 1 个，
+## 每个 pickup 实体每玩家只拾一次。命中只看调用方 reach，不读客户端命中断言。
+## 冲刺沿胶囊 yaw 做 8 向水平位移，步长不得超过 SHOVE_STEP_MAX（与 Move 同一格上限）。
 ## 出界复位：range_enabled 时用调用方 AABB（闭区间）经 TraprushOutOfRangeReset
 ## 写回最近检查点落点。不计数 N，不写硬直。默认关闭。
 ## 下落：调用方 fall_dy 是每 tick 重力加速度，经 TraprushGravity.integrate
@@ -36,9 +39,13 @@ const JumpIntent := preload("res://src/games/traprush/jump_intent.gd")
 const MoveIntent := preload("res://src/games/traprush/move_intent.gd")
 const OutOfRangeReset := preload("res://src/games/traprush/out_of_range_reset.gd")
 const ShoveApply := preload("res://src/games/traprush/shove_apply.gd")
+const ShoveGate := preload("res://src/games/traprush/shove_gate.gd")
 const ShoveIntent := preload("res://src/games/traprush/shove_intent.gd")
 const PadAccept := preload("res://src/games/traprush/pad_accept.gd")
+const PickupAccept := preload("res://src/games/traprush/pickup_accept.gd")
 const PortalLanding := preload("res://src/games/traprush/portal_landing.gd")
+const SprintApply := preload("res://src/games/traprush/sprint_apply.gd")
+const SprintIntent := preload("res://src/games/traprush/sprint_intent.gd")
 const StateHasher := preload("res://src/shared/protocol/state_hasher.gd")
 const TopologyLoader := preload("res://src/games/traprush/traprush_topology_loader.gd")
 const TraprushDestructible := preload("res://src/games/traprush/destructible.gd")
@@ -50,6 +57,7 @@ const MOVE_STEP_MAX: int = Fixed.SCALE
 ## 每条 Shove 的调用方步长上限与选目标邻域。等于 Fixed.SCALE（1 格）。不是产品力度。
 const SHOVE_STEP_MAX: int = Fixed.SCALE
 const SHOVE_REACH_MAX: int = Fixed.SCALE
+const SPRINT_STEP_MAX: int = Fixed.SCALE
 
 var jump_dy: int = 0
 var support_dy: int = 0
@@ -60,6 +68,8 @@ var use_item_reach_dy: int = 0
 var use_item_reach_dz: int = 0
 var shove_step: int = 0
 var shove_cooldown_ticks: int = 1
+var sprint_step: int = 0
+var item_cooldown_ticks: int = 1
 var range_enabled: bool = false
 var range_min_x: int = 0
 var range_max_x: int = 0
@@ -77,6 +87,8 @@ var _crate_ids: Dictionary = {}
 var _crate_health: Dictionary = {}
 var _hazard_ids: Dictionary = {}
 var _hazard_cycle: Array[Dictionary] = []
+var _pickup_ids: Dictionary = {}
+var _pickup_kinds: Dictionary = {}
 var _spawn: CheckpointSpawn = null
 var _ordered_ids: PackedInt32Array = PackedInt32Array()
 var _players: Array[Dictionary] = []
@@ -125,6 +137,11 @@ static func create(
 		return null
 	session._hazard_ids = hazard_ids
 	session._hazard_cycle = cycle
+	var pickups_raw: Variant = loaded.get("pickup_ids", {})
+	if typeof(pickups_raw) != TYPE_DICTIONARY:
+		return null
+	session._pickup_ids = pickups_raw
+	session._pickup_kinds = _pickup_kinds_from_bundle(bundle)
 	session._spawn = spawn
 	session._ordered_ids = ordered
 	var start_x: int = start["x"]
@@ -152,11 +169,17 @@ static func create(
 			"finish_tick": -1,
 			"latch": {},
 			"last_shove_tick": -1,
+			"last_use_item_tick": -1,
+			"last_sprint_tick": -1,
+			"bomb": 0,
+			"dash": 0,
+			"taken": {},
 		})
 	for player: Dictionary in session._players:
 		session._accept_player_pads(player)
 		session._resolve_player_portals(player)
 		session._accept_player_finish(player)
+		session._grant_player_pickups(player)
 	return session
 
 
@@ -214,6 +237,22 @@ func player_finish_tick(slot: int) -> int:
 	return finish_tick
 
 
+func player_bomb_count(slot: int) -> int:
+	var player: Dictionary = _player_at(slot)
+	if player.is_empty():
+		return 0
+	var bomb: int = player.get("bomb", 0)
+	return bomb
+
+
+func player_dash_count(slot: int) -> int:
+	var player: Dictionary = _player_at(slot)
+	if player.is_empty():
+		return 0
+	var dash: int = player.get("dash", 0)
+	return dash
+
+
 func destructible_alive_count() -> int:
 	var alive: int = 0
 	for key: Variant in _crate_health.keys():
@@ -267,6 +306,10 @@ func apply_player_intent(slot: int, payload: Dictionary) -> bool:
 	var use_ok: bool = use_decoded.get("ok", false)
 	if use_ok:
 		return _try_use_item(player, payload)
+	var sprint_decoded: Dictionary = SprintIntent.decode(payload)
+	var sprint_ok: bool = sprint_decoded.get("ok", false)
+	if sprint_ok:
+		return _try_sprint(player, payload)
 	var shove_decoded: Dictionary = ShoveIntent.decode(payload)
 	var shove_ok: bool = shove_decoded.get("ok", false)
 	if shove_ok:
@@ -286,6 +329,7 @@ func apply_player_intent(slot: int, payload: Dictionary) -> bool:
 	var capsule_id: int = player["capsule_id"]
 	if move_ok and _resolve_player_portals(player):
 		_reset_player_if_out_of_range(player)
+		_grant_player_pickups(player)
 		return true
 	var track: CheckpointTrack = player["track"]
 	var stepped: Dictionary = IntentStepper.apply(
@@ -307,6 +351,7 @@ func apply_player_intent(slot: int, payload: Dictionary) -> bool:
 	_resolve_player_portals(player)
 	_accept_player_pads(player)
 	_accept_player_finish(player)
+	_grant_player_pickups(player)
 	return true
 
 
@@ -330,6 +375,7 @@ func advance_sim_tick() -> void:
 		_resolve_player_portals(player)
 		_accept_player_pads(player)
 		_accept_player_finish(player)
+		_grant_player_pickups(player)
 
 
 func commit_tick() -> void:
@@ -366,6 +412,14 @@ static func shove_step_allowed(step: int) -> bool:
 	return true
 
 
+static func sprint_step_allowed(step: int) -> bool:
+	if step < 0:
+		return false
+	if step > SPRINT_STEP_MAX:
+		return false
+	return true
+
+
 func hash_state() -> String:
 	var hasher: StateHasher = StateHasher.new()
 	if _world != null:
@@ -388,6 +442,25 @@ func hash_state() -> String:
 			hasher.write_s64(entity_id)
 		var last_shove_tick: int = player.get("last_shove_tick", -1)
 		hasher.write_s64(last_shove_tick)
+		var last_use_item_tick: int = player.get("last_use_item_tick", -1)
+		hasher.write_s64(last_use_item_tick)
+		var last_sprint_tick: int = player.get("last_sprint_tick", -1)
+		hasher.write_s64(last_sprint_tick)
+		var bomb: int = player.get("bomb", 0)
+		hasher.write_s64(bomb)
+		var dash: int = player.get("dash", 0)
+		hasher.write_s64(dash)
+		var taken: Dictionary = player.get("taken", {})
+		var taken_ids: Array[int] = []
+		for taken_key: Variant in taken.keys():
+			if typeof(taken_key) != TYPE_INT:
+				continue
+			var taken_id: int = taken_key
+			taken_ids.append(taken_id)
+		taken_ids.sort()
+		hasher.write_s64(taken_ids.size())
+		for taken_id: int in taken_ids:
+			hasher.write_s64(taken_id)
 	return hasher.digest_hex()
 
 
@@ -464,6 +537,7 @@ func _resolve_player_portals(player: Dictionary) -> bool:
 				next_latch[dest_id] = true
 		_accept_player_pads(player)
 		_accept_player_finish(player)
+		_grant_player_pickups(player)
 		return false
 	return false
 
@@ -537,6 +611,7 @@ func _try_shove(slot: int, player: Dictionary, payload: Dictionary) -> bool:
 		_resolve_player_portals(target)
 		_accept_player_pads(target)
 		_accept_player_finish(target)
+		_grant_player_pickups(target)
 	return true
 
 
@@ -685,6 +760,17 @@ func _reset_player_if_out_of_range(player: Dictionary) -> bool:
 
 
 func _try_use_item(player: Dictionary, payload: Dictionary) -> bool:
+	if item_cooldown_ticks < 1:
+		return false
+	var now_tick: int = 0
+	if _world != null:
+		now_tick = _world.tick_index
+	var last_tick: int = player.get("last_use_item_tick", -1)
+	if not ShoveGate.can_shove(now_tick, last_tick, item_cooldown_ticks):
+		return true
+	var bomb: int = player.get("bomb", 0)
+	if bomb < 1:
+		return false
 	var capsule_id: int = player["capsule_id"]
 	var ids: Array[int] = []
 	for key: Variant in _crate_ids.keys():
@@ -717,8 +803,90 @@ func _try_use_item(player: Dictionary, payload: Dictionary) -> bool:
 		)
 		var broken_ok: bool = broken.get("ok", false)
 		if broken_ok:
+			player["bomb"] = bomb - 1
+			player["last_use_item_tick"] = now_tick
 			return true
 	return false
+
+
+func _try_sprint(player: Dictionary, payload: Dictionary) -> bool:
+	if not sprint_step_allowed(sprint_step):
+		return false
+	if item_cooldown_ticks < 1:
+		return false
+	var dash: int = player.get("dash", 0)
+	if dash < 1:
+		return false
+	var capsule_id: int = player["capsule_id"]
+	var last_tick: int = player.get("last_sprint_tick", -1)
+	var now_tick: int = 0
+	if _world != null:
+		now_tick = _world.tick_index
+	var result: Dictionary = SprintApply.apply(
+		_world,
+		capsule_id,
+		payload,
+		now_tick,
+		last_tick,
+		item_cooldown_ticks,
+		sprint_step
+	)
+	var result_ok: bool = result.get("ok", false)
+	if not result_ok:
+		return false
+	var sprinted: bool = result.get("sprinted", false)
+	if sprinted:
+		player["dash"] = dash - 1
+		player["last_sprint_tick"] = now_tick
+		_reset_player_if_out_of_range(player)
+		_accept_player_pads(player)
+		_resolve_player_portals(player)
+		_accept_player_pads(player)
+		_accept_player_finish(player)
+		_grant_player_pickups(player)
+	return true
+
+
+func _grant_player_pickups(player: Dictionary) -> void:
+	var capsule_id: int = player["capsule_id"]
+	var taken_raw: Variant = player.get("taken", {})
+	var taken: Dictionary = {}
+	if typeof(taken_raw) == TYPE_DICTIONARY:
+		taken = taken_raw
+	var bomb: int = player.get("bomb", 0)
+	var dash: int = player.get("dash", 0)
+	var granted: Dictionary = PickupAccept.try_grant(
+		_world,
+		capsule_id,
+		_pickup_ids,
+		_pickup_kinds,
+		taken,
+		bomb,
+		dash
+	)
+	var granted_ok: bool = granted.get("ok", false)
+	if not granted_ok:
+		return
+	var next_bomb_raw: Variant = granted.get("bomb", bomb)
+	if typeof(next_bomb_raw) == TYPE_INT:
+		player["bomb"] = next_bomb_raw
+	var next_dash_raw: Variant = granted.get("dash", dash)
+	if typeof(next_dash_raw) == TYPE_INT:
+		player["dash"] = next_dash_raw
+	var next_taken_raw: Variant = granted.get("taken", taken)
+	if typeof(next_taken_raw) == TYPE_DICTIONARY:
+		player["taken"] = next_taken_raw
+
+
+static func _pickup_kinds_from_bundle(bundle: SimulationBundle) -> Dictionary:
+	var kinds: Dictionary = {}
+	if bundle == null:
+		return kinds
+	for item: Dictionary in bundle.pickups:
+		var entity_id: int = item["entity_id"]
+		var kind: String = item["kind"]
+		kinds[entity_id] = kind
+	return kinds
 
 
 static func _offset_pose(start_x: int, start_y: int, start_z: int, offset: Dictionary) -> Dictionary:

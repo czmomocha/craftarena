@@ -10,7 +10,9 @@ extends Node
 ## presentation stub, not a product speed. Reset button and R rising-edge
 ## encode ResetToCheckpointIntent; that sample is a stub, not a hold
 ## duration. Use item button and use_item rising-edge encode UseItemIntent;
-## play_use_item_damage / reach are stubs, not a blast table. Jump button
+## play_use_item_damage / reach are stubs, not a blast table. A granted
+## bomb is required. Sprint button and Left Shift rising-edge encode
+## SprintIntent along current yaw; a granted dash is required. Jump button
 ## and jump rising-edge encode JumpIntent; play_jump_dy / play_support_dy
 ## / play_fall_dy are stubs, not a locked jump height or product gravity.
 ## Advance tick 按调用方加速度积分（TraprushGravity），意图仍不 tick。
@@ -36,6 +38,7 @@ const PLAY_NAME: String = "Play"
 const STOP_NAME: String = "Stop"
 const RESET_NAME: String = "Reset"
 const USE_ITEM_NAME: String = "UseItem"
+const SPRINT_NAME: String = "Sprint"
 const JUMP_NAME: String = "Jump"
 const ADVANCE_TICK_NAME: String = "AdvanceTick"
 const _USE_ITEM: String = "use_item"
@@ -57,6 +60,8 @@ var play_use_item_damage: int = PlayStubs.USE_ITEM_DAMAGE
 var play_use_item_reach_dx: int = PlayStubs.USE_ITEM_REACH_DX
 var play_use_item_reach_dy: int = PlayStubs.USE_ITEM_REACH_DY
 var play_use_item_reach_dz: int = PlayStubs.USE_ITEM_REACH_DZ
+var play_sprint_step: int = PlayStubs.SPRINT_STEP
+var play_item_cooldown_ticks: int = PlayStubs.ITEM_COOLDOWN_TICKS
 var play_jump_dy: int = PlayStubs.JUMP_DY
 var play_support_dy: int = PlayStubs.SUPPORT_DY
 ## Advance tick is a click, not a frame, so Preview falls a whole cell per step.
@@ -65,6 +70,7 @@ var play_range_half: int = OutOfRangeReset.STUB_HALF
 var _status: Label = null
 var _reset_held: bool = false
 var _use_item_held: bool = false
+var _sprint_held: bool = false
 var _jump_held: bool = false
 var _play_view_busy: bool = false # rebuilds must not re-enter _process sampling
 
@@ -145,8 +151,10 @@ func try_start_play(seed: int = 1, radius: int = 0, cylinder_height: int = 0) ->
 		return false
 	_reset_held = false
 	_use_item_held = false
+	_sprint_held = false
 	_jump_held = false
 	_copy_use_item_stubs()
+	_copy_sprint_stubs()
 	_copy_jump_stubs()
 	_copy_fall_stub()
 	_copy_play_range_stub()
@@ -163,6 +171,7 @@ func try_stop_play() -> bool:
 		return false
 	_reset_held = false
 	_use_item_held = false
+	_sprint_held = false
 	_jump_held = false
 	_play_view_busy = true
 	var ok: bool = preview.try_stop_play()
@@ -247,6 +256,23 @@ func try_sample_play_use_item(pressed: bool) -> bool:
 	_copy_use_item_stubs()
 	return try_apply_play_intent({
 		"intent": PlayerIntentNames.USE_ITEM,
+	})
+
+
+func try_sample_play_sprint(pressed: bool) -> bool:
+	if preview == null or not preview.is_playing():
+		_sprint_held = pressed
+		return false
+	if not _window_alive() or not window.visible:
+		_sprint_held = pressed
+		return false
+	var rising: bool = pressed and not _sprint_held
+	_sprint_held = pressed
+	if not rising:
+		return false
+	_copy_sprint_stubs()
+	return try_apply_play_intent({
+		"intent": PlayerIntentNames.SPRINT,
 	})
 
 
@@ -386,6 +412,7 @@ func _ensure_window() -> void:
 	_add_button(action_row, STOP_NAME, "Stop", _on_stop)
 	_add_button(action_row, RESET_NAME, "Reset", _on_reset)
 	_add_button(action_row, USE_ITEM_NAME, "Use item", _on_use_item)
+	_add_button(action_row, SPRINT_NAME, "Sprint", _on_sprint)
 	_add_button(action_row, JUMP_NAME, "Jump", _on_jump)
 	_add_button(action_row, ADVANCE_TICK_NAME, "Advance tick", _on_advance_tick)
 	map = AuthoringPreviewMap.new()
@@ -421,6 +448,13 @@ func _on_use_item() -> void:
 	})
 
 
+func _on_sprint() -> void:
+	_copy_sprint_stubs()
+	try_apply_play_intent({
+		"intent": PlayerIntentNames.SPRINT,
+	})
+
+
 func _on_jump() -> void:
 	_copy_jump_stubs()
 	try_apply_play_intent({
@@ -439,6 +473,13 @@ func _copy_use_item_stubs() -> void:
 	preview.play_use_item_reach_dx = play_use_item_reach_dx
 	preview.play_use_item_reach_dy = play_use_item_reach_dy
 	preview.play_use_item_reach_dz = play_use_item_reach_dz
+
+
+func _copy_sprint_stubs() -> void:
+	if preview == null:
+		return
+	preview.play_sprint_step = play_sprint_step
+	preview.play_item_cooldown_ticks = play_item_cooldown_ticks
 
 
 func _copy_jump_stubs() -> void:
@@ -475,6 +516,7 @@ func _process(_delta: float) -> void:
 	)
 	try_sample_play_reset(Input.is_physical_key_pressed(KEY_R))
 	try_sample_play_use_item(Input.is_action_pressed(_USE_ITEM))
+	try_sample_play_sprint(Input.is_physical_key_pressed(KEY_SHIFT))
 	try_sample_play_jump(Input.is_action_pressed(_JUMP))
 
 

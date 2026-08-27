@@ -7,13 +7,14 @@
 	"finish": [],
 	"destructibles": [],
 	"hazards": [],
-	"solids": [
+	"solids": [],
+	"pickups": [
 		{
-			"entity_id": 70,
+			"entity_id": 100,
 			"x": 0,
-			"y": -65536,
-			"z": 0
+			"y": 0,
+			"z": 0,
+			"kind": "bomb"
 		}
-	],
-	"pickups": []
+	]
 }

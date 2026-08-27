@@ -20,5 +20,6 @@
 	"finish": [],
 	"destructibles": [],
 	"hazards": [],
-	"solids": []
+	"solids": [],
+	"pickups": []
 }

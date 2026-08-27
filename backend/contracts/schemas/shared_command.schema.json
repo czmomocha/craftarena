@@ -70,6 +70,7 @@
 									"JumpIntent",
 									"ShoveIntent",
 									"UseItemIntent",
+									"SprintIntent",
 									"InteractIntent",
 									"ResetToCheckpointIntent",
 									"BuildTowerIntent",

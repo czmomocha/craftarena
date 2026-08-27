@@ -15,5 +15,6 @@
 			"cooldown_ticks": 1
 		}
 	],
-	"solids": []
+	"solids": [],
+	"pickups": []
 }

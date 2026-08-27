@@ -632,6 +632,6 @@ cell = Fixed.SCALE 与由其推导的一切 cell/2 占用半长
 | C0 立刻闸门 | 已合入 | `.github/CODEOWNERS`、`.cursor/rules/course-correction-freeze.mdc`、`.cursor/rules/chapter-granularity-and-review.mdc`、[docs/audits/2026-08-26-audit.md](../audits/2026-08-26-audit.md)、本文件 §4.0 |
 | C1 真机与真网络 | 第 1、2 章已合入；B 段部署、双机与 §12 数字 **人类已于 2026-08-27 采、已回填** | 导出预设 + 包内核查 + compose + `server-deploy.md` + 客户端 `--server=` + [§12 表](../runbooks/server-deploy.md#12-本批必须回填的结论)。结论：近端 ICMP 未证伪快照/插值桩；7 局空转证实 CPU 先于内存。不写死 IP/域名，不配 Let's Encrypt。24h 采样与协议层 RTT 仍未做 |
 | C2 度量与自动可玩性 | 第 1、2 章已合入 | 第 1 章：走路可达探针 + 占位桩收敛。第 2 章：`tests/integration/` 与 `tests/replay/` 真实用例 + CI 收集、CD-53 §4.2–§4.4 状态列、[返工率首份数据](../audits/2026-08-27-ai-rework-rate.md)。不做 Node 包装、不把 `--bot-run` 接进 CI |
-| C3 核心玩法前提 | 第 1 章已合入；第 2 章（沿路地板 / ±8 降级）进行中 | 第 1 章：权威重力积分（`TraprushGravity`）+ 跳跃冲量弧 + 落地归零 `vy` + `hash_state` 含 `vy` + 灰盒磁带回放。第 2 章：三张官方课必经路铺始终固体；`course_01` 上层偏到 `z=-3*CELL`；`course_03` 箱子旁绕行立足面；走路上不掉、走下路面才复位。D5 复活硬直三个候选已写在本文件 D5，待人类选。道具/机关、网络参数锁定仍待。**不得**用 2026-08-27 的 ~3ms ICMP 样本锁定 Tick / 快照 / 插值 |
+| C3 核心玩法前提 | 第 1、2 章已合入；第 3 章（爆破球 + 冲刺）进行中 | 第 1 章：权威重力积分（`TraprushGravity`）+ 跳跃冲量弧 + 落地归零 `vy` + `hash_state` 含 `vy` + 灰盒磁带回放。第 2 章：三张官方课必经路铺始终固体；`course_01` 上层偏到 `z=-3*CELL`；`course_03` 箱子旁绕行立足面；走路上不掉、走下路面才复位。第 3 章：服务端裁决的爆破球拾取/使用与冲刺位移；伪造命中被拒；`SprintIntent` `intent_id=6`；v1 `pickups` 袋。D5 复活硬直三个候选已写在本文件 D5，待人类选。机关伤害/击退、网络参数锁定仍待。**不得**用 2026-08-27 的 ~3ms ICMP 样本锁定 Tick / 快照 / 插值 |
 | C4 资产契约与美术规格 | 未开工 | D4 主数值已拍（字体已补答）；BASTION 色板不阻塞 |
 | C5 治理与里程碑重排 | 未开工 | 需 C1–C4 实测结论作输入 |

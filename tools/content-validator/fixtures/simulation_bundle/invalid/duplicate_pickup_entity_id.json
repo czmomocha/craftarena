@@ -6,22 +6,22 @@
 	"portals": [],
 	"finish": [],
 	"destructibles": [],
-	"hazards": [
+	"hazards": [],
+	"solids": [],
+	"pickups": [
 		{
-			"entity_id": 50,
+			"entity_id": 100,
 			"x": 0,
 			"y": 0,
 			"z": 0,
-			"cooldown_ticks": 1
+			"kind": "bomb"
 		},
 		{
-			"entity_id": 50,
+			"entity_id": 100,
 			"x": 65536,
 			"y": 0,
 			"z": 0,
-			"cooldown_ticks": 2
+			"kind": "dash"
 		}
-	],
-	"solids": [],
-	"pickups": []
+	]
 }

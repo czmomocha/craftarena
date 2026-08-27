@@ -13,5 +13,6 @@
 	],
 	"destructibles": [],
 	"hazards": [],
-	"solids": []
+	"solids": [],
+	"pickups": []
 }
