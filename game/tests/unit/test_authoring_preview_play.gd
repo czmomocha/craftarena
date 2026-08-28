@@ -23,6 +23,13 @@ const COURSE_01_PATH: String = "res://content/official/traprush/course_01.json"
 const COURSE_02_PATH: String = "res://content/official/traprush/course_02.json"
 const CELL: int = 65536
 const EPS: float = 0.0001
+## 这两个必须是真实角色尺寸，不能随手写 1。1 是 Q48.16 原始单位，即 1/65536 格；
+## SimulationWorld 的竖直扫掠按 ceil(|dy| / radius) 取样，Preview 一次 Advance
+## 下落一整格，于是 radius=1 会让一次 advance 取样 65536 次而不是 8 次。它不会
+## 失败，只会把这一个用例跑成十几分钟——CI 的 Godot job 因此从 PR #176 起被
+## 15 分钟 timeout 连续切断，见 docs/audits/2026-08-28-ci-gate-timeout.md。
+const RADIUS: int = TraprushPlayStubs.CAPSULE_RADIUS
+const HEIGHT: int = TraprushPlayStubs.CAPSULE_HEIGHT
 
 var _preview_shell: AuthoringPreviewShell = null
 var _editor_shell: AuthoringEditorShell = null
@@ -44,8 +51,8 @@ func after_each() -> void:
 func test_official_courses_start_play_on_first_pad() -> void:
 	var first: AuthoringPreview = _connected_course(COURSE_01_PATH)
 	var second: AuthoringPreview = _connected_course(COURSE_02_PATH)
-	assert_true(first.try_start_play(1, 1, 1))
-	assert_true(second.try_start_play(1, 1, 1))
+	assert_true(first.try_start_play(1, RADIUS, HEIGHT))
+	assert_true(second.try_start_play(1, RADIUS, HEIGHT))
 	assert_true(first.is_playing())
 	assert_true(second.is_playing())
 	assert_false(first.is_safe_point())
@@ -173,7 +180,7 @@ func test_shell_play_stop_updates_marker_and_status() -> void:
 	_preview_shell = AuthoringPreviewShell.create(AuthoringPreviewHostKinds.WINDOW)
 	add_child(_preview_shell)
 	assert_true(_preview_shell.open_from(session))
-	assert_true(_preview_shell.try_start_play(1, 1, 1))
+	assert_true(_preview_shell.try_start_play(1, RADIUS, HEIGHT))
 	var playing_on: bool = _preview_shell.status_view().get("playing", false)
 	assert_true(playing_on)
 	assert_true(_preview_shell.status_label_text().contains("playing=true"))
@@ -218,7 +225,7 @@ func test_playing_drops_editor_follow_without_rolling_back_write() -> void:
 	assert_true(_editor_shell.try_place_checkpoint(1, 0, 0, 0, 0))
 	assert_true(_editor_shell.open_preview())
 	assert_true(_editor_shell.preview_follows)
-	assert_true(_editor_shell.preview.try_start_play(1, 1, 1))
+	assert_true(_editor_shell.preview.try_start_play(1, RADIUS, HEIGHT))
 	assert_true(_editor_shell.preview.preview.is_playing())
 	assert_true(_editor_shell.try_place_checkpoint(2, 1, 1, 0, 0))
 	assert_true(_editor_shell.session.world.has_entity(2))

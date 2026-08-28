@@ -101,5 +101,43 @@ jobs:
       - name: Headless boot smoke test
         run: "\"$GODOT4\" --headless --path game --quit"
 
+      # job 级 timeout 把超时记成 cancelled 而不是 failure，PR 上看起来像「还在跑」。
+      # #176–#180 五刀就是这样带着从未通过的 Godot 门禁合入的，见
+      # docs/audits/2026-08-28-ci-gate-timeout.md。这里自己掐 10 分钟预算：
+      # 超了由 timeout 结束进程，step 变红并打印下面那行，不再是灰色的 cancelled。
       - name: GUT unit, integration, and replay tests
-        run: "\"$GODOT4\" --headless --path game -s res://addons/gut/gut_cmdln.gd -gdir=res://tests/unit,res://tests/integration,res://tests/replay -gexit"
+        run: |
+          set -uo pipefail
+          timeout -k 30 600 "$GODOT4" --headless --path game \
+            -s res://addons/gut/gut_cmdln.gd \
+            -gdir=res://tests/unit,res://tests/integration,res://tests/replay \
+            -gjunit_xml_file=res://.gut-results.xml -gexit
+          status=$?
+          if [ "$status" -eq 124 ] || [ "$status" -eq 137 ]; then
+            echo "::error::GUT 超过 10 分钟预算被终止。这是失败，不是排队。"
+          fi
+          exit "$status"
+
+      # 单个脚本慢慢变慢在此之前没有任何信号，直到它一次吃光整个预算。
+      # 这一步不判定，只把耗时打出来，好让下一次变慢在 PR 里看得见。
+      - name: Report slowest test scripts
+        if: always()
+        run: |
+          python3 - <<'PY'
+          import pathlib
+          import xml.etree.ElementTree as ET
+
+          results = pathlib.Path("game/.gut-results.xml")
+          if not results.exists():
+              print("no .gut-results.xml: GUT never reached the export step.")
+              raise SystemExit(0)
+          root = ET.parse(results).getroot()
+          suites = sorted(
+              ((float(s.get("time", 0.0)), s.get("name", "?")) for s in root),
+              reverse=True,
+          )
+          print(f"{'seconds':>8}  test script")
+          for seconds, name in suites[:10]:
+              print(f"{seconds:8.1f}  {name}")
+          print(f"{sum(s for s, _ in suites):8.1f}  total over {len(suites)} scripts")
+          PY
