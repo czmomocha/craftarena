@@ -34,7 +34,9 @@ extends Node
 ## Own-seat finish_tick tints the finish zone: pending / current / done.
 ## HUD shows pads=n/m, floor=n, finish=n, crates=n/m, hazards=n/m, and solids=n/m; result= appears
 ## when every snapshot seat has finished. Online matches then GET the
-## control-plane board; 200 adds settled=. floor uses own-seat authority y
+## control-plane board; 200 adds settled=. Online in-match also samples protocol
+## RTT (ping type=3 / pong type=4) and shows rtt= / rtt_n= after the first pong.
+## floor uses own-seat authority y
 ## (y / Fixed.SCALE toward zero), not interpolated samples. crates n/m is
 ## live boxes over compiled bag count. hazards n/m is solid boxes over
 ## compiled bag count (tick 0 solid half). solids n/m is compiled always-solid
@@ -50,6 +52,10 @@ extends Node
 ## Solo opens an 8-cell play-range stub (not a product bound).
 ## play_move_step is a presentation stub, not a product speed.
 ## HUD buttons use FOCUS_NONE so Space stays jump, not Solo play.
+## LineEdits are FOCUS_CLICK. Clicks outside them (3D view, buttons, HUD
+## padding) and Enter / play actions call gui_release_focus so WASD does
+## not type into seats / course / room. Play sampling pauses while a
+## LineEdit has focus.
 ## The window defaults to 1280×720 maximized; that is a developer
 ## run size, not a locked product FOV.
 ## Unexpected socket close while connecting or in-match reissues the
@@ -292,6 +298,7 @@ func set_server_host_text(text: String) -> void:
 ## play states describing two different servers, which reads as a bug rather
 ## than as "you changed servers".
 func try_apply_server_host(raw_host: String = "") -> bool:
+	_release_edit_focus()
 	if endpoint == null:
 		return false
 	if _online_busy() or _offline_playing():
@@ -313,6 +320,7 @@ func try_apply_server_host(raw_host: String = "") -> bool:
 
 
 func try_quick() -> bool:
+	_release_edit_focus()
 	if join == null or _offline_playing():
 		return false
 	var id: String = selected_course_id()
@@ -327,6 +335,7 @@ func try_quick() -> bool:
 
 
 func try_create_room() -> bool:
+	_release_edit_focus()
 	if join == null or _offline_playing():
 		return false
 	var id: String = selected_course_id()
@@ -341,6 +350,7 @@ func try_create_room() -> bool:
 
 
 func try_join_room(raw_code: String = "") -> bool:
+	_release_edit_focus()
 	if join == null or _offline_playing():
 		return false
 	var code: String = raw_code
@@ -354,6 +364,7 @@ func try_join_room(raw_code: String = "") -> bool:
 
 
 func try_poll() -> bool:
+	_release_edit_focus()
 	if join == null or _offline_playing():
 		return false
 	if not join.try_poll():
@@ -364,6 +375,7 @@ func try_poll() -> bool:
 
 
 func try_solo() -> bool:
+	_release_edit_focus()
 	if offline == null:
 		return false
 	if _online_busy():
@@ -406,6 +418,7 @@ func try_stop_offline() -> bool:
 
 
 func try_cancel() -> bool:
+	_release_edit_focus()
 	if _offline_playing():
 		return try_stop_offline()
 	if try_leave_play():
@@ -467,6 +480,8 @@ func try_begin_play() -> bool:
 		return false
 	if not play.try_begin(join, gateway_base):
 		return false
+	if live_io:
+		play.rtt.log_path = "user://protocol_rtt.jsonl"
 	_reset_interp()
 	_opened_socket = false
 	if live_io:
@@ -506,10 +521,10 @@ func try_reconnect() -> bool:
 	return true
 
 
-func on_binary(bytes: PackedByteArray) -> bool:
+func on_binary(bytes: PackedByteArray, now_ms: int = -1) -> bool:
 	if play == null:
 		return false
-	var ok: bool = play.on_binary(bytes)
+	var ok: bool = play.on_binary(bytes, now_ms)
 	if ok:
 		_apply_snapshot_map()
 	_refresh_status()
@@ -704,6 +719,12 @@ func status_view() -> Dictionary:
 		"seat": join_view.get("seat", -1),
 		"play_state": play_view.get("state", ""),
 		"tls": _tls_on(play_view),
+		"rtt_ms": play_view.get("rtt_ms", -1),
+		"rtt_n": play_view.get("rtt_n", 0),
+		"rtt_p50_ms": play_view.get("rtt_p50_ms", -1),
+		"rtt_p90_ms": play_view.get("rtt_p90_ms", -1),
+		"rtt_p95_ms": play_view.get("rtt_p95_ms", -1),
+		"rtt_lost": play_view.get("rtt_lost", 0),
 		"server_host": ServerEndpointGd.host_of(control_plane_base),
 		"gateway_host": ServerEndpointGd.host_of(gateway_base),
 		"server_error": "" if endpoint == null else endpoint.error_line(),
@@ -803,6 +824,13 @@ func _process(delta: float) -> void:
 		_poll_gateway()
 	if window == null or not window.visible:
 		return
+	if _edit_has_focus():
+		if _offline_playing():
+			offline.try_advance()
+			_apply_snapshot_map()
+			_refresh_status()
+		try_advance_interp()
+		return
 	if _offline_playing():
 		offline.try_advance()
 	try_sample_play_move(
@@ -838,6 +866,7 @@ func _ensure_window() -> void:
 	window.transient = false
 	window.own_world_3d = true
 	window.close_requested.connect(_on_close_requested)
+	window.window_input.connect(handle_window_input)
 	var root: VBoxContainer = VBoxContainer.new()
 	root.name = "VBoxContainer"
 	root.set_anchors_preset(Control.PRESET_TOP_WIDE)
@@ -868,6 +897,7 @@ func _ensure_window() -> void:
 	_server_edit.max_length = 64
 	_server_edit.focus_mode = Control.FOCUS_CLICK
 	_server_edit.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_server_edit.text_submitted.connect(_on_edit_submitted)
 	server_row.add_child(_server_edit)
 	_add_button(server_row, APPLY_SERVER_NAME, "Apply server", try_apply_server_host)
 	_sync_server_edit()
@@ -876,6 +906,7 @@ func _ensure_window() -> void:
 	_room_edit.placeholder_text = "Room code"
 	_room_edit.max_length = 6
 	_room_edit.focus_mode = Control.FOCUS_CLICK
+	_room_edit.text_submitted.connect(_on_edit_submitted)
 	root.add_child(_room_edit)
 	_course_edit = LineEdit.new()
 	_course_edit.name = COURSE_ID_NAME
@@ -883,6 +914,7 @@ func _ensure_window() -> void:
 	_course_edit.text = OfficialTraprushCoursesGd.DEFAULT_ID
 	_course_edit.max_length = 32
 	_course_edit.focus_mode = Control.FOCUS_CLICK
+	_course_edit.text_submitted.connect(_on_edit_submitted)
 	root.add_child(_course_edit)
 	_seats_edit = LineEdit.new()
 	_seats_edit.name = SEATS_NAME
@@ -890,6 +922,7 @@ func _ensure_window() -> void:
 	_seats_edit.text = str(OfficialTraprushCoursesGd.DEFAULT_SEATS)
 	_seats_edit.max_length = 1
 	_seats_edit.focus_mode = Control.FOCUS_CLICK
+	_seats_edit.text_submitted.connect(_on_edit_submitted)
 	root.add_child(_seats_edit)
 	map = MatchSnapshotMapGd.new()
 	map.name = _MAP_NAME
@@ -969,6 +1002,44 @@ func _add_button(row: BoxContainer, node_name: String, text: String, handler: Ca
 	button.focus_mode = Control.FOCUS_NONE
 	button.pressed.connect(handler)
 	row.add_child(button)
+
+
+func handle_window_input(event: InputEvent) -> void:
+	if window == null:
+		return
+	var mouse: InputEventMouseButton = event as InputEventMouseButton
+	if mouse == null or not mouse.pressed:
+		return
+	if mouse.button_index != MOUSE_BUTTON_LEFT and mouse.button_index != MOUSE_BUTTON_RIGHT:
+		return
+	if _click_hits_line_edit(mouse.position):
+		return
+	_release_edit_focus()
+
+
+func _click_hits_line_edit(point: Vector2) -> bool:
+	for edit: LineEdit in [_server_edit, _room_edit, _course_edit, _seats_edit]:
+		if edit == null:
+			continue
+		if edit.get_global_rect().has_point(point):
+			return true
+	return false
+
+
+func _edit_has_focus() -> bool:
+	if window == null:
+		return false
+	return window.gui_get_focus_owner() is LineEdit
+
+
+func _release_edit_focus() -> void:
+	if window == null:
+		return
+	window.gui_release_focus()
+
+
+func _on_edit_submitted(_text: String) -> void:
+	_release_edit_focus()
 
 
 func _dispatch_pending() -> void:
@@ -1089,6 +1160,7 @@ func _poll_gateway() -> void:
 			if last_sent_command != play.last_command:
 				_peer.send(play.last_command, WebSocketPeer.WRITE_MODE_BINARY)
 				last_sent_command = play.last_command
+		_send_protocol_probe()
 	elif ready == WebSocketPeer.STATE_CLOSED:
 		_peer = null
 		_opened_socket = false
@@ -1103,6 +1175,17 @@ func _note_command(bytes: PackedByteArray) -> void:
 	_peer.send(bytes, WebSocketPeer.WRITE_MODE_BINARY)
 	last_sent_command = bytes
 	_refresh_status()
+
+
+func _send_protocol_probe() -> void:
+	if _peer == null or play == null:
+		return
+	if _peer.get_ready_state() != WebSocketPeer.STATE_OPEN:
+		return
+	var probe: PackedByteArray = play.try_encode_probe(Time.get_ticks_msec())
+	if probe.is_empty():
+		return
+	_peer.send(probe, WebSocketPeer.WRITE_MODE_BINARY)
 
 
 func _refresh_status() -> void:
@@ -1145,6 +1228,11 @@ func _refresh_status() -> void:
 	parts.append("play=%s" % play_state)
 	var tls_on: bool = view.get("tls", false)
 	parts.append("tls=%s" % ("on" if tls_on else "off"))
+	var rtt_n: int = view.get("rtt_n", 0)
+	if rtt_n > 0:
+		var rtt_ms: int = view.get("rtt_ms", -1)
+		parts.append("rtt=%d" % rtt_ms)
+		parts.append("rtt_n=%d" % rtt_n)
 	var server_host: String = str(view.get("server_host", ""))
 	if server_host != "":
 		parts.append("server=%s" % server_host)
@@ -1417,5 +1505,6 @@ func _on_close_requested() -> void:
 
 
 func _on_sprint() -> void:
+	_release_edit_focus()
 	try_sample_play_sprint(true)
 	try_sample_play_sprint(false)

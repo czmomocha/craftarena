@@ -9,21 +9,26 @@ extends RefCounted
 ## 快照帧变长：[version:u8][type:u8=2][tick:s64][player_count:u8]
 ## 随后每玩家 41 字节（x/y/z/yaw_bam s64×4 + accepted_count:u8 + finish_tick:s64），
 ## 再 [crate_count:u8] 与每箱 16 字节（entity_id:s64 + durability:s64，0 为已毁）。
+## 探针帧定长 18 字节：[version:u8][type:u8=3 ping / 4 pong][seq:s64][client_send_ms:s64]。
+## 服务端原样回显 seq 与 client_send_ms，不入命令队列、不推进仿真、不续租。
 ## 解码拒绝：版本不符、未知类型、截断、尾随字节、保留字段非零。
 ## 命令是规范的：同一逻辑帧恒得同一字节序列。字节序为 PackedByteArray 原生小端。
 ## 命令帧不带 slot：连接身份由服务端持有。SprintIntent id=6。Shove 已接线但无线上目标 id；
-## Interact 仍未接线。新增 id 属协议变更，旧解码器拒绝。Tick/快照频率不在本文件锁定（CD-43 §4）。
+## Interact 仍未接线。新增 id / 帧类型属协议变更，旧解码器拒绝。Tick/快照频率不在本文件锁定（CD-43 §4）。
 
 const PlayerIntentNames := preload("res://src/shared/commands/player_intent_names.gd")
 
 const PROTOCOL_VERSION: int = 1
 const FRAME_COMMAND: int = 1
 const FRAME_SNAPSHOT: int = 2
+const FRAME_PING: int = 3
+const FRAME_PONG: int = 4
 
 const _COMMAND_SIZE: int = 35
 const _SNAPSHOT_HEADER: int = 11
 const _SNAPSHOT_PLAYER: int = 41
 const _SNAPSHOT_CRATE: int = 16
+const _PROBE_SIZE: int = 18
 const _YAW_BAM_OMITTED: int = -1
 
 const _INTENT_TO_ID: Dictionary = {
@@ -177,4 +182,64 @@ static func decode_snapshot(bytes: PackedByteArray) -> Dictionary:
 		"tick": bytes.decode_s64(2),
 		"players": players,
 		"crates": crates,
+	}
+
+
+static func encode_ping(seq: int, client_send_ms: int) -> PackedByteArray:
+	return _encode_probe(FRAME_PING, seq, client_send_ms)
+
+
+static func encode_pong(seq: int, client_send_ms: int) -> PackedByteArray:
+	return _encode_probe(FRAME_PONG, seq, client_send_ms)
+
+
+static func decode_ping(bytes: PackedByteArray) -> Dictionary:
+	return _decode_probe(bytes, FRAME_PING)
+
+
+static func decode_pong(bytes: PackedByteArray) -> Dictionary:
+	return _decode_probe(bytes, FRAME_PONG)
+
+
+## 合法 ping 则编码对应 pong；其它帧返回空。服务端用它回显，不解析时钟。
+static func echo_pong(bytes: PackedByteArray) -> PackedByteArray:
+	var decoded: Dictionary = decode_ping(bytes)
+	var decoded_ok: bool = decoded.get("ok", false)
+	if not decoded_ok:
+		return PackedByteArray()
+	var seq: int = decoded.get("seq", 0)
+	var client_send_ms: int = decoded.get("client_send_ms", 0)
+	return encode_pong(seq, client_send_ms)
+
+
+static func _encode_probe(frame_type: int, seq: int, client_send_ms: int) -> PackedByteArray:
+	if seq < 1 or client_send_ms < 0:
+		return PackedByteArray()
+	if frame_type != FRAME_PING and frame_type != FRAME_PONG:
+		return PackedByteArray()
+	var bytes: PackedByteArray = PackedByteArray()
+	bytes.resize(_PROBE_SIZE)
+	bytes.encode_u8(0, PROTOCOL_VERSION)
+	bytes.encode_u8(1, frame_type)
+	bytes.encode_s64(2, seq)
+	bytes.encode_s64(10, client_send_ms)
+	return bytes
+
+
+static func _decode_probe(bytes: PackedByteArray, frame_type: int) -> Dictionary:
+	var failed: Dictionary = {"ok": false}
+	if bytes.size() != _PROBE_SIZE:
+		return failed
+	if bytes.decode_u8(0) != PROTOCOL_VERSION:
+		return failed
+	if bytes.decode_u8(1) != frame_type:
+		return failed
+	var seq: int = bytes.decode_s64(2)
+	var client_send_ms: int = bytes.decode_s64(10)
+	if seq < 1 or client_send_ms < 0:
+		return failed
+	return {
+		"ok": true,
+		"seq": seq,
+		"client_send_ms": client_send_ms,
 	}

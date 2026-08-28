@@ -4,7 +4,8 @@ extends RefCounted
 ## After a ready join ticket, build the gateway URL and follow snapshots.
 ## Commands use MatchFrameCodec; the command tick is 0 because the server
 ## tick is authoritative (CD-43 §3). Shove is button-only (no target id).
-## Interact stays unencoded.
+## Interact stays unencoded. Online sessions emit ping (type=3) and sample
+## pong RTT; that is measurement, not a locked interpolation window.
 ## Sockets stay outside this type. Interpolation is sampled by the lobby
 ## from the follower's previous/latest poses. Own-slot Move/Jump add a
 ## local overlay via MatchLocalPredict; a newer snapshot tick hard-snaps.
@@ -16,6 +17,7 @@ const MatchFrameCodec := preload("res://src/shared/protocol/match_frame_codec.gd
 const MatchJoinSessionGd := preload("res://src/client/match_join_session.gd")
 const MatchLocalPredictGd := preload("res://src/client/match_local_predict.gd")
 const MatchMoveFacingGd := preload("res://src/client/match_move_facing.gd")
+const MatchProtocolRttGd := preload("res://src/client/match_protocol_rtt.gd")
 const MatchSnapshotFollowGd := preload("res://src/client/match_snapshot_follow.gd")
 const PlayerIntentNames := preload("res://src/shared/commands/player_intent_names.gd")
 
@@ -29,6 +31,7 @@ var state: String = STATE_IDLE
 var websocket_url: String = ""
 var follow: MatchSnapshotFollowGd = MatchSnapshotFollowGd.new()
 var predict: MatchLocalPredictGd = MatchLocalPredictGd.new()
+var rtt: MatchProtocolRttGd = MatchProtocolRttGd.new()
 var last_command: PackedByteArray = PackedByteArray()
 ## Online overlay jump stays 0 so snapshots are not stacked with a fake hop.
 ## Match-server / Solo jump_dy is the Preview placeholder. Official courses
@@ -79,6 +82,7 @@ func try_begin(join: MatchJoinSessionGd, gateway_base: String) -> bool:
 	websocket_url = url
 	follow = MatchSnapshotFollowGd.new()
 	predict = MatchLocalPredictGd.new()
+	rtt.reset()
 	if not predict.bind_slot(join.seat):
 		websocket_url = ""
 		return false
@@ -106,17 +110,31 @@ func try_leave() -> bool:
 	websocket_url = ""
 	follow = MatchSnapshotFollowGd.new()
 	predict = MatchLocalPredictGd.new()
+	rtt.reset()
 	last_command = PackedByteArray()
 	return true
 
 
-func on_binary(bytes: PackedByteArray) -> bool:
+func on_binary(bytes: PackedByteArray, now_ms: int = -1) -> bool:
 	if state != STATE_IN_MATCH:
 		return false
+	var clock_ms: int = now_ms
+	if clock_ms < 0:
+		clock_ms = Time.get_ticks_msec()
+	var pong: Dictionary = rtt.try_accept_pong(bytes, clock_ms)
+	var pong_ok: bool = pong.get("ok", false)
+	if pong_ok:
+		return true
 	if not follow.apply_frame(bytes):
 		return false
 	predict.on_authoritative_tick(follow.tick)
 	return true
+
+
+func try_encode_probe(now_ms: int) -> PackedByteArray:
+	if state != STATE_IN_MATCH:
+		return PackedByteArray()
+	return rtt.try_emit_ping(now_ms)
 
 
 func try_encode_intent(intent_name: String, dx: int, dz: int, yaw_bam: int) -> PackedByteArray:
@@ -152,6 +170,7 @@ func try_encode_move_axes(forward: bool, back: bool, left: bool, right: bool, st
 
 func status_view() -> Dictionary:
 	var follow_view: Dictionary = follow.status_view()
+	var rtt_view: Dictionary = rtt.status_view()
 	return {
 		"state": state,
 		"websocket_url": websocket_url,
@@ -161,6 +180,12 @@ func status_view() -> Dictionary:
 		"player_count": follow_view.get("player_count", 0),
 		"crate_count": follow_view.get("crate_count", 0),
 		"own_slot": predict.own_slot,
+		"rtt_ms": rtt_view.get("rtt_ms", -1),
+		"rtt_n": rtt_view.get("rtt_n", 0),
+		"rtt_p50_ms": rtt_view.get("rtt_p50_ms", -1),
+		"rtt_p90_ms": rtt_view.get("rtt_p90_ms", -1),
+		"rtt_p95_ms": rtt_view.get("rtt_p95_ms", -1),
+		"rtt_lost": rtt_view.get("rtt_lost", 0),
 	}
 
 

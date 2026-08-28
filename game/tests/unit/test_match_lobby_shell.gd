@@ -7,6 +7,7 @@ extends GutTest
 ## Own-seat box uses OWN_ALBEDO; standing labels prefix the own seat with "*".
 ## Own-seat accepted_count tints course pads done / current / pending.
 ## Own-seat finish_tick tints the finish zone; HUD shows pads/floor/finish/crates/hazards/result.
+## Online matches sample protocol RTT after a pong; HUD then shows rtt= / rtt_n=.
 ## Online all-finished GET writes settled=; Solo never GETs. Client never POSTs.
 ## Reset rising-edge returns to the last accepted pad without dropping progress.
 ## Online overlay stays off latest live crates, solid hazards, and latest remote capsules.
@@ -144,6 +145,26 @@ func test_open_window_quick_play_ready_begins_play() -> void:
 	assert_false(_shell.allows_online_writes())
 
 
+func test_online_pong_shows_rtt_on_status_line() -> void:
+	_shell = _open_shell()
+	assert_true(_shell.try_quick())
+	assert_true(_shell.accept_http(201, _join("ABCD23", "ticket-rtt")))
+	assert_true(_shell.on_socket_open())
+	assert_true(_shell.on_binary(_snapshot(2, 12)))
+	assert_false(_shell.status_label_text().contains("rtt="))
+	var ping: PackedByteArray = _shell.play.try_encode_probe(50)
+	assert_false(ping.is_empty())
+	assert_true(_shell.on_binary(MatchFrameCodec.echo_pong(ping), 57))
+	var view: Dictionary = _shell.status_view()
+	var rtt_n: int = view.get("rtt_n", 0)
+	var rtt_ms: int = view.get("rtt_ms", -1)
+	assert_eq(rtt_n, 1)
+	assert_eq(rtt_ms, 7)
+	assert_true(_shell.status_label_text().contains("rtt=7"))
+	assert_true(_shell.status_label_text().contains("rtt_n=1"))
+	assert_eq(_shell.play.follow.tick, 2)
+
+
 func test_hud_buttons_do_not_steal_space_and_window_is_dev_default() -> void:
 	_shell = _open_shell()
 	assert_eq(_shell.window.size, MatchLobbyShell.WINDOW_SIZE)
@@ -158,6 +179,37 @@ func test_hud_buttons_do_not_steal_space_and_window_is_dev_default() -> void:
 	var room: LineEdit = _shell.window.find_child(MatchLobbyShell.ROOM_NAME, true, false)
 	assert_not_null(room)
 	assert_eq(room.focus_mode, Control.FOCUS_CLICK)
+
+
+func test_line_edit_focus_releases_outside_fields_and_on_play_actions() -> void:
+	_shell = _open_shell()
+	var seats: LineEdit = _shell.window.find_child(MatchLobbyShell.SEATS_NAME, true, false)
+	assert_not_null(seats)
+	seats.grab_focus()
+	assert_true(seats.has_focus())
+	var miss: InputEventMouseButton = InputEventMouseButton.new()
+	miss.pressed = true
+	miss.button_index = MOUSE_BUTTON_LEFT
+	miss.position = Vector2(400, 500)
+	_shell.handle_window_input(miss)
+	assert_false(seats.has_focus())
+	seats.grab_focus()
+	assert_true(seats.has_focus())
+	var hit: InputEventMouseButton = InputEventMouseButton.new()
+	hit.pressed = true
+	hit.button_index = MOUSE_BUTTON_LEFT
+	hit.position = seats.get_global_rect().get_center()
+	_shell.handle_window_input(hit)
+	assert_true(seats.has_focus())
+	assert_true(_shell.try_solo())
+	assert_false(seats.has_focus())
+	_shell.try_cancel()
+	var course: LineEdit = _shell.window.find_child(MatchLobbyShell.COURSE_ID_NAME, true, false)
+	assert_not_null(course)
+	course.grab_focus()
+	assert_true(course.has_focus())
+	_shell._on_edit_submitted(course.text)
+	assert_false(course.has_focus())
 
 
 func test_wss_gateway_base_shows_tls_on() -> void:

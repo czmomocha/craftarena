@@ -7,7 +7,8 @@ extends Node
 ## 实时回路：在本场内网端口监听 WebSocket（--bind 占位 0.0.0.0，公网暴露由部署层
 ## 与网关拓扑阻止），二进制命令帧经 MatchRealtime 排队、在 commit_tick 边界按到达
 ## 顺序应用；每 SNAPSHOT_EVERY_TICKS 个 tick 广播一帧二进制快照。命令帧 tick 只
-## 解码不信任，服务端 tick 权威（CD-43 §3）。每槽每 tick 至多一条命令（先到先得），
+## 解码不信任，服务端 tick 权威（CD-43 §3）。入站 ping（type=3）立即回 pong，
+## 不入命令队列。每槽每 tick 至多一条命令（先到先得），
 ## 断开丢弃排队；握手后按上游 URL 的 slot 占用席位，缺席位则占用最小空槽。
 ## 墙钟发送速率仍待（CD-63）。
 ## 心跳：每 HEARTBEAT_EVERY_TICKS 个 tick 打印一行结构化 JSON（含状态哈希与
@@ -119,7 +120,12 @@ func _process(_delta: float) -> void:
 					continue
 				_peers[peer] = slot
 			while peer.get_available_packet_count() > 0:
-				_realtime.accept_command(slot, peer.get_packet())
+				var inbound: PackedByteArray = peer.get_packet()
+				var pong: PackedByteArray = _realtime.handle_inbound(slot, inbound)
+				if pong.is_empty():
+					continue
+				if peer.get_ready_state() == WebSocketPeer.STATE_OPEN:
+					peer.send(pong, WebSocketPeer.WRITE_MODE_BINARY)
 		elif state == WebSocketPeer.STATE_CLOSED:
 			closed.append(peer)
 	for peer: WebSocketPeer in closed:
