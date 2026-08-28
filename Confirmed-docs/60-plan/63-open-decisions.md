@@ -36,7 +36,7 @@ AI 不得把其他文档中的示例表格、推荐项或"建议"当成已确认
 
 已关闭并迁出本清单：定点数单位尺度、舍入、溢出与三角函数（2026-08-21，[ADR-0005](../../docs/adr/0005-fixed-point-numeric-model.md) 选项 1）。合同见 [CD-42 §1.1](../40-technical/42-contracts-and-rulevm.md)。
 
-已关闭并迁出本清单：一期 TRAPRUSH 环境失败复活硬直秒数 = **1.0 s**（2026-08-28，纠偏 D5 中档）。不锁 Tick Hz。代码落地前仍是 1 tick 桩，接线另开章。§1.3 其余数值（伤害、冷却、推击力度、无控保护、刷新时间）仍延期。口径见 [纠偏方案 D5](../../docs/plans/course-correction-2026-08.md) 与 [CD-91 D.3](../90-reference/91-decision-log.md)。C5 再写入 [CD-21](../20-gameplay/21-traprush.md)。
+已关闭并迁出本清单：一期 TRAPRUSH 环境失败复活硬直秒数 = **1.0 s**（2026-08-28，纠偏 D5 中档）。不锁 Tick Hz。对局 / Solo 已由 `TraprushPlayStubs` 按占位 60 physics tick/s 换成 60 tick；Preview 仍 1 次 Advance。§1.3 其余数值（伤害、冷却、推击力度、无控保护、刷新时间）仍延期。口径见 [纠偏方案 D5](../../docs/plans/course-correction-2026-08.md)、[CD-91 D.3](../90-reference/91-decision-log.md) 与 [CD-21 §6](../20-gameplay/21-traprush.md#6-单局流程)。
 
 ## 3. 明确跳过的运营类议题
 

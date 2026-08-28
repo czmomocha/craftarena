@@ -3,9 +3,11 @@ extends RefCounted
 
 ## 动作占位桩的单一配置源。
 ##
-## 这些**不是产品数值**：跳跃高度、重力、爆破伤害与推击力度都还没拍板
+## 这些**大多不是产品数值**：跳跃高度、重力、爆破伤害与推击力度都还没拍板
 ## （[CD-63](Confirmed-docs/60-plan/63-open-decisions.md) §1）。它们只是让
-## 对局能跑起来的开发期占位值。
+## 对局能跑起来的开发期占位值。例外：`RESPAWN_STUN_MS` 已由纠偏 D5 定为 1.0 s；
+## 换算用的 `PHYSICS_TICKS_PER_SECOND_PLACEHOLDER` 仍是当前引擎 physics，不是
+## [CD-43](Confirmed-docs/40-technical/43-networking-and-replay.md) 产品 Tick。
 ##
 ## 存在的理由是变更成本，不是复用：同一组数字原先抄在对局进程、大厅 Solo 与
 ## Preview 壳三处，现在又要被 BotRunner 抄第四遍。数值拍板时四处必须同时改，
@@ -48,10 +50,23 @@ const SHOVE_COOLDOWN_TICKS: int = 1
 ## 一格冲刺步长与 1 tick 道具冷却，不是产品冲刺距离或冷却秒数。
 const SPRINT_STEP: int = Fixed.SCALE
 const ITEM_COOLDOWN_TICKS: int = 1
-## 机关击退四分之一格、环境失败硬直 1 tick。不是 D5 的 0.5/1.0/1.5 秒，
-## 也不是 Authoring hazard.knockback / damage 字段。
+## 机关击退四分之一格。不是 Authoring hazard.knockback / damage 字段。
 const HAZARD_KNOCKBACK_STEP: int = Fixed.SCALE / 4
-const RESPAWN_STUN_TICKS: int = 1
+## D5：一期环境失败硬直 1.0 s（人类 2026-08-28）。不锁 Tick Hz。
+## 对局 / Solo / BotRunner 用当前引擎 physics 占位 Hz 换成 tick；改 Hz 只改
+## PHYSICS_TICKS_PER_SECOND_PLACEHOLDER，不是 CD-43 产品 Tick。
+const RESPAWN_STUN_MS: int = 1000
+const PHYSICS_TICKS_PER_SECOND_PLACEHOLDER: int = 60
+const RESPAWN_STUN_TICKS: int = (RESPAWN_STUN_MS * PHYSICS_TICKS_PER_SECOND_PLACEHOLDER + 999) / 1000
+## Preview 手动 Advance，不是墙钟。硬直一次点击即可过，避免点 60 下。
+const PREVIEW_RESPAWN_STUN_TICKS: int = 1
+
+
+## 墙钟毫秒 → 会话 tick。向上取整，避免把 1.0 s 缩短。非正数当 0。
+static func ticks_from_ms(duration_ms: int) -> int:
+	if duration_ms <= 0:
+		return 0
+	return (duration_ms * PHYSICS_TICKS_PER_SECOND_PLACEHOLDER + 999) / 1000
 
 ## 占位胶囊尺寸（八分之一格），不是产品角色比例——那要等 D4 的美术规格表。
 ## 改半径会连带改赛道布局、Shove 邻域、UseItem reach 与全部占用相交断言，

@@ -22,7 +22,8 @@ extends RefCounted
 ## Shove/Interact stay refused. Does not tick. Fall is only on advance.
 ## Out-of-range reset uses caller AABB via TraprushOutOfRangeReset when
 ## play_range_enabled; default off. No drop-count N. Reset and hazard crush
-## write caller play_respawn_stun_ticks (stub, not D5 product seconds).
+## write caller play_respawn_stun_ticks（对局 1.0 s 换算 tick 不走 Preview；
+## Preview 壳注入 PREVIEW_RESPAWN_STUN_TICKS = 1 次 Advance）。
 ## Occupancy uses existing TraprushPadAccept: overlapping a checkpoint pad
 ## advances ordered progress. Occupancy uses existing TraprushPortalLanding
 ## try_land_exit: overlapping a portal source box lands one hop. two_way dest

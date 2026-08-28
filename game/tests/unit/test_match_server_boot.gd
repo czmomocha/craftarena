@@ -18,6 +18,7 @@ const MatchServer := preload("res://src/server/match_server.gd")
 const PlayerIntentNames := preload("res://src/shared/commands/player_intent_names.gd")
 const SimulationBundle := preload("res://src/ugc/simulation_bundle.gd")
 const TraprushMatchSession := preload("res://src/games/traprush/match_session.gd")
+const TraprushPlayStubs := preload("res://src/games/traprush/play_stubs.gd")
 const TraprushTopologyCompiler := preload("res://src/ugc/traprush_topology_compiler.gd")
 
 const COURSE_01_PATH: String = "res://content/official/traprush/course_01.json"
@@ -108,7 +109,7 @@ func test_boot_session_from_config() -> void:
 	assert_eq(session.sprint_step, Fixed.SCALE)
 	assert_eq(session.item_cooldown_ticks, 1)
 	assert_eq(session.hazard_knockback_step, Fixed.SCALE / 4)
-	assert_eq(session.respawn_stun_ticks, 1)
+	assert_eq(session.respawn_stun_ticks, TraprushPlayStubs.RESPAWN_STUN_TICKS)
 	assert_true(session.range_enabled)
 	assert_eq(session.range_max_x, 8 * Fixed.SCALE)
 	assert_eq(session.range_min_x, -8 * Fixed.SCALE)

@@ -63,7 +63,7 @@ var play_use_item_reach_dz: int = PlayStubs.USE_ITEM_REACH_DZ
 var play_sprint_step: int = PlayStubs.SPRINT_STEP
 var play_item_cooldown_ticks: int = PlayStubs.ITEM_COOLDOWN_TICKS
 var play_hazard_knockback_step: int = PlayStubs.HAZARD_KNOCKBACK_STEP
-var play_respawn_stun_ticks: int = PlayStubs.RESPAWN_STUN_TICKS
+var play_respawn_stun_ticks: int = PlayStubs.PREVIEW_RESPAWN_STUN_TICKS
 var play_jump_dy: int = PlayStubs.JUMP_DY
 var play_support_dy: int = PlayStubs.SUPPORT_DY
 ## Advance tick is a click, not a frame, so Preview falls a whole cell per step.

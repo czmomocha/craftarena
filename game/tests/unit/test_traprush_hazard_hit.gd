@@ -1,8 +1,9 @@
 extends GutTest
 
 ## C3 第 4 章：服务端裁决的机关伤害 / 击退。固体半周期占用重叠才命中；
-## 不读客户端命中断言，不读 Authoring damage/knockback 字段。击退与硬直
-## 从调用方占位桩注入，不是 D5 产品秒数。灰盒磁带路径仍不接伤害。
+## 不读客户端命中断言，不读 Authoring damage/knockback 字段。
+## 击退与硬直从调用方注入。产品 1.0 s 在 PlayStubs；本文件多数用例仍注入 1 tick
+## 只测「硬直门」本身。灰盒磁带路径仍不接伤害。
 
 const AuthoringDocument := preload("res://src/creator/authoring_document.gd")
 const AuthoringPreview := preload("res://src/creator/authoring_preview.gd")
