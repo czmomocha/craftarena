@@ -167,7 +167,9 @@ UGC 权威碰撞形状约束见 [CD-42](../40-technical/42-contracts-and-rulevm.
 
 环境失败后无限复活，返回最近检查点并承受固定复活硬直；不因生命次数淘汰。
 
-实现落点（2026-08-26）：出界复位。`TraprushOutOfRangeReset` 在调用方 AABB（闭区间：边界上算出界为假）外把胶囊写回已有 `CheckpointSpawn.pose_for`（尚无进度则回起点）。对局 `TraprushMatchSession` 与 Preview `AuthoringPreview` 共用该模块；会话默认 `range_enabled=false`，对局进程 / Solo / Preview 壳打开开发桩半宽 `STUB_HALF = 8 * Fixed.SCALE`（±8 格），不是产品场地。先复位再占用扫描，避免踩到范围外的垫再弹回该垫。进度不回退。不计数掉出次数 N，不接重力/下落，不写复活硬直。空区间（min > max）拒绝。灰盒磁带路径不改委托。
+实现落点（2026-08-28）：复活硬直 **1.0 s**（纠偏 D5）。对局进程 / Solo / BotRunner 从 `TraprushPlayStubs` 注入：`RESPAWN_STUN_MS = 1000`，按 `PHYSICS_TICKS_PER_SECOND_PLACEHOLDER = 60`（当前引擎 physics，**不是** [CD-43 §4](../40-technical/43-networking-and-replay.md#4-未锁定项) 产品 Tick）换成 60 个会话 tick。出界与踩实心机关复位后写入 `stun_remaining`，每 `advance_sim_tick` 减 1；硬直中拒绝 Move / Jump / UseItem / Shove / Sprint，允许 ResetToCheckpoint。Preview 手动 Advance 不是墙钟，仍用 `PREVIEW_RESPAWN_STUN_TICKS = 1`。快照帧不含 stun 字段（不改协议）；线上靠权威拒意图 + 新快照硬贴。不锁 Tick Hz。
+
+实现落点（2026-08-26）：出界复位。`TraprushOutOfRangeReset` 在调用方 AABB（闭区间：边界上算出界为假）外把胶囊写回已有 `CheckpointSpawn.pose_for`（尚无进度则回起点）。对局 `TraprushMatchSession` 与 Preview `AuthoringPreview` 共用该模块；会话默认 `range_enabled=false`，对局进程 / Solo / Preview 壳打开开发桩半宽 `STUB_HALF = 8 * Fixed.SCALE`（±8 格），不是产品场地。先复位再占用扫描，避免踩到范围外的垫再弹回该垫。进度不回退。不计数掉出次数 N，不接重力/下落。该句中「不写复活硬直」被上文 2026-08-28 硬直落点覆盖。空区间（min > max）拒绝。灰盒磁带路径不改委托。
 
 ### 6.1 排序优先级
 

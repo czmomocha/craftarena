@@ -53,52 +53,39 @@ Worktree 端口偏移见 README「并行工作区」；本文件不复述端口�
 
 ---
 
-## 本刀：纠偏 C1 收尾 — 测试机日常更新脚本 + D5 硬直 1.0s 落文档
+## 本刀：纠偏 C3 第 8 章 — 环境失败硬直 1.0 s
 
-对应：当前完整章节 PR。这一章闭合的是：VPS 上一条可重复的关服 / 拉 `main` / 重建 / 等就绪；以及人类已选的复活硬直 **1.0 s** 写进纠偏 D5 / CD-91 / CD-63。不是实现 1 秒硬直，也不是代填 ICMP / 协议层数字。
+对应：当前完整章节 PR。这一章把 D5 已选的 **1.0 秒**接到对局 / Solo 权威复位（出界、踩实心机关）。不锁 Tick Hz，不改快照协议，不加 HUD 字段。
 
-**无开发机 GUI。** 不需要 `npm run dev`，也不要为了验收去停 24h ICMP。
+**不需要三后端。** Solo 即可。
 
-Windows 上用 Git Bash（或测试机 Linux）。仓库根：
+### 1. 走下路面：约一秒不能动
 
-### 1. 脚本用法与禁止项
+按上面共用启动 **0.2**（不需要 0.1）。点 **Solo play**。
 
-```bash
-bash infra/compose/craftarena-compose.sh
-bash -n infra/compose/craftarena-compose.sh
-```
+1. 从出生点向石色路**侧面**走，走下立足面掉进坑，应闪回最近检查点。
+2. 预期：闪回后大约 **1 秒**内 WASD / 空格 / Q / Shift 带不走胶囊（R 复位仍可发）。约 1 秒后又能走。失败：闪回后立刻能冲；或卡住远超过两秒。
 
-1. 预期：无参数打印 `Usage`，退出码非 0；`bash -n` 无输出、退出 0。正文有 `update` / `down`。打开脚本，作为命令执行的只有 `compose down`，没有 `down -v`。
-2. 失败：无参数却去拉起容器；或脚本里能一键 `down -v`。
+### 2. 踩实心机关
 
-### 2. 有测试机时（可选，不要打断 ICMP）
+同一局，走到出生点 −Z 两格洋红盒，固体半周期踩上。
 
-SSH 到测试机，仓库根：
+1. 预期：击退/闪回出生点后，同样大约 1 秒不能走。失败：踩实心毫无反应；或硬直仍像一帧那么短。
 
-```bash
-bash infra/compose/craftarena-compose.sh status
-```
+### 3. Preview 仍是点一下
 
-1. 预期：打印 `git:` 一行和三个 compose 服务。本刀**不要求**跑 `update`（会杀掉进行中的对局；不影响本机 ping，但不必为验收去做）。
-2. 失败：`GODOT_SHA512 empty` 却还继续 build；或 `down` 带了 `-v`。
+打开编辑器 Preview，摆一个检查点，Play，Advance 掉出或踩机关后硬直。
 
-采协议层 RTT 时再按 [`server-deploy.md` §4.1](server-deploy.md#41-日常更新测试机) 与 §13.2：先 `update`，两边客户端也要新代码。
-
-### 3. D5 文档（无真机）
-
-打开 [纠偏方案 D5](../plans/course-correction-2026-08.md)「你的决定」：道具 A，复活硬直 **1.0 s**。CD-91 D.3 有 `traprush_respawn_stun = 1_second`。
-
-1. 预期：三处一致。`game/src` 里硬直仍是 1 tick 桩，本刀不改。
-2. 失败：文档写了 1.0 s 但 PR 把 `RESPAWN_STUN_TICKS` 改成产品值（那是下一章）。
+1. 预期：**再点一次 Advance** 就能动，不必点 60 下。失败：Preview 也要墙钟 1 秒或点几十下。
 
 ### 本刀不测
 
-- 24 小时 ICMP 的数字（[`server-deploy.md`](server-deploy.md) §8.1，进行中则让它跑完）；
-- 远端双机协议层 P50/P90（同手册 §13.2，要先 `update` 再进场）；
-- 1.0 s 硬直手感；
-- `docker compose down -v`。
+- 24 小时 ICMP 与远端协议层百分位回填；
+- 改 `SNAPSHOT_EVERY_TICKS` / 插值窗口；
+- 在线快照里出现 stun 字段（协议不改；线上可能每拍硬贴回检查点）；
+- 把 D10 写成「已经好玩」。
 
 ### 仍然欠着（不因本章消失）
 
-1.0 s 硬直接线、24 小时 ICMP 回填、远端协议层 RTT 回填、C3 网络参数锁定、D10 首次可玩性结论。
+24 小时 ICMP 回填、远端协议层 RTT 回填、C3 网络参数锁定、E6 在有美术之后的可玩性签署。
 

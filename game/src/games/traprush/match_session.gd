@@ -15,8 +15,9 @@ extends RefCounted
 ## 每个 pickup 实体每玩家只拾一次。命中只看调用方 reach，不读客户端命中断言。
 ## 冲刺沿胶囊 yaw 做 8 向水平位移，步长不得超过 SHOVE_STEP_MAX（与 Move 同一格上限）。
 ## 出界复位：range_enabled 时用调用方 AABB（闭区间）经 TraprushOutOfRangeReset
-## 写回最近检查点落点。不计数 N。复位后写入调用方 respawn_stun_ticks（占位桩，
-## 不是 D5 产品秒数）。默认关闭。
+## 写回最近检查点落点。不计数 N。复位后写入调用方 respawn_stun_ticks（对局 /
+## Solo 由 PlayStubs 注入 D5 1.0 s 换算 tick；Preview 仍是 1 次 Advance）。
+## 不锁 CD-43 Tick Hz。默认关闭。
 ## 下落：调用方 fall_dy 是每 tick 重力加速度，经 TraprushGravity.integrate
 ## 写入胶囊 vy。默认 0（2 人 Headless 冲线夹具不走路板，不能默认下落）。
 ## commit_tick 先积分再 world.tick（与灰盒相同）。MatchRealtime 在积分与
