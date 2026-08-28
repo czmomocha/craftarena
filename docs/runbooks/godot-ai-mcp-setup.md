@@ -1,8 +1,8 @@
 # Godot AI 接入烟测
 
-本文件是 [CD-51 §7](../../Confirmed-docs/50-engineering/51-dev-environment.md) 的可执行版本：在开发机上安装唯一主 MCP（Godot AI）、**先关匿名遥测**、接上 Cursor，并按 [ADR-0003](../adr/0003-godot-mcp-selection.md) 的清单做一次人工核实。
+本文件是 [CD-51 §7](../../Confirmed-docs/50-engineering/51-dev-environment.md) 的可执行版本：在开发机上安装唯一主 MCP（Godot AI）、**先关匿名遥测**、接上客户端（Cursor 或 CodeBuddy，后者见 §4.1），并按 [ADR-0003](../adr/0003-godot-mcp-selection.md) 的清单做一次人工核实。
 
-它不是 [环境烟测清单](environment-smoke-test.md) 的替代。M0 那十步仍然用命令行证明 Headless / CI 闭环；本清单证明的是「打开的编辑器 + Cursor」这条加速器。两条闭环必须同时成立，MCP 才能当加速器而不是单点。
+它不是 [环境烟测清单](environment-smoke-test.md) 的替代。M0 那十步仍然用命令行证明 Headless / CI 闭环；本清单证明的是「打开的编辑器 + 客户端」这条加速器。两条闭环必须同时成立，MCP 才能当加速器而不是单点。
 
 - 适用范围：Windows 与 macOS 开发机。Linux CI **不**跑本清单。
 - 预计耗时：30～45 分钟（含第一次 `uvx` 拉包）。
@@ -44,7 +44,9 @@ printf '%s\n' "$GODOT_AI_DISABLE_TELEMETRY"
 
 预期输出：`true`。若默认 shell 是 bash，改写 `~/.bashrc`。
 
-然后完全退出 Cursor 与 Godot 再打开，避免子进程拿不到新变量。
+然后**完全退出 Cursor / CodeBuddy 与 Godot 再打开**，避免子进程拿不到新变量。
+
+> macOS 注意：GUI 应用不读 `~/.zshrc`，只重启应用**不足以**让编辑器和 IDE 拿到这个变量 —— 光靠本步会在 macOS 上静默失效。Godot 要从终端启动，IDE 侧要在 `mcp.json` 的 `env` 里显式注入，见 §4.1。
 
 ---
 
@@ -166,7 +168,7 @@ grep '^version=' game/addons/godot_ai/plugin.cfg
 
 ---
 
-## 第 4 步：给 Cursor 写 attach 配置
+## 第 4 步：给客户端写 attach 配置
 
 仍在 Godot AI Dock：
 
@@ -176,6 +178,22 @@ grep '^version=' game/addons/godot_ai/plugin.cfg
 4. 在 Cursor 的 MCP 面板确认 `godot-ai` 已连接。不要手改成 URL 模式，也不要把本机 `uvx` 绝对路径提交进仓库。
 
 Windows 上 Dock 可能生成 `pythonw.exe` 包装而不是直接的 `uvx.exe`，这是上游为避免弹出控制台窗口的做法，不要简化回去。
+
+### 4.1 CodeBuddy 等 Dock 未内置的客户端
+
+`game/addons/godot_ai/clients/` 里没有 `codebuddy.gd`（只有 cursor / claude / windsurf / vscode / zed 等）。不必等上游支持：这些客户端的 `mcp.json` 同为 `mcpServers` 标准格式，Godot AI 又用 stdio transport，配置可以直接搬。
+
+1. 先按上面第 1～2 步在 Dock 里对 **Cursor** 点两次 Configure，生成带 `--disable-telemetry` 的配置；
+2. 把 `~/.cursor/mcp.json` 里的 `godot-ai` 条目原样复制进 `~/.codebuddy/mcp.json` 的 `mcpServers`；
+3. 额外补一个 `env` 字段显式写 `"GODOT_AI_DISABLE_TELEMETRY": "true"`；
+4. **完全退出并重启客户端**（macOS 是 `Cmd+Q`，不是关窗口）—— MCP 子进程只在启动时拉起。
+
+两个 macOS 陷阱，都是同一个根因：**GUI 应用不读 `~/.zshrc`**，第 0 步写的主开关对它们无效。
+
+- `env` 字段必须在 `mcp.json` 里显式注入，否则子进程拿不到遥测开关；Godot AI 把它列进 `command_user_fields`，不会被 Configure 覆盖。
+- 开编辑器也要**从终端启动**：先 `source ~/.zshrc`，再执行 `"$GODOT4" --editor --path game`。从 Dock / Finder 双击打开同样读不到该变量，插件会先发出 startup 事件。
+
+搬运后两个客户端共用同一个 Godot AI 服务（同端口、同进程），这不是「第二套 Godot MCP」，第 7 步的判定不变。
 
 ---
 
@@ -235,10 +253,10 @@ echo "exit code: $?"
 
 人工确认并勾选：
 
-- [x] 插件目录无 `.cs` / `.csproj`（2026-08-21 Windows 与 macOS 接入烟测已核对）
-- [x] MCP HTTP/WS 只听 `127.0.0.1:8000` / `9500`，未开 `--allow-host`（两台机器均已核对端口）
-- [x] **Clients & Tools → Settings**：Vision Routing 保持关（主 Dock 上看不到此项，属正常；Windows 2026-08-21 人类确认；macOS 第 3 步已在 Settings 页确认，EditorSettings 无 `vision_routing/*` 键即默认关）
-- [x] 没有同时启用第二套 Godot MCP（Windows 同日人类确认；macOS：Cursor 用户级 `mcp.json` 与当前会话 MCP 目录仅 `godot-ai`）
+- [x] 插件目录无 `.cs` / `.csproj`（2026-08-21 Windows 与 macOS 已核对；2026-08-28 第三台 macOS 14.6.1 已核对）
+- [x] MCP HTTP/WS 只听 `127.0.0.1:8000` / `9500`，未开 `--allow-host`（三台机器均已核对端口）
+- [x] **Clients & Tools → Settings**：Vision Routing 保持关（主 Dock 上看不到此项，属正常；Windows 2026-08-21 人类确认；两台 macOS 均以 EditorSettings 无 `vision_routing/*` 键判定默认关，无需开 Developer mode）
+- [x] 没有同时启用第二套 Godot MCP（Windows 同日人类确认；两台 macOS：Cursor 与 CodeBuddy 的用户级 `mcp.json` 各自仅 `godot-ai` 一项）
 - [x] 没有把 `editor_manage(op="game_eval")` 写进任务习惯或脚本
 - [x] 没有用 `test_run` / `McpTestSuite` 替代 GUT
 
@@ -280,5 +298,6 @@ git status --short
 |---|---|---|---|---|---|---|---|---|---|
 | 2026-08-21 | 人类（安装 / Configure / Ctrl+Z）+ AI Agent（第 5–6、8–9 步） | Windows 10.0.26100 | 3.1.5 | 通过：`GODOT_AI_DISABLE_TELEMETRY=true`，无 `%APPDATA%\godot-ai\`，Cursor attach 含 `--disable-telemetry` | 通过：MCP 创建并重命名 `Marker3D`（`undoable: true`），人类 Ctrl+Z 两次后层次只剩根节点 `McpSmoke` | 通过：`project_run` 主场景 `game_status=live`，日志含 `client_boot` / `gl_compatibility`；无类型脚本诊断定位到 `_mcp_smoke_probe.gd:4` | 通过：Headless `--quit` 与 GUT `6/6`，exit 0 | 通过：已 `git checkout -- game/project.godot`；`editor_plugins` 仅 GUT；无 `_mcp_game_helper`；`game/addons/godot_ai/` 未入库 | **Windows 接入烟测通过**。第 7 步全部人工项已勾选：Vision Routing 关、无第二套 Godot MCP（人类 2026-08-21 确认） |
 | 2026-08-21 | 人类（安装 / Configure / Cmd+Z）+ AI Agent（第 5–6、8–9 步） | macOS 26.5.2 (arm64) | 3.1.5 | 通过：`GODOT_AI_DISABLE_TELEMETRY=true`，无 `~/Library/Application Support/godot-ai/`，Cursor attach 含 `--disable-telemetry` | 通过：MCP 创建并重命名 `Marker3D`（`undoable: true`），人类 Cmd+Z 两次后层次只剩根节点 `McpSmoke` | 通过：`project_run` 主场景 `game_status=live`（编辑器在前台），日志含 `client_boot` / `gl_compatibility`；无类型脚本诊断定位到 `_mcp_smoke_probe.gd:4` | 通过：Headless `--quit` 与 GUT `6/6`，exit 0；还原 `project.godot` 后再跑 `--quit` 仍有 `client_boot` 且无 `_mcp_game_helper` | 通过：已 `git checkout -- game/project.godot`；`editor_plugins` 仅 GUT；无 `_mcp_game_helper`；`game/addons/godot_ai/` 未入库 | **macOS 接入烟测通过**。第 7 步：插件无 C#；HTTP/WS 仅 `127.0.0.1:8000` / `9500`；Vision Routing 默认关；仅一套 `godot-ai` MCP；未用 `game_eval` / `test_run` |
+| 2026-08-28 | 人类（安装 / Configure / Cmd+Z）+ AI Agent（第 5–6、8–9 步，另补写 `~/.zshrc` 的遥测变量与 `GODOT4`） | macOS 14.6.1 (arm64) | 3.1.5 | 通过：`GODOT_AI_DISABLE_TELEMETRY=true`（写入 `~/.zshrc`），无 `~/Library/Application Support/godot-ai/`，EditorSettings `godot_ai/telemetry_enabled=false`，attach 含 `--disable-telemetry` 且 `mcp.json` 的 `env` 显式注入该变量 | 通过：MCP 创建并重命名 `Marker3D`（`undoable: true`），人类 Cmd+Z 两次后层次只剩根节点 `McpSmoke` | 通过：`project_run` 主场景 `status=live` / `helper_live=true`，日志含 `client_boot` / `gl_compatibility`；缺类型脚本诊断定位到 `_mcp_smoke_probe.gd:5`（`Warning treated as error`） | 通过：还原 `project.godot` 后 `--quit` 仍有 `client_boot`，GUT `1087/1087`（16174 asserts）全绿 | 通过：`git status` 干净，无 `_mcp_game_helper`，`game/addons/godot_ai/` 未入库 | **macOS + CodeBuddy 接入烟测通过**（第三台开发机，客户端为 CodeBuddy）。第 7 步：插件无 `.cs` / `.csproj`；HTTP/WS 仅 `127.0.0.1:8000` / `9500`（同 PID）；EditorSettings 无 `vision_routing/*` 与 `allow_host`（均默认关）；Cursor 与 CodeBuddy 各仅一套 `godot-ai`；未用 `game_eval` / `test_run` |
 
 签字前不要在任务单里写「本机 MCP 已可用」。上表有对应机器的通过行之后，该开发机上允许按 [CD-52 §7](../../Confirmed-docs/50-engineering/52-ai-workflow.md) 使用 MCP。M2 生产级启用已于 2026-08-23 通过（[ADR-0003](../adr/0003-godot-mcp-selection.md) 阶段 C、[ADR-0004 §8.1](../adr/0004-multi-agent-adoption-timing-and-architecture.md)）：大型 `.tscn` 必须走 MCP / Editor API / UndoRedo；编辑器未开时仍走 README 命令行。若编辑器仍开着并把插件状态写回 `project.godot`，提交前再还原一次。

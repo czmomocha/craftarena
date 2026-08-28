@@ -16,7 +16,7 @@
 | 控制面 | TypeScript + Node.js + Fastify |
 | 测试期数据库 | SQLite；仅控制面直接访问 |
 | 实时入口 | 独立 TypeScript TLS WebSocket 网关 |
-| AI IDE | Cursor |
+| AI IDE | **Cursor / CodeBuddy**（仅编辑器侧的工具选择：二者共用同一套 Godot AI 服务，不是第二套 MCP；**不进 CI、不进玩家包、不进 MatchServer**，CI 与 Headless 只走 README 命令行） |
 | Godot 主 MCP | **Godot AI**（[hi-godot/godot-ai](https://github.com/hi-godot/godot-ai)，MIT）；编辑器插件 **3.1.5** + 同版本 PyPI 包 `godot-ai==3.1.5`，由本机 [uv](https://docs.astral.sh/uv/) / `uvx` 拉起 Python 服务。唯一启用的 Godot MCP，理由与阶段见 [ADR-0003](../../docs/adr/0003-godot-mcp-selection.md)。**匿名遥测必须关闭**（§7.2）。插件**不入库**（`game/addons/godot_ai/` 已 gitignore）；CI 与 Headless 不依赖它 |
 | 单元测试 | GUT **9.7.1**（MIT）；随仓库入库于 `game/addons/gut/`，升级须同步本行 |
 | 版本管理 | GitHub 私有 Monorepo；受保护 `main`；Git LFS |
