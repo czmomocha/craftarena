@@ -83,6 +83,7 @@
 - `traprush_offline_opponents = local_ghost`。
 - `authoritative_motion_dof = upright_3d_kinematic`。
 - `traprush_inventory = 延期`。
+- `traprush_respawn_stun = 1_second`（2026-08-28）：纠偏 D5 中档。一期环境失败（出界 / 踩实心机关）固定硬直 **1.0 s**。不锁 Tick Hz；落地前 `TraprushPlayStubs.RESPAWN_STUN_TICKS` 仍是 1 tick 桩。覆盖 CD-63 §1.3 中「复活硬直」秒数空白，以及 D.8 `match_oob_reset` 里「不写复活硬直」的产品秒数空白。§1.3 其余数值仍延期。口径见 [纠偏方案 D5](../../docs/plans/course-correction-2026-08.md)。
 
 ## D.4 BASTION
 
@@ -225,7 +226,7 @@
 ## D.9 明确延期或跳过
 
 - `bug_reporting` 及 Bug 提交、客服、通知、告警展示等同类问题：跳过，后续开发再决定。
-- 道具栏、具体数值、时长、动画、精确频率等实现级玩法细节：统一延期。定点数尺度已迁出，见 D.8 `fixed_point_contract`。
+- 道具栏、具体数值、时长、动画、精确频率等实现级玩法细节：统一延期。定点数尺度已迁出，见 D.8 `fixed_point_contract`。该句中「复活硬直」秒数被 D.3 `traprush_respawn_stun = 1_second`（2026-08-28）覆盖；其余具体数值仍延期。
 - `hidden_state_sync`：延期，不默认采用任何推荐协议。
 
 ## D.10 文档体系

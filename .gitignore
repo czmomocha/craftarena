@@ -77,8 +77,9 @@ logs/
 tmp/
 .cache/
 
-# C1 §8 ping 原始输出含对端地址，不得入库（手册指定的本地文件名）
+# C1 §8 ping 原始输出含对端地址，不得入库（手册指定的本地文件名，含 24h 另存）
 /rtt-raw.txt
+/rtt-raw*.txt
 
 # 操作系统与编辑器
 .DS_Store

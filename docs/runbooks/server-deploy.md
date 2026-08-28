@@ -103,6 +103,49 @@ curl -fsS http://127.0.0.1:8090/readyz
 
 ---
 
+## 4.1 日常更新（测试机）
+
+第一次构建用上面 §3–§4。之后每次要让测试机跟上 `main`（协议层 ping/pong、玩法补丁、文档），**不要**手打一长串 `git pull` + `docker compose build` + `up`，用仓库里的脚本。ICMP 是客户端打 `<SERVER_HOST>`，**更新 compose 不必停 24 小时 ping**。
+
+脚本：[`infra/compose/craftarena-compose.sh`](../../infra/compose/craftarena-compose.sh)。在测试机仓库根：
+
+```bash
+bash infra/compose/craftarena-compose.sh update
+```
+
+它会：`git fetch` → 快进到 `origin/main`（可用 `CRAFTARENA_GIT_REF` 改）→ `docker compose build`（**不加** `--no-cache`：Godot zip 在 `COPY game` 之前，改 `game/` 不会重下引擎）→ `up -d --remove-orphans` → 等本机 `8080`/`8090` 的 `/readyz` → 打印当前 `git log -1`。
+
+| 子命令 | 做什么 |
+|---|---|
+| `status` | HEAD + `docker compose ps` |
+| `logs` / `logs -f` | 最近日志 / 跟随 |
+| `down` | 停容器，**保留** SQLite volume。脚本里没有 `-v` |
+| `up` | 用已有镜像拉起，不拉代码、不重建 |
+| `restart` | 同镜像重启（进行中的对局会掉） |
+| `build` | 只重建，不拉 git |
+| `update` | 日常路径：拉代码 + 重建 + 拉起 + 等就绪 |
+
+约束：
+
+1. **只 `git pull` 不够。** `match-host` 镜像里的 `game/` 是构建时 `COPY` 进去的。8 月 27 日那次部署没有 C3 第 6 章 ping/pong；协议层 RTT 必须先 `update` 再进场。
+2. **客户端也要新。** 探针在客户端发 ping。两台真机用源码跑就 `git pull` 后 `--path game`；用导出包就要重新导出。只更新 VPS、旧包没有 `rtt=`。
+3. **不要 `docker compose down -v`。** 会删 `control-plane-data`。脚本故意不提供这个开关；真要清库按 §11 自己打，且确认过。
+4. 工作区若有已跟踪文件的未提交改动，`update` 直接失败，避免把测试机上的手改覆盖掉。
+5. 进行中的对局在 `update` / `down` / `restart` 时会断。测试环境可接受。
+6. 第一次测试机上还没有这份脚本时，先手动快进一次，再跑 `update`：
+
+```bash
+cd <REPO_DIR>
+git fetch origin
+git checkout main
+git pull --ff-only origin main
+bash infra/compose/craftarena-compose.sh update
+```
+
+之后日常只需第二条。
+
+---
+
 ## 5. 开放端口
 
 只需要两个：
@@ -230,7 +273,7 @@ ICMP 与游戏用的 TCP/WebSocket 走的不是同一条队列，拥塞时表现
 C1 第 2 章只跑了约 10 分钟 / 600 次。纠偏方案 C1 产出 6 要的是 **24 小时** RTT / 丢包 / 抖动。本节把那次加长，**不改** §8 的解析脚本。
 
 1. 对局进程不必一直开着。ICMP 测的是到 `<SERVER_HOST>` 的路径，不是 WebSocket。
-2. 在客户端那台机器上开一个**不要关**的 PowerShell，把 §8 脚本里的 `$n = 600` 改成 `$n = 86400`（1 秒 1 次，约 24 小时）。输出文件仍叫 `rtt-raw.txt`，或另存 `rtt-raw-24h.txt`，**不要提交**。
+2. 在客户端那台机器上开一个**不要关**的 PowerShell，把 §8 脚本里的 `$sent = 600` 改成 `$sent = 86400`（1 秒 1 次，约 24 小时）。输出文件仍叫 `rtt-raw.txt`，或另存 `rtt-raw-24h.txt`，**不要提交**。测试机 `update` compose **不要**为了它停 ping。
 3. 跑完用同一套 `Get-Pct` 脚本出 P50/P90/P95、丢包、IPDV。
 4. 把数字填进 §12 表的「真链路实测」列，并写明是 24h 窗口。近端 10 分钟那一行**不要删**，并列，避免把两个窗口合成一个数。
 5. 笔记本休眠、Wi-Fi 切换、VPN 开关都会污染窗口。发生了就在执行记录里写，不要假装是稳定公网。
@@ -305,9 +348,17 @@ Godot 缺动态库时补 `infra/compose/Dockerfile` 里那份 apt 列表，不�
 
 ## 11. 停止
 
+日常用脚本（不会带 `-v`）：
+
+```bash
+bash infra/compose/craftarena-compose.sh down
+```
+
+等价手打：
+
 ```bash
 docker compose down          # 停服务，保留数据库 volume
-docker compose down -v       # 连数据库一起删。会丢结算记录，确认过再用
+docker compose down -v       # 连数据库一起删。会丢结算记录，确认过再用。脚本不提供这一条
 ```
 
 ---
@@ -341,7 +392,7 @@ docker compose down -v       # 连数据库一起删。会丢结算记录，确�
 
 ### 对纠偏退出条件的含义
 
-- **E2**（有 RTT / 丢包 / 资源基线）：本表填了数。双机对局与写库已在同日验证。C1 产出 6 写的 **24 小时**采样步骤见 §8.1，**仍未跑**。
+- **E2**（有 RTT / 丢包 / 资源基线）：本表填了数。双机对局与写库已在同日验证。C1 产出 6 写的 **24 小时**采样步骤见 §8.1；人类 2026-08-28 **进行中**，数字未回填前仍按本表「约 10 分钟窗口」读。
 - **E3**（列出并修正零延迟下做错的网络参数）：本表**列出**了。被证实的是容量推导「CPU 先于内存」；被证伪的是「7 局空转大约要 3 GB」。快照 / 心跳 / 插值 / 对账占位桩在这条 ~3ms ICMP 路径上**没有**被证伪，因此**不修正**那些代码常量。E3 的「修正」仍留给 C3 在有 24h ICMP 或协议层样本之后做，不能用本表锁 [CD-63 §1.5](../../Confirmed-docs/60-plan/63-open-decisions.md)。
 
 ### 资源摘录（空转）
@@ -374,6 +425,7 @@ craftarena-control-plane-1   7.05%     108.1MiB / 3.339GiB
 |---|---|---|
 | 2026-08-27 | 人类 | 远端部署与双机对局已跑通 |
 | 2026-08-27 | 人类采数，AI 回填本表 | ICMP 600：P50/P90=3ms，P95=4ms，丢包 0%，IPDV 0.16ms。7 局空转全 `201`；match-host 198.92% / 422.2 MiB。结论见上表：CPU 先于内存成立；网络占位桩未被证伪；C3 不得用本样本锁定 CD-43 §4 |
+| 2026-08-28 | 人类 | 24h ICMP（§8.1）进行中。compose 更新不影响本机 ping。数字未回填。 |
 
 ---
 
@@ -389,7 +441,10 @@ C3 第 6 章把探针做成了对局二进制帧：客户端发 ping（type=3）
 
 ### 13.2 远端双机（给锁定用的样本）
 
-1. 按 §4–§7 让两台真机进同一场（至少一台不走 `127.0.0.1`）。
+8 月 27 日那次双机**没有** ping/pong（C3 第 6 章，合入 `main` 的 PR #177）。必须先让测试机镜像和两台客户端都含探针，再进一场。**不要**为了这一步停正在跑的 24h ICMP。
+
+0. 测试机：按 [§4.1](#41-日常更新测试机) `bash infra/compose/craftarena-compose.sh update`（第一次还没有脚本就先 `git pull --ff-only origin main`）。`status` 打印的 commit 必须已经含 C3 第 6 章 ping/pong（PR #177 合入 `main` 之后）。只 `git pull` 不 `build` 不够。
+1. 两台客户端：源码跑则两边 `git pull` 后 `--path game`；导出包则重新导出。旧包没有 `rtt=`。至少一台不走 `127.0.0.1`。按 §5–§7 进同一 2 人房。
 2. 进场后站着等至少 60 秒，让探针打满约 60 个样本（默认约每秒 1 次；在途探针未回则 5 秒记一次丢失）。
 3. 状态行记下最后一次 `rtt=` 与 `rtt_n=`。更完整的序列在客户端 `user://protocol_rtt.jsonl`（Windows 源码运行大约是 `%APPDATA%\Godot\app_userdata\Craft Arena\protocol_rtt.jsonl`）。**不要提交**该文件：即使行内不含主机，时间戳也能和别的日志对上。
 4. 用下面的脚本出 P50/P90/P95（只统计 `event=protocol_rtt` 的 `rtt_ms`；`protocol_rtt_loss` 另行计丢失次数）：
