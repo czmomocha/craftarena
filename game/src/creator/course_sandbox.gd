@@ -8,6 +8,8 @@ extends Node
 ## WASD moves the marker in world XZ while the Preview window is visible.
 ## Occupancy accepts checkpoint pads; walking into a portal marker lands upstairs.
 ## After the last pad, walking onto the finish marker records finish=n.
+## +X is the short dangerous path. From checkpoint 1, +Z is the longer safe
+## path: a lateral two_way then a one_way upstairs. Stepping off the stone falls.
 ## Reset or R snaps the marker back to the last accepted pad.
 ## Status shows pads=n/m, floor=n, and finish=n.
 

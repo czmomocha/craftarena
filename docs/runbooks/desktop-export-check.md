@@ -103,7 +103,7 @@ Linux 包在 VPS 上用同一条：
 ### 4.1 Windows 包开窗
 
 1. 双击 `export\windows\CraftArena.exe`（不要加 `--headless`）。
-2. 预期：出现标题 **Traprush** 的窗口，状态行含 `join=idle`、`play=idle`、`tls=off`、`course=3/2/1`。失败：闪退、黑窗、或只有控制台。
+2. 预期：出现标题 **Traprush** 的窗口，状态行含 `join=idle`、`play=idle`、`tls=off`、`course=3/5/1`。失败：闪退、黑窗、或只有控制台。
 3. 点 **Solo play**，点窗口内部一次，按 WASD 与空格。预期：青色本席盒会动、会跳、会落回脚下石色盒。
 4. 对照编辑器里 `& $env:GODOT4 --path game` 的同一画面。预期：**颜色与明暗一致**——这是 Compatibility 下运行时创建的 `StandardMaterial3D` 的目检项，自检只能证明它能建，不能证明它长得对。
 

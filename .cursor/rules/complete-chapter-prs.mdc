@@ -15,11 +15,11 @@ alwaysApply: true
 
 真机：PR Test plan 与 [章节真机清单](docs/runbooks/chapter-device-check.md) 本刀必须是编号步骤（怎么开、点什么、期望 / 失败）；禁止只写「真机再看一眼」。无 GUI 的章写「无」加原因。人工检查，不是 CI 门禁。口径见 [CD-52 §3.2](Confirmed-docs/50-engineering/52-ai-workflow.md)。
 
-- 做（本刀 = 纠偏 C3 第 4 章：机关伤害 / 击退最小实现）：固体半周期占用重叠由服务端扫描，不读客户端命中断言，不读 Authoring `hazard.damage` / `knockback`（官方课仍是 0）。先按盒心→胶囊做 8 向水平击退（中心重叠时向 +Z），步长从 `TraprushPlayStubs` 注入且不得超过 `Fixed.SCALE`；仍重叠则环境失败复位到最近检查点。出界复位走同一条硬直写入。硬直是注入的 1 tick 占位，拒绝 Move/Jump/UseItem/Sprint/Shove，允许 ResetToCheckpoint。`hash_state` 含 `stun_remaining`。`course_01` 出生点 −Z 加两格立足面（entity 87/88）以便走到洋红盒。灰盒磁带路径仍不接伤害。BotRunner `_state_key` 含硬直。不改 `Confirmed-docs/`（CD-21 由 C5 覆盖写）。
-- 不做：把硬直写成 D5 的 0.5 / 1.0 / 1.5 产品秒数；锁定 Tick / 快照 / 插值（不得用 C1 近端 ICMP）；第 4 张官方赛道；90 秒语义关；预警动画；机关 HUD / 新颜色；编辑器 Place hazard；无控保护；产品击退距离；新增冻结常量引用点。
-- 仍欠着（不因本章合入而消失）：D5 复活硬直三候选待人类选（本章硬直仍是 1 tick 桩）；24 小时 ICMP；协议层 RTT；C3 网络参数锁定；符合 CD-61 §4.1 语义的赛道。
-- 仍不做：把 C3 机关伤害与网络参数锁定塞进同一个 PR。
+- 做（本刀 = 纠偏 C3 第 5 章：一张符合 CD-61 §4.1 语义的赛道）：改默认官方课 `course_01`，不加第 4 张课。+X 五步仍是危险捷径（窄路、两侧是坑、可五格冲线）。从检查点 1 向 +Z 走更长安全路：侧向 `two_way` 到左侧区块，再 `one_way` 上楼与捷径汇合。走下路面权威下落并复位。BotRunner 仍判定 `completable`（走捷径）。不改 `STUB_HALF` / `play_move_step`。不改 `Confirmed-docs/`（CD-21 / CD-61 由 C5 覆盖写）。诚实边界：冻结的 ±8 格与每 tick 1/16 格步长下，干净完赛做不到 90 秒墙钟；本章锁的是落差与路线取舍，不是秒表。
+- 不做：第 4 张官方赛道；把硬直写成 D5 产品秒数；锁定 Tick / 快照 / 插值（不得用 C1 近端 ICMP）；预警动画；机关 HUD / 新颜色；无控保护；新增冻结常量引用点。
+- 仍欠着（不因本章合入而消失）：D5 复活硬直三候选待人类选（硬直仍是 1 tick 桩）；24 小时 ICMP；协议层 RTT；C3 网络参数锁定。
+- 仍不做：把语义赛道与网络参数锁定塞进同一个 PR。
 
 纠偏归属：C3
 是否新增冻结常量引用：否
-审查级别：深审
+审查级别：常审

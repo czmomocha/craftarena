@@ -25,8 +25,13 @@ func test_official_course_loads_and_is_publish_ready() -> void:
 	var world: AuthoringWorld = AuthoringDocument.load_from_path(COURSE_PATH)
 	assert_not_null(world)
 	assert_eq(world.grid.cell, 65536)
-	assert_eq(world.revision, 13)
-	assert_eq(world.entity_ids(), [1, 2, 3, 10, 11, 30, 40, 60, 70, 80, 81, 82, 83, 84, 85, 86, 87, 88, 100, 101])
+	assert_eq(world.revision, 14)
+	assert_eq(world.entity_ids(), [
+		1, 2, 3, 10, 11, 12, 20, 21, 30, 40, 60, 70, 80, 81, 82, 83, 84, 85,
+		86, 87, 88, 100, 101, 110, 111, 112, 113, 114, 115, 116, 117, 118, 119,
+		120, 121, 122, 123, 124, 125, 126, 127, 128, 129, 130, 131, 132, 133,
+		134, 135,
+	])
 	var result: Dictionary = AuthoringReachability.evaluate(world)
 	assert_true(_ok(result))
 	var issues: Array = result.get("issues", [1])
@@ -70,8 +75,8 @@ func test_retarget_portal_is_dangling_and_not_a_write_gate() -> void:
 	assert_true(_shell.open())
 	assert_true(_shell.import_document(AuthoringDocument.encode(loaded)))
 	assert_eq(_shell.validator.reach_ok(), true)
-	assert_true(_shell.try_place_portal(20, 99, 5, 0, 0))
-	assert_true(_shell.session.world.has_entity(20))
+	assert_true(_shell.try_place_portal(50, 99, 5, 0, 0))
+	assert_true(_shell.session.world.has_entity(50))
 	assert_eq(_shell.validator.has_code(AuthoringReachabilityCodes.DANGLING_PORTAL), true)
 	assert_false(_shell.allows_settlement())
 

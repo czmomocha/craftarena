@@ -25,7 +25,7 @@ const FALL_TICKS: int = 40
 
 
 func test_official_courses_have_path_floor_counts() -> void:
-	assert_eq(_compile(COURSE_01).solids.size(), 10)
+	assert_eq(_compile(COURSE_01).solids.size(), 36)
 	assert_eq(_compile(COURSE_02).solids.size(), 8)
 	assert_eq(_compile(COURSE_03).solids.size(), 14)
 
@@ -155,6 +155,11 @@ func _course_01_stands() -> Array[Vector3i]:
 		Vector3i(0, CELL, -3 * CELL),
 		Vector3i(CELL, CELL, -3 * CELL),
 		Vector3i(2 * CELL, CELL, -3 * CELL),
+		Vector3i(2 * CELL, 0, CELL),
+		Vector3i(7 * CELL, 0, -2 * CELL),
+		Vector3i(-7 * CELL, 0, -2 * CELL),
+		Vector3i(-5 * CELL, 0, 4 * CELL),
+		Vector3i(6 * CELL, 0, 5 * CELL),
 	]
 
 
