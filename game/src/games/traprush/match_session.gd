@@ -219,6 +219,16 @@ func player_pose(slot: int) -> Dictionary:
 	return _world.get_pose(capsule_id)
 
 
+## 用本会话的 support_dy 问权威世界：这名玩家脚下现在有没有固体。
+## 探针在不含 Jump 的动作集里用它丢掉坠落态；Jump 判定走同一条查询。
+func player_supported_by_solid(slot: int) -> bool:
+	var player: Dictionary = _player_at(slot)
+	if player.is_empty():
+		return false
+	var capsule_id: int = player["capsule_id"]
+	return _world.is_supported_by_solid(capsule_id, support_dy)
+
+
 func player_accepted_count(slot: int) -> int:
 	var player: Dictionary = _player_at(slot)
 	if player.is_empty():

@@ -10,7 +10,8 @@ extends Node
 ## so CI --quit does not call localhost.
 ## `-- --package-check` short-circuits all of that and prints the exported
 ## package self report instead (course correction C1). `-- --bot-run` likewise
-## short-circuits into the walkability probe over the official courses (C2).
+## short-circuits into the course-completion probe over the official courses
+## (C2; C3 第 7 章可用 `--route=safe` 封掉 course_01 捷径传送门)。
 ## `-- --server=HOST` (or --control-plane= / --gateway=, or the matching
 ## CRAFTARENA_* variables) points the lobby at a deployed test server instead
 ## of a local npm run dev.
