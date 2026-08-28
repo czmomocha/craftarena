@@ -10,7 +10,8 @@ extends GutTest
 ## state (session hash or crate durability) update last_valid_input_tick
 ## for MatchHost lease renew (CD-44 §3). Oversize Move (|dx| or |dz| above
 ## MOVE_STEP_MAX) still queues but apply fails, so the tick is spent and
-## pose / renew tick stay put. Sockets are a thin wrapper in match_server.gd; network correctness tests
+## pose / renew tick stay put. Ping frames echo a pong and never queue or
+## renew. Sockets are a thin wrapper in match_server.gd; network correctness tests
 ## stay manual (CD-91 D.8). No settlement, no online writes.
 
 const AuthoringDocument := preload("res://src/creator/authoring_document.gd")
@@ -333,6 +334,40 @@ func test_shove_frame_pushes_target_and_renews() -> void:
 	var after_z: int = after.get("z", 2)
 	assert_eq(after_z, before_z - CELL / 4)
 	assert_eq(realtime.last_valid_input_tick(), 1)
+
+
+func test_ping_echoes_without_queue_or_renew() -> void:
+	var realtime: MatchRealtime = _two_player_realtime()
+	var slot: int = realtime.add_player()
+	var ping: PackedByteArray = MatchFrameCodec.encode_ping(4, 20)
+	var pong: PackedByteArray = realtime.handle_inbound(slot, ping)
+	assert_eq(pong, MatchFrameCodec.encode_pong(4, 20))
+	assert_eq(realtime.pending_count(), 0)
+	assert_eq(realtime.session.tick_index(), 0)
+	assert_eq(realtime.last_valid_input_tick(), -1)
+	assert_false(realtime.accept_command(slot, ping))
+	assert_eq(realtime.pending_count(), 0)
+	var empty: PackedByteArray = realtime.handle_inbound(1, ping)
+	assert_true(empty.is_empty())
+	assert_true(realtime.accept_command(slot, MatchFrameCodec.encode_command(0, PlayerIntentNames.JUMP, 0, 0, 0)))
+	var still_pong: PackedByteArray = realtime.handle_inbound(slot, ping)
+	assert_eq(still_pong, MatchFrameCodec.encode_pong(4, 20))
+	assert_eq(realtime.pending_count(), 1)
+
+
+func test_handle_inbound_commands_still_queue() -> void:
+	var realtime: MatchRealtime = _two_player_realtime()
+	var slot: int = realtime.add_player()
+	var echoed: PackedByteArray = realtime.handle_inbound(
+		slot,
+		MatchFrameCodec.encode_command(0, PlayerIntentNames.MOVE, CELL, 0, -1)
+	)
+	assert_true(echoed.is_empty())
+	assert_eq(realtime.pending_count(), 1)
+	realtime.commit_tick()
+	var moved: Dictionary = realtime.session.player_pose(slot)
+	var moved_x: int = moved.get("x", -1)
+	assert_eq(moved_x, CELL)
 
 
 func _two_player_realtime() -> MatchRealtime:

@@ -81,6 +81,34 @@ func test_open_then_snapshot_then_commands() -> void:
 	assert_false(play.allows_settlement())
 
 
+func test_protocol_probe_records_pong_without_touching_snapshot() -> void:
+	var play: MatchPlaySession = MatchPlaySession.new()
+	assert_true(play.try_encode_probe(0).is_empty())
+	assert_true(play.try_begin(_ready_join(), "ws://127.0.0.1:8090"))
+	assert_true(play.try_encode_probe(1).is_empty())
+	assert_true(play.on_open())
+	assert_true(play.on_binary(_one_player_snapshot(2, 8)))
+	assert_eq(play.follow.tick, 2)
+	var ping: PackedByteArray = play.try_encode_probe(100)
+	assert_eq(ping, MatchFrameCodec.encode_ping(1, 100))
+	assert_true(play.on_binary(MatchFrameCodec.echo_pong(ping), 118))
+	assert_eq(play.follow.tick, 2)
+	var view: Dictionary = play.status_view()
+	var rtt_ms: int = view.get("rtt_ms", -1)
+	var rtt_n: int = view.get("rtt_n", 0)
+	assert_eq(rtt_ms, 18)
+	assert_eq(rtt_n, 1)
+	assert_true(play.on_binary(_one_player_snapshot(3, 24)))
+	assert_eq(play.follow.tick, 3)
+	var after_snapshot: Dictionary = play.status_view()
+	var after_n: int = after_snapshot.get("rtt_n", 0)
+	assert_eq(after_n, 1)
+	play.try_leave()
+	var left: Dictionary = play.status_view()
+	var left_n: int = left.get("rtt_n", 0)
+	assert_eq(left_n, 0)
+
+
 func test_wasd_axes_encode_move_only_when_in_match() -> void:
 	var play: MatchPlaySession = MatchPlaySession.new()
 	assert_true(play.try_encode_move_axes(true, false, false, false, 16).is_empty())

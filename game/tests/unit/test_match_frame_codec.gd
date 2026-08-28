@@ -5,6 +5,7 @@ extends GutTest
 ## snapshot frame. Decode rejects wrong version, unknown type, truncation,
 ## trailing bytes and non-zero reserved fields. Encoding is canonical.
 ## Tick/snapshot rates and interpolation windows stay unlocked (CD-43 §4).
+## v1 also has 18-byte ping/pong probes (type 3/4); they are not commands.
 
 const MatchFrameCodec := preload("res://src/shared/protocol/match_frame_codec.gd")
 const PlayerIntentNames := preload("res://src/shared/commands/player_intent_names.gd")
@@ -191,3 +192,50 @@ func test_encode_is_canonical() -> void:
 	var p_y: int = p.get("y", 0)
 	assert_eq(p_x, BIG)
 	assert_eq(p_y, -BIG)
+
+
+func test_ping_pong_round_trip_and_echo() -> void:
+	var ping: PackedByteArray = MatchFrameCodec.encode_ping(3, 1500)
+	assert_eq(ping.size(), 18)
+	var decoded_ping: Dictionary = MatchFrameCodec.decode_ping(ping)
+	var ping_ok: bool = decoded_ping.get("ok", false)
+	assert_true(ping_ok)
+	var ping_seq: int = decoded_ping.get("seq", -1)
+	var ping_ms: int = decoded_ping.get("client_send_ms", -1)
+	assert_eq(ping_seq, 3)
+	assert_eq(ping_ms, 1500)
+	var as_command: Dictionary = MatchFrameCodec.decode_command(ping)
+	var as_command_ok: bool = as_command.get("ok", true)
+	assert_false(as_command_ok)
+	var as_snapshot: Dictionary = MatchFrameCodec.decode_snapshot(ping)
+	var as_snapshot_ok: bool = as_snapshot.get("ok", true)
+	assert_false(as_snapshot_ok)
+	var as_pong: Dictionary = MatchFrameCodec.decode_pong(ping)
+	var as_pong_ok: bool = as_pong.get("ok", true)
+	assert_false(as_pong_ok)
+	var pong: PackedByteArray = MatchFrameCodec.echo_pong(ping)
+	assert_eq(pong, MatchFrameCodec.encode_pong(3, 1500))
+	var decoded_pong: Dictionary = MatchFrameCodec.decode_pong(pong)
+	var pong_ok: bool = decoded_pong.get("ok", false)
+	assert_true(pong_ok)
+	var pong_seq: int = decoded_pong.get("seq", -1)
+	var pong_ms: int = decoded_pong.get("client_send_ms", -1)
+	assert_eq(pong_seq, 3)
+	assert_eq(pong_ms, 1500)
+	assert_eq(MatchFrameCodec.encode_ping(3, 1500), MatchFrameCodec.encode_ping(3, 1500))
+	assert_true(MatchFrameCodec.echo_pong(MatchFrameCodec.encode_command(1, PlayerIntentNames.JUMP, 0, 0, 0)).is_empty())
+	assert_true(MatchFrameCodec.encode_ping(0, 1).is_empty())
+	assert_true(MatchFrameCodec.encode_ping(1, -1).is_empty())
+	var cut: PackedByteArray = ping.slice(0, ping.size() - 1)
+	var cut_decoded: Dictionary = MatchFrameCodec.decode_ping(cut)
+	var cut_ok: bool = cut_decoded.get("ok", true)
+	assert_false(cut_ok)
+	var longer: PackedByteArray = ping.duplicate()
+	longer.append(0)
+	var longer_decoded: Dictionary = MatchFrameCodec.decode_ping(longer)
+	var longer_ok: bool = longer_decoded.get("ok", true)
+	assert_false(longer_ok)
+	ping[0] = 2
+	var versioned: Dictionary = MatchFrameCodec.decode_ping(ping)
+	var versioned_ok: bool = versioned.get("ok", true)
+	assert_false(versioned_ok)

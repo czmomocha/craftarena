@@ -219,9 +219,23 @@ for ($i = 1; $i -lt $samples.Count; $i++) {
 
 `jitter_ms` 是相邻样本 RTT 差的平均绝对值（IPDV），不是标准差。
 
-ICMP 与游戏用的 TCP/WebSocket 走的不是同一条队列，拥塞时表现可能不同。它是**下限估计**，不是协议层 RTT。协议层 RTT 需要帧里带时间戳，那不在本章。
+ICMP 与游戏用的 TCP/WebSocket 走的不是同一条队列，拥塞时表现可能不同。它是**下限估计**，不是协议层 RTT。协议层 RTT 的采集步骤在 [§13](#13-协议层-rttc3)。
 
-2026-08-27 已按上面的 600 次流程采过一回（约 10 分钟，不是 24 小时）。数字与结论在 §12。原始 `rtt-raw.txt` 含对端地址，**不要提交**。
+2026-08-27 已按上面的 600 次流程采过一回（约 10 分钟，不是 24 小时）。数字与结论在 §12。原始 `rtt-raw.txt` 含对端地址，**不要提交**。24 小时 ICMP 的跑法见 §8.1；人类执行前 §12 仍按「约 10 分钟窗口」读。
+
+---
+
+## 8.1 24 小时 ICMP（C1 产出 6，步骤在此补齐）
+
+C1 第 2 章只跑了约 10 分钟 / 600 次。纠偏方案 C1 产出 6 要的是 **24 小时** RTT / 丢包 / 抖动。本节把那次加长，**不改** §8 的解析脚本。
+
+1. 对局进程不必一直开着。ICMP 测的是到 `<SERVER_HOST>` 的路径，不是 WebSocket。
+2. 在客户端那台机器上开一个**不要关**的 PowerShell，把 §8 脚本里的 `$n = 600` 改成 `$n = 86400`（1 秒 1 次，约 24 小时）。输出文件仍叫 `rtt-raw.txt`，或另存 `rtt-raw-24h.txt`，**不要提交**。
+3. 跑完用同一套 `Get-Pct` 脚本出 P50/P90/P95、丢包、IPDV。
+4. 把数字填进 §12 表的「真链路实测」列，并写明是 24h 窗口。近端 10 分钟那一行**不要删**，并列，避免把两个窗口合成一个数。
+5. 笔记本休眠、Wi-Fi 切换、VPN 开关都会污染窗口。发生了就在执行记录里写，不要假装是稳定公网。
+
+AI 不得代填尚未采到的 24h 数字。跑完之前 C3 **仍不得**用 ICMP 锁定 [CD-43 §4](../../Confirmed-docs/40-technical/43-networking-and-replay.md#4-未锁定项)。
 
 ---
 
@@ -327,8 +341,8 @@ docker compose down -v       # 连数据库一起删。会丢结算记录，确�
 
 ### 对纠偏退出条件的含义
 
-- **E2**（有 RTT / 丢包 / 资源基线）：本表填了数。双机对局与写库已在同日验证。C1 产出 6 写的 **24 小时**采样仍未做。
-- **E3**（列出并修正零延迟下做错的网络参数）：本表**列出**了。被证实的是容量推导「CPU 先于内存」；被证伪的是「7 局空转大约要 3 GB」。快照 / 心跳 / 插值 / 对账占位桩在这条 ~3ms ICMP 路径上**没有**被证伪，因此**不修正**那些代码常量。E3 的「修正」仍留给 C3，且需要更像公网的样本或人类另行拍板，不能用本表锁 [CD-63 §1.5](../../Confirmed-docs/60-plan/63-open-decisions.md)。
+- **E2**（有 RTT / 丢包 / 资源基线）：本表填了数。双机对局与写库已在同日验证。C1 产出 6 写的 **24 小时**采样步骤见 §8.1，**仍未跑**。
+- **E3**（列出并修正零延迟下做错的网络参数）：本表**列出**了。被证实的是容量推导「CPU 先于内存」；被证伪的是「7 局空转大约要 3 GB」。快照 / 心跳 / 插值 / 对账占位桩在这条 ~3ms ICMP 路径上**没有**被证伪，因此**不修正**那些代码常量。E3 的「修正」仍留给 C3 在有 24h ICMP 或协议层样本之后做，不能用本表锁 [CD-63 §1.5](../../Confirmed-docs/60-plan/63-open-decisions.md)。
 
 ### 资源摘录（空转）
 
@@ -360,3 +374,52 @@ craftarena-control-plane-1   7.05%     108.1MiB / 3.339GiB
 |---|---|---|
 | 2026-08-27 | 人类 | 远端部署与双机对局已跑通 |
 | 2026-08-27 | 人类采数，AI 回填本表 | ICMP 600：P50/P90=3ms，P95=4ms，丢包 0%，IPDV 0.16ms。7 局空转全 `201`；match-host 198.92% / 422.2 MiB。结论见上表：CPU 先于内存成立；网络占位桩未被证伪；C3 不得用本样本锁定 CD-43 §4 |
+
+---
+
+## 13. 协议层 RTT（C3）
+
+C3 第 6 章把探针做成了对局二进制帧：客户端发 ping（type=3），对局进程回 pong（type=4），回显 `seq` 与 `client_send_ms`。这是 **WebSocket 上的命令/快照同通道时延**，不是 ICMP。
+
+它**不是** Tick / 快照 / 插值的锁定。采到的数字填下表，锁定仍是后续章。
+
+### 13.1 开发机（证明闭环）
+
+照 [章节真机清单](chapter-device-check.md) 本刀：本地 `npm run dev` + 大厅建 1 人房。状态行出现 `rtt=` / `rtt_n=` 即闭环成立。本机回环的毫秒数**不能**拿去改 `SNAPSHOT_EVERY_TICKS`。
+
+### 13.2 远端双机（给锁定用的样本）
+
+1. 按 §4–§7 让两台真机进同一场（至少一台不走 `127.0.0.1`）。
+2. 进场后站着等至少 60 秒，让探针打满约 60 个样本（默认约每秒 1 次；在途探针未回则 5 秒记一次丢失）。
+3. 状态行记下最后一次 `rtt=` 与 `rtt_n=`。更完整的序列在客户端 `user://protocol_rtt.jsonl`（Windows 源码运行大约是 `%APPDATA%\Godot\app_userdata\Craft Arena\protocol_rtt.jsonl`）。**不要提交**该文件：即使行内不含主机，时间戳也能和别的日志对上。
+4. 用下面的脚本出 P50/P90/P95（只统计 `event=protocol_rtt` 的 `rtt_ms`；`protocol_rtt_loss` 另行计丢失次数）：
+
+```powershell
+$path = "$env:APPDATA\Godot\app_userdata\Craft Arena\protocol_rtt.jsonl"
+$rows = Get-Content $path | ForEach-Object { $_ | ConvertFrom-Json }
+$rtt = @($rows | Where-Object { $_.event -eq "protocol_rtt" } | ForEach-Object { [int]$_.rtt_ms } | Sort-Object)
+$lost = @($rows | Where-Object { $_.event -eq "protocol_rtt_loss" }).Count
+function Get-Pct([int[]]$s, [int]$p) {
+    if ($s.Count -eq 0) { return -1 }
+    $i = [math]::Max(0, [math]::Ceiling($p * $s.Count / 100.0) - 1)
+    if ($i -ge $s.Count) { $i = $s.Count - 1 }
+    return $s[$i]
+}
+[pscustomobject]@{
+    n          = $rtt.Count
+    lost       = $lost
+    rtt_p50_ms = Get-Pct $rtt 50
+    rtt_p90_ms = Get-Pct $rtt 90
+    rtt_p95_ms = Get-Pct $rtt 95
+} | Format-List
+```
+
+5. 把数字填进下表。不入库 IP、票据、`match-id`。
+
+| 项 | 回环 / 近端（开发机） | 远端双机（待填） | 结论 |
+|---|---|---|---|
+| 协议层 RTT P50 / P90 / P95 | 本刀只要求状态行出现 `rtt=`，不把回环毫秒写成基线 | | 有数之前不得改快照 / 插值桩 |
+| 探针丢失 | | | `protocol_rtt_loss` 次数；不是 ICMP 丢包 |
+| 与 §12 ICMP 对照 | ICMP P50=3ms 是下限估计 | | 协议层应 ≥ ICMP；若远小于 ICMP 则采样有 bug |
+
+AI 不得代填远端格子。C3 锁定 Tick / 快照 / 插值仍要等这张表或 §8.1 的 24h ICMP 有真实数字，且**不得**只用 §12 的 ~3ms ICMP。

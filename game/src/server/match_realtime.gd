@@ -15,7 +15,8 @@ extends RefCounted
 ## `last_valid_input_tick`（从未发生为 -1），供心跳上报；MatchHost 只在该值前进
 ## 时续租。权威标记 = 会话 `hash_state`（位姿/进度/门闩）+ 箱耐久。心跳、被拒
 ## 命令、未改变权威状态的命令、以及纯下落不更新它（CD-44 §3）。
-## 本类不碰 socket：传输是 match_server.gd 的薄层；网络正确性测试保持手动
+## 本类不碰 socket：传输是 match_server.gd 的薄层；入站 ping 由 handle_inbound
+## 回 pong，不入队、不续租。网络正确性测试保持手动
 ## （CD-91 D.8 manual_network_tests）。全员冲线后允许生成结算 payload；
 ## 不在线写入、不 HTTP。
 
@@ -119,8 +120,22 @@ func last_valid_input_tick() -> int:
 	return _last_valid_input_tick
 
 
+## 入站分流：合法 ping 立刻回 pong，不入队、不续租；其它字节走 accept_command。
+## 未占用席位不回显，避免未绑定连接拿探针刷带宽。
+func handle_inbound(slot: int, bytes: PackedByteArray) -> PackedByteArray:
+	if session == null:
+		return PackedByteArray()
+	if not _occupied.has(slot):
+		return PackedByteArray()
+	var pong: PackedByteArray = MatchFrameCodec.echo_pong(bytes)
+	if not pong.is_empty():
+		return pong
+	accept_command(slot, bytes)
+	return PackedByteArray()
+
+
 ## 解码二进制命令帧并入队（FIFO），下一 commit_tick 才应用。
-## 拒绝：槽位未占用、该槽本 tick 已有排队、帧不可解码（含快照帧）。
+## 拒绝：槽位未占用、该槽本 tick 已有排队、帧不可解码（含快照帧、探针帧）。
 func accept_command(slot: int, bytes: PackedByteArray) -> bool:
 	if session == null:
 		return false
