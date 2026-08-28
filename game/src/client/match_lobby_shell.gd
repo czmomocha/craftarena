@@ -1407,6 +1407,8 @@ func _prepare_offline_stubs() -> void:
 	offline.play_shove_cooldown_ticks = PlayStubsGd.SHOVE_COOLDOWN_TICKS
 	offline.play_sprint_step = PlayStubsGd.SPRINT_STEP
 	offline.play_item_cooldown_ticks = PlayStubsGd.ITEM_COOLDOWN_TICKS
+	offline.play_hazard_knockback_step = PlayStubsGd.HAZARD_KNOCKBACK_STEP
+	offline.play_respawn_stun_ticks = PlayStubsGd.RESPAWN_STUN_TICKS
 	offline.play_range_half = OutOfRangeResetGd.STUB_HALF
 
 

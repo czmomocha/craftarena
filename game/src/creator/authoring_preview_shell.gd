@@ -62,6 +62,8 @@ var play_use_item_reach_dy: int = PlayStubs.USE_ITEM_REACH_DY
 var play_use_item_reach_dz: int = PlayStubs.USE_ITEM_REACH_DZ
 var play_sprint_step: int = PlayStubs.SPRINT_STEP
 var play_item_cooldown_ticks: int = PlayStubs.ITEM_COOLDOWN_TICKS
+var play_hazard_knockback_step: int = PlayStubs.HAZARD_KNOCKBACK_STEP
+var play_respawn_stun_ticks: int = PlayStubs.RESPAWN_STUN_TICKS
 var play_jump_dy: int = PlayStubs.JUMP_DY
 var play_support_dy: int = PlayStubs.SUPPORT_DY
 ## Advance tick is a click, not a frame, so Preview falls a whole cell per step.
@@ -158,6 +160,7 @@ func try_start_play(seed: int = 1, radius: int = 0, cylinder_height: int = 0) ->
 	_copy_jump_stubs()
 	_copy_fall_stub()
 	_copy_play_range_stub()
+	_copy_hazard_hit_stubs()
 	_play_view_busy = true
 	var ok: bool = preview.try_start_play(seed, radius, cylinder_height)
 	_rebuild_map()
@@ -499,6 +502,13 @@ func _copy_play_range_stub() -> void:
 	if preview == null:
 		return
 	preview.enable_play_range(play_range_half)
+
+
+func _copy_hazard_hit_stubs() -> void:
+	if preview == null:
+		return
+	preview.play_hazard_knockback_step = play_hazard_knockback_step
+	preview.play_respawn_stun_ticks = play_respawn_stun_ticks
 
 
 func _process(_delta: float) -> void:

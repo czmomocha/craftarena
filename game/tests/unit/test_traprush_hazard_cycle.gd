@@ -2,8 +2,8 @@ extends GutTest
 
 ## Period hazards compile into v1 topology and toggle solid on tick.
 ## cooldown_ticks is the existing hazard field (half-period). Intents do
-## not tick, so they do not toggle. No damage, knockback, gravity, or
-## settlement. Official courses stay empty.
+## not tick, so they do not toggle. Crush after standing in an open cell
+## is TraprushHazardHit (default knockback 0 → reset). No settlement.
 
 const AuthoringPreview := preload("res://src/creator/authoring_preview.gd")
 const AuthoringPreviewHostKinds := preload("res://src/creator/authoring_preview_host_kinds.gd")
@@ -63,10 +63,9 @@ func test_match_period_one_blocks_then_opens_then_blocks() -> void:
 	session.commit_tick()
 	assert_eq(session.tick_index(), 2)
 	assert_true(session.is_hazard_solid(HAZARD_ID))
-	assert_true(session.apply_player_intent(0, _move(CELL, 0)))
-	var reblocked: Dictionary = session.player_pose(0)
-	var reblocked_x: int = reblocked.get("x", -1)
-	assert_eq(reblocked_x, opened_x)
+	var crushed: Dictionary = session.player_pose(0)
+	var crushed_x: int = crushed.get("x", -1)
+	assert_eq(crushed_x, 0)
 
 
 func test_zero_cooldown_stays_solid_after_ticks() -> void:

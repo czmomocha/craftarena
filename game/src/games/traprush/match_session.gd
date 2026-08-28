@@ -15,13 +15,15 @@ extends RefCounted
 ## 每个 pickup 实体每玩家只拾一次。命中只看调用方 reach，不读客户端命中断言。
 ## 冲刺沿胶囊 yaw 做 8 向水平位移，步长不得超过 SHOVE_STEP_MAX（与 Move 同一格上限）。
 ## 出界复位：range_enabled 时用调用方 AABB（闭区间）经 TraprushOutOfRangeReset
-## 写回最近检查点落点。不计数 N，不写硬直。默认关闭。
+## 写回最近检查点落点。不计数 N。复位后写入调用方 respawn_stun_ticks（占位桩，
+## 不是 D5 产品秒数）。默认关闭。
 ## 下落：调用方 fall_dy 是每 tick 重力加速度，经 TraprushGravity.integrate
 ## 写入胶囊 vy。默认 0（2 人 Headless 冲线夹具不走路板，不能默认下落）。
 ## commit_tick 先积分再 world.tick（与灰盒相同）。MatchRealtime 在积分与
 ## world.tick 之间应用意图，避免同一拍 Jump 被立刻落下。不锁产品重力。
 ## 周期机关：commit_tick 在 world.tick() 之后按已有 cooldown_ticks 切换固体。
-## 意图不推进 tick，故不切换。不读 damage/knockback，不发明 period。
+## 意图不推进 tick，故不切换。不读 Authoring damage/knockback。固体半周期占用
+## 重叠由 TraprushHazardHit 裁决：先注入击退，仍重叠则环境失败复位并写硬直。
 ## 语义与 AuthoringPreview 试玩逐字对齐：同一 IntentStepper、同一占用扫描
 ## 顺序（垫→门→垫→终点）。无网络、无结算、不在线写入。
 ## 直播名次由 TraprushStanding 从 accepted_count / finish_tick 派生。
@@ -34,6 +36,7 @@ const DestructibleBreak := preload("res://src/games/traprush/destructible_break.
 const FinishAccept := preload("res://src/games/traprush/finish_accept.gd")
 const Gravity := preload("res://src/games/traprush/gravity.gd")
 const HazardCycle := preload("res://src/games/traprush/hazard_cycle.gd")
+const HazardHit := preload("res://src/games/traprush/hazard_hit.gd")
 const IntentStepper := preload("res://src/games/traprush/intent_stepper.gd")
 const JumpIntent := preload("res://src/games/traprush/jump_intent.gd")
 const MoveIntent := preload("res://src/games/traprush/move_intent.gd")
@@ -70,6 +73,8 @@ var shove_step: int = 0
 var shove_cooldown_ticks: int = 1
 var sprint_step: int = 0
 var item_cooldown_ticks: int = 1
+var hazard_knockback_step: int = 0
+var respawn_stun_ticks: int = 0
 var range_enabled: bool = false
 var range_min_x: int = 0
 var range_max_x: int = 0
@@ -174,6 +179,7 @@ static func create(
 			"bomb": 0,
 			"dash": 0,
 			"taken": {},
+			"stun_remaining": 0,
 		})
 	for player: Dictionary in session._players:
 		session._accept_player_pads(player)
@@ -253,6 +259,17 @@ func player_dash_count(slot: int) -> int:
 	return dash
 
 
+func player_stun_remaining(slot: int) -> int:
+	var player: Dictionary = _player_at(slot)
+	if player.is_empty():
+		return 0
+	var stun_raw: Variant = player.get("stun_remaining", 0)
+	if typeof(stun_raw) != TYPE_INT:
+		return 0
+	var stun: int = stun_raw
+	return stun
+
+
 func destructible_alive_count() -> int:
 	var alive: int = 0
 	for key: Variant in _crate_health.keys():
@@ -302,6 +319,9 @@ func apply_player_intent(slot: int, payload: Dictionary) -> bool:
 	var player: Dictionary = _player_at(slot)
 	if player.is_empty():
 		return false
+	var reset_ok: bool = CheckpointSpawn.is_reset_intent(payload)
+	if _player_stunned(player) and not reset_ok:
+		return false
 	var use_decoded: Dictionary = UseItemIntent.decode(payload)
 	var use_ok: bool = use_decoded.get("ok", false)
 	if use_ok:
@@ -323,11 +343,11 @@ func apply_player_intent(slot: int, payload: Dictionary) -> bool:
 			return false
 	var jump_decoded: Dictionary = JumpIntent.decode(payload)
 	var jump_ok: bool = jump_decoded.get("ok", false)
-	var reset_ok: bool = CheckpointSpawn.is_reset_intent(payload)
 	if not move_ok and not reset_ok and not jump_ok:
 		return false
 	var capsule_id: int = player["capsule_id"]
 	if move_ok and _resolve_player_portals(player):
+		_resolve_player_hazards(player)
 		_reset_player_if_out_of_range(player)
 		_grant_player_pickups(player)
 		return true
@@ -346,6 +366,7 @@ func apply_player_intent(slot: int, payload: Dictionary) -> bool:
 		return false
 	if reset_ok:
 		player["latch"] = {}
+	_resolve_player_hazards(player)
 	_reset_player_if_out_of_range(player)
 	_accept_player_pads(player)
 	_resolve_player_portals(player)
@@ -361,15 +382,18 @@ func apply_player_falls() -> void:
 	for player: Dictionary in _players:
 		var capsule_id: int = player["capsule_id"]
 		Gravity.integrate(_world, capsule_id, fall_dy)
+		_resolve_player_hazards(player)
 		_reset_player_if_out_of_range(player)
 
 
 func advance_sim_tick() -> void:
 	if _world == null:
 		return
+	_tick_stuns()
 	_world.tick()
 	HazardCycle.apply(_world, _hazard_cycle)
 	for player: Dictionary in _players:
+		_resolve_player_hazards(player)
 		_reset_player_if_out_of_range(player)
 		_accept_player_pads(player)
 		_resolve_player_portals(player)
@@ -461,6 +485,11 @@ func hash_state() -> String:
 		hasher.write_s64(taken_ids.size())
 		for taken_id: int in taken_ids:
 			hasher.write_s64(taken_id)
+		var stun_raw: Variant = player.get("stun_remaining", 0)
+		var stun: int = 0
+		if typeof(stun_raw) == TYPE_INT:
+			stun = stun_raw
+		hasher.write_s64(stun)
 	return hasher.digest_hex()
 
 
@@ -606,6 +635,7 @@ func _try_shove(slot: int, player: Dictionary, payload: Dictionary) -> bool:
 	var shoved: bool = result.get("shoved", false)
 	if shoved:
 		player["last_shove_tick"] = now_tick
+		_resolve_player_hazards(target)
 		_reset_player_if_out_of_range(target)
 		_accept_player_pads(target)
 		_resolve_player_portals(target)
@@ -756,7 +786,50 @@ func _reset_player_if_out_of_range(player: Dictionary) -> bool:
 	var reset: bool = result.get("reset", false)
 	if reset:
 		player["latch"] = {}
+		player["stun_remaining"] = respawn_stun_ticks
 	return reset
+
+
+func _resolve_player_hazards(player: Dictionary) -> bool:
+	if _world == null or _spawn == null:
+		return false
+	var capsule_id: int = player["capsule_id"]
+	var track: CheckpointTrack = player["track"]
+	var result: Dictionary = HazardHit.try_apply(
+		_world,
+		capsule_id,
+		_hazard_cycle,
+		hazard_knockback_step,
+		_spawn,
+		track
+	)
+	var result_ok: bool = result.get("ok", false)
+	if not result_ok:
+		return false
+	var reset: bool = result.get("reset", false)
+	if reset:
+		player["latch"] = {}
+		player["stun_remaining"] = respawn_stun_ticks
+	return reset
+
+
+func _player_stunned(player: Dictionary) -> bool:
+	var stun_raw: Variant = player.get("stun_remaining", 0)
+	if typeof(stun_raw) != TYPE_INT:
+		return false
+	var stun: int = stun_raw
+	return stun > 0
+
+
+func _tick_stuns() -> void:
+	for player: Dictionary in _players:
+		var stun_raw: Variant = player.get("stun_remaining", 0)
+		if typeof(stun_raw) != TYPE_INT:
+			continue
+		var stun: int = stun_raw
+		if stun < 1:
+			continue
+		player["stun_remaining"] = stun - 1
 
 
 func _try_use_item(player: Dictionary, payload: Dictionary) -> bool:
@@ -838,6 +911,7 @@ func _try_sprint(player: Dictionary, payload: Dictionary) -> bool:
 	if sprinted:
 		player["dash"] = dash - 1
 		player["last_sprint_tick"] = now_tick
+		_resolve_player_hazards(player)
 		_reset_player_if_out_of_range(player)
 		_accept_player_pads(player)
 		_resolve_player_portals(player)

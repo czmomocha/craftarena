@@ -1,7 +1,7 @@
 {
 	"schema_version": 1,
 	"cell": 65536,
-	"revision": 12,
+	"revision": 13,
 	"entities": [
 		{
 			"schema_version": 1,
@@ -316,6 +316,52 @@
 					"x": 131072,
 					"y": 0,
 					"z": -196608,
+					"yaw_bam": 0
+				},
+				"zone": {
+					"shape": {
+						"kind": "box",
+						"hx": 32768,
+						"hy": 32768,
+						"hz": 32768
+					},
+					"tags": [
+						"solid"
+					]
+				}
+			}
+		},
+		{
+			"schema_version": 1,
+			"entity_id": 87,
+			"components": {
+				"transform": {
+					"x": 0,
+					"y": -65536,
+					"z": -65536,
+					"yaw_bam": 0
+				},
+				"zone": {
+					"shape": {
+						"kind": "box",
+						"hx": 32768,
+						"hy": 32768,
+						"hz": 32768
+					},
+					"tags": [
+						"solid"
+					]
+				}
+			}
+		},
+		{
+			"schema_version": 1,
+			"entity_id": 88,
+			"components": {
+				"transform": {
+					"x": 0,
+					"y": -65536,
+					"z": -131072,
 					"yaw_bam": 0
 				},
 				"zone": {
