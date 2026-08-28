@@ -15,12 +15,12 @@ alwaysApply: true
 
 真机：PR Test plan 与 [章节真机清单](docs/runbooks/chapter-device-check.md) 本刀必须是编号步骤（怎么开、点什么、期望 / 失败）；禁止只写「真机再看一眼」。无 GUI 的章写「无」加原因。人工检查，不是 CI 门禁。口径见 [CD-52 §3.2](Confirmed-docs/50-engineering/52-ai-workflow.md)。
 
-- 做（本刀 = 纠偏 C3 第 6 章：协议层 RTT 可观测）：v1 增加定长 ping/pong（type 3/4，18 字节）。占用席位后服务端原样回显，不入命令队列、不续租、不推进仿真。在线对局约每秒一探针；状态行在有样本后出现 `rtt=` / `rtt_n=`；`live_io` 把样本追加到 `user://protocol_rtt.jsonl`（不含主机）。补 [`server-deploy.md`](docs/runbooks/server-deploy.md) §8.1（24h ICMP 步骤）与 §13（协议层采集）。不改 `SNAPSHOT_EVERY_TICKS` / `HEARTBEAT_EVERY_TICKS` / `play_interp_step`。不改 `Confirmed-docs/`（CD-43 §1 / §4 由 C5 覆盖写）。
-- 不做：把 Tick / 快照 / 插值 / 对账写成产品值；用 C1 ~3ms ICMP 锁 CD-43 §4；D5 硬直秒数；第 4 张课；预警动画；新增冻结常量引用点。
-- 仍欠着（不因本章合入而消失）：D5 复活硬直三候选待人类选（硬直仍是 1 tick 桩）；24 小时 ICMP 人类执行与回填；远端双机协议层 RTT 样本回填；C3 网络参数锁定。
-- 仍不做：把可观测闭环与参数锁定塞进同一个 PR。
+- 做（本刀 = 纠偏 C3 第 7 章：BotRunner 证明 course_01 安全路）：探针增加 `forbid_portal_ids`；CLI `--route=safe` / `--forbid-portal=`。封掉 entity 10 后重放 C3 第 5 章四向安全路仍 `completable`，步数明显多于捷径。默认 `--bot-run` 仍走捷径。合成课正反例进 GUT。不改 `SNAPSHOT_EVERY_TICKS` / `HEARTBEAT_EVERY_TICKS` / `play_interp_step`。不改 `Confirmed-docs/`。不加第 4 张课。
+- 不做：把 Tick / 快照 / 插值 / 对账写成产品值；用 C1 ~3ms ICMP 锁 CD-43 §4；D5 硬直秒数；把 `--bot-run` 接进 CI；新增冻结常量引用点。
+- 仍欠着（不因本章合入而消失）：D5 复活硬直三候选待人类选（硬直仍是 1 tick 桩）；24 小时 ICMP 人类执行与回填；远端双机协议层 RTT 样本回填；C3 网络参数锁定；人类首次「是否好玩」结论（D10）。
+- 仍不做：把可玩性自动判定与网络参数锁定塞进同一个 PR。
 
 纠偏归属：C3
 是否新增冻结常量引用：否
-审查级别：深审
+审查级别：常审
 隔离方式：无（C3 串行，当前 checkout）

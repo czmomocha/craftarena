@@ -53,43 +53,56 @@ Worktree 端口偏移见 README「并行工作区」；本文件不复述端口�
 
 ---
 
-## 本刀：纠偏 C3 第 6 章 — 在线对局能看见协议层 RTT
+## 本刀：纠偏 C3 第 7 章 — BotRunner 证明 course_01 安全路可完成
 
-对应：当前完整章节 PR。这一章闭合的是测量环：进一场在线对局后，状态行出现 `rtt=` / `rtt_n=`，证明 ping/pong 在命令通道上走通。不是锁定 Tick / 快照 / 插值，也不是 24 小时 ICMP（步骤在 [`server-deploy.md`](server-deploy.md) §8.1，人类另跑）。
+对应：当前完整章节 PR。这一章闭合的是 G3 的自动一半：默认探针仍走 +X 捷径；`--route=safe` 封掉 entity 10 之后仍 `completable`，步数明显更多。不是锁定 Tick / 快照 / 插值，也不是 D10 人类「好不好玩」签字（那一步你自己玩完再写）。
 
-**需要三后端。** Solo 不发探针，状态行不应出现 `rtt=`。
+**不需要三后端。** Headless `--bot-run` 与 Solo 窗口即可。
 
-键位与赛道布局不是本章对象。
+### 1. 默认探针仍走捷径
 
-### 1. 在线 1 人房：大约三秒后状态行有 rtt=
+仓库根：
 
-按上面共用启动 0.1 再 0.2。把人数框改成 `1`，点 **Create room**（点按钮会离开输入框）。若还闪着光标，再点一次 3D 赛道区域，不要点回人数/课程框。
+```powershell
+& $env:GODOT4_CONSOLE --headless --path game -- --bot-run --course=course_01
+```
 
-1. 等到状态行 `play=in_match`（一人房应很快入场；若一直 `join=waiting` 则 0.1 没就绪）。
-2. 站着等大约 3 秒，不要 Cancel。WASD 应移动青盒，不应把字符打进人数或课程框。
-3. 预期：状态行出现 `rtt=`（本机回环通常是个位数或十几毫秒）和 `rtt_n=`（至少 1）。数字会变，不必等于某个产品值。
-4. 失败：10 秒后仍没有 `rtt=`；或者一进场就掉线；或者 `rtt=` 出现在点 Solo 之后（Solo 不该有）；或者按 W 时人数/课程框出现字母。
+1. 预期：一行 `event=bot_run_course`，`outcome=completable`，`route=any`，`steps` 是个位数（通常 5），`forbid_portals` 为空数组。最后一行 `event=bot_run_summary` 且 `ok=true`，进程 exit 0。
+2. 失败：`not_completable`；或 `steps` 已经二十以上（默认不该去走安全路）；或进程非 0。
 
-点 **Cancel** 回到大厅。
+### 2. 封掉捷径传送门后仍能走通
 
-### 2. Solo：回归，且没有 rtt=
+```powershell
+& $env:GODOT4_CONSOLE --headless --path game -- --bot-run --course=course_01 --route=safe
+```
 
-1. 点 **Solo play**。走两格或按 Q 打碎出生点箱子。
-2. 预期：能走、能碎箱；状态行有 `offline=` 横幅；**没有** `rtt=`。
-3. 失败：Solo 不能开；或 Solo 状态行出现 `rtt=`。
+这一条重放 C3 第 5 章那条四向安全路（约三十步），不是现场 A*。开发机通常几十秒内结束。不要用默认 3000 tick 预算去跑它。
 
-### 3. 可选：JSONL 不含主机
+1. 预期：`outcome=completable`，`route=safe`，`forbid_portals` 含 `10`，`steps` **明显大于**第 1 步（至少二十）。exit 0。
+2. 失败：`budget_exhausted` / `search_exhausted`；或 `steps` 仍是个位数（说明没封住捷径）；或对 `course_02` 带 `--route=safe` 却绿了（应 exit 1）。
 
-Windows 源码运行时，样本在 `%APPDATA%\Godot\app_userdata\Craft Arena\protocol_rtt.jsonl`。打开看一行：应有 `"event":"protocol_rtt"` 和 `"rtt_ms"`，**不应**有 IP、`ws://`、票据。该文件不要提交。
+可选对照：`--bot-run --course=course_02 --route=safe` 应立刻 `error=safe_route_requires_course_01` 并 exit 1，不必等搜索。
+
+### 3. Solo：人走两条路（给 D10 用，本章不代签）
+
+按上面共用启动 **0.2**（不需要 0.1）。点 **Solo play**。
+
+1. 捷径：从出生点连按 W（+X）约五格，应上楼并冲线。预期：石色窄路两侧是坑；状态行 `finish=` 有值。失败：掉下去回出生点却没走偏；或五格后没冲线。
+2. Cancel 再 Solo。安全路：先 W 两格到检查点 1，再按 S（+Z）走进更长走廊，经侧向传送到左侧区块，再上楼与捷径汇合后冲线。预期：步数明显多于捷径；走下石路会下落并闪回检查点。失败：走廊走到一半无故复位；或侧向门不落地。
+3. 道具：出生点已拾爆破球与冲刺。面对出生点箱子按 Q，箱应消失。按 Left Shift 或点 **Sprint**，应沿朝向冲一格且不穿固体。失败：Q 无反应；或冲刺穿墙。
+4. 机关：走到出生点 −Z 两格洋红盒，固体半周期踩上应被击退/复位。失败：踩实心洋红盒毫无反应。
+
+本步没有「必须觉得好玩」的预期。D10 是你（加 2–3 名熟人）事后给的非正式结论，AI 不得代填。
 
 ### 本刀不测
 
-- 24 小时 ICMP（§8.1，另开窗口过夜）；
-- 远端双机协议层 P50/P90（[`server-deploy.md`](server-deploy.md) §13.2，填表后才能锁参数）；
+- 24 小时 ICMP（[`server-deploy.md`](server-deploy.md) §8.1）；
+- 远端双机协议层 P50/P90（同手册 §13.2）；
 - 改快照频率或插值窗口；
-- 0.5 / 1.0 / 1.5 秒产品硬直。
+- 0.5 / 1.0 / 1.5 秒产品硬直；
+- `--bot-run` 进 CI。
 
 ### 仍然欠着（不因本章消失）
 
-D5 复活硬直（候选已写在纠偏方案 D5，待人类选）、24 小时 ICMP 执行与回填、远端协议层 RTT 回填、C3 网络参数锁定。
+D5 复活硬直（候选已写在纠偏方案 D5，待人类选）、24 小时 ICMP 执行与回填、远端协议层 RTT 回填、C3 网络参数锁定、D10 首次可玩性结论。
 

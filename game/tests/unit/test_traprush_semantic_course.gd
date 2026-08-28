@@ -113,6 +113,7 @@ func test_stepping_off_the_safe_route_falls_and_resets() -> void:
 	assert_eq(_axis(session.player_pose(0), "z"), CELL)
 	assert_true(_move(session, -CELL, 0))
 	session.commit_tick()
+	assert_false(session.player_supported_by_solid(0))
 	var saw_fall: bool = false
 	var reset: bool = false
 	for _tick: int in range(FALL_TICKS):
@@ -134,6 +135,7 @@ func test_stepping_off_the_safe_route_falls_and_resets() -> void:
 
 
 func test_bot_still_completes_on_the_authority() -> void:
+	## 默认探针仍走 +X 捷径。安全路由 test_traprush_course_routes.gd 封掉 entity 10 另测。
 	var result: Dictionary = CourseCompletionProbe.run_path(COURSE_01)
 	var outcome: String = result["outcome"]
 	assert_eq(outcome, CourseCompletionProbe.OUTCOME_COMPLETABLE)
