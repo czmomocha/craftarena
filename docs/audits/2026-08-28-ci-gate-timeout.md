@@ -75,7 +75,7 @@ assert_true(_preview_shell.try_start_play(1, 1, 1))
 本章做四件事：
 
 1. 把五处 `1, 1` 改成 `TraprushPlayStubs.CAPSULE_RADIUS / CAPSULE_HEIGHT`，并在原处写清为什么不能随手写 1。断言全部不变、全部仍通过。
-2. CI 的 GUT step 自己掐 10 分钟（`timeout -k 30 600`）。超预算由 `timeout` 结束进程，step 变红并打印一行明确错误，不再是灰色的 `cancelled`。job 级 `timeout-minutes: 15` 保留为兜底。
+2. CI 的 GUT step 自己掐 12 分钟（`timeout -k 30 720`）。超预算由 `timeout` 结束进程，step 变红并打印一行明确错误，不再是灰色的 `cancelled`。job 级 `timeout-minutes: 15` 保留为兜底。预算数字按 §5 的 CI 实测定，不是拍的。
 3. 新增 `Report slowest test scripts` step：用 GUT 的 `-gjunit_xml_file` 导出结果，打印最慢的 10 个测试脚本与总时长。不判定，只让下一次变慢在 PR 里看得见。
 4. 在当前 `main` 上补跑一次完整 GUT，结果记在下一节。
 
@@ -101,7 +101,22 @@ assert_true(_preview_shell.try_start_play(1, 1, 1))
 | 21.0 | `tests/replay/test_traprush_official_tape_replay.gd` |
 | 16.2 | `tests/unit/test_match_lobby_shell.gd` |
 
-前三名都是在权威仿真上做搜索或整段走课，代价本来就高，不是本次的异常。作为对比，最后一次绿的 CI（PR #175）里 GUT step 单独花了 10.9 分钟，其余步骤合计 1.7 分钟——所以 10 分钟预算会在 job 的 15 分钟上限之前先触发，这正是想要的顺序。
+前三名都是在权威仿真上做搜索或整段走课，代价本来就高，不是本次的异常。
+
+本章 PR 在 CI 上跑出的第一组数（run `33168145521`，两个 job 最终 `conclusion` 都是 `success`）：
+
+| | 开发机（Windows） | CI（ubuntu-latest） |
+|---|---|---|
+| GUT 111 个脚本合计 | 354.1 s | 533.1 s |
+| GUT step 墙钟 | — | 9.0 min |
+| 最慢单个脚本 | 121.8 s | 186.4 s（`test_traprush_official_path_floors.gd`） |
+| GUT 之前的步骤合计 | — | 1.4 min |
+
+CI 比开发机慢约 1.5 倍，所以预算必须按 CI 这一列定。最初按开发机数字设的 10 分钟只剩 67 秒余量，会误报；改为 **12 分钟**：比实测多约 35%，同时 1.4 + 12 = 13.4 分钟仍在 job 的 15 分钟上限之内——预算比 job 上限晚触发就等于没加。
+
+作为对比，最后一次绿的 CI（PR #175）里 GUT 单独花了 10.9 分钟，其中约 7 分钟是本次修掉的那一个用例。
+
+**后续观察点**：`test_traprush_official_path_floors.gd` 一个脚本占了 CI 侧 GUT 总时长的三分之一。它在权威仿真上把三张官方课整段走完，代价是真实的，但再加课就会重新逼近预算。下次赛道扩容时先看这一行。
 
 ## 6. 怎么复跑本文件的结论
 
