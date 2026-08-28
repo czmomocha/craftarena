@@ -418,7 +418,7 @@ static func _state_key(session: TraprushMatchSession, bundle: SimulationBundle) 
 	var x: int = pose.get("x", 0)
 	var y: int = pose.get("y", 0)
 	var z: int = pose.get("z", 0)
-	return "%d,%d,%d,%d,%d,%d,%d,%d" % [
+	return "%d,%d,%d,%d,%d,%d,%d,%d,%d" % [
 		_bucket(x),
 		_bucket(y),
 		_bucket(z),
@@ -427,6 +427,7 @@ static func _state_key(session: TraprushMatchSession, bundle: SimulationBundle) 
 		hazards,
 		session.player_bomb_count(0),
 		session.player_dash_count(0),
+		session.player_stun_remaining(0),
 	]
 
 

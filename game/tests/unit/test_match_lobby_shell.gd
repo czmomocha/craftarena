@@ -62,8 +62,8 @@ func test_open_window_quick_play_ready_begins_play() -> void:
 	assert_eq(_shell.crates.crate_count(), 1)
 	assert_eq(_shell.hazards.hazard_count(), 1)
 	assert_eq(_shell.hazards.hazard_total(), 1)
-	assert_eq(_shell.solids.solid_count(), 8)
-	assert_eq(_shell.solids.solid_total(), 8)
+	assert_eq(_shell.solids.solid_count(), 10)
+	assert_eq(_shell.solids.solid_total(), 10)
 	assert_eq(_shell.course.hazard_node_count(), 0)
 	assert_eq(_shell.crates.hazard_node_count(), 0)
 	assert_eq(_shell.crates.link_node_count(), 0)
@@ -99,7 +99,7 @@ func test_open_window_quick_play_ready_begins_play() -> void:
 	assert_false(idle_tls)
 	assert_true(_shell.status_label_text().contains("crates_mapped=1"))
 	assert_true(_shell.status_label_text().contains("hazards_mapped=1"))
-	assert_true(_shell.status_label_text().contains("solids_mapped=8"))
+	assert_true(_shell.status_label_text().contains("solids_mapped=10"))
 	assert_true(_shell.status_label_text().contains("links_mapped=2"))
 	assert_true(_shell.status_label_text().contains("orders_mapped=3/2"))
 	assert_true(_shell.try_quick())
@@ -135,7 +135,7 @@ func test_open_window_quick_play_ready_begins_play() -> void:
 	assert_true(_shell.status_label_text().contains("course=3/2/1"))
 	assert_true(_shell.status_label_text().contains("crates_mapped=0"))
 	assert_true(_shell.status_label_text().contains("hazards_mapped=1"))
-	assert_true(_shell.status_label_text().contains("solids_mapped=8"))
+	assert_true(_shell.status_label_text().contains("solids_mapped=10"))
 	assert_true(_shell.status_label_text().contains("links_mapped=2"))
 	assert_true(_shell.status_label_text().contains("orders_mapped=3/2"))
 	assert_true(_shell.status_label_text().contains("standings=#1s0 mvp=-"))
@@ -662,8 +662,8 @@ func test_online_overlay_stops_on_official_solid() -> void:
 	assert_true(_shell.accept_http(201, _join("ABCD23", "ticket-official-solid")))
 	assert_true(_shell.on_socket_open())
 	assert_true(_shell.on_binary(_snapshot(0, 0, [_crate(40, 1)])))
-	assert_eq(_shell.solids.solid_count(), 8)
-	assert_eq(_shell.solids.live_solid_boxes().size(), 8)
+	assert_eq(_shell.solids.solid_count(), 10)
+	assert_eq(_shell.solids.live_solid_boxes().size(), 10)
 	var steps: int = 0
 	while steps < 20:
 		assert_false(_shell.try_sample_play_move(false, false, true, false).is_empty())
@@ -813,7 +813,7 @@ func test_solo_own_progress_tints_pads_and_cancel_restores() -> void:
 	assert_true(_shell.status_label_text().contains("finish=-1"))
 	assert_true(_shell.status_label_text().contains("crates=1/1"))
 	assert_true(_shell.status_label_text().contains("hazards=1/1"))
-	assert_true(_shell.status_label_text().contains("solids=8/8"))
+	assert_true(_shell.status_label_text().contains("solids=10/10"))
 	assert_false(_shell.status_label_text().contains("result="))
 	assert_true(_shell.try_cancel())
 	assert_eq(_shell.course.own_accepted_count(), -1)
@@ -1015,14 +1015,14 @@ func test_solo_walk_off_spawn_footing_drops_y() -> void:
 	var rest: Dictionary = _shell.offline.session.player_pose(0)
 	var rest_y: int = rest.get("y", 1)
 	_shell.play_move_step = Fixed.SCALE
-	assert_false(_shell.try_sample_play_move(true, false, false, false).is_empty())
+	## 出生点 −Z 现在有走到机关的踏板；先 +X 再 +Z 才落到空格。
+	assert_false(_shell.try_sample_play_move(false, false, false, true).is_empty())
+	assert_false(_shell.try_sample_play_move(false, true, false, false).is_empty())
 	for _drop: int in range(8):
 		assert_true(_shell.offline.try_advance())
 	var dropped: Dictionary = _shell.offline.session.player_pose(0)
 	var dropped_y: int = dropped.get("y", 2)
 	assert_lt(dropped_y, rest_y)
-	var dropped_z: int = dropped.get("z", 0)
-	assert_eq(dropped_z, -Fixed.SCALE)
 
 
 func test_solo_opens_eight_cell_range_stub() -> void:

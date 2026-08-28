@@ -53,7 +53,7 @@ func test_official_courses_compile_distinct_topology() -> void:
 	assert_eq(second.destructibles.size(), 1)
 	assert_eq(first.hazards.size(), 1)
 	assert_eq(second.hazards.size(), 1)
-	assert_eq(first.solids.size(), 8)
+	assert_eq(first.solids.size(), 10)
 	assert_eq(second.solids.size(), 8)
 	var first_hazard: Dictionary = _hazard(first, 60)
 	var first_solid: Dictionary = _solid(first, 70)
@@ -249,7 +249,7 @@ func test_loaded_pads_are_non_solid_occupancy_and_world_ticks() -> void:
 	var hazard_ids: Dictionary = loaded["hazard_ids"]
 	assert_eq(hazard_ids.size(), 1)
 	var solid_ids: Dictionary = loaded["solid_ids"]
-	assert_eq(solid_ids.size(), 8)
+	assert_eq(solid_ids.size(), 10)
 	var pickup_ids: Dictionary = loaded["pickup_ids"]
 	assert_eq(pickup_ids.size(), 2)
 	var box_id: int = pad_ids[1]
@@ -266,6 +266,10 @@ func test_loaded_pads_are_non_solid_occupancy_and_world_ticks() -> void:
 	assert_true(world.is_static_box_solid(solid_box_id))
 	var footing_box_id: int = solid_ids[80]
 	assert_true(world.is_static_box_solid(footing_box_id))
+	var approach_box_id: int = solid_ids[87]
+	assert_true(world.is_static_box_solid(approach_box_id))
+	var hazard_floor_box_id: int = solid_ids[88]
+	assert_true(world.is_static_box_solid(hazard_floor_box_id))
 	var pickup_box_id: int = pickup_ids[100]
 	assert_false(world.is_static_box_solid(pickup_box_id))
 	var capsule_id: int = world.spawn_capsule(0, 0, 0, 0, 1, 1)

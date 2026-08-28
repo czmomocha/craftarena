@@ -48,6 +48,10 @@ const SHOVE_COOLDOWN_TICKS: int = 1
 ## 一格冲刺步长与 1 tick 道具冷却，不是产品冲刺距离或冷却秒数。
 const SPRINT_STEP: int = Fixed.SCALE
 const ITEM_COOLDOWN_TICKS: int = 1
+## 机关击退四分之一格、环境失败硬直 1 tick。不是 D5 的 0.5/1.0/1.5 秒，
+## 也不是 Authoring hazard.knockback / damage 字段。
+const HAZARD_KNOCKBACK_STEP: int = Fixed.SCALE / 4
+const RESPAWN_STUN_TICKS: int = 1
 
 ## 占位胶囊尺寸（八分之一格），不是产品角色比例——那要等 D4 的美术规格表。
 ## 改半径会连带改赛道布局、Shove 邻域、UseItem reach 与全部占用相交断言，
@@ -73,4 +77,6 @@ static func apply_match(session: TraprushMatchSession) -> void:
 	session.shove_cooldown_ticks = SHOVE_COOLDOWN_TICKS
 	session.sprint_step = SPRINT_STEP
 	session.item_cooldown_ticks = ITEM_COOLDOWN_TICKS
+	session.hazard_knockback_step = HAZARD_KNOCKBACK_STEP
+	session.respawn_stun_ticks = RESPAWN_STUN_TICKS
 	session.enable_play_range(OutOfRangeReset.STUB_HALF)

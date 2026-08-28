@@ -25,7 +25,7 @@ const FALL_TICKS: int = 40
 
 
 func test_official_courses_have_path_floor_counts() -> void:
-	assert_eq(_compile(COURSE_01).solids.size(), 8)
+	assert_eq(_compile(COURSE_01).solids.size(), 10)
 	assert_eq(_compile(COURSE_02).solids.size(), 8)
 	assert_eq(_compile(COURSE_03).solids.size(), 14)
 

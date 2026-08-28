@@ -3,8 +3,9 @@ extends RefCounted
 
 ## 周期机关固体切换：与灰盒 try_commit_tick 同一公式，用已有
 ## hazard.cooldown_ticks 当半周期，不发明 period 字段。
-## cooldown_ticks < 1 时始终固体（避免除零）。不读 damage / knockback，
-## 不挤出、不伤害。只在调用方推进 tick 之后调用。不结算。
+## cooldown_ticks < 1 时始终固体（避免除零）。不读 Authoring damage / knockback。
+## 固体切换本身不挤出。命中（击退 / 环境失败）由 TraprushHazardHit 在 apply
+## 之后按占用扫描裁决。只在调用方推进 tick 之后调用。不结算。
 
 
 static func is_solid(tick_index: int, cooldown_ticks: int) -> bool:
@@ -23,6 +24,12 @@ static func entries_from(hazards: Array, hazard_ids: Dictionary) -> Array[Dictio
 			return []
 		if typeof(bag.get("cooldown_ticks", null)) != TYPE_INT:
 			return []
+		if typeof(bag.get("x", null)) != TYPE_INT:
+			return []
+		if typeof(bag.get("y", null)) != TYPE_INT:
+			return []
+		if typeof(bag.get("z", null)) != TYPE_INT:
+			return []
 		var entity_id: int = bag["entity_id"]
 		if not hazard_ids.has(entity_id):
 			return []
@@ -35,9 +42,16 @@ static func entries_from(hazards: Array, hazard_ids: Dictionary) -> Array[Dictio
 		var cooldown_ticks: int = bag["cooldown_ticks"]
 		if cooldown_ticks < 0:
 			return []
+		var x: int = bag["x"]
+		var y: int = bag["y"]
+		var z: int = bag["z"]
 		entries.append({
+			"entity_id": entity_id,
 			"box_id": box_id,
 			"cooldown_ticks": cooldown_ticks,
+			"x": x,
+			"y": y,
+			"z": z,
 		})
 	return entries
 

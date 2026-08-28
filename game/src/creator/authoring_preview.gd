@@ -10,6 +10,8 @@ extends RefCounted
 ## try_advance_play applies caller play_fall_dy as gravity accel via
 ## TraprushGravity.integrate, then advances the sim tick and toggles compiled
 ## hazards via TraprushHazardCycle (existing cooldown_ticks, not a new period).
+## Solid-phase hazard overlap is then TraprushHazardHit (injected knockback,
+## then environment-fail reset). Does not read Authoring damage/knockback.
 ## try_apply_play_intent accepts MoveIntent (caller dx/dz),
 ## ResetToCheckpointIntent (compiled pad respawn table, no client
 ## coordinates), UseItemIntent (compiled destructible occupancy at
@@ -19,7 +21,8 @@ extends RefCounted
 ## airborne keeps pose and vy).
 ## Shove/Interact stay refused. Does not tick. Fall is only on advance.
 ## Out-of-range reset uses caller AABB via TraprushOutOfRangeReset when
-## play_range_enabled; default off. No drop-count N, no stun.
+## play_range_enabled; default off. No drop-count N. Reset and hazard crush
+## write caller play_respawn_stun_ticks (stub, not D5 product seconds).
 ## Occupancy uses existing TraprushPadAccept: overlapping a checkpoint pad
 ## advances ordered progress. Occupancy uses existing TraprushPortalLanding
 ## try_land_exit: overlapping a portal source box lands one hop. two_way dest
@@ -41,6 +44,7 @@ extends RefCounted
 
 const Gravity := preload("res://src/games/traprush/gravity.gd")
 const HazardCycle := preload("res://src/games/traprush/hazard_cycle.gd")
+const HazardHit := preload("res://src/games/traprush/hazard_hit.gd")
 const OutOfRangeReset := preload("res://src/games/traprush/out_of_range_reset.gd")
 const PickupAccept := preload("res://src/games/traprush/pickup_accept.gd")
 const ShoveGate := preload("res://src/games/traprush/shove_gate.gd")
@@ -80,6 +84,8 @@ var play_support_dy: int = 0
 var play_fall_dy: int = 0
 var play_sprint_step: int = 0
 var play_item_cooldown_ticks: int = 1
+var play_hazard_knockback_step: int = 0
+var play_respawn_stun_ticks: int = 0
 var play_range_enabled: bool = false
 var play_range_min_x: int = 0
 var play_range_max_x: int = 0
@@ -91,6 +97,7 @@ var _in_tick: bool = false
 var _playing: bool = false
 var _portal_latch: Dictionary = {}
 var _play_finish_tick: int = -1
+var _play_stun_remaining: int = 0
 
 
 func connect_from(session: AuthoringSession) -> bool:
@@ -229,10 +236,12 @@ func try_start_play(seed: int, radius: int = 0, cylinder_height: int = 0) -> boo
 	_playing = true
 	_portal_latch = {}
 	_play_finish_tick = -1
+	_play_stun_remaining = 0
 	_accept_overlapping_play_pads()
 	_resolve_play_portals()
 	_accept_overlapping_play_finish()
 	_grant_play_pickups()
+	_resolve_play_hazards()
 	return true
 
 
@@ -247,10 +256,13 @@ func try_stop_play() -> bool:
 func try_advance_play() -> bool:
 	if not is_playing():
 		return false
+	_tick_play_stun()
 	Gravity.integrate(play_world, player_id, play_fall_dy)
+	_resolve_play_hazards()
 	_reset_play_if_out_of_range()
 	play_world.tick()
 	HazardCycle.apply(play_world, play_hazard_cycle)
+	_resolve_play_hazards()
 	_reset_play_if_out_of_range()
 	_accept_overlapping_play_pads()
 	_resolve_play_portals()
@@ -262,6 +274,9 @@ func try_advance_play() -> bool:
 
 func try_apply_play_intent(payload: Dictionary) -> bool:
 	if not is_playing():
+		return false
+	var reset_ok: bool = TraprushCheckpointSpawn.is_reset_intent(payload)
+	if _play_stunned() and not reset_ok:
 		return false
 	var use_decoded: Dictionary = TraprushUseItemIntent.decode(payload)
 	var use_ok: bool = use_decoded.get("ok", false)
@@ -275,10 +290,10 @@ func try_apply_play_intent(payload: Dictionary) -> bool:
 	var move_ok: bool = move_decoded.get("ok", false)
 	var jump_decoded: Dictionary = TraprushJumpIntent.decode(payload)
 	var jump_ok: bool = jump_decoded.get("ok", false)
-	var reset_ok: bool = TraprushCheckpointSpawn.is_reset_intent(payload)
 	if not move_ok and not reset_ok and not jump_ok:
 		return false
 	if move_ok and _resolve_play_portals():
+		_resolve_play_hazards()
 		_reset_play_if_out_of_range()
 		_grant_play_pickups()
 		return true
@@ -298,6 +313,7 @@ func try_apply_play_intent(payload: Dictionary) -> bool:
 		return false
 	if reset_ok:
 		_portal_latch = {}
+	_resolve_play_hazards()
 	_reset_play_if_out_of_range()
 	_accept_overlapping_play_pads()
 	_resolve_play_portals()
@@ -552,7 +568,39 @@ func _reset_play_if_out_of_range() -> bool:
 	var reset: bool = result.get("reset", false)
 	if reset:
 		_portal_latch = {}
+		_play_stun_remaining = play_respawn_stun_ticks
 	return reset
+
+
+func _resolve_play_hazards() -> bool:
+	if not is_playing() or play_spawn == null or play_track == null:
+		return false
+	var result: Dictionary = HazardHit.try_apply(
+		play_world,
+		player_id,
+		play_hazard_cycle,
+		play_hazard_knockback_step,
+		play_spawn,
+		play_track
+	)
+	var result_ok: bool = result.get("ok", false)
+	if not result_ok:
+		return false
+	var reset: bool = result.get("reset", false)
+	if reset:
+		_portal_latch = {}
+		_play_stun_remaining = play_respawn_stun_ticks
+	return reset
+
+
+func _play_stunned() -> bool:
+	return _play_stun_remaining > 0
+
+
+func _tick_play_stun() -> void:
+	if _play_stun_remaining < 1:
+		return
+	_play_stun_remaining -= 1
 
 
 func _clear_play() -> void:
@@ -580,6 +628,7 @@ func _clear_play() -> void:
 	player_id = 0
 	_portal_latch = {}
 	_play_finish_tick = -1
+	_play_stun_remaining = 0
 
 
 func _accept_overlapping_play_pads() -> void:
@@ -652,6 +701,12 @@ func play_dash_count() -> int:
 	if not is_playing():
 		return 0
 	return play_dash
+
+
+func play_stun_remaining() -> int:
+	if not is_playing():
+		return 0
+	return _play_stun_remaining
 
 
 func _try_use_item_play(payload: Dictionary) -> bool:
@@ -727,6 +782,7 @@ func _try_sprint_play(payload: Dictionary) -> bool:
 	if sprinted:
 		play_dash -= 1
 		play_last_sprint_tick = now_tick
+		_resolve_play_hazards()
 		_reset_play_if_out_of_range()
 		_accept_overlapping_play_pads()
 		_resolve_play_portals()
