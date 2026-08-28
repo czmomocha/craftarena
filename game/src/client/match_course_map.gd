@@ -15,6 +15,8 @@ extends Node3D
 ## the finish zone: pending gold, current gold when every pad is done,
 ## accepted dark-gold after finish_tick. Idle (-1) keeps PENDING_ALBEDO
 ## and FINISH_PENDING_ALBEDO. Not walk-reachability or product cosmetics.
+## Box size and every colour come from PlaceholderSpec; this file keeps the
+## names but no longer owns the values (D4 changes one place).
 ## No interpolation, prediction, or course-selection API.
 
 const AuthoringDocumentGd := preload("res://src/creator/authoring_document.gd")
@@ -23,15 +25,13 @@ const TraprushTopologyCompilerGd := preload("res://src/ugc/traprush_topology_com
 const PAD_PREFIX: String = "pad_"
 const PORTAL_PREFIX: String = "portal_"
 const FINISH_PREFIX: String = "finish_"
-const PLACEHOLDER_SIZE: Vector3 = Vector3(1.0, 1.0, 1.0)
-const PENDING_ALBEDO: Color = Color(0.35, 0.9, 0.4)
-const ACCEPTED_ALBEDO: Color = Color(0.16, 0.38, 0.22)
-const CURRENT_ALBEDO: Color = Color(0.55, 1.0, 0.45)
-const FINISH_PENDING_ALBEDO: Color = Color(0.95, 0.82, 0.2)
-const FINISH_CURRENT_ALBEDO: Color = Color(1.0, 0.92, 0.35)
-const FINISH_ACCEPTED_ALBEDO: Color = Color(0.42, 0.32, 0.08)
-const _TWO_WAY_ALBEDO: Color = Color(0.2, 0.75, 0.95)
-const _ONE_WAY_ALBEDO: Color = Color(0.95, 0.55, 0.15)
+const PLACEHOLDER_SIZE: Vector3 = PlaceholderSpec.BOX_SIZE
+const PENDING_ALBEDO: Color = PlaceholderSpec.PAD_PENDING_ALBEDO
+const ACCEPTED_ALBEDO: Color = PlaceholderSpec.PAD_ACCEPTED_ALBEDO
+const CURRENT_ALBEDO: Color = PlaceholderSpec.PAD_CURRENT_ALBEDO
+const FINISH_PENDING_ALBEDO: Color = PlaceholderSpec.FINISH_PENDING_ALBEDO
+const FINISH_CURRENT_ALBEDO: Color = PlaceholderSpec.FINISH_CURRENT_ALBEDO
+const FINISH_ACCEPTED_ALBEDO: Color = PlaceholderSpec.FINISH_ACCEPTED_ALBEDO
 
 var _pad_count: int = 0
 var _portal_count: int = 0
@@ -238,8 +238,8 @@ func _xyz_from_bag(bag: Dictionary) -> Dictionary:
 func _portal_color(bag: Dictionary) -> Color:
 	var kind: String = bag["kind"]
 	if kind == AuthoringPortalKinds.ONE_WAY:
-		return _ONE_WAY_ALBEDO
-	return _TWO_WAY_ALBEDO
+		return PlaceholderSpec.PORTAL_ONE_WAY_ALBEDO
+	return PlaceholderSpec.PORTAL_TWO_WAY_ALBEDO
 
 
 func _spawn_box(node_name: String, bag: Dictionary, color: Color) -> void:

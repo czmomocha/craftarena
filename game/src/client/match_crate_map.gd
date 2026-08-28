@@ -20,8 +20,7 @@ const TraprushTopologyCompilerGd := preload("res://src/ugc/traprush_topology_com
 const MatchSnapshotFollowGd := preload("res://src/client/match_snapshot_follow.gd")
 
 const CRATE_PREFIX: String = "crate_"
-const PLACEHOLDER_SIZE: Vector3 = Vector3(1.0, 1.0, 1.0)
-const _CRATE_ALBEDO: Color = Color(0.85, 0.4, 0.25)
+const PLACEHOLDER_SIZE: Vector3 = PlaceholderSpec.BOX_SIZE
 
 var _has_course: bool = false
 var _cell: int = 0
@@ -247,7 +246,7 @@ func _spawn_box(node_name: String, pose: Dictionary) -> void:
 	var z: int = pose["z"]
 	var mesh: BoxMesh = BoxMesh.new()
 	mesh.size = PLACEHOLDER_SIZE
-	mesh.material = _unshaded(_CRATE_ALBEDO)
+	mesh.material = _unshaded(PlaceholderSpec.CRATE_ALBEDO)
 	var node: MeshInstance3D = MeshInstance3D.new()
 	node.name = node_name
 	node.mesh = mesh

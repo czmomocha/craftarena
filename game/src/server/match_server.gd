@@ -39,7 +39,7 @@ const HEARTBEAT_EVERY_TICKS: int = 60
 ## 占位快照广播节奏（每 2 个 tick 一帧），不是产品快照频率（CD-43 §4）。
 const SNAPSHOT_EVERY_TICKS: int = 2
 ## 占位出生间隔，不锁产品出生布局。胶囊尺寸来自 TraprushPlayStubs。
-const SPAWN_STRIDE: int = 32768
+const SPAWN_STRIDE: int = PlaceholderSpec.SPAWN_STRIDE
 ## 占位仿真种子；对局种子由控制面下发是后续章节。
 const MATCH_SEED: int = 1
 

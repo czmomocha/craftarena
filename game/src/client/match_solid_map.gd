@@ -7,14 +7,15 @@ extends Node3D
 ## live_solid_boxes() returns compiled Q48.16 centers plus cell/2 half-extents
 ## (authoring lattice, not the 1 m placeholder). Snapshots never move a solid;
 ## v1 frames have no solid bag. Official courses compile path floors.
-## No interpolation or prediction API.
+## No interpolation or prediction API. Box size and colour come from
+## PlaceholderSpec; this file keeps the names but no longer owns the values.
 
 const AuthoringDocumentGd := preload("res://src/creator/authoring_document.gd")
 const TraprushTopologyCompilerGd := preload("res://src/ugc/traprush_topology_compiler.gd")
 
 const SOLID_PREFIX: String = "solid_"
-const PLACEHOLDER_SIZE: Vector3 = Vector3(1.0, 1.0, 1.0)
-const SOLID_ALBEDO: Color = Color(0.52, 0.48, 0.42)
+const PLACEHOLDER_SIZE: Vector3 = PlaceholderSpec.BOX_SIZE
+const SOLID_ALBEDO: Color = PlaceholderSpec.SOLID_ALBEDO
 
 var _has_course: bool = false
 var _cell: int = 0

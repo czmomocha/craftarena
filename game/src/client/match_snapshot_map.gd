@@ -17,6 +17,8 @@ extends Node3D
 ## looks at the origin. The offset is a presentation stub, not a
 ## product camera rig. follow_slot also tints that box as the own seat
 ## (OWN_ALBEDO); other seats use REMOTE_ALBEDO. Not product cosmetics.
+## Box size, camera offset, and every colour come from PlaceholderSpec; this
+## file keeps the names but no longer owns the values (D4 changes one place).
 ## Each player box has a local -Z facing marker so yaw is visible on a
 ## cube. Not a product turn speed.
 
@@ -25,15 +27,13 @@ const MatchSnapshotFollowGd := preload("res://src/client/match_snapshot_follow.g
 const CAMERA_NAME: String = "SnapshotCamera"
 const LIGHT_NAME: String = "SnapshotLight"
 const PLAYER_PREFIX: String = "player_"
-const PLACEHOLDER_SIZE: Vector3 = Vector3(1.0, 1.0, 1.0)
-const CAMERA_OFFSET: Vector3 = Vector3(6.0, 8.0, 6.0)
+const PLACEHOLDER_SIZE: Vector3 = PlaceholderSpec.BOX_SIZE
+const CAMERA_OFFSET: Vector3 = PlaceholderSpec.CAMERA_OFFSET
 const FACE_NAME: String = "face"
 const FACE_OFFSET: Vector3 = Vector3(0.0, 0.15, -0.55)
 const FACE_SIZE: Vector3 = Vector3(0.18, 0.18, 0.28)
-const OWN_ALBEDO: Color = Color(0.15, 0.85, 0.75)
-const REMOTE_ALBEDO: Color = Color(0.2, 0.45, 0.95)
-const _LIGHT_ROT_DEG: Vector3 = Vector3(-50.0, -30.0, 0.0)
-const _FACE_ALBEDO: Color = Color(0.95, 0.92, 0.35)
+const OWN_ALBEDO: Color = PlaceholderSpec.OWN_ALBEDO
+const REMOTE_ALBEDO: Color = PlaceholderSpec.REMOTE_ALBEDO
 
 var follow_slot: int = -1
 var _player_count: int = 0
@@ -128,7 +128,7 @@ func ensure_rig() -> void:
 	if light == null:
 		light = DirectionalLight3D.new()
 		light.name = LIGHT_NAME
-		light.rotation_degrees = _LIGHT_ROT_DEG
+		light.rotation_degrees = PlaceholderSpec.LIGHT_ROTATION_DEG
 		add_child(light)
 
 
@@ -194,7 +194,7 @@ func _spawn_player(slot: int, body: Dictionary) -> void:
 func _spawn_facing(player: MeshInstance3D) -> void:
 	var mesh: BoxMesh = BoxMesh.new()
 	mesh.size = FACE_SIZE
-	mesh.material = _unshaded(_FACE_ALBEDO)
+	mesh.material = _unshaded(PlaceholderSpec.FACE_ALBEDO)
 	var node: MeshInstance3D = MeshInstance3D.new()
 	node.name = FACE_NAME
 	node.mesh = mesh

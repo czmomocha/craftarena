@@ -15,12 +15,12 @@ alwaysApply: true
 
 真机：PR Test plan 与 [章节真机清单](docs/runbooks/chapter-device-check.md) 本刀必须是编号步骤（怎么开、点什么、期望 / 失败）；禁止只写「真机再看一眼」。无 GUI 的章写「无」加原因。人工检查，不是 CI 门禁。口径见 [CD-52 §3.2](Confirmed-docs/50-engineering/52-ai-workflow.md)。
 
-- 做（本刀 = `[freeze-exception]`：恢复 CI 的 Godot 门禁）：五处测试把胶囊尺寸从 Q48.16 字面量 `1` 改回 `TraprushPlayStubs.CAPSULE_RADIUS / CAPSULE_HEIGHT`；CI 的 GUT step 自己掐 10 分钟使超时变红而非灰色 `cancelled`；新增最慢测试脚本耗时打印；在 `main` 上补跑一次完整 GUT；落 [门禁失守记录](docs/audits/2026-08-28-ci-gate-timeout.md)、CD-91 `ci_green_claim`、CD-52 §3.3。
-- 不做：给 `SimulationWorld._sweep_step_count` 加取样上限（动权威碰撞落点与状态哈希，另立深审章）；调高 job 的 `timeout-minutes`；改任何玩法、表现或数值；替人类改 `main` 的分支保护设置。
-- 仍欠着（不因本章合入而消失）：24 小时 ICMP 回填；远端协议层 RTT 回填；C3 网络参数锁定；E6 有美术之后的可玩性签署；扫掠取样代价无上限（宪法第十七条缺口）；`main` 分支保护为何放行了那五次合并。
-- 仍不做：把可玩性自动判定与网络参数锁定塞进同一个 PR。
+- 做（本刀 = 纠偏 C4 第 1 章：占位几何与色板收敛到单一配置源）：新建 `game/src/shared/placeholder_spec.gd`，把 1 米占位盒、相机/灯光偏移、二十来个 albedo、`play_move_step` / `play_interp_step`、`CAPSULE_RADIUS/HEIGHT`、`SPAWN_STRIDE` 的**字面量**收敛到一处；8 套对局映射、Preview 映射、两条壳、`match_server`、`play_stubs` 全部改为读它。公开常量名保留为别名（测试按名字引用），私有常量删除后直接读 spec。**数值一个不改**——既有 GUT 用例保持全绿就是本章的验收信号。新增源码扫描用例，防止下一章又把 `Color(...)` 写回某个 map。
+- 不做：接线 D4 的相机斜 45° 与 UI 基准 1920×1080（会改可见行为，留后续章）；权威碰撞与视觉网格分离（要 `GameplayAsset` 契约）；任何 `.glb`；给占位表现新增强色值断言。
+- 仍欠着（不因本章合入而消失）：24 小时 ICMP 回填；远端协议层 RTT 回填；C3 网络参数锁定；E6 有美术之后的可玩性签署；扫掠取样代价无上限（宪法第十七条缺口）；`main` 分支保护为何放行了 PR #176–#180 那五次合并。
+- 仍不做：把 Schema 变更（`GameplayAsset` / SimulationBundle v2）塞进本 PR——那要先出 ADR 走人类门禁。
 
-纠偏归属：freeze-exception（CI 的 Godot 门禁自 PR #176 起连续被 15 分钟超时终止，五刀带着未通过的门禁进了 `main`；这是宪法第十条与第二十四条的阻断性缺陷，按最小变更修）
-是否新增冻结常量引用：否（净减少：五处硬编码尺寸改为读已有的 `CAPSULE_RADIUS` / `CAPSULE_HEIGHT`）
-审查级别：常审（改的是测试传参与 CI 工作流，产品代码零改动；但门禁本身的处置结论要人类看）
-隔离方式：`fix/ci-gut-timeout`
+纠偏归属：C4
+是否新增冻结常量引用：否（净减少：字面量从 13 个文件收敛到 1 个，冻结清单里的每一项此后只有一处定义）
+审查级别：深审（新文件落在 `shared/`，且是 D4 数值此后唯一的落点）
+隔离方式：`feat/c4-placeholder-spec`
