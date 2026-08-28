@@ -29,7 +29,7 @@ func test_official_course_01_maps_occupancy_and_skips_crates() -> void:
 	add_child(_map)
 	assert_true(_map.apply_path(COURSE_01_PATH))
 	assert_eq(_map.pad_count(), 3)
-	assert_eq(_map.portal_count(), 2)
+	assert_eq(_map.portal_count(), 5)
 	assert_eq(_map.finish_count(), 1)
 	assert_eq(_map.crate_node_count(), 0)
 	assert_eq(_map.link_node_count(), 0)

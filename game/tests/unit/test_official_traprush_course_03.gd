@@ -1,9 +1,10 @@
 extends GutTest
 
 ## Third official TRAPRUSH course: one_way ascent + upper two_way pair.
-## Distinct from course_01/02 (both are two_way-only with a +Z crate; this one
-## puts a destructible crate on the ground lane and a one_way portal upstairs).
-## Publish reachability is ok. Tampering is not a write gate. Never settlement.
+## Distinct from course_01 (shortcut two_way + safe-route one_way) and course_02
+## (two_way-only). This one puts a destructible crate on the ground lane and a
+## one_way portal upstairs. Publish reachability is ok. Tampering is not a write
+## gate. Never settlement.
 
 const AuthoringDocument := preload("res://src/creator/authoring_document.gd")
 const AuthoringEditorShell := preload("res://src/creator/authoring_editor_shell.gd")
@@ -70,8 +71,16 @@ func test_course_03_has_one_way_ascent_unlike_01_02() -> void:
 			two_way_count += 1
 	assert_eq(one_way_count, 1)
 	assert_eq(two_way_count, 2)
+	var first_one_way: int = 0
 	for item: Dictionary in first.portal_links():
-		assert_eq(_link_str(item, "kind"), AuthoringPortalKinds.TWO_WAY)
+		var first_kind: String = _link_str(item, "kind")
+		if first_kind == AuthoringPortalKinds.ONE_WAY:
+			first_one_way += 1
+			assert_eq(_link_int(item, "source_id"), 12)
+			assert_eq(_link_int(item, "dest_id"), 11)
+		else:
+			assert_eq(first_kind, AuthoringPortalKinds.TWO_WAY)
+	assert_eq(first_one_way, 1)
 	for item: Dictionary in second.portal_links():
 		assert_eq(_link_str(item, "kind"), AuthoringPortalKinds.TWO_WAY)
 	assert_eq(_entity_x(third, 40), CELL)

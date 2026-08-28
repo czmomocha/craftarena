@@ -44,7 +44,7 @@ func test_official_courses_compile_distinct_topology() -> void:
 	assert_not_null(first)
 	assert_not_null(second)
 	assert_eq(first.pads.size(), 3)
-	assert_eq(first.portals.size(), 2)
+	assert_eq(first.portals.size(), 5)
 	assert_eq(second.pads.size(), 3)
 	assert_eq(second.portals.size(), 2)
 	assert_eq(first.finish.size(), 1)
@@ -53,7 +53,7 @@ func test_official_courses_compile_distinct_topology() -> void:
 	assert_eq(second.destructibles.size(), 1)
 	assert_eq(first.hazards.size(), 1)
 	assert_eq(second.hazards.size(), 1)
-	assert_eq(first.solids.size(), 10)
+	assert_eq(first.solids.size(), 36)
 	assert_eq(second.solids.size(), 8)
 	var first_hazard: Dictionary = _hazard(first, 60)
 	var first_solid: Dictionary = _solid(first, 70)
@@ -106,6 +106,8 @@ func test_official_courses_compile_distinct_topology() -> void:
 	assert_eq(first_pad_z, 0)
 	assert_eq(second_pad_z, 2 * CELL)
 	assert_eq(first_kind, AuthoringPortalKinds.TWO_WAY)
+	assert_eq(str(_portal(first, 12).get("kind", "")), AuthoringPortalKinds.ONE_WAY)
+	assert_eq(str(_portal(first, 20).get("kind", "")), AuthoringPortalKinds.TWO_WAY)
 	assert_eq(first_source_x, 3 * CELL)
 	assert_eq(first_source_y, 0)
 	assert_eq(first_source_z, 0)
@@ -243,13 +245,13 @@ func test_loaded_pads_are_non_solid_occupancy_and_world_ticks() -> void:
 	var finish_ids: Dictionary = loaded["finish_ids"]
 	var destructible_ids: Dictionary = loaded["destructible_ids"]
 	assert_eq(pad_ids.size(), 3)
-	assert_eq(portal_ids.size(), 2)
+	assert_eq(portal_ids.size(), 5)
 	assert_eq(finish_ids.size(), 1)
 	assert_eq(destructible_ids.size(), 1)
 	var hazard_ids: Dictionary = loaded["hazard_ids"]
 	assert_eq(hazard_ids.size(), 1)
 	var solid_ids: Dictionary = loaded["solid_ids"]
-	assert_eq(solid_ids.size(), 10)
+	assert_eq(solid_ids.size(), 36)
 	var pickup_ids: Dictionary = loaded["pickup_ids"]
 	assert_eq(pickup_ids.size(), 2)
 	var box_id: int = pad_ids[1]

@@ -177,7 +177,7 @@ func test_official_course_01_has_hazard_approach_floors() -> void:
 	assert_not_null(world)
 	var bundle: SimulationBundle = TraprushTopologyCompiler.compile(world)
 	assert_not_null(bundle)
-	assert_eq(bundle.solids.size(), 10)
+	assert_eq(bundle.solids.size(), 36)
 	assert_eq(bundle.hazards.size(), 1)
 	var hazard: Dictionary = bundle.hazards[0]
 	var hazard_z: int = hazard.get("z", 1)

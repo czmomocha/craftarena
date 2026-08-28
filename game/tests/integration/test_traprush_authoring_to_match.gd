@@ -73,11 +73,11 @@ func test_preview_compiles_advances_and_refuses_patches_until_stop() -> void:
 	assert_eq(preview.play_world.tick_index, 1)
 	var patch: SharedCommand = _place_portal_edit(preview.world.revision)
 	assert_false(preview.try_apply_patch(Levels.P2, patch))
-	assert_false(preview.world.has_entity(20))
+	assert_false(preview.world.has_entity(50))
 	assert_true(preview.try_stop_play())
 	assert_true(preview.is_safe_point())
 	assert_true(preview.try_apply_patch(Levels.P2, _place_portal_edit(preview.world.revision)))
-	assert_true(preview.world.has_entity(20))
+	assert_true(preview.world.has_entity(50))
 	assert_false(preview.allows_online_writes())
 	assert_false(preview.allows_settlement())
 
@@ -154,10 +154,10 @@ func _place_portal_edit(expected_revision: int) -> SharedCommand:
 			"op": "place",
 			"record": {
 				"schema_version": 1,
-				"entity_id": 20,
+				"entity_id": 50,
 				"components": {
 					"transform": {"x": CELL, "y": 0, "z": 0, "yaw_bam": 0},
-					"portal": {"target_id": 21, "yaw_bam": 0, "cooldown_ticks": 0},
+					"portal": {"target_id": 51, "yaw_bam": 0, "cooldown_ticks": 0},
 				},
 			},
 		},

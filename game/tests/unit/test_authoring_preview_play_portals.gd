@@ -183,7 +183,7 @@ func test_not_playing_has_no_floor_or_portal_ids() -> void:
 	assert_eq(preview.play_floor_index(), 0)
 	assert_eq(preview.play_portal_ids.size(), 0)
 	assert_true(preview.try_start_play(1, PLAY_RADIUS, PLAY_RADIUS))
-	assert_eq(preview.play_portal_ids.size(), 2)
+	assert_eq(preview.play_portal_ids.size(), 5)
 	assert_true(preview.try_stop_play())
 	assert_eq(preview.play_floor_index(), 0)
 	assert_eq(preview.play_portal_ids.size(), 0)
