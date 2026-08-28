@@ -68,11 +68,10 @@ static func ticks_from_ms(duration_ms: int) -> int:
 		return 0
 	return (duration_ms * PHYSICS_TICKS_PER_SECOND_PLACEHOLDER + 999) / 1000
 
-## 占位胶囊尺寸（八分之一格），不是产品角色比例——那要等 D4 的美术规格表。
-## 改半径会连带改赛道布局、Shove 邻域、UseItem reach 与全部占用相交断言，
-## 所以这里也只留一份。
-const CAPSULE_RADIUS: int = Fixed.SCALE / 8
-const CAPSULE_HEIGHT: int = Fixed.SCALE / 8
+## 角色比例是 D4 的美术规格项，不是本文件的动作占位桩，所以数值住在
+## PlaceholderSpec。这里只保留对局侧的名字，避免调用方两处引用。
+const CAPSULE_RADIUS: int = PlaceholderSpec.CHARACTER_RADIUS
+const CAPSULE_HEIGHT: int = PlaceholderSpec.CHARACTER_HEIGHT
 
 
 ## 套用 MATCH 组并打开开发桩出界 AABB。对局进程、BotRunner 与任何直接持有

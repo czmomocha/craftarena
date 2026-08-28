@@ -17,8 +17,8 @@ const MatchSnapshotFollowGd := preload("res://src/client/match_snapshot_follow.g
 const TraprushTopologyCompilerGd := preload("res://src/ugc/traprush_topology_compiler.gd")
 
 const HAZARD_PREFIX: String = "hazard_"
-const PLACEHOLDER_SIZE: Vector3 = Vector3(1.0, 1.0, 1.0)
-const HAZARD_ALBEDO: Color = Color(0.82, 0.18, 0.48)
+const PLACEHOLDER_SIZE: Vector3 = PlaceholderSpec.BOX_SIZE
+const HAZARD_ALBEDO: Color = PlaceholderSpec.HAZARD_ALBEDO
 
 var _has_course: bool = false
 var _cell: int = 0

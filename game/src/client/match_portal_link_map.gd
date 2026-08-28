@@ -21,8 +21,6 @@ const DANGLE_PREFIX: String = "portal_dangle_"
 const LINK_THICKNESS: float = 0.08
 const DIR_SIZE: Vector3 = Vector3(0.2, 0.2, 0.2)
 const _MIN_LINK_LEN: float = 0.001
-const _TWO_WAY_ALBEDO: Color = Color(0.2, 0.75, 0.95)
-const _ONE_WAY_ALBEDO: Color = Color(0.95, 0.55, 0.15)
 
 var _link_count: int = 0
 var _direction_count: int = 0
@@ -180,9 +178,9 @@ func _spawn_link(bag: Dictionary) -> void:
 	var length: float = delta.length()
 	if length < _MIN_LINK_LEN:
 		return
-	var color: Color = _TWO_WAY_ALBEDO
+	var color: Color = PlaceholderSpec.PORTAL_TWO_WAY_ALBEDO
 	if kind == AuthoringPortalKindsGd.ONE_WAY:
-		color = _ONE_WAY_ALBEDO
+		color = PlaceholderSpec.PORTAL_ONE_WAY_ALBEDO
 	var mesh: BoxMesh = BoxMesh.new()
 	mesh.size = Vector3(LINK_THICKNESS, LINK_THICKNESS, length)
 	mesh.material = _unshaded(color)
@@ -202,7 +200,7 @@ func _spawn_link(bag: Dictionary) -> void:
 func _spawn_direction(entity_id: int, from: Vector3, to: Vector3) -> void:
 	var mesh: BoxMesh = BoxMesh.new()
 	mesh.size = DIR_SIZE
-	mesh.material = _unshaded(_ONE_WAY_ALBEDO)
+	mesh.material = _unshaded(PlaceholderSpec.PORTAL_ONE_WAY_ALBEDO)
 	var node: MeshInstance3D = MeshInstance3D.new()
 	node.name = direction_name(entity_id)
 	node.mesh = mesh

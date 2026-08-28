@@ -589,7 +589,7 @@ cell = Fixed.SCALE 与由其推导的一切 cell/2 占用半长
 | CD-21 §5.3 / §6 | 道具与机关最小集按 D5 从"候选"转"已锁一期最小集" | D5 |
 | CD-31 §5 | `GameplayAssetVersion` 四项分离的实现落点 | C4 |
 | CD-33 | 若碰撞分离触及 SimulationBundle Schema，标注 P4 与人类门禁 | C4 |
-| CD-41 §5 | 增设「当前生效值」节；巨行拆解 | C5 |
+| CD-41 §5 | 增设「当前生效值」节；巨行拆解；`shared/` 的一句话说明补上「spec」——`game/src/shared/placeholder_spec.gd` 是 D4 数值此后唯一的落点（C4 第 1 章新增，未建新目录，故不在本批改所有者文档） | C5 / C4 |
 | CD-42 | SimulationBundle 因碰撞分离产生的 Schema 变更（P4，需事前批准） | C4 |
 | CD-43 §2 | 测试远端允许明文 `http`/`ws`；「明文只许本机」改为「测试机明文 / 公开 TLS」。**本决策已于 2026-08-27 先写入 CD-43 实现落点与 CD-91**（安全边界变化，宪法第十八条，不等 C5） | D11 |
 | CD-43 §4 | Tick / 快照 / 插值 / 对账阈值从"未锁定"改为实测值 | C3 |
@@ -634,5 +634,5 @@ cell = Fixed.SCALE 与由其推导的一切 cell/2 占用半长
 | C1 真机与真网络 | 第 1、2 章已合入；B 段部署、双机与 §12 数字 **人类已于 2026-08-27 采、已回填** | 导出预设 + 包内核查 + compose + `server-deploy.md` + 客户端 `--server=` + [§12 表](../runbooks/server-deploy.md#12-本批必须回填的结论)。结论：近端 ICMP 未证伪快照/插值桩；7 局空转证实 CPU 先于内存。不写死 IP/域名，不配 Let's Encrypt。日常更新脚本 [`craftarena-compose.sh`](../../infra/compose/craftarena-compose.sh)（手册 [§4.1](../runbooks/server-deploy.md#41-日常更新测试机)）。24h ICMP **步骤**见 [§8.1](../runbooks/server-deploy.md#81-24-小时-icmpc1-产出-6步骤在此补齐)；人类 2026-08-28 **进行中**，数字未回填。协议层 RTT 闭环见 C3 第 6 章；远端样本见 [§13](../runbooks/server-deploy.md#13-协议层-rttc3)，**仍未填**（测试机须重建到含 ping/pong 的 main） |
 | C2 度量与自动可玩性 | 第 1、2 章已合入 | 第 1 章：走路可达探针 + 占位桩收敛。第 2 章：`tests/integration/` 与 `tests/replay/` 真实用例 + CI 收集、CD-53 §4.2–§4.4 状态列、[返工率首份数据](../audits/2026-08-27-ai-rework-rate.md)。不做 Node 包装、不把 `--bot-run` 接进 CI |
 | C3 核心玩法前提 | 第 1–8 章（第 8 章进行中） | 第 1 章：权威重力积分（`TraprushGravity`）+ 跳跃冲量弧 + 落地归零 `vy` + `hash_state` 含 `vy` + 灰盒磁带回放。第 2 章：三张官方课必经路铺始终固体；`course_01` 上层偏到 `z=-3*CELL`；`course_03` 箱子旁绕行立足面；走路上不掉、走下路面才复位。第 3 章：服务端裁决的爆破球拾取/使用与冲刺位移；伪造命中被拒；`SprintIntent` `intent_id=6`；v1 `pickups` 袋。第 4 章：固体半周期占用重叠才命中；注入击退后仍重叠则环境失败复位；出界复位写入同一硬直桩；不读 Authoring damage/knockback。第 5 章：改默认课 `course_01`（不加第 4 张课）：+X 五步仍是危险捷径；从 CP1 向 +Z 走更长安全路，经侧向 two_way 与 one_way 上楼汇合；走下路面下落复位。诚实边界：±8 格 + 冻结 `play_move_step` 下干净完赛做不到 90 秒墙钟。第 6 章：v1 ping/pong（type 3/4）原样回显；在线对局采样协议层 RTT；不改快照/心跳/插值桩。第 7 章：探针 `forbid_portal_ids` + `--route=safe` 封掉 course_01 entity 10，证明安全路可完成；默认 `--bot-run` 仍走捷径。第 8 章：D5 复活硬直 **1.0 s** 接到对局 / Solo（占位 60 physics tick/s → 60 tick）；Preview 仍 1 次 Advance；不锁 Tick Hz、不改快照协议。D10 非正式试玩：色块阶段不签署「好玩」；脑补后认为可玩、值得期待。网络参数锁定仍待 24h ICMP 或远端协议层样本。**不得**用 2026-08-27 的 ~3ms ICMP 样本锁定 Tick / 快照 / 插值 |
-| C4 资产契约与美术规格 | 未开工 | D4 主数值已拍（字体已补答）；BASTION 色板不阻塞 |
+| C4 资产契约与美术规格 | 第 1 章进行中 | D4 主数值已拍（字体已补答）；BASTION 色板不阻塞。第 1 章：占位几何与色板收敛到 [`game/src/shared/placeholder_spec.gd`](../../game/src/shared/placeholder_spec.gd)——1 米占位盒、相机/灯光偏移、二十来个 albedo、`play_move_step` / `play_interp_step`、`CAPSULE_RADIUS/HEIGHT`、`SPAWN_STRIDE` 的字面量各只剩一处；13 个消费方改为读它；新增源码扫描用例挡住色值再次散落。**数值一个不改**，1076 个 GUT 用例全绿即验收。这是 E8 后半（占位常量收敛到单一配置源）的落点；D4 的相机 45° 与 UI 1920×1080 **接线**留后续章，因为那会改可见行为 |
 | C5 治理与里程碑重排 | 未开工 | 需 C1–C4 实测结论作输入 |

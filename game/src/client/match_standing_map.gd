@@ -18,10 +18,6 @@ const TraprushStandingGd := preload("res://src/games/traprush/standing.gd")
 const MARK_PREFIX: String = "standing_mark_"
 const OWN_MARK_PREFIX: String = "*"
 const STANDING_LIFT: float = 1.35
-const _FINISHED_ALBEDO: Color = Color(1.0, 0.85, 0.2)
-const _RUNNING_ALBEDO: Color = Color(0.85, 0.9, 1.0)
-const _OWN_OUTLINE: Color = Color(0.15, 0.85, 0.75)
-const _REMOTE_OUTLINE: Color = Color(0.0, 0.0, 0.0)
 
 var follow_slot: int = -1
 var _standing_count: int = 0
@@ -176,18 +172,18 @@ func _spawn_mark(slot: int, pose: Dictionary, row: Dictionary) -> void:
 	label.text = mark_text(row)
 	if follow_slot >= 0 and slot == follow_slot:
 		label.text = "%s%s" % [OWN_MARK_PREFIX, label.text]
-		label.outline_modulate = _OWN_OUTLINE
+		label.outline_modulate = PlaceholderSpec.STANDING_OWN_OUTLINE
 	else:
-		label.outline_modulate = _REMOTE_OUTLINE
+		label.outline_modulate = PlaceholderSpec.STANDING_REMOTE_OUTLINE
 	label.font_size = 64
 	label.pixel_size = 0.02
 	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
 	label.outline_size = 12
 	var finished: bool = row.get("finished", false)
 	if finished:
-		label.modulate = _FINISHED_ALBEDO
+		label.modulate = PlaceholderSpec.STANDING_FINISHED_ALBEDO
 	else:
-		label.modulate = _RUNNING_ALBEDO
+		label.modulate = PlaceholderSpec.STANDING_RUNNING_ALBEDO
 	label.position = Vector3(
 		meters_from_fixed(x),
 		meters_from_fixed(y) + STANDING_LIFT,

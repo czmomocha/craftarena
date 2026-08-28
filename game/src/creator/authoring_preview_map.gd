@@ -6,7 +6,9 @@ extends Node3D
 ## One 1×1×1 m BoxMesh per entity with transform; portal_link, checkpoint-order,
 ## finish Label3D, and reachability-issue gizmos. Hazard entities use HAZARD_ALBEDO. Solid
 ## zone tags use SOLID_ALBEDO. Finish zone tags use FINISH_ALBEDO and a "finish" mark.
-## Destructible entities use CRATE_ALBEDO.
+## Destructible entities use CRATE_ALBEDO. Box size, camera offset, and every
+## colour come from PlaceholderSpec, the same source the match maps read, so
+## Preview and a live match cannot drift into two palettes.
 ## During Preview play, non-solid period hazards
 ## are hidden. Always-solid placeholders stay visible. Preview play draws the
 ## sim player pose as a presentation stub and marks accepted checkpoint labels
@@ -26,7 +28,7 @@ const FINISH_PREFIX: String = "finish_mark_"
 const SEQUENCE_PREFIX: String = "checkpoint_seq_"
 const REACH_MARK_PREFIX: String = "reach_mark_"
 const REACH_SEG_PREFIX: String = "reach_seg_"
-const PLACEHOLDER_SIZE: Vector3 = Vector3(1.0, 1.0, 1.0)
+const PLACEHOLDER_SIZE: Vector3 = PlaceholderSpec.BOX_SIZE
 const LINK_THICKNESS: float = 0.08
 const DANGLE_SIZE: Vector3 = Vector3(0.35, 0.35, 0.35)
 const DIR_SIZE: Vector3 = Vector3(0.2, 0.2, 0.2)
@@ -37,20 +39,10 @@ const SEQUENCE_LIFT: float = 0.25
 const REACH_LIFT: float = 1.7
 const REACH_SEG_LIFT: float = 0.45
 const _MIN_LINK_LEN: float = 0.001
-const _CAMERA_POS: Vector3 = Vector3(6.0, 8.0, 6.0)
-const _LIGHT_ROT_DEG: Vector3 = Vector3(-50.0, -30.0, 0.0)
-const _STUB_ALBEDO: Color = Color(0.85, 0.7, 0.25)
-const HAZARD_ALBEDO: Color = Color(0.82, 0.18, 0.48)
-const SOLID_ALBEDO: Color = Color(0.52, 0.48, 0.42)
-const FINISH_ALBEDO: Color = Color(0.95, 0.82, 0.2)
-const CRATE_ALBEDO: Color = Color(0.85, 0.4, 0.25)
-const _PLAYER_ALBEDO: Color = Color(0.2, 0.45, 0.95)
-const _TWO_WAY_ALBEDO: Color = Color(0.2, 0.75, 0.95)
-const _ONE_WAY_ALBEDO: Color = Color(0.95, 0.55, 0.15)
-const _DANGLE_ALBEDO: Color = Color(0.9, 0.25, 0.35)
-const _CHECKPOINT_ALBEDO: Color = Color(0.35, 0.9, 0.4)
-const _CHECKPOINT_DUP_ALBEDO: Color = Color(0.95, 0.3, 0.85)
-const _REACH_ALBEDO: Color = Color(1.0, 0.82, 0.2)
+const HAZARD_ALBEDO: Color = PlaceholderSpec.HAZARD_ALBEDO
+const SOLID_ALBEDO: Color = PlaceholderSpec.SOLID_ALBEDO
+const FINISH_ALBEDO: Color = PlaceholderSpec.FINISH_PENDING_ALBEDO
+const CRATE_ALBEDO: Color = PlaceholderSpec.CRATE_ALBEDO
 
 var _reach_ok: bool = true
 var _reach_issue_count: int = 0
@@ -153,7 +145,7 @@ func ensure_rig() -> void:
 	if camera == null:
 		camera = Camera3D.new()
 		camera.name = CAMERA_NAME
-		camera.position = _CAMERA_POS
+		camera.position = PlaceholderSpec.CAMERA_OFFSET
 		camera.current = true
 		add_child(camera)
 		if is_inside_tree():
@@ -162,7 +154,7 @@ func ensure_rig() -> void:
 	if light == null:
 		light = DirectionalLight3D.new()
 		light.name = LIGHT_NAME
-		light.rotation_degrees = _LIGHT_ROT_DEG
+		light.rotation_degrees = PlaceholderSpec.LIGHT_ROTATION_DEG
 		add_child(light)
 
 
@@ -201,7 +193,7 @@ func show_player_pose(pose: Dictionary) -> void:
 		yaw_bam = pose["yaw"]
 	var mesh: BoxMesh = BoxMesh.new()
 	mesh.size = PLACEHOLDER_SIZE
-	mesh.material = _unshaded(_PLAYER_ALBEDO)
+	mesh.material = _unshaded(PlaceholderSpec.PREVIEW_PLAYER_ALBEDO)
 	var node: MeshInstance3D = MeshInstance3D.new()
 	node.name = PLAYER_NAME
 	node.mesh = mesh
@@ -267,7 +259,7 @@ func focus_entity(entity_id: int) -> bool:
 	if camera == null:
 		return false
 	var target: Vector3 = placeholder.position
-	camera.position = target + _CAMERA_POS
+	camera.position = target + PlaceholderSpec.CAMERA_OFFSET
 	if camera.is_inside_tree():
 		var up: Vector3 = Vector3.UP
 		var look: Vector3 = target - camera.position
@@ -410,7 +402,7 @@ func _record_has_zone_tag(record: SharedComponentRecord, tag_name: String) -> bo
 
 
 func _spawn_placeholder(entity_id: int, pose: Dictionary, record: SharedComponentRecord) -> void:
-	var albedo: Color = _STUB_ALBEDO
+	var albedo: Color = PlaceholderSpec.ENTITY_STUB_ALBEDO
 	if record != null and record.components.has(SharedComponentNames.HAZARD):
 		albedo = HAZARD_ALBEDO
 	elif record != null and _record_has_solid_tag(record):
@@ -464,7 +456,7 @@ func _spawn_portal_gizmos(world: AuthoringWorld) -> void:
 func _spawn_dangle(source_id: int, from: Vector3) -> void:
 	var mesh: BoxMesh = BoxMesh.new()
 	mesh.size = DANGLE_SIZE
-	mesh.material = _unshaded(_DANGLE_ALBEDO)
+	mesh.material = _unshaded(PlaceholderSpec.PORTAL_DANGLE_ALBEDO)
 	var node: MeshInstance3D = MeshInstance3D.new()
 	node.name = dangle_name(source_id)
 	node.mesh = mesh
@@ -485,9 +477,9 @@ func _spawn_link(
 		return
 	var mesh: BoxMesh = BoxMesh.new()
 	mesh.size = Vector3(LINK_THICKNESS, LINK_THICKNESS, length)
-	var color: Color = _TWO_WAY_ALBEDO
+	var color: Color = PlaceholderSpec.PORTAL_TWO_WAY_ALBEDO
 	if kind == AuthoringPortalKinds.ONE_WAY:
-		color = _ONE_WAY_ALBEDO
+		color = PlaceholderSpec.PORTAL_ONE_WAY_ALBEDO
 	mesh.material = _unshaded(color)
 	var node: MeshInstance3D = MeshInstance3D.new()
 	node.name = link_name(source_id)
@@ -502,7 +494,7 @@ func _spawn_link(
 func _spawn_direction(source_id: int, from: Vector3, to: Vector3) -> void:
 	var mesh: BoxMesh = BoxMesh.new()
 	mesh.size = DIR_SIZE
-	mesh.material = _unshaded(_ONE_WAY_ALBEDO)
+	mesh.material = _unshaded(PlaceholderSpec.PORTAL_ONE_WAY_ALBEDO)
 	var node: MeshInstance3D = MeshInstance3D.new()
 	node.name = direction_name(source_id)
 	node.mesh = mesh
@@ -580,9 +572,9 @@ func _spawn_checkpoint_mark(entity_id: int, order: int, from: Vector3, duplicate
 	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
 	label.outline_size = 12
 	if duplicated:
-		label.modulate = _CHECKPOINT_DUP_ALBEDO
+		label.modulate = PlaceholderSpec.CHECKPOINT_DUP_ALBEDO
 	else:
-		label.modulate = _CHECKPOINT_ALBEDO
+		label.modulate = PlaceholderSpec.CHECKPOINT_ALBEDO
 	label.position = from + Vector3(0.0, CHECKPOINT_LIFT, 0.0)
 	add_child(label)
 
@@ -621,7 +613,7 @@ func _spawn_checkpoint_seq(from_id: int, to_id: int, from: Vector3, to: Vector3)
 		return
 	var mesh: BoxMesh = BoxMesh.new()
 	mesh.size = Vector3(LINK_THICKNESS, LINK_THICKNESS, length)
-	mesh.material = _unshaded(_CHECKPOINT_ALBEDO)
+	mesh.material = _unshaded(PlaceholderSpec.CHECKPOINT_ALBEDO)
 	var node: MeshInstance3D = MeshInstance3D.new()
 	node.name = sequence_name(from_id, to_id)
 	node.mesh = mesh
@@ -693,7 +685,7 @@ func _spawn_reach_mark(entity_id: int, code: String, from: Vector3) -> void:
 	label.pixel_size = 0.012
 	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
 	label.outline_size = 8
-	label.modulate = _REACH_ALBEDO
+	label.modulate = PlaceholderSpec.REACH_ALBEDO
 	label.position = from + Vector3(0.0, REACH_LIFT, 0.0)
 	add_child(label)
 
@@ -707,7 +699,7 @@ func _spawn_unreachable_seg(from_id: int, to_id: int, from: Vector3, to: Vector3
 		return
 	var mesh: BoxMesh = BoxMesh.new()
 	mesh.size = Vector3(LINK_THICKNESS, LINK_THICKNESS, length)
-	mesh.material = _unshaded(_REACH_ALBEDO)
+	mesh.material = _unshaded(PlaceholderSpec.REACH_ALBEDO)
 	var node: MeshInstance3D = MeshInstance3D.new()
 	node.name = unreachable_seg_name(from_id, to_id)
 	node.mesh = mesh

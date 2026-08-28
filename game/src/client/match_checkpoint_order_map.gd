@@ -19,8 +19,6 @@ const LINK_THICKNESS: float = 0.08
 const CHECKPOINT_LIFT: float = 1.15
 const SEQUENCE_LIFT: float = 0.25
 const _MIN_LINK_LEN: float = 0.001
-const _CHECKPOINT_ALBEDO: Color = Color(0.35, 0.9, 0.4)
-const _CHECKPOINT_DUP_ALBEDO: Color = Color(0.95, 0.3, 0.85)
 
 var _checkpoint_count: int = 0
 var _sequence_count: int = 0
@@ -209,9 +207,9 @@ func _spawn_checkpoint_mark(entity_id: int, order: int, from: Vector3, duplicate
 	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
 	label.outline_size = 12
 	if duplicated:
-		label.modulate = _CHECKPOINT_DUP_ALBEDO
+		label.modulate = PlaceholderSpec.CHECKPOINT_DUP_ALBEDO
 	else:
-		label.modulate = _CHECKPOINT_ALBEDO
+		label.modulate = PlaceholderSpec.CHECKPOINT_ALBEDO
 	label.position = from + Vector3(0.0, CHECKPOINT_LIFT, 0.0)
 	add_child(label)
 	_checkpoint_count += 1
@@ -226,7 +224,7 @@ func _spawn_checkpoint_seq(from_id: int, to_id: int, from: Vector3, to: Vector3)
 		return
 	var mesh: BoxMesh = BoxMesh.new()
 	mesh.size = Vector3(LINK_THICKNESS, LINK_THICKNESS, length)
-	mesh.material = _unshaded(_CHECKPOINT_ALBEDO)
+	mesh.material = _unshaded(PlaceholderSpec.CHECKPOINT_ALBEDO)
 	var node: MeshInstance3D = MeshInstance3D.new()
 	node.name = sequence_name(from_id, to_id)
 	node.mesh = mesh
