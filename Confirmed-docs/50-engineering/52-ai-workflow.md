@@ -110,6 +110,21 @@ AI 不得用"代码看起来正确"代替运行证据。
 
 决策来源见 [CD-91 D.6](../90-reference/91-decision-log.md) `chapter_device_check = numbered_runbook_and_pr`。
 
+### 3.3 「CI 绿」只能按 run 的最终结论写
+
+PR 正文与任务单里写「CI 绿」之前，必须核对每个 job 的最终 `conclusion` 是 `success`。合并当刻 `gh pr checks` 显示的 `pending` **不是**通过。
+
+超时被终止的 job 结论是 `cancelled` 而不是 `failure`：它在 PR 页面上是灰点而不是红叉，视觉上更接近「还在排队」。2026-08-28 的 [门禁失守记录](../../docs/audits/2026-08-28-ci-gate-timeout.md) 里，五个 PR 就是这样带着从未跑完的 Godot 门禁合入 `main` 的。
+
+```powershell
+$j = (gh run view <run-id> --json jobs | Out-String) | ConvertFrom-Json
+$j.jobs | ForEach-Object { "$($_.name)  $($_.conclusion)" }
+```
+
+`cancelled`、`skipped`、`neutral` 都不是通过。把它们写成「CI 绿」违反宪法第二十四条。
+
+决策来源见 [CD-91 D.6](../90-reference/91-decision-log.md) `ci_green_claim = job_conclusion_success`。
+
 ## 4. AI 使用规则
 
 1. 先读项目现有代码，再生成代码；

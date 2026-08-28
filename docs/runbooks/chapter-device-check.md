@@ -53,39 +53,42 @@ Worktree 端口偏移见 README「并行工作区」；本文件不复述端口�
 
 ---
 
-## 本刀：纠偏 C3 第 8 章 — 环境失败硬直 1.0 s
+## 本刀：`[freeze-exception]` — 恢复 CI 的 Godot 门禁
 
-对应：当前完整章节 PR。这一章把 D5 已选的 **1.0 秒**接到对局 / Solo 权威复位（出界、踩实心机关）。不锁 Tick Hz，不改快照协议，不加 HUD 字段。
+对应：当前完整章节 PR。**本章无开发机可见行为**：只改了五处测试传参、CI 工作流与四份文档，产品代码一行没动。
 
-**不需要三后端。** Solo 即可。
+不必打开窗口。要复验的是「测试跑得完」和「以后跑不完会变红」，两件事都在命令行里：
 
-### 1. 走下路面：约一秒不能动
+### 1. 全量 GUT 能跑完
 
-按上面共用启动 **0.2**（不需要 0.1）。点 **Solo play**。
+仓库根，检出本 PR 分支后：
 
-1. 从出生点向石色路**侧面**走，走下立足面掉进坑，应闪回最近检查点。
-2. 预期：闪回后大约 **1 秒**内 WASD / 空格 / Q / Shift 带不走胶囊（R 复位仍可发）。约 1 秒后又能走。失败：闪回后立刻能冲；或卡住远超过两秒。
+```powershell
+& $env:GODOT4_CONSOLE --headless --path game -s res://addons/gut/gut_cmdln.gd -gdir=res://tests/unit,res://tests/integration,res://tests/replay -gexit
+```
 
-### 2. 踩实心机关
+1. 预期：**几分钟内**打印 `All tests passed!` 并退出，退出码 0。失败：某个脚本停在那里不动超过十分钟——那说明还有同类问题没找干净。
+2. 对照：在 `main` 上跑同一条命令，`test_authoring_preview_play.gd` 会停住不动（那是本章要修的症状，不是你的机器坏了）。想跳过对照可以，但别把「main 上也这样」当成正常。
 
-同一局，走到出生点 −Z 两格洋红盒，固体半周期踩上。
+### 2. PR 的 CI 这次真的是 success
 
-1. 预期：击退/闪回出生点后，同样大约 1 秒不能走。失败：踩实心毫无反应；或硬直仍像一帧那么短。
+在 PR 页面等 CI 跑完，然后核对**最终结论**而不是合并当刻的 `pending`：
 
-### 3. Preview 仍是点一下
+```powershell
+$j = (gh run view <run-id> --json jobs | Out-String) | ConvertFrom-Json
+$j.jobs | ForEach-Object { "$($_.name)  $($_.conclusion)" }
+```
 
-打开编辑器 Preview，摆一个检查点，Play，Advance 掉出或踩机关后硬直。
-
-1. 预期：**再点一次 Advance** 就能动，不必点 60 下。失败：Preview 也要墙钟 1 秒或点几十下。
+1. 预期：两个 job 都是 `success`；`Godot check-only and GUT` 的耗时明显低于 15 分钟。失败：出现 `cancelled` —— 那正是 PR #176 起一直发生、却被读成「还在跑」的那种状态。
+2. 在 job 日志里找 `Report slowest test scripts` 这一步，应打印最慢的 10 个测试脚本与总时长。这是以后发现「某个脚本正在慢慢变慢」的唯一信号。
 
 ### 本刀不测
 
-- 24 小时 ICMP 与远端协议层百分位回填；
-- 改 `SNAPSHOT_EVERY_TICKS` / 插值窗口；
-- 在线快照里出现 stun 字段（协议不改；线上可能每拍硬贴回检查点）；
-- 把 D10 写成「已经好玩」。
+- 给 `SimulationWorld._sweep_step_count` 加取样上限（会动权威碰撞落点与状态哈希，另立深审章）；
+- 任何玩法、表现或数值变化（本章一处都没有）；
+- `main` 分支保护为何仍允许这五次合并（需要人类核对 GitHub 设置，不是本章能改的）。
 
 ### 仍然欠着（不因本章消失）
 
-24 小时 ICMP 回填、远端协议层 RTT 回填、C3 网络参数锁定、E6 在有美术之后的可玩性签署。
+24 小时 ICMP 回填、远端协议层 RTT 回填、C3 网络参数锁定、E6 在有美术之后的可玩性签署；扫掠取样代价无上限（宪法第十七条缺口）。
 

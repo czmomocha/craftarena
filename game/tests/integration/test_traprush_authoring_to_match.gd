@@ -65,7 +65,11 @@ func test_preview_compiles_advances_and_refuses_patches_until_stop() -> void:
 	var preview: AuthoringPreview = AuthoringPreview.new()
 	assert_true(preview.connect_from(session))
 	assert_true(preview.is_safe_point())
-	assert_true(preview.try_start_play(1, 1, 1))
+	# 真实角色尺寸。半径决定竖直扫掠的取样密度，写 1 会把这条跑成十几分钟，
+	# 见 docs/audits/2026-08-28-ci-gate-timeout.md。
+	assert_true(preview.try_start_play(
+		1, TraprushPlayStubs.CAPSULE_RADIUS, TraprushPlayStubs.CAPSULE_HEIGHT
+	))
 	assert_true(preview.is_playing())
 	assert_false(preview.is_safe_point())
 	assert_eq(preview.play_world.tick_index, 0)
