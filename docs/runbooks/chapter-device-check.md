@@ -53,56 +53,52 @@ Worktree 端口偏移见 README「并行工作区」；本文件不复述端口�
 
 ---
 
-## 本刀：纠偏 C3 第 7 章 — BotRunner 证明 course_01 安全路可完成
+## 本刀：纠偏 C1 收尾 — 测试机日常更新脚本 + D5 硬直 1.0s 落文档
 
-对应：当前完整章节 PR。这一章闭合的是 G3 的自动一半：默认探针仍走 +X 捷径；`--route=safe` 封掉 entity 10 之后仍 `completable`，步数明显更多。不是锁定 Tick / 快照 / 插值，也不是 D10 人类「好不好玩」签字（那一步你自己玩完再写）。
+对应：当前完整章节 PR。这一章闭合的是：VPS 上一条可重复的关服 / 拉 `main` / 重建 / 等就绪；以及人类已选的复活硬直 **1.0 s** 写进纠偏 D5 / CD-91 / CD-63。不是实现 1 秒硬直，也不是代填 ICMP / 协议层数字。
 
-**不需要三后端。** Headless `--bot-run` 与 Solo 窗口即可。
+**无开发机 GUI。** 不需要 `npm run dev`，也不要为了验收去停 24h ICMP。
 
-### 1. 默认探针仍走捷径
+Windows 上用 Git Bash（或测试机 Linux）。仓库根：
 
-仓库根：
+### 1. 脚本用法与禁止项
 
-```powershell
-& $env:GODOT4_CONSOLE --headless --path game -- --bot-run --course=course_01
+```bash
+bash infra/compose/craftarena-compose.sh
+bash -n infra/compose/craftarena-compose.sh
 ```
 
-1. 预期：一行 `event=bot_run_course`，`outcome=completable`，`route=any`，`steps` 是个位数（通常 5），`forbid_portals` 为空数组。最后一行 `event=bot_run_summary` 且 `ok=true`，进程 exit 0。
-2. 失败：`not_completable`；或 `steps` 已经二十以上（默认不该去走安全路）；或进程非 0。
+1. 预期：无参数打印 `Usage`，退出码非 0；`bash -n` 无输出、退出 0。正文有 `update` / `down`。打开脚本，作为命令执行的只有 `compose down`，没有 `down -v`。
+2. 失败：无参数却去拉起容器；或脚本里能一键 `down -v`。
 
-### 2. 封掉捷径传送门后仍能走通
+### 2. 有测试机时（可选，不要打断 ICMP）
 
-```powershell
-& $env:GODOT4_CONSOLE --headless --path game -- --bot-run --course=course_01 --route=safe
+SSH 到测试机，仓库根：
+
+```bash
+bash infra/compose/craftarena-compose.sh status
 ```
 
-这一条重放 C3 第 5 章那条四向安全路（约三十步），不是现场 A*。开发机通常几十秒内结束。不要用默认 3000 tick 预算去跑它。
+1. 预期：打印 `git:` 一行和三个 compose 服务。本刀**不要求**跑 `update`（会杀掉进行中的对局；不影响本机 ping，但不必为验收去做）。
+2. 失败：`GODOT_SHA512 empty` 却还继续 build；或 `down` 带了 `-v`。
 
-1. 预期：`outcome=completable`，`route=safe`，`forbid_portals` 含 `10`，`steps` **明显大于**第 1 步（至少二十）。exit 0。
-2. 失败：`budget_exhausted` / `search_exhausted`；或 `steps` 仍是个位数（说明没封住捷径）；或对 `course_02` 带 `--route=safe` 却绿了（应 exit 1）。
+采协议层 RTT 时再按 [`server-deploy.md` §4.1](server-deploy.md#41-日常更新测试机) 与 §13.2：先 `update`，两边客户端也要新代码。
 
-可选对照：`--bot-run --course=course_02 --route=safe` 应立刻 `error=safe_route_requires_course_01` 并 exit 1，不必等搜索。
+### 3. D5 文档（无真机）
 
-### 3. Solo：人走两条路（给 D10 用，本章不代签）
+打开 [纠偏方案 D5](../plans/course-correction-2026-08.md)「你的决定」：道具 A，复活硬直 **1.0 s**。CD-91 D.3 有 `traprush_respawn_stun = 1_second`。
 
-按上面共用启动 **0.2**（不需要 0.1）。点 **Solo play**。
-
-1. 捷径：从出生点连按 W（+X）约五格，应上楼并冲线。预期：石色窄路两侧是坑；状态行 `finish=` 有值。失败：掉下去回出生点却没走偏；或五格后没冲线。
-2. Cancel 再 Solo。安全路：先 W 两格到检查点 1，再按 S（+Z）走进更长走廊，经侧向传送到左侧区块，再上楼与捷径汇合后冲线。预期：步数明显多于捷径；走下石路会下落并闪回检查点。失败：走廊走到一半无故复位；或侧向门不落地。
-3. 道具：出生点已拾爆破球与冲刺。面对出生点箱子按 Q，箱应消失。按 Left Shift 或点 **Sprint**，应沿朝向冲一格且不穿固体。失败：Q 无反应；或冲刺穿墙。
-4. 机关：走到出生点 −Z 两格洋红盒，固体半周期踩上应被击退/复位。失败：踩实心洋红盒毫无反应。
-
-本步没有「必须觉得好玩」的预期。D10 是你（加 2–3 名熟人）事后给的非正式结论，AI 不得代填。
+1. 预期：三处一致。`game/src` 里硬直仍是 1 tick 桩，本刀不改。
+2. 失败：文档写了 1.0 s 但 PR 把 `RESPAWN_STUN_TICKS` 改成产品值（那是下一章）。
 
 ### 本刀不测
 
-- 24 小时 ICMP（[`server-deploy.md`](server-deploy.md) §8.1）；
-- 远端双机协议层 P50/P90（同手册 §13.2）；
-- 改快照频率或插值窗口；
-- 0.5 / 1.0 / 1.5 秒产品硬直；
-- `--bot-run` 进 CI。
+- 24 小时 ICMP 的数字（[`server-deploy.md`](server-deploy.md) §8.1，进行中则让它跑完）；
+- 远端双机协议层 P50/P90（同手册 §13.2，要先 `update` 再进场）；
+- 1.0 s 硬直手感；
+- `docker compose down -v`。
 
 ### 仍然欠着（不因本章消失）
 
-D5 复活硬直（候选已写在纠偏方案 D5，待人类选）、24 小时 ICMP 执行与回填、远端协议层 RTT 回填、C3 网络参数锁定、D10 首次可玩性结论。
+1.0 s 硬直接线、24 小时 ICMP 回填、远端协议层 RTT 回填、C3 网络参数锁定、D10 首次可玩性结论。
 

@@ -152,7 +152,7 @@ DevLauncher 只管本地开发编排，不做守护、重启和资源限制；�
 
 ### 远端测试环境（Docker Compose）
 
-产物在 `infra/compose/`，逐步操作、基线采集与云上差异见[远端部署手册](docs/runbooks/server-deploy.md)。命令在测试机的 `infra/compose/` 目录下执行：
+产物在 `infra/compose/`，逐步操作、基线采集与云上差异见[远端部署手册](docs/runbooks/server-deploy.md)。手打 `docker compose` 在测试机的 `infra/compose/` 下执行；日常更新从**仓库根**跑脚本（见下表最后一行）：
 
 | 用途 | 命令 |
 |---|---|
@@ -160,7 +160,8 @@ DevLauncher 只管本地开发编排，不做守护、重启和资源限制；�
 | 拉起三服务 | `docker compose up -d` |
 | 看状态与健康 | `docker compose ps` |
 | 跟日志 | `docker compose logs -f` |
-| 停止并清理 | `docker compose down` |
+| 停止并清理 | `docker compose down`（**不要**加 `-v`，会丢掉 SQLite） |
+| 日常更新（拉 main、重建、等就绪） | 仓库根：`bash infra/compose/craftarena-compose.sh update`（手册 [§4.1](docs/runbooks/server-deploy.md#41-日常更新测试机)） |
 
 `match-host` 不发布任何端口，只在 compose 内网被网关访问；对外只开控制面与网关两个端口。测试期传输是明文 `http` / `ws`（人类 2026-08-27 拍板 D11，[CD-62](Confirmed-docs/60-plan/62-risk-register.md) 已登记），**不是产品形态**。
 
