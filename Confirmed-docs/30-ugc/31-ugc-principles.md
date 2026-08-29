@@ -58,6 +58,10 @@
 - 碰撞、占地、导航和挂点属于不可变 `GameplayAssetVersion`；
 - GameplayAsset 变化必须生成新内容版本，不能伪装成运行中 P0/P1 补丁。
 
+实现落点（[ADR-0006](../../docs/adr/0006-gameplay-asset-contract.md)，2026-08-29 拍板）：平台内置资产清单在 `game/src/shared/schema/gameplay_asset_catalog.gd`；创作者只能用 `gameplay_asset` 组件引用清单里的 `asset_id`，**不能自填尺寸**；权威碰撞随内容发布写进 SimulationBundle 的 `assets` 袋，所以已发布内容与旧回放按各自发布时的形状裁决。目录改几何时旧内容重编译失败，必须走新内容版本——这是本节第三条的机械保障。
+
+一期边界：占地由权威碰撞的 AABB 在格网上投影**派生**，不是独立字段；挂点只留字段位、仿真不消费；**不含导航**（无导航网格、无寻路），解冻 BASTION 时重开。视觉网格不进 bundle，客户端按 `asset_id` 解析 `latest`，所以改视觉不产生新内容版本。一期 bundle 尚未签名，"不可变"目前靠字段与编译期准入，不是密码学不可变。
+
 ## 6. Schema 与规则兼容
 
 - 编辑器支持当前 Schema 和前两个版本自动迁移；

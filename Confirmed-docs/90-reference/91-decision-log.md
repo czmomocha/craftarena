@@ -52,7 +52,7 @@
 - `collaborative_editing = single_editor_fork`：单写者；他人可只读或复制私有草稿；设备租约互斥。
 - `ugc_forking = never_allowed`。
 - `ugc_withdrawal = hard_delete`；`hard_delete_audit_exception = minimal_tombstone`。
-- `asset_versioning = latest_alias`，后由 `asset_latest_gameplay_boundary = visual_latest_gameplay_immutable` 限定：仅视觉/音效自动 latest。
+- `asset_versioning = latest_alias`，后由 `asset_latest_gameplay_boundary = visual_latest_gameplay_immutable` 限定：仅视觉/音效自动 latest。该句被 `gameplay_asset_contract = catalog_reference_plus_bundle_geometry`（2026-08-29，[ADR-0006](../../docs/adr/0006-gameplay-asset-contract.md) 整包采纳推荐 Q1=B / Q2=A / Q3=A / Q4=A / Q5=A / Q6=A）落实为可执行形状：新增第 19 个组件 `gameplay_asset`（只含 `asset_id` + `gameplay_version`，创作者**不能自填尺寸**）；平台内置资产清单在 `game/src/shared/schema/gameplay_asset_catalog.gd`，编译期要求 id 已登记且版本为当前版本，所以目录改几何会让旧内容重编译失败、必须发新内容版本；SimulationBundle 升 v2（P4，宪法第十八条人类门禁），新增 `assets` 袋携带权威碰撞与挂点，每个占用袋带资产引用，已发布内容与旧回放按各自发布时的形状裁决；`TraprushTopologyLoader` 的 `half = cell / 2` 退场，半长来自 `assets`，只接受 `box`（sphere/capsule/platform_prefab 在 Schema 白名单内但无权威静态实现，直接拒）；`zone.shape` 回归"触发与查询区域"，此前它被校验却被编译期丢弃。占地由碰撞 AABB 派生、挂点只留字段位、视觉网格不进 bundle、一期不含导航。v1 仍解码并迁移到内置"占满一格"资产，占用逐字节不变（任意 `cell`）。一期 bundle 未签名，"不可变"靠字段与编译期准入，不是密码学不可变。数字与字段只在 [CD-42 §1.2 / §1.3](../40-technical/42-contracts-and-rulevm.md) 与 [CD-31 §5](../30-ugc/31-ugc-principles.md) 维护。
 - `ugc_data_format = json_source_binary_bundle`。
 - `schema_compatibility = current_plus_two`。
 - `rule_vm_compatibility = versioned_semantics`。

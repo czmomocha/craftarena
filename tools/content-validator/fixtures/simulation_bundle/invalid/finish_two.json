@@ -1,7 +1,20 @@
 {
-	"schema_version": 1,
+	"schema_version": 2,
 	"cell": 65536,
 	"source_revision": 0,
+	"assets": [
+		{
+			"asset_id": 1,
+			"gameplay_version": 1,
+			"collision": {
+				"kind": "box",
+				"hx": 32768,
+				"hy": 32768,
+				"hz": 32768
+			},
+			"attach_points": []
+		}
+	],
 	"pads": [],
 	"portals": [],
 	"finish": [
@@ -9,13 +22,17 @@
 			"entity_id": 30,
 			"x": 0,
 			"y": 0,
-			"z": 0
+			"z": 0,
+			"asset_id": 1,
+			"gameplay_version": 1
 		},
 		{
 			"entity_id": 31,
 			"x": 65536,
 			"y": 0,
-			"z": 0
+			"z": 0,
+			"asset_id": 1,
+			"gameplay_version": 1
 		}
 	],
 	"destructibles": [],

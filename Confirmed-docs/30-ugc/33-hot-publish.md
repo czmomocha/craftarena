@@ -19,6 +19,8 @@
 
 公开对局开局锁定不可变基础 `ContentHash`。P0/P1 **不覆盖**基础版本，而是形成不可变 `PatchHash` 序列；对局、结算和回放都记录基础哈希与按序应用的补丁。
 
+已发生的 P4：SimulationBundle v1 → v2（新增 `assets` 袋与每袋资产引用）与新组件 `gameplay_asset`，2026-08-29 经人类门禁（宪法第十八条）批准，记录见 [ADR-0006](../../docs/adr/0006-gameplay-asset-contract.md)。v1 内容仍可解码并迁移，符合 [CD-31 §6](31-ugc-principles.md) 的"当前与前两个版本"承诺。
+
 ## 2. 发布流水线
 
 ```text

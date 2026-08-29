@@ -12,33 +12,36 @@
 				"hy": 32768,
 				"hz": 32768
 			},
-			"attach_points": []
+			"attach_points": [
+				{
+					"name": "muzzle",
+					"dx": 0,
+					"dy": 0,
+					"dz": 0
+				},
+				{
+					"name": "muzzle",
+					"dx": 16384,
+					"dy": 0,
+					"dz": 0
+				}
+			]
 		}
 	],
 	"pads": [],
 	"portals": [],
 	"finish": [],
 	"destructibles": [],
-	"hazards": [
+	"hazards": [],
+	"solids": [
 		{
-			"entity_id": 50,
+			"entity_id": 70,
 			"x": 0,
-			"y": 0,
+			"y": -65536,
 			"z": 0,
-			"cooldown_ticks": 1,
-			"asset_id": 1,
-			"gameplay_version": 1
-		},
-		{
-			"entity_id": 50,
-			"x": 65536,
-			"y": 0,
-			"z": 0,
-			"cooldown_ticks": 2,
 			"asset_id": 1,
 			"gameplay_version": 1
 		}
 	],
-	"solids": [],
 	"pickups": []
 }

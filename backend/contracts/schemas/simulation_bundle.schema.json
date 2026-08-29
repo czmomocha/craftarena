@@ -2,13 +2,14 @@
 	"$schema": "https://json-schema.org/draft/2020-12/schema",
 	"$id": "https://craftarena.local/contracts/simulation_bundle.schema.json",
 	"title": "SimulationBundle",
-	"description": "v1 TRAPRUSH topology compile of AuthoringWorld. Field list owner: CD-42 §3.4. Pads, two_way/one_way portals, at most one finish occupancy bag, destructible occupancy bags, hazard occupancy bags (cooldown_ticks is the existing component field used as a half-period), always-solid occupancy bags (zone.tags includes solid), and pickup occupancy bags (inventory.item_state bomb/dash). Dangling portals are omitted. Not a signed binary, not a Rule VM graph.",
+	"description": "v2 TRAPRUSH topology compile of AuthoringWorld. Field list owner: CD-42 §3.4. Pads, two_way/one_way portals, at most one finish occupancy bag, destructible occupancy bags, hazard occupancy bags (cooldown_ticks is the existing component field used as a half-period), always-solid occupancy bags (zone.tags includes solid), and pickup occupancy bags (inventory.item_state bomb/dash). Dangling portals are omitted. v2 adds the assets bag and gives every occupancy bag an asset_id + gameplay_version reference into it (ADR-0006): the authoritative collision travels with the published content instead of being hardcoded as cell/2 in the loader. Assets are strictly ascending by asset_id and every entry must be referenced. Visual meshes and navigation are never in the bundle; footprint is derived from the collision AABB. v1 bodies are still decoded by game/src/ugc/simulation_bundle.gd and migrated to the built-in lattice-cell asset, but v1 is no longer a valid wire form. Not a signed binary, not a Rule VM graph.",
 	"type": "object",
 	"additionalProperties": false,
 	"required": [
 		"schema_version",
 		"cell",
 		"source_revision",
+		"assets",
 		"pads",
 		"portals",
 		"finish",
@@ -18,9 +19,13 @@
 		"pickups"
 	],
 	"properties": {
-		"schema_version": { "type": "integer", "const": 1 },
+		"schema_version": { "type": "integer", "const": 2 },
 		"cell": { "type": "integer", "minimum": 1 },
 		"source_revision": { "type": "integer", "minimum": 0 },
+		"assets": {
+			"type": "array",
+			"items": { "$ref": "#/$defs/asset" }
+		},
 		"pads": {
 			"type": "array",
 			"items": { "$ref": "#/$defs/pad" }
@@ -52,6 +57,37 @@
 		}
 	},
 	"$defs": {
+		"attach_point": {
+			"type": "object",
+			"additionalProperties": false,
+			"required": ["name", "dx", "dy", "dz"],
+			"properties": {
+				"name": { "type": "string", "minLength": 1 },
+				"dx": { "type": "integer" },
+				"dy": { "type": "integer" },
+				"dz": { "type": "integer" }
+			}
+		},
+		"asset": {
+			"description": "One platform GameplayAsset as it was published: immutable gameplay version plus the authoritative collision and attach points that decide play. Visual mesh is deliberately absent (the client resolves latest by asset_id, so changing visuals produces no new content version). Only box collision has an authoritative static implementation today; the other kinds stay whitelisted at the Schema level but are rejected by TraprushTopologyLoader.",
+			"type": "object",
+			"additionalProperties": false,
+			"required": [
+				"asset_id",
+				"gameplay_version",
+				"collision",
+				"attach_points"
+			],
+			"properties": {
+				"asset_id": { "type": "integer", "minimum": 1 },
+				"gameplay_version": { "type": "integer", "minimum": 1 },
+				"collision": { "$ref": "component_record.schema.json#/$defs/collision_shape" },
+				"attach_points": {
+					"type": "array",
+					"items": { "$ref": "#/$defs/attach_point" }
+				}
+			}
+		},
 		"pad": {
 			"type": "object",
 			"additionalProperties": false,
@@ -63,7 +99,9 @@
 				"order",
 				"respawn_dx",
 				"respawn_dy",
-				"respawn_dz"
+				"respawn_dz",
+				"asset_id",
+				"gameplay_version"
 			],
 			"properties": {
 				"entity_id": { "type": "integer", "minimum": 1 },
@@ -73,7 +111,9 @@
 				"order": { "type": "integer", "minimum": 0 },
 				"respawn_dx": { "type": "integer" },
 				"respawn_dy": { "type": "integer" },
-				"respawn_dz": { "type": "integer" }
+				"respawn_dz": { "type": "integer" },
+				"asset_id": { "type": "integer", "minimum": 1 },
+				"gameplay_version": { "type": "integer", "minimum": 1 }
 			}
 		},
 		"finish": {
@@ -83,13 +123,17 @@
 				"entity_id",
 				"x",
 				"y",
-				"z"
+				"z",
+				"asset_id",
+				"gameplay_version"
 			],
 			"properties": {
 				"entity_id": { "type": "integer", "minimum": 1 },
 				"x": { "type": "integer" },
 				"y": { "type": "integer" },
-				"z": { "type": "integer" }
+				"z": { "type": "integer" },
+				"asset_id": { "type": "integer", "minimum": 1 },
+				"gameplay_version": { "type": "integer", "minimum": 1 }
 			}
 		},
 		"destructible": {
@@ -100,14 +144,18 @@
 				"x",
 				"y",
 				"z",
-				"durability"
+				"durability",
+				"asset_id",
+				"gameplay_version"
 			],
 			"properties": {
 				"entity_id": { "type": "integer", "minimum": 1 },
 				"x": { "type": "integer" },
 				"y": { "type": "integer" },
 				"z": { "type": "integer" },
-				"durability": { "type": "integer", "minimum": 0 }
+				"durability": { "type": "integer", "minimum": 0 },
+				"asset_id": { "type": "integer", "minimum": 1 },
+				"gameplay_version": { "type": "integer", "minimum": 1 }
 			}
 		},
 		"hazard": {
@@ -118,14 +166,18 @@
 				"x",
 				"y",
 				"z",
-				"cooldown_ticks"
+				"cooldown_ticks",
+				"asset_id",
+				"gameplay_version"
 			],
 			"properties": {
 				"entity_id": { "type": "integer", "minimum": 1 },
 				"x": { "type": "integer" },
 				"y": { "type": "integer" },
 				"z": { "type": "integer" },
-				"cooldown_ticks": { "type": "integer", "minimum": 0 }
+				"cooldown_ticks": { "type": "integer", "minimum": 0 },
+				"asset_id": { "type": "integer", "minimum": 1 },
+				"gameplay_version": { "type": "integer", "minimum": 1 }
 			}
 		},
 		"solid": {
@@ -135,13 +187,17 @@
 				"entity_id",
 				"x",
 				"y",
-				"z"
+				"z",
+				"asset_id",
+				"gameplay_version"
 			],
 			"properties": {
 				"entity_id": { "type": "integer", "minimum": 1 },
 				"x": { "type": "integer" },
 				"y": { "type": "integer" },
-				"z": { "type": "integer" }
+				"z": { "type": "integer" },
+				"asset_id": { "type": "integer", "minimum": 1 },
+				"gameplay_version": { "type": "integer", "minimum": 1 }
 			}
 		},
 		"pickup": {
@@ -152,14 +208,18 @@
 				"x",
 				"y",
 				"z",
-				"kind"
+				"kind",
+				"asset_id",
+				"gameplay_version"
 			],
 			"properties": {
 				"entity_id": { "type": "integer", "minimum": 1 },
 				"x": { "type": "integer" },
 				"y": { "type": "integer" },
 				"z": { "type": "integer" },
-				"kind": { "type": "string", "enum": ["bomb", "dash"] }
+				"kind": { "type": "string", "enum": ["bomb", "dash"] },
+				"asset_id": { "type": "integer", "minimum": 1 },
+				"gameplay_version": { "type": "integer", "minimum": 1 }
 			}
 		},
 		"portal": {
@@ -175,7 +235,9 @@
 				"dest_x",
 				"dest_y",
 				"dest_z",
-				"dest_yaw_bam"
+				"dest_yaw_bam",
+				"asset_id",
+				"gameplay_version"
 			],
 			"properties": {
 				"entity_id": { "type": "integer", "minimum": 1 },
@@ -187,7 +249,9 @@
 				"dest_x": { "type": "integer" },
 				"dest_y": { "type": "integer" },
 				"dest_z": { "type": "integer" },
-				"dest_yaw_bam": { "type": "integer" }
+				"dest_yaw_bam": { "type": "integer" },
+				"asset_id": { "type": "integer", "minimum": 1 },
+				"gameplay_version": { "type": "integer", "minimum": 1 }
 			}
 		}
 	}
