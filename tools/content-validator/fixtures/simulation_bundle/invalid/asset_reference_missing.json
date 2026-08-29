@@ -16,22 +16,19 @@
 		}
 	],
 	"pads": [],
-	"portals": [
-		{
-			"entity_id": 2,
-			"target_id": 3,
-			"kind": "one_way",
-			"dest_x": 65536,
-			"dest_y": 0,
-			"dest_z": 0,
-			"dest_yaw_bam": 0,
-			"asset_id": 1,
-			"gameplay_version": 1
-		}
-	],
+	"portals": [],
 	"finish": [],
 	"destructibles": [],
 	"hazards": [],
-	"solids": [],
+	"solids": [
+		{
+			"entity_id": 70,
+			"x": 0,
+			"y": -65536,
+			"z": 0,
+			"asset_id": 9,
+			"gameplay_version": 1
+		}
+	],
 	"pickups": []
 }

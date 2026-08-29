@@ -818,6 +818,9 @@ static func without_portals(
 	var filtered: SimulationBundle = SimulationBundle.new()
 	filtered.cell = bundle.cell
 	filtered.source_revision = bundle.source_revision
+	# 资产表必须跟着复制：v2 起权威半长来自 `assets`，漏掉这一行会让过滤后的
+	# bundle 加载不出任何占用（ADR-0006）。封门不改资产，所以整表照搬。
+	filtered.assets = bundle.assets
 	filtered.pads = bundle.pads
 	filtered.finish = bundle.finish
 	filtered.destructibles = bundle.destructibles

@@ -112,6 +112,8 @@ static func _named_component_is_valid(component_name: String, body: Dictionary) 
 			return _tower_is_valid(body)
 		SharedComponentNames.REPLICATION:
 			return _replication_is_valid(body)
+		SharedComponentNames.GAMEPLAY_ASSET:
+			return _gameplay_asset_is_valid(body)
 		_:
 			return false
 
@@ -270,32 +272,19 @@ static func _replication_is_valid(body: Dictionary) -> bool:
 	return _exactly(body, PackedStringArray(["policy_id"])) and _int_at_least(body, "policy_id", 0)
 
 
+## 引用平台内置资产的不可变玩法版本。只校验形状与下界；`asset_id` 是否登记、
+## 版本是否是当前版本由编译期的 `SharedGameplayAssetCatalog` 把关（ADR-0006 Q5），
+## 因为 AuthoringWorld 允许存在草稿态的引用，而编译才是发布门禁。
+static func _gameplay_asset_is_valid(body: Dictionary) -> bool:
+	if not _exactly(body, PackedStringArray(["asset_id", "gameplay_version"])):
+		return false
+	return _int_at_least(body, "asset_id", 1) and _int_at_least(body, "gameplay_version", 1)
+
+
+## 形状校验的实现在 `SharedCollisionShapeKinds`：`zone.shape` 与资产表的权威碰撞
+## 必须用同一份 kind→字段对应关系（ADR-0006）。
 static func _shape_is_valid(shape: Dictionary) -> bool:
-	if not shape.has("kind") or typeof(shape["kind"]) != TYPE_STRING:
-		return false
-	var kind: String = shape["kind"]
-	if not SharedCollisionShapeKinds.contains(kind):
-		return false
-	match kind:
-		SharedCollisionShapeKinds.BOX:
-			return (
-				_exactly(shape, PackedStringArray(["kind", "hx", "hy", "hz"]))
-				and _is_int_field(shape, "hx")
-				and _is_int_field(shape, "hy")
-				and _is_int_field(shape, "hz")
-			)
-		SharedCollisionShapeKinds.SPHERE:
-			return _exactly(shape, PackedStringArray(["kind", "radius"])) and _is_int_field(shape, "radius")
-		SharedCollisionShapeKinds.CAPSULE:
-			return (
-				_exactly(shape, PackedStringArray(["kind", "radius", "cylinder_height"]))
-				and _is_int_field(shape, "radius")
-				and _is_int_field(shape, "cylinder_height")
-			)
-		SharedCollisionShapeKinds.PLATFORM_PREFAB:
-			return _exactly(shape, PackedStringArray(["kind", "prefab_id"])) and _int_at_least(shape, "prefab_id", 1)
-		_:
-			return false
+	return SharedCollisionShapeKinds.shape_is_valid(shape)
 
 
 static func _exactly(source: Dictionary, keys: PackedStringArray) -> bool:

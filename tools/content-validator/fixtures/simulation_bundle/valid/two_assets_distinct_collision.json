@@ -1,7 +1,7 @@
 {
 	"schema_version": 2,
 	"cell": 65536,
-	"source_revision": 0,
+	"source_revision": 3,
 	"assets": [
 		{
 			"asset_id": 1,
@@ -13,32 +13,48 @@
 				"hz": 32768
 			},
 			"attach_points": []
+		},
+		{
+			"asset_id": 7,
+			"gameplay_version": 4,
+			"collision": {
+				"kind": "box",
+				"hx": 16384,
+				"hy": 32768,
+				"hz": 16384
+			},
+			"attach_points": [
+				{
+					"name": "muzzle",
+					"dx": 0,
+					"dy": 32768,
+					"dz": -16384
+				}
+			]
 		}
 	],
 	"pads": [],
 	"portals": [],
 	"finish": [],
 	"destructibles": [],
-	"hazards": [
+	"hazards": [],
+	"solids": [
 		{
-			"entity_id": 50,
+			"entity_id": 70,
 			"x": 0,
-			"y": 0,
+			"y": -65536,
 			"z": 0,
-			"cooldown_ticks": 1,
 			"asset_id": 1,
 			"gameplay_version": 1
 		},
 		{
-			"entity_id": 50,
+			"entity_id": 71,
 			"x": 65536,
 			"y": 0,
 			"z": 0,
-			"cooldown_ticks": 2,
-			"asset_id": 1,
-			"gameplay_version": 1
+			"asset_id": 7,
+			"gameplay_version": 4
 		}
 	],
-	"solids": [],
 	"pickups": []
 }

@@ -22,6 +22,9 @@ const PATH_AGENT: String = "path_agent"
 const BUILD_SLOT: String = "build_slot"
 const TOWER: String = "tower"
 const REPLICATION: String = "replication"
+## 引用平台内置 GameplayAsset 的不可变玩法版本（ADR-0006）。缺省视为
+## `SharedGameplayAssetCatalog.LATTICE_CELL_ID`，即"占满一格"。
+const GAMEPLAY_ASSET: String = "gameplay_asset"
 
 const ALL: PackedStringArray = [
 	TRANSFORM,
@@ -42,6 +45,7 @@ const ALL: PackedStringArray = [
 	BUILD_SLOT,
 	TOWER,
 	REPLICATION,
+	GAMEPLAY_ASSET,
 ]
 
 

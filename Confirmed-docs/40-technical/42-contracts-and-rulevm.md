@@ -31,6 +31,7 @@
 | `build_slot` | 白名单、占用者 | BASTION |
 | `tower` | 等级、射程、冷却、目标策略 | BASTION |
 | `replication` | 复制策略 | 两玩法 |
+| `gameplay_asset` | 引用平台资产的不可变玩法版本 | 两玩法 |
 
 字段的英文标识符、JSON 形状与校验落点见 [§1.2](#12-字段标识符v1)。槽位语义、具体数值和复制策略表仍见 [CD-63](../60-plan/63-open-decisions.md)，不得从本表自行补全。
 
@@ -87,8 +88,15 @@ components     以组件名为键的对象；未知键拒绝；允许空袋
 | `build_slot` | `whitelist`（原型 ID 数组），`occupant_id` ≥ 0（0 为空） |
 | `tower` | `level` ≥ 1，`attack_range`，`cooldown_ticks` ≥ 0，`target_priority` ∈ `front` / `nearest` / `strongest` / `weakest`（[CD-22 §5.1](../20-gameplay/22-bastion.md)） |
 | `replication` | `policy_id` ≥ 0（0 为空；策略表未锁，[CD-43](43-networking-and-replay.md) 未命名模式） |
+| `gameplay_asset` | `asset_id` ≥ 1，`gameplay_version` ≥ 1。**只是引用**：尺寸、挂点、视觉都不在这里；`asset_id` 必须已登记在平台内置资产清单且版本为当前版本，由编译期把关（[ADR-0006](../../docs/adr/0006-gameplay-asset-contract.md)）。缺省视为"占满一格" |
 
 `box` 另需 `hx`/`hy`/`hz`；`sphere` 需 `radius`；`capsule` 需 `radius` 与 `cylinder_height`（与 `KinematicCapsule` 同名）；`platform_prefab` 需 `prefab_id` ≥ 1。
+
+### 1.3 权威碰撞的载体（v2 起）
+
+`zone.shape` 是**触发与查询区域**，不是权威碰撞。权威碰撞、占地与挂点由 `gameplay_asset` 引用的平台资产决定，并随内容发布写进 SimulationBundle 的 `assets` 袋；语义与边界的所有者是 [CD-31 §5](../30-ugc/31-ugc-principles.md)，决策记录见 [ADR-0006](../../docs/adr/0006-gameplay-asset-contract.md)。
+
+2026-08-29 之前不是这样：`zone.shape` 通过了 Schema 校验却被编译期丢弃，加载期一律用 `cell / 2` 当半长。字段被校验却不被采用，见 ADR-0006 §1.3。
 
 ## 2. Rule VM v1
 
@@ -199,9 +207,9 @@ Undo / Redo 是会话内对成功命令派生的反向 payload（`place`↔`remo
 | 第一张官方 TRAPRUSH 赛道 | `game/content/official/traprush/course_01.json` |
 | 第二张官方 TRAPRUSH 赛道 | `game/content/official/traprush/course_02.json` |
 | 第三张官方 TRAPRUSH 赛道 | `game/content/official/traprush/course_03.json` |
-| SimulationBundle | `game/src/ugc/simulation_bundle.gd` |
-| TRAPRUSH 拓扑编译 | `game/src/ugc/traprush_topology_compiler.gd` |
-| TRAPRUSH 拓扑加载 | `game/src/games/traprush/traprush_topology_loader.gd` |
+| SimulationBundle | `game/src/ugc/simulation_bundle.gd`（v2：`assets` 袋 + 每袋 `asset_id`/`gameplay_version`；v1 仍解码并迁移到内置"占满一格"资产） |
+| TRAPRUSH 拓扑编译 | `game/src/ugc/traprush_topology_compiler.gd`（资产准入在这里；不读 `zone.shape`） |
+| TRAPRUSH 拓扑加载 | `game/src/games/traprush/traprush_topology_loader.gd`（半长来自 `assets`；只接受 `box`） |
 | 周期机关固体切换 | `game/src/games/traprush/hazard_cycle.gd` |
 | 对局进程多人仿真循环 | `game/src/games/traprush/match_session.gd`（`fall_dy` 默认 0；boot / Solo 占位 `-SCALE/16`） |
 | 对局二进制协议 v1 | `game/src/shared/protocol/match_frame_codec.gd` |
@@ -234,7 +242,8 @@ Undo / Redo 是会话内对成功命令派生的反向 payload（`place`↔`remo
 | 关键状态哈希 | `game/src/shared/protocol/state_hasher.gd` |
 | 定点与 BAM | `game/src/shared/fixed/` |
 | 组件名 | `game/src/shared/schema/component_names.gd` |
-| 碰撞 kind | `game/src/shared/schema/collision_shape_kinds.gd` |
+| 碰撞 kind | `game/src/shared/schema/collision_shape_kinds.gd`（`shape_is_valid` 是形状袋校验的唯一实现，`zone.shape` 与资产表的权威碰撞都调它） |
+| 平台内置资产清单 | `game/src/shared/schema/gameplay_asset_catalog.gd`（编译期准入；已发布 bundle 不查它） |
 | 炮塔目标优先级 | `game/src/shared/schema/tower_target_priorities.gd` |
 | 实体袋校验 | `game/src/shared/schema/component_record.gd` |
 
@@ -250,4 +259,4 @@ JSON Schema 落点：
 | SimulationBundle | `backend/contracts/schemas/simulation_bundle.schema.json` |
 | 正反例与校验 | `tools/content-validator/`（由根目录 `npm test` 收集） |
 
-`payload` 只允许 nil / bool / int / String / Array / Dictionary（字符串键）；禁止 float、Object、Callable。PLAYER 命令必须带白名单 `intent` 字符串。EDIT 命令必须带白名单 `op` 字符串，payload 形状见 [§3.3](#33-服务端处理管线)。SYSTEM 命令允许 `actor_id = 0`。Component Schema v1 字段见 [§1.2](#12-字段标识符v1)。AuthoringDocument 字段见 [CD-32 §1.4](../30-ugc/32-editor-and-preview.md#14-共同数据模型)。SimulationBundle v1 字段见本表与 [CD-32 §3](../30-ugc/32-editor-and-preview.md#3-从编辑到预览)「TRAPRUSH 拓扑编译」（含可空 `hazards` 与可空 `solids` 袋）。Preview 试玩、MoveIntent、检查点占用验收、传送占用落地、冲线占用、重置到检查点、UseItemIntent 可破坏占用、JumpIntent 接地跳跃与周期机关固体切换见 [CD-32 §3](../30-ugc/32-editor-and-preview.md#3-从编辑到预览)「Preview 试玩」。对局票据 HTTP JSON Schema 在 `backend/contracts/src/match_ticket.ts`，由控制面 Fastify 路由挂载（含 `POST /match-sessions/:matchId/tickets/reconnect`）。单局结算 HTTP JSON Schema 在 `backend/contracts/src/match_settlement.ts`。Rule VM 图的 JSON Schema 仍未落地。OpenAPI 仍未落地。签名二进制包仍待。
+`payload` 只允许 nil / bool / int / String / Array / Dictionary（字符串键）；禁止 float、Object、Callable。PLAYER 命令必须带白名单 `intent` 字符串。EDIT 命令必须带白名单 `op` 字符串，payload 形状见 [§3.3](#33-服务端处理管线)。SYSTEM 命令允许 `actor_id = 0`。Component Schema v1 字段见 [§1.2](#12-字段标识符v1)。AuthoringDocument 字段见 [CD-32 §1.4](../30-ugc/32-editor-and-preview.md#14-共同数据模型)。SimulationBundle **v2** 字段见本表与 [CD-32 §3](../30-ugc/32-editor-and-preview.md#3-从编辑到预览)「TRAPRUSH 拓扑编译」（含可空 `hazards` 与可空 `solids` 袋，以及 v2 的 `assets` 袋与每袋资产引用，见 [§1.3](#13-权威碰撞的载体v2-起)）。Preview 试玩、MoveIntent、检查点占用验收、传送占用落地、冲线占用、重置到检查点、UseItemIntent 可破坏占用、JumpIntent 接地跳跃与周期机关固体切换见 [CD-32 §3](../30-ugc/32-editor-and-preview.md#3-从编辑到预览)「Preview 试玩」。对局票据 HTTP JSON Schema 在 `backend/contracts/src/match_ticket.ts`，由控制面 Fastify 路由挂载（含 `POST /match-sessions/:matchId/tickets/reconnect`）。单局结算 HTTP JSON Schema 在 `backend/contracts/src/match_settlement.ts`。Rule VM 图的 JSON Schema 仍未落地。OpenAPI 仍未落地。签名二进制包仍待——所以 `GameplayAssetVersion` 的"不可变"目前靠字段与编译期准入，不是密码学不可变。

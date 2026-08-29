@@ -1,7 +1,20 @@
 {
-	"schema_version": 1,
+	"schema_version": 2,
 	"cell": 65536,
 	"source_revision": 2,
+	"assets": [
+		{
+			"asset_id": 1,
+			"gameplay_version": 1,
+			"collision": {
+				"kind": "box",
+				"hx": 32768,
+				"hy": 32768,
+				"hz": 32768
+			},
+			"attach_points": []
+		}
+	],
 	"pads": [
 		{
 			"entity_id": 1,
@@ -11,7 +24,9 @@
 			"order": 0,
 			"respawn_dx": 0,
 			"respawn_dy": 0,
-			"respawn_dz": 0
+			"respawn_dz": 0,
+			"asset_id": 1,
+			"gameplay_version": 1
 		}
 	],
 	"portals": [
@@ -25,7 +40,9 @@
 			"dest_x": 65536,
 			"dest_y": 0,
 			"dest_z": 0,
-			"dest_yaw_bam": 16384
+			"dest_yaw_bam": 16384,
+			"asset_id": 1,
+			"gameplay_version": 1
 		}
 	],
 	"finish": [
@@ -33,7 +50,9 @@
 			"entity_id": 4,
 			"x": 131072,
 			"y": 0,
-			"z": 0
+			"z": 0,
+			"asset_id": 1,
+			"gameplay_version": 1
 		}
 	],
 	"destructibles": [],

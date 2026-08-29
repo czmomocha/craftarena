@@ -1,7 +1,8 @@
 {
-	"schema_version": 1,
+	"schema_version": 2,
 	"cell": 65536,
 	"source_revision": 0,
+	"assets": [],
 	"pads": [],
 	"portals": [],
 	"finish": [],

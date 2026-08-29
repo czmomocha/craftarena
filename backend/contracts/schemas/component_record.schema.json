@@ -34,7 +34,8 @@
 				"path_agent": { "$ref": "#/$defs/path_agent" },
 				"build_slot": { "$ref": "#/$defs/build_slot" },
 				"tower": { "$ref": "#/$defs/tower" },
-				"replication": { "$ref": "#/$defs/replication" }
+				"replication": { "$ref": "#/$defs/replication" },
+				"gameplay_asset": { "$ref": "#/$defs/gameplay_asset" }
 			}
 		}
 	},
@@ -281,6 +282,16 @@
 			"required": ["policy_id"],
 			"properties": {
 				"policy_id": { "type": "integer", "minimum": 0 }
+			}
+		},
+		"gameplay_asset": {
+			"description": "Reference to a platform GameplayAsset's immutable gameplay version (ADR-0006). Dimensions are never authored here: asset_id must be registered in game/src/shared/schema/gameplay_asset_catalog.gd and gameplay_version must be its current version, both enforced at compile time. Absent means the built-in lattice-cell asset.",
+			"type": "object",
+			"additionalProperties": false,
+			"required": ["asset_id", "gameplay_version"],
+			"properties": {
+				"asset_id": { "type": "integer", "minimum": 1 },
+				"gameplay_version": { "type": "integer", "minimum": 1 }
 			}
 		}
 	}

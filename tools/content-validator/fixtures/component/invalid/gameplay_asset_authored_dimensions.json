@@ -1,0 +1,16 @@
+{
+	"schema_version": 1,
+	"entity_id": 70,
+	"components": {
+		"gameplay_asset": {
+			"asset_id": 1,
+			"gameplay_version": 1,
+			"collision": {
+				"kind": "box",
+				"hx": 16384,
+				"hy": 16384,
+				"hz": 16384
+			}
+		}
+	}
+}
