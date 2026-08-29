@@ -12,6 +12,14 @@
 # 不构成任何决策依据，没有必要为它常年占用仓库和 LFS 配额。文件只留在本地。
 /early-concepts/
 
+# AI 生成测试资源
+#
+# 混元 3D 生成的 GLB 与配套 PNG，原始 62 MB。只服务于
+# docs/plans/asset-bake-trial-2026-08.md 那一次烘焙试验：结论、参数与脚本
+# 用法都已入库，原始样本既没有留存价值，也没有占 Git LFS 配额的必要。
+# 文件只留在本地。
+/test-res/
+
 # 导出与构建产物
 /build/
 /export/
