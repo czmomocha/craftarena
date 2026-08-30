@@ -22,7 +22,7 @@
 
 ## 共用启动（大厅窗口）
 
-机关狂奔匹配大厅是代码创建的 `Window`，标题 **Traprush**。第一行是状态 Label。按钮（从左到右）：**Quick play**、**Create room**、**Join room**、**Solo play**、**Cancel**、**Poll**。其下一行是服务器地址：输入框（placeholder `Server host`，默认填当前控制面主机）加 **Apply server** 按钮。再往下三个输入框：房间码（placeholder `Room code`）、课程 id（默认 `course_01`）、人数（默认 `2`）。窗口里的 3D：本席玩家盒是青色（`OWN_ALBEDO`），远端玩家盒仍是海军蓝（`REMOTE_ALBEDO`）；橙色盒是可破坏箱；洋红盒是周期机关（固体半周期才出现；官方赛道出生点 −Z 1 个）；石色盒是固定固体占用（始终显示；官方赛道沿必经路铺立足面，`course_01` 另有出生点 −X 1 个，上层楼板在 −Z 三格）；垫 / 门 / 终点是赛道占位盒（未开玩时垫是原绿、终点是原金；开玩后本席已验收垫是暗绿，当前目标垫是亮薄荷；全部垫完成后终点变亮金，冲线后变暗金）；条是传送连线与检查点顺序 gizmos。玩家盒上方有名次 Label；本席名次标以 `*` 开头。开玩时状态行含 `pads=n/m`、`floor=n`、`finish=n`、`crates=n/m`、`hazards=n/m` 与 `solids=n/m`。
+机关狂奔匹配大厅是代码创建的 `Window`，标题 **Traprush**。第一行是状态 Label。按钮（从左到右）：**Quick play**、**Create room**、**Join room**、**Solo play**、**Cancel**、**Poll**。其下一行是服务器地址：输入框（placeholder `Server host`，默认填当前控制面主机）加 **Apply server** 按钮。再往下三个输入框：房间码（placeholder `Room code`）、课程 id（默认 `course_01`）、人数（默认 `2`）。窗口里的 3D：玩家是**角色视觉资产**（一个约 1 米高的机器人），本席覆青色薄膜（`OWN_ALBEDO`），远端覆海军蓝薄膜（`REMOTE_ALBEDO`）；视觉资产解析不出来时回退成同色的 1 米占位盒。橙色盒是可破坏箱；洋红盒是周期机关（固体半周期才出现；官方赛道出生点 −Z 1 个）；石色盒是固定固体占用（始终显示；官方赛道沿必经路铺立足面，`course_01` 另有出生点 −X 1 个，上层楼板在 −Z 三格）；垫 / 门 / 终点是赛道占位盒（未开玩时垫是原绿、终点是原金；开玩后本席已验收垫是暗绿，当前目标垫是亮薄荷；全部垫完成后终点变亮金，冲线后变暗金）；条是传送连线与检查点顺序 gizmos。玩家盒上方有名次 Label；本席名次标以 `*` 开头。开玩时状态行含 `pads=n/m`、`floor=n`、`finish=n`、`crates=n/m`、`hazards=n/m` 与 `solids=n/m`。
 
 ### 0.1 后端（本刀需要在线入场时）
 
@@ -53,50 +53,69 @@ Worktree 端口偏移见 README「并行工作区」；本文件不复述端口�
 
 ---
 
-## 本刀：纠偏 C4 第 4 章 — 单资产预算门禁与跨平台烘焙
+## 本刀：纠偏 C4 第 5 章 — 第一个 `.glb` 入库与角色视觉解析
 
-对应：当前完整章节 PR。[CD-11 §8.1](../../Confirmed-docs/10-product/11-scope-and-platforms.md) 的预算 2026-08-30 已拍板，但当时**没有任何跨平台工具能执行它**——烘焙试验那份脚本硬编码 macOS `sips` 且不入库。这一章补上：一条校验命令（进 CI）+ 一条烘焙命令（开发机）。
+对应：当前完整章节 PR。这一章闭合 **E7 后半**：仓库此前 0 个 `.glb`，所以 [ADR-0006 §7](../adr/0006-gameplay-asset-contract.md) 只能说"权威碰撞与视觉网格的分离是**结构性**的，数值今天仍相等"。现在角色视觉是一个 1.03 m 高、0.74 × 0.61 m 粗的网格，权威胶囊仍是 0.125 格，占位盒仍是 1 米——**三者互不相等**。
 
-**本章无 Godot 内可见行为**：不碰 `game/`、不入库任何资产。要看的全在命令行里，所以**不需要** `npm run dev`，也不需要打开 Traprush 窗口。
+入库物只有两个文件：`game/content/assets/characters/robot_placeholder.glb`（LFS）与它的 `.glb.import`。
 
-1. **空仓库不假绿**：仓库根 `npm run asset-budget`。
-   - 预期：输出 `no .glb under game/ — nothing was checked.` 加一句 `this is not a pass.`，退出码 0。
-   - 失败：只打一句 `ok` 就退出（那会让人以为门禁查过了）。
-   - 为什么这么设计：仓库现在 0 个 `.glb`（E7 后半在第 5 章），门禁必须说清"没查"而不是"通过"。
-2. **真实生成产物被拒，并逐张点名**：拿一个 4096 贴图的生成产物来跑。
+**先做一次导入**，否则看不到模型：
+
+```bash
+"$GODOT4" --headless --path game --import     # Windows: & $env:GODOT4_CONSOLE --headless --path game --import
+```
+
+1. **Solo 里看见角色，不是青盒**：按 0.2 打开窗口（**不需要** `npm run dev`），点 **Solo play**。
+   - 预期：出生点站着一个约 1 米高的机器人（灰白外壳 + 黄黑警示条），整体覆一层**青色**半透明薄膜；它的**脚**踩在原来那个青盒的下沿位置，不浮空、不半埋。
+   - 失败：还是纯青色 1 米盒（说明视觉没解析出来，先回去跑 `--import`）；或者机器人悬在半空 / 只露上半身（`CHARACTER_FOOT_LIFT` 接错了）。
+2. **朝向还看得出来**：WASD 走几步再转向。
+   - 预期：机器人正前方那块黄色小标记（`face`）跟着转，8 向离散偏航仍然可读。
+   - 失败：标记不见了（占位盒被整棵隐藏而不是只退出渲染层），或者标记不跟着转。
+3. **本席与远端仍然分得清**：`npm run dev` 后 **Quick play**，人数填 `2`，用第二个客户端（或第二台机器）也进同一场。
+   - 预期：本席机器人覆**青**膜，远端机器人覆**海军蓝**膜；名次 Label 与本席 `*` 前缀照旧。
+   - 失败：两个机器人一样颜色（薄膜没按席位染），或分色回到了盒子上而模型仍灰白。
+4. **Preview 试玩里是同一个角色**：编辑器里打开 Preview 壳，走到 Preview 试玩（步骤同上一章的 Preview 流程），开玩。
+   - 预期：玩家标记也是那个机器人，覆 Preview 玩家色薄膜。对局与 Preview 必须是同一个角色，否则两套壳会慢慢漂成两套美术。
+   - 失败：Preview 里还是盒子。
+5. **赛道占位盒**故意**没有变**：同一屏里看垫 / 门 / 终点 / 箱 / 机关 / 固体。
+   - 预期：它们**仍然是色块盒**。这不是漏做：一期唯一内置 GameplayAsset 是"占满一格"，7 类袋（含官方赛道的路面地板）全都引用它，把视觉按 `asset_id` 接上去会让地板、检查点垫和箱子共用同一个模型。理由写在 `game/src/shared/visual_asset_catalog.gd` 文件头。
+   - 失败：地板变成了一排机器人。
+6. **资产过预算门禁**：仓库根 `npm run asset-budget`。
+   - 预期：`ok game/content/assets/characters/robot_placeholder.glb: 3000/3000 tris (static), 3 textures, largest edge 512, 784.2 KB`，退出码 0。上一章那句"什么都没查"不再出现。
+   - 失败：被拒（那就不该入库）；或仍然打印 `nothing was checked`（说明扫不到 `game/`）。
+7. **包内自检覆盖到它**：
    ```bash
-   npm run asset-budget <你的生成产物>.glb
+   "$GODOT4" --headless --path game -- --package-check
    ```
-   （我这边用的是 `test-res/test-glb/kofizhou_lightai_1787938054928__AIGC_TEMP.glb`，你本机应该还在。）
-   - 预期：退出码 **1**，逐行列出 `[texture_size] texture "#0" is 4096x4096`（三张各一行，**带 `#索引`**）与 `[file_bytes] 28.36 MB exceeds the 2.00 MB budget`，末尾指向烘焙 runbook。
-   - 失败：绿了；或三张贴图都叫 `<embedded>` 分不出是哪张。
-3. **烘焙一次，再验一次**：
+   - 预期：JSON 里 `"character_visual_loadable": true`，`"character_visual_path"` 指向那个 `.glb`，`ok=true`。
+   - 失败：`character_visual_loadable: false` —— 视觉在源码工程里就加载不出来。
+   - 这条**是实例化**而不是 `file_exists`：`.glb` 进包后是导入产物 `.scn`，导出过滤配错只会在这里暴露。
+   - **只在源码工程验过**。我这台机器没装 4.7.2 导出模板，所以真导出包里这一项**未实测**（见「诚实边界」）。你若按 [导出包核查清单](desktop-export-check.md) 跑一次导出，请顺带确认这一项也是 `true`。
+8. **入库形态是 LFS 单文件**（可选，但建议看一眼）：
    ```bash
-   npx --yes @gltf-transform/cli@4.4.2 resize <产物>.glb /tmp/out.glb --width 512 --height 512
-   npm run asset-budget /tmp/out.glb
+   git lfs ls-files
    ```
-   - 预期：第一条约 7 秒，打印 `29.74 MB → 803 KB` 量级；第二条 `ok ... largest edge 512, 784.2 KB`，退出码 0。
-   - 失败：`npx` 装不上（Windows 上尤其要确认）；或烘焙后仍被拒。
-   - macOS 上会打印 `objc[...] libvips-cpp` 两个版本冲突的警告，**可以忽略**（runbook 已记）。
-4. **门禁不依赖 native**：确认 `npm audit` 输出 `found 0 vulnerabilities`。
-   - 预期：0 漏洞。校验只用 `@gltf-transform/core`（2 个包）；带 4 个 libvips CVE 的 `sharp` 只在第 3 步的 `npx` 临时环境里，不在本仓库依赖树。
-   - 失败：audit 报 high —— 那说明 cli 被误写进了 `package.json`。
+   - 预期：列出那个 `.glb`；`game/content/assets/characters/` 下只有 `.glb` 与 `.glb.import` 两个文件。
+   - 失败：多出 `robot_placeholder_0.png` 之类的解包贴图 —— 那说明 `.glb.import` 的 `gltf/embedded_image_handling` 又回到了默认的 `1`（Extract），同一份像素会入库两遍。
 
 ### 本刀不测
 
-- 任何 `.glb` 入库（第 5 章，E7 后半）；
-- 按用途分档的烘焙参数（baseColor / ORM / normal 各自上限）与自动化流水线 —— 人类 2026-08-30 明确**不放 C4**；
-- 场景总量 / Draw call / 材质数 / 骨骼上限 —— 仍属 [CD-63 §1.7](../../Confirmed-docs/60-plan/63-open-decisions.md) 延期；
-- 动画状态契约、本地化键（第 6 章）；
-- KTX2 / Basis 压缩路径（校验器**能读** KTX2 尺寸，但没有烘焙路径）。
+- **地形块视觉**：人类 2026-08-30 授权"角色或地形块二选一，另一个待补"。本刀只做角色；
+- 动画（资产无 `skin`、无 animation，动画状态契约仍未做）；
+- 本地化键、相机 45° 与 UI 1920×1080 接线（C4 剩余章）；
+- `asset_id → 视觉` 的按资产解析（理由见第 5 步）；
+- 导出包内的表现（源码工程 `--package-check` 已覆盖判定，但**没有**在本刀里重跑一次 Windows / Web 导出）；
+- KTX2 / Basis 压缩路径。
 
 ### 诚实边界
 
-- 烘焙工具**不在 lock 里**，传递依赖不保证逐字节可复现。可接受，因为入库物是产物 `.glb` 且由第 1 步的门禁把关；
-- 那 4 个 CVE 仍然存在，只是不在本仓库依赖树。攻击面是"用 libvips 解码不可信图像"，而这里解码的是你自己生成的资产、在开发机上；
-- 第 3 步的时间与体积数字来自 **2026-08-30 本机 macOS arm64 一次运行**，不是性能指标。
+- 这是**占位美术**：比例、朝向轴、配色都没经过美术定稿，只用来把 DCC → GLB → LFS → 导入 → 表现层这条链路跑通。它不构成 D4 之外的任何美术决策；
+- **导出包内未实测**：本机没装 4.7.2 导出模板（`~/Library/Application Support/Godot/export_templates/` 为空），`--export-release` 直接失败，所以"`.glb` 会随 `export_filter="all_resources"` 进包"目前是**推断**——`.glb` 是导入资源，而 `include_filter` 里那条 `content/official/*.json` 只是因为 JSON 不是 Godot 资源类型才必须显式列。推断不等于验证（宪法第二十四条）；已跑的是源码工程的 `--package-check`；
+- 贴图按 `gltf/embedded_image_handling=3`（**Embed as Uncompressed**，引擎自证枚举）内嵌，所以入库干净，但**运行时显存不省**——512² 三张未压缩。KTX2 / Basis 仍未测（烘焙试验 §5.2 已记"编码格式只省磁盘，不省显存"）；
+- 权威胶囊仍是 `PlaceholderSpec.CHARACTER_RADIUS / HEIGHT`（0.125 格）这个 D4 占位常量，**角色还不是 GameplayAsset**（ADR-0006 §7 遗留项未变）。视觉换了不等于碰撞接线了；
+- 薄膜是 `material_overlay`，不改模型自己的材质，所以两个席位共用同一份导入资源。它是可读性补偿，不是产品皮肤。
 
 ### 仍然欠着（不因本章消失）
 
-24h ICMP 回填、远端协议层 RTT 回填、C3 网络参数锁定、E6 有美术后的可玩性签署、E7 后半（第一个 `.glb` 入库）、扫掠取样代价无上限（宪法第十七条缺口）、`match_lobby_shell.gd` 已 1,510 行（E9 要求 < 400）。
+24h ICMP 回填、远端协议层 RTT 回填、C3 网络参数锁定、E6 有美术后的可玩性签署、E7 的"一组地形块"那一半、角色胶囊尚未进资产表、扫掠取样代价无上限（宪法第十七条缺口）、`match_lobby_shell.gd` 已 1,510 行（E9 要求 < 400）。
 

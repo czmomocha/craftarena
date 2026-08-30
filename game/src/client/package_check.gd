@@ -53,6 +53,7 @@ static func _run_checks(failures: Array[String]) -> Dictionary:
 	var packed: bool = OS.has_feature("template")
 	var addons: PackedStringArray = _packed_addons()
 	_record(checks, failures, "courses_readable", _courses_readable(), true)
+	_record(checks, failures, "character_visual_loadable", _character_visual_loadable(), true)
 	_record(checks, failures, "user_draft_roundtrip", _user_draft_roundtrip(), true)
 	_record(checks, failures, "no_mcp_autoload", not _autoload_names().has(MCP_AUTOLOAD), true)
 	_record(checks, failures, "runtime_material", _runtime_material_ok(), true)
@@ -90,6 +91,7 @@ static func _body(checks: Dictionary, failures: Array[String]) -> Dictionary:
 		"autoloads": _autoload_names(),
 		"packed_addons": _packed_addons(),
 		"course_paths": _course_paths(),
+		"character_visual_path": SharedVisualAssetCatalog.CHARACTER_SCENE_PATH,
 		"user_data_dir": OS.get_user_data_dir(),
 		"draft_path": ProjectSettings.globalize_path(AuthoringDraftStoreGd.DEFAULT_PATH),
 	}
@@ -113,6 +115,19 @@ static func _courses_readable() -> bool:
 	for path: String in _course_paths():
 		if AuthoringDocumentGd.load_from_path(path) == null:
 			return false
+	return true
+
+
+## Instantiating, not just ResourceLoader.exists: a `.glb` reaches the package as
+## an imported `.scn`, so a wrong export filter or a missing reimport shows up
+## here and nowhere else. The表现层 falls back to a placeholder box when this
+## fails, which is exactly why it needs a check — a silent fallback in a
+## shipped package looks identical to "the art was never added".
+static func _character_visual_loadable() -> bool:
+	var visual: Node3D = SharedVisualAssetCatalog.try_instantiate_character()
+	if visual == null:
+		return false
+	visual.free()
 	return true
 
 

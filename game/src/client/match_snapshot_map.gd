@@ -21,6 +21,13 @@ extends Node3D
 ## file keeps the names but no longer owns the values (D4 changes one place).
 ## Each player box has a local -Z facing marker so yaw is visible on a
 ## cube. Not a product turn speed.
+##
+## 当 `character_scene_path` 能解析出视觉资产（SharedVisualAssetCatalog，
+## ADR-0006 Q4）时，每个玩家节点多挂一个 `visual` 子节点，占位盒自身退出渲染
+## （`layers = 0`）但**节点、网格与座位色材质原样保留**：座位色仍由它定义，
+## 名次标签、朝向标记与预测 overlay 读的还是同一个节点位姿。视觉解析失败就是
+## 今天的行为，一个 1 米盒。视觉从不参与裁决，权威胶囊仍是
+## PlaceholderSpec.CHARACTER_RADIUS / HEIGHT。
 
 const MatchSnapshotFollowGd := preload("res://src/client/match_snapshot_follow.gd")
 
@@ -32,11 +39,15 @@ const CAMERA_OFFSET: Vector3 = PlaceholderSpec.CAMERA_OFFSET
 const FACE_NAME: String = "face"
 const FACE_OFFSET: Vector3 = Vector3(0.0, 0.15, -0.55)
 const FACE_SIZE: Vector3 = Vector3(0.18, 0.18, 0.28)
+const VISUAL_NAME: String = "visual"
 const OWN_ALBEDO: Color = PlaceholderSpec.OWN_ALBEDO
 const REMOTE_ALBEDO: Color = PlaceholderSpec.REMOTE_ALBEDO
 
 var follow_slot: int = -1
+## 空字符串或解析失败 ⇒ 回退占位盒。是变量而不是常量，好让测试两条分支都能跑。
+var character_scene_path: String = SharedVisualAssetCatalog.CHARACTER_SCENE_PATH
 var _player_count: int = 0
+var _visual_count: int = 0
 
 
 static func meters_from_fixed(value: int) -> float:
@@ -111,6 +122,18 @@ func facing_node(slot: int) -> MeshInstance3D:
 	return player.get_node_or_null(FACE_NAME) as MeshInstance3D
 
 
+func visual_node(slot: int) -> Node3D:
+	var player: MeshInstance3D = player_node(slot)
+	if player == null:
+		return null
+	return player.get_node_or_null(VISUAL_NAME) as Node3D
+
+
+## 有多少个席位真的用上了视觉资产。0 表示全部回退到占位盒。
+func visual_count() -> int:
+	return _visual_count
+
+
 func camera_node() -> Camera3D:
 	return get_node_or_null(CAMERA_NAME) as Camera3D
 
@@ -179,9 +202,10 @@ func _spawn_player(slot: int, body: Dictionary) -> void:
 	var y: int = pose["y"]
 	var z: int = pose["z"]
 	var yaw_bam: int = pose["yaw_bam"]
+	var seat: Color = player_albedo(slot, follow_slot)
 	var mesh: BoxMesh = BoxMesh.new()
 	mesh.size = PLACEHOLDER_SIZE
-	mesh.material = _unshaded(player_albedo(slot, follow_slot))
+	mesh.material = _unshaded(seat)
 	var node: MeshInstance3D = MeshInstance3D.new()
 	node.name = player_name(slot)
 	node.mesh = mesh
@@ -189,6 +213,23 @@ func _spawn_player(slot: int, body: Dictionary) -> void:
 	node.rotation.y = yaw_radians_from_bam(yaw_bam)
 	add_child(node)
 	_spawn_facing(node)
+	_attach_visual(node, seat)
+
+
+## 视觉资产在时：挂 `visual` 子节点并让占位盒本体退出渲染层。用 `layers = 0`
+## 而不是 `visible = false`，因为后者会连带隐藏 `face` 与 `visual` 两个子节点，
+## 那样朝向就看不见了。返回是否真的挂上了视觉。
+func _attach_visual(player: MeshInstance3D, seat: Color) -> bool:
+	var visual: Node3D = SharedVisualAssetCatalog.try_instantiate(character_scene_path)
+	if visual == null:
+		return false
+	visual.name = VISUAL_NAME
+	visual.position = SharedVisualAssetCatalog.CHARACTER_FOOT_LIFT
+	player.add_child(visual)
+	SharedVisualAssetCatalog.tint(visual, seat)
+	player.layers = 0
+	_visual_count += 1
+	return true
 
 
 func _spawn_facing(player: MeshInstance3D) -> void:
@@ -211,6 +252,7 @@ func _clear_players() -> void:
 		remove_child(node)
 		node.free()
 	_player_count = 0
+	_visual_count = 0
 
 
 func _aim_camera() -> void:
