@@ -53,42 +53,51 @@ Worktree 端口偏移见 README「并行工作区」；本文件不复述端口�
 
 ---
 
-## 本刀：纠偏 C4 第 3 章 — GameplayAsset 契约落地（Bundle v2）
+## 本刀：freeze-exception — MatchHost 引擎路径不再静默回退
 
-对应：当前完整章节 PR。[ADR-0006](../adr/0006-gameplay-asset-contract.md) 已于 2026-08-29 整包拍板，这一章把它实现：权威碰撞、占地与挂点从"loader 里写死的 `cell / 2`"改为随内容发布的 `assets` 袋。
+对应：当前 PR（纠偏 [§1.3 例外通道](../plans/course-correction-2026-08.md)，人类 2026-08-30 选 A「单独一刀修」）。它修的是 C4 第 3 章真机验证时坑掉时间的那件事：`GODOT4` 缺失或写错时 MatchHost 悄悄用 PATH 上的 `godot`，一路撑到第一次 `POST /matches` 才回一个**不带原因**的 502，而 `spawn ... ENOENT` 只留在子进程输出里，日志和响应都看不到。
 
-**本章的验收信号是"看起来完全一样"。** 数值一个没改：唯一内置资产就是"占满一格"，所以占用与合入前逐字节相同。如果你在窗口里看出任何差别，那就是回归。
+**这一章没有 Godot 内的可见行为变化。** 要看的东西全在后端终端与 HTTP 响应里，所以不需要打开 Traprush 窗口，也不需要做「共用启动」的 0.2。
 
-需要 `npm run dev`（步骤 3 要在线入场）。先做「共用启动」。
+1. **正常路径没退化**：仓库根 `npm run dev`。
+   - 预期：三个 `/readyz` 都就绪；`match-host` 那行 `match host ready` 里多了 `godotSource`（macOS/Linux 上是 `GODOT4`，Windows 上设了 `_console.exe` 就是 `GODOT4_CONSOLE`），`godot` 仍是你机器上的引擎路径。
+   - 失败：MatchHost 起不来（先确认 `echo $GODOT4` / `$env:GODOT4` 非空），或日志里没有 `godotSource`。
+2. **缺 `GODOT4` 就当场拒绝启动**：另开一个终端，把变量清掉只跑 MatchHost。
 
-1. **离线单人先看占用没变**：打开窗口，直接点 **Solo play**。
-   - 预期：状态行 `course=3/5/1`；开玩后 `pads=0/3`、`floor=1`、`finish=1`、`crates=0/1`、`hazards=1/1`、`solids=36/36`。数字与合入前完全一致。
-   - 失败：任一计数变了，或 3D 里盒子大小/位置变了。
-2. **踩边界确认半长还是半格**：WASD 沿 +X 走五步到终点垫。
-   - 预期：一步一格能站住（出生点正下方与沿路有石色立足面），走到最后终点变亮金、冲线后变暗金。
-   - 失败：走一步就掉下去（半长变小了），或明明该掉却站住了（半长变大了）。
-3. **机关命中与硬直没变**：从出生点向 −Z 走两格踩洋红机关。
-   - 预期：处于固体半周期时被击退并闪回出生点，约 1 秒后才能再动（D5 的 1.0 s）。
-   - 失败：踩上去没反应，或反应位置偏了半格。
-4. **在线一局**：**Quick play** 进一局，走到冲线。
-   - 预期：远端玩家盒、洋红机关、石色固体、橙箱与合入前一致；名次与结算正常。
-   - 失败：任何一类盒子消失——那说明 `assets` 袋在某条路径上没被带上（本章唯一改坏过的地方就是这个，见下）。
-5. **自动证据（不是真机，但请扫一眼 PR 里的输出）**：`--bot-run` 三张官方课仍 `completable`，且 `course_01` 仍是 5 步、`course_03` 仍是 12 步，动作序列逐项相同。
+   | 平台 | 命令（仓库根） |
+   |---|---|
+   | macOS | `env -u GODOT4 npm run match-host` |
+   | Windows | `$env:GODOT4=""; $env:GODOT4_CONSOLE=""; npm run match-host`（**新开一个** PowerShell，别污染当前会话） |
 
-失败长什么样：盒子整类消失、走路掉下去、机关判定偏移、bot 步数变化。这四种都指向同一个原因——某条路径拿到的半长不是 `cell / 2`。
+   - 预期：进程立刻退出，stderr 写明 `GODOT4 must point at the Godot engine executable`（Windows 上是 `GODOT4_CONSOLE or GODOT4 ...`），并提到不会回退到 PATH 上的 `godot`。**没有**任何监听、没有 502。
+   - 失败：进程照样起来了（说明还在静默回退），或报错只有一句 `undefined`。
+   - 提示：仓库根有 `.env` 且里面写了 `GODOT4` 时，`npm run match-host` 不读它（只有 `npm run dev` 会 `loadEnvFile`），所以这一步照上面做就行。
+3. **引擎路径写错时，502 说得出原因**：新终端里把 `GODOT4` 指到一个不存在的文件，只拉起 MatchHost（这一步不需要控制面：失败发生在 listen 之前，还没轮到登记）。
+
+   ```bash
+   GODOT4=/nope/godot npm run match-host
+   ```
+
+   Windows：`$env:GODOT4="C:\nope\godot.exe"; $env:GODOT4_CONSOLE=""; npm run match-host`
+
+   再在另一个终端开一场：
+
+   ```bash
+   curl -sS -i -X POST http://127.0.0.1:8100/matches
+   ```
+
+   - 预期：HTTP 502，body 的 `error` 是 `session_listen_failed`，`message` 里能读到 `spawn ... ENOENT`（这是本章的核心：原因进了响应）。MatchHost 终端同时出现一条 `match failed to start` 的 **error** 级日志，带 `godot`、`godotSource`、`recentOutput`。
+   - 失败：502 的 `message` 只写「进程在 listen 前退出」而不含 spawn 原因；或者 MatchHost 终端一行日志都没有（这正是修之前的样子）。
+   - 收尾：Ctrl+C 停掉终端。端口号若被 worktree 偏移过，按 README「并行工作区」换算，不要照抄 8100。
 
 ### 本刀不测
 
-- 任何 `.glb` 或真实美术资源（C4 第 5 章）；
-- 导入规范与性能预算表（第 4 章）、动画状态契约、本地化键（第 6 章）；
-- 角色胶囊接入资产表（玩家不进 bundle，另开一章）；
-- 非 box 碰撞的权威实现（本章明确拒绝，不做近似）。
-
-### 本章改坏过一次，值得记下来
-
-`CourseCompletionProbe.without_portals` 是手工拼 `SimulationBundle`（不走 `from_dictionary`）的唯一地方，漏拷 `assets` 会让过滤后的 bundle 加载不出任何占用。GUT 里三条安全路用例当场变红，已修。全仓只有这一处手工构造，已在该函数上写明原因。
+- 任何 Godot 内的表现（本章不碰 `game/`）；
+- 引擎版本是否匹配（只查"能不能派生出来"，不查 `--version`）；
+- compose 镜像里的路径（`Dockerfile` 已经 `ENV GODOT4=/opt/godot/godot`，未改）；
+- C4 第 4 章起的资产预算校验、`.glb` 入库。
 
 ### 仍然欠着（不因本章消失）
 
-24 小时 ICMP 回填、远端协议层 RTT 回填、C3 网络参数锁定、E6 在有美术之后的可玩性签署；扫掠取样代价无上限（宪法第十七条缺口）。
+24 小时 ICMP 回填、远端协议层 RTT 回填、C3 网络参数锁定、E6 在有美术之后的可玩性签署、E7 后半（第一个 `.glb` 入库）；烘焙试验 §7 第 2、3 项（是否引入烘焙工具依赖、是否把烘焙流水线立为一章）仍待人类拍板。
 

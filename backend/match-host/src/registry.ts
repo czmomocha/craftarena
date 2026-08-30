@@ -59,11 +59,35 @@ export interface MatchRegistryOptions {
 }
 
 export interface MatchEvent {
-	readonly type: "started" | "stopped";
+	readonly type: "started" | "stopped" | "start_failed";
 	readonly matchId: string;
 	readonly port: number;
 	readonly reason?: MatchStopReason | undefined;
+	/** `start_failed` 才有：抛给调用方的失败原因。 */
+	readonly message?: string | undefined;
 	readonly recentOutput?: readonly string[] | undefined;
+}
+
+/**
+ * 拼进错误消息的进程输出行数。
+ *
+ * `POST /matches` 的调用方（控制面、运维的 curl）看不到 MatchHost 日志，而"为什么起不来"
+ * 只写在子进程这几行里：`spawn ... ENOENT`、项目路径不对、场景缺失、引擎版本不匹配。
+ * 不带上它们，502 就只剩一句"进程在 listen 前退出了"。
+ */
+const FAILURE_OUTPUT_LINES = 5;
+const FAILURE_OUTPUT_LINE_CHARS = 200;
+
+function describeRecentOutput(lines: readonly string[]): string {
+	if (lines.length === 0) {
+		return "";
+	}
+	const tail = lines
+		.slice(-FAILURE_OUTPUT_LINES)
+		.map((line) =>
+			line.length > FAILURE_OUTPUT_LINE_CHARS ? `${line.slice(0, FAILURE_OUTPUT_LINE_CHARS)}...` : line,
+		);
+	return `; last output: ${tail.join(" | ")}`;
 }
 
 export class MatchCapacityError extends Error {
@@ -145,15 +169,20 @@ export class MatchRegistry {
 				course,
 			});
 		} catch (error) {
+			const recentOutput = process?.recentOutput() ?? [];
 			process?.kill();
 			this.#ports.release(port);
-			if (error instanceof MatchListenError || error instanceof MatchSessionRegisterError) {
-				throw error;
-			}
-			if (process === undefined) {
-				throw error;
-			}
-			throw new MatchSessionRegisterError(error instanceof Error ? error.message : String(error));
+			const failure = this.#toStartFailure(error, process !== undefined);
+			// 失败的场次进不了注册表，也就永远不会触发 `stopped` 事件——不在这里发一条，
+			// CD-44 §3 的"尽力保留日志"就只覆盖跑起来过的对局，起不来的那种一个字都不留。
+			this.#options.onEvent?.({
+				type: "start_failed",
+				matchId,
+				port,
+				message: failure.message,
+				recentOutput,
+			});
+			throw failure;
 		}
 
 		const now = this.#now();
@@ -191,6 +220,20 @@ export class MatchRegistry {
 		return record;
 	}
 
+	/**
+	 * 把 catch 到的东西整成要抛给 `POST /matches` 的错误，同时决定它是 502 还是 500。
+	 * `launched` 为 false 表示连子进程都没派生出来（端口耗尽、参数非法），那不是上游失败。
+	 */
+	#toStartFailure(error: unknown, launched: boolean): Error {
+		if (error instanceof MatchListenError || error instanceof MatchSessionRegisterError) {
+			return error;
+		}
+		if (!launched) {
+			return error instanceof Error ? error : new Error(String(error));
+		}
+		return new MatchSessionRegisterError(error instanceof Error ? error.message : String(error));
+	}
+
 	async #waitUntilListening(process: LaunchedProcess, port: number): Promise<void> {
 		const abort = new AbortController();
 		let settled = false;
@@ -216,9 +259,11 @@ export class MatchRegistry {
 
 		const outcome = await Promise.race([listenAttempt, exitAttempt]);
 		settled = true;
+		// 每条 listen 失败都带上进程最后几行输出：引擎起不来的真实原因只在那里。
+		const output = describeRecentOutput(process.recentOutput());
 		if (processExit !== undefined) {
 			throw new MatchListenError(
-				`match process exited before listen (code=${processExit.code}, signal=${processExit.signal})`,
+				`match process exited before listen (code=${processExit.code}, signal=${processExit.signal})${output}`,
 			);
 		}
 		if (outcome.kind === "listening") {
@@ -226,15 +271,15 @@ export class MatchRegistry {
 		}
 
 		if (outcome.kind === "listen_failed" && outcome.error instanceof MatchListenError) {
-			throw outcome.error;
+			throw new MatchListenError(`${outcome.error.message}${output}`);
 		}
 		if (outcome.kind === "listen_failed") {
 			throw new MatchListenError(
-				outcome.error instanceof Error ? outcome.error.message : String(outcome.error),
+				`${outcome.error instanceof Error ? outcome.error.message : String(outcome.error)}${output}`,
 			);
 		}
 		throw new MatchListenError(
-			`match process exited before listen (code=${outcome.exit.code}, signal=${outcome.exit.signal})`,
+			`match process exited before listen (code=${outcome.exit.code}, signal=${outcome.exit.signal})${output}`,
 		);
 	}
 

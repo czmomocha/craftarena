@@ -54,6 +54,21 @@ const registry = new MatchRegistry({
 			);
 			return;
 		}
+		if (event.type === "start_failed") {
+			// 拉起失败对调用方只是一个 502，原因必须留在这里，否则排查时无从下手。
+			app?.log.error(
+				{
+					matchId: event.matchId,
+					port: event.port,
+					godot: config.godotExecutable,
+					godotSource: config.godotExecutableSource,
+					reason: event.message,
+					recentOutput: event.recentOutput,
+				},
+				"match failed to start",
+			);
+			return;
+		}
 		app?.log.info({ matchId: event.matchId, port: event.port }, "match started");
 	},
 });
@@ -116,6 +131,7 @@ try {
 	server.log.info(
 		{
 			godot: config.godotExecutable,
+			godotSource: config.godotExecutableSource,
 			scene: config.matchScene,
 			portRange: [config.portRangeMin, config.portRangeMax],
 			controlPlaneUrl: config.controlPlaneUrl,
