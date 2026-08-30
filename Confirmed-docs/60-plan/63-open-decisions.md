@@ -21,7 +21,7 @@ AI 不得把其他文档中的示例表格、推荐项或"建议"当成已确认
 4. 各阶段默认时长、官方地图目标局时与 UI 动画时长；
 5. Tick、输入发送、快照频率、插值窗口和对账阈值；
 6. BASTION 隐藏布障的协议实现，包括服务器裁剪、提交揭示或其他方式；
-7. 具体性能预算和香港真实网络门禁。
+7. 具体性能预算和香港真实网络门禁（**单个 3D 资产预算已迁出**，见下方 2026-08-30）。
 
 ## 2. 工具与平台细节
 
@@ -35,6 +35,8 @@ AI 不得把其他文档中的示例表格、推荐项或"建议"当成已确认
 已关闭并迁出本清单：多 Agent 启用时机与运行时（2026-08-21，[ADR-0004](../../docs/adr/0004-multi-agent-adoption-timing-and-architecture.md)）。Cursor 原生 worktree + subagent + hooks；一期不引入 Multica 与 Automations；审查由 Bugbot 承担。启用判据与权限边界见 [CD-52](../50-engineering/52-ai-workflow.md)。A1–A4 已成立；M1 已退出（2026-08-23）；M2 已退出（2026-08-24）；工具链评审已通过（保持 2 域，第 3 域未开，M3 启动时由人类重审）。
 
 已关闭并迁出本清单：定点数单位尺度、舍入、溢出与三角函数（2026-08-21，[ADR-0005](../../docs/adr/0005-fixed-point-numeric-model.md) 选项 1）。合同见 [CD-42 §1.1](../40-technical/42-contracts-and-rulevm.md)。
+
+已关闭并迁出本清单：**单个 3D 资产预算**（2026-08-30）—— 静态无绑定物件 3,000 三角面 / 带动画绑定角色 6,000 三角面 / 贴图边长 512 / 单个文件 2 MB；同日拍板 AI 生成产物（TRELLIS、混元 3D）可作为正式资产。数值只在 [CD-11 §8.1](../10-product/11-scope-and-platforms.md) 维护，本文不复述。§1.7 其余部分（场景总量、Draw call、材质数、骨骼上限等工程性能预算，以及香港真实网络门禁）**仍延期**。观察数据见 [烘焙试验记录](../../docs/plans/asset-bake-trial-2026-08.md)；该文 §7 的第 2 项（是否引入烘焙工具与依赖）与第 3 项（是否把烘焙流水线立为 C4 一章）**仍未拍板**，AI 不得自选。来源见 [CD-91 D.1](../90-reference/91-decision-log.md)。
 
 已关闭并迁出本清单：一期 TRAPRUSH 环境失败复活硬直秒数 = **1.0 s**（2026-08-28，纠偏 D5 中档）。不锁 Tick Hz。对局 / Solo 已由 `TraprushPlayStubs` 按占位 60 physics tick/s 换成 60 tick；Preview 仍 1 次 Advance。§1.3 其余数值（伤害、冷却、推击力度、无控保护、刷新时间）仍延期。口径见 [纠偏方案 D5](../../docs/plans/course-correction-2026-08.md)、[CD-91 D.3](../90-reference/91-decision-log.md) 与 [CD-21 §6](../20-gameplay/21-traprush.md#6-单局流程)。
 
