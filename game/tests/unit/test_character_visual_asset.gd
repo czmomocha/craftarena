@@ -1,20 +1,24 @@
 extends GutTest
 
-## C4 第 5 章：第一个 `.glb` 入库 + 视觉资产解析链路（纠偏 §3 C4 产出 5、E7 后半）。
+## C4 第 5 章：第一批 `.glb` 入库 + 视觉资产解析链路（纠偏 §3 C4 产出 5、E7 后半）。
+##
+## 覆盖两个资产：角色（玩家节点）与地块（`solids` 袋 / `zone.tags` 含 solid）。
 ##
 ## 这里断言的是**分离已经数值成立**，不是模型好不好看。ADR-0006 §7 此前只能说
 ## "结构已分离、数值仍相等"，因为唯一内置资产就是占满一格、D4 又定 1 格 = 1 米。
-## 现在角色视觉是一个 1.03 m 高、0.74 × 0.61 m 粗的网格，而权威胶囊仍是
-## 0.125 格、占位盒仍是 1 米——三者互不相等。
+## 现在角色视觉是一个 1.03 m 高的网格、地块是等比缩到一格宽的薄板，而权威胶囊
+## 仍是 0.125 格、占位盒仍是 1 米。
 ##
 ## 冻结期不给占位表现新增强断言（.cursor/rules/chapter-granularity-and-review.mdc
 ## §3），所以下面没有一句写死 RGB 或模型尺寸的期望值；写死的是**关系**：视觉
-## 尺寸不等于权威尺寸、占位盒色值没变、解析失败必须回退。
+## 尺寸不等于权威尺寸、占位盒色值没变、解析失败必须回退、地块缩放由 AABB 推出。
 
 const CharacterAabb := "视觉网格的 AABB"
+const EPS: float = 0.0001
 
 var _map: MatchSnapshotMap = null
 var _preview: AuthoringPreviewMap = null
+var _solids: MatchSolidMap = null
 
 
 func before_each() -> void:
@@ -22,6 +26,8 @@ func before_each() -> void:
 	add_child_autofree(_map)
 	_preview = AuthoringPreviewMap.new()
 	add_child_autofree(_preview)
+	_solids = MatchSolidMap.new()
+	add_child_autofree(_solids)
 
 
 # --- 资产入库本身 -------------------------------------------------------------
@@ -41,9 +47,26 @@ func test_character_asset_is_in_the_repository_and_imports() -> void:
 
 
 func test_asset_path_lives_under_platform_content() -> void:
-	# CD-51 §5.1：平台资产放 game/content/，格式 .glb。
-	assert_true(SharedVisualAssetCatalog.CHARACTER_SCENE_PATH.begins_with("res://content/"))
-	assert_true(SharedVisualAssetCatalog.CHARACTER_SCENE_PATH.ends_with(".glb"))
+	# CD-51 §5.1：平台资产放 game/content/assets/，格式 .glb。
+	for path: String in [
+		SharedVisualAssetCatalog.CHARACTER_SCENE_PATH,
+		SharedVisualAssetCatalog.TERRAIN_TILE_SCENE_PATH,
+	]:
+		assert_true(path.begins_with("res://content/assets/"), path)
+		assert_true(path.ends_with(".glb"), path)
+
+
+func test_terrain_tile_asset_is_in_the_repository_and_imports() -> void:
+	assert_true(
+		SharedVisualAssetCatalog.has_terrain_tile(),
+		"地块视觉资产不在包内。跑 README 的「Headless 导入检查」再试"
+	)
+	var visual: Node3D = SharedVisualAssetCatalog.try_instantiate_terrain_tile()
+	assert_not_null(visual, "地块视觉资产存在但实例化不出 Node3D")
+	if visual == null:
+		return
+	assert_gt(_mesh_instances(visual).size(), 0, "地块资产里没有任何网格")
+	visual.free()
 
 
 # --- 视觉与权威碰撞在数值上真的分开了 ----------------------------------------
@@ -183,34 +206,196 @@ func test_preview_player_marker_falls_back_to_the_placeholder_box() -> void:
 	assert_eq(marker.layers, 1)
 
 
-func test_preview_entity_placeholders_stay_boxes() -> void:
-	# 实体占位盒**有意**不接视觉：一期唯一内置资产被 7 类袋共用，接上去会把
-	# 路面地板也变成同一个模型。理由见 SharedVisualAssetCatalog 文件头。
+func test_preview_solid_tag_gets_a_tile_and_other_entities_stay_boxes() -> void:
+	# 按**袋类型**接线，不是按 asset_id：solid 铺地块，机关（洋红）与可破坏箱
+	# （橙）不铺——D4 已把危险色定成可读性的一部分。理由见 catalog 文件头。
 	var world: AuthoringWorld = AuthoringWorld.new()
-	var record: SharedComponentRecord = SharedComponentRecord.create(7, {
-		"transform": {"x": 0, "y": 0, "z": 0, "yaw_bam": 0},
-	})
-	assert_true(world.put(record))
+	assert_true(world.put(_record_solid(11)))
+	assert_true(world.put(_record_hazard(12)))
+	assert_true(world.put(_record_crate(13)))
+	assert_true(world.put(_record_plain(14)))
 	_preview.rebuild(world)
-	var placeholder: MeshInstance3D = _preview.placeholder_node(7)
-	assert_not_null(placeholder)
-	if placeholder == null:
+
+	var solid: MeshInstance3D = _preview.placeholder_node(11)
+	assert_not_null(solid)
+	if solid != null:
+		assert_not_null(_preview.placeholder_visual_node(11), "solid 没铺上地块")
+		assert_eq(solid.layers, 0, "铺了地块的固体，占位盒本体应退出渲染层")
+		assert_eq((solid.mesh as BoxMesh).size, AuthoringPreviewMap.PLACEHOLDER_SIZE)
+
+	for entity_id: int in [12, 13, 14]:
+		var node: MeshInstance3D = _preview.placeholder_node(entity_id)
+		assert_not_null(node, "entity %d 没画出来" % entity_id)
+		if node == null:
+			continue
+		assert_null(
+			_preview.placeholder_visual_node(entity_id),
+			"entity %d 不该铺地块" % entity_id
+		)
+		assert_eq(node.layers, 1, "entity %d 的占位盒必须自己可见" % entity_id)
+
+
+func test_preview_solid_falls_back_to_the_placeholder_box() -> void:
+	_preview.tile_scene_path = ""
+	var world: AuthoringWorld = AuthoringWorld.new()
+	assert_true(world.put(_record_solid(11)))
+	_preview.rebuild(world)
+	var solid: MeshInstance3D = _preview.placeholder_node(11)
+	assert_not_null(solid)
+	if solid == null:
 		return
-	assert_eq(placeholder.layers, 1)
-	assert_eq(placeholder.get_child_count(), 0, "实体占位盒不该长出视觉子节点")
+	assert_null(_preview.placeholder_visual_node(11))
+	assert_eq(solid.layers, 1)
+	assert_eq(_seat_albedo(solid), AuthoringPreviewMap.SOLID_ALBEDO)
+
+
+# --- 地块贴合：缩放由 AABB 推出，不是写死的 -----------------------------------
+
+
+func test_tile_is_scaled_from_its_own_aabb_to_exactly_one_cell() -> void:
+	var visual: Node3D = SharedVisualAssetCatalog.try_instantiate_terrain_tile()
+	assert_not_null(visual)
+	if visual == null:
+		return
+	var raw: AABB = SharedVisualAssetCatalog.local_bounds(visual)
+	# 前提：这块砖本来就不是一格宽，否则这条用例什么也没验证。
+	assert_gt(
+		maxf(raw.size.x, raw.size.z),
+		PlaceholderSpec.METERS_PER_CELL,
+		"样本本来就 ≤ 一格宽，贴合逻辑没被这条用例覆盖"
+	)
+	assert_true(SharedVisualAssetCatalog.fit_tile_on_cell(visual))
+	var fitted: AABB = _fitted_bounds(visual)
+	assert_almost_eq(
+		maxf(fitted.size.x, fitted.size.z),
+		PlaceholderSpec.METERS_PER_CELL,
+		EPS,
+		"水平最长边应恰好一格"
+	)
+	# 等比：三轴同一个系数，模型自己的厚薄比例不被压扁。
+	assert_almost_eq(visual.scale.x, visual.scale.y, EPS)
+	assert_almost_eq(visual.scale.y, visual.scale.z, EPS)
+	visual.free()
+
+
+func test_tile_top_face_lands_on_the_placeholder_box_top() -> void:
+	# 踩得到的那个平面。对齐占位盒而不是权威 AABB：视觉不读裁决数据（Q4 = A）。
+	var visual: Node3D = SharedVisualAssetCatalog.try_instantiate_fitted_tile()
+	assert_not_null(visual)
+	if visual == null:
+		return
+	var fitted: AABB = _fitted_bounds(visual)
+	assert_almost_eq(
+		fitted.position.y + fitted.size.y,
+		PlaceholderSpec.METERS_PER_CELL / 2.0,
+		EPS,
+		"顶面没落在占位盒顶面，踩上去会浮空或半埋"
+	)
+	# 水平居中，否则铺成一条路会整体偏移半格。
+	assert_almost_eq(fitted.position.x + fitted.size.x / 2.0, 0.0, EPS)
+	assert_almost_eq(fitted.position.z + fitted.size.z / 2.0, 0.0, EPS)
+	visual.free()
+
+
+func test_fit_refuses_a_degenerate_visual() -> void:
+	# 没有网格 ⇒ AABB 为零 ⇒ 算不出缩放。放弃贴合，而不是除以 0。
+	var empty: Node3D = Node3D.new()
+	assert_false(SharedVisualAssetCatalog.fit_tile_on_cell(empty))
+	assert_eq(SharedVisualAssetCatalog.local_bounds(empty).size, Vector3.ZERO)
+	empty.free()
+	assert_false(SharedVisualAssetCatalog.fit_tile_on_cell(null))
+
+
+func test_local_bounds_accounts_for_child_transforms() -> void:
+	# 今天两个资产都是「根下一个单位变换的 Mesh」，下一个未必是。
+	var root: Node3D = Node3D.new()
+	var child: MeshInstance3D = MeshInstance3D.new()
+	var box: BoxMesh = BoxMesh.new()
+	box.size = Vector3(2.0, 2.0, 2.0)
+	child.mesh = box
+	child.position = Vector3(10.0, 0.0, 0.0)
+	root.add_child(child)
+	var bounds: AABB = SharedVisualAssetCatalog.local_bounds(root)
+	assert_almost_eq(bounds.position.x, 9.0, EPS, "子节点位移没算进 AABB")
+	assert_almost_eq(bounds.size.x, 2.0, EPS)
+	root.free()
+
+
+# --- 对局固体映射 ------------------------------------------------------------
+
+
+func test_match_solids_get_tiles_and_keep_authoritative_half_extents() -> void:
+	assert_true(_solids.apply_path(OfficialTraprushCourses.document_path(
+		OfficialTraprushCourses.COURSE_01
+	)))
+	assert_gt(_solids.solid_total(), 0, "course_01 应该有始终固体")
+	assert_eq(_solids.visual_count(), _solids.solid_total(), "每个固体都该铺上地块")
+	# 权威半长与视觉无关：本席预测读的还是编译拓扑那一份。
+	var boxes: Array = _solids.live_solid_boxes()
+	assert_eq(boxes.size(), _solids.solid_total())
+	for raw: Variant in boxes:
+		var box: Dictionary = raw
+		var half_x: int = box.get("hx", 0)
+		var half_y: int = box.get("hy", 0)
+		var half_z: int = box.get("hz", 0)
+		assert_eq(half_x, PlaceholderSpec.CELL / 2)
+		assert_eq(half_y, PlaceholderSpec.CELL / 2)
+		assert_eq(half_z, PlaceholderSpec.CELL / 2)
+
+
+func test_match_solid_keeps_its_placeholder_mesh_and_colour() -> void:
+	assert_true(_solids.apply_path(OfficialTraprushCourses.document_path(
+		OfficialTraprushCourses.COURSE_01
+	)))
+	var entity_id: int = _first_solid_entity_id()
+	assert_gt(entity_id, 0)
+	var node: MeshInstance3D = _solids.solid_node(entity_id)
+	assert_not_null(node)
+	if node == null:
+		return
+	assert_not_null(_solids.visual_node(entity_id))
+	assert_eq(node.layers, 0)
+	assert_eq((node.mesh as BoxMesh).size, MatchSolidMap.PLACEHOLDER_SIZE)
+	assert_eq(_seat_albedo(node), MatchSolidMap.SOLID_ALBEDO)
+
+
+func test_match_solids_fall_back_to_placeholder_boxes() -> void:
+	_solids.tile_scene_path = ""
+	assert_true(_solids.apply_path(OfficialTraprushCourses.document_path(
+		OfficialTraprushCourses.COURSE_01
+	)))
+	assert_eq(_solids.visual_count(), 0)
+	var entity_id: int = _first_solid_entity_id()
+	assert_gt(entity_id, 0)
+	assert_null(_solids.visual_node(entity_id))
+	assert_eq(_solids.solid_node(entity_id).layers, 1)
+
+
+func test_match_solid_visual_count_resets_on_rebuild() -> void:
+	var path: String = OfficialTraprushCourses.document_path(
+		OfficialTraprushCourses.COURSE_01
+	)
+	assert_true(_solids.apply_path(path))
+	var first: int = _solids.visual_count()
+	assert_gt(first, 0)
+	assert_true(_solids.apply_path(path))
+	assert_eq(_solids.visual_count(), first, "重建后视觉计数应重算而不是累加")
 
 
 # --- 包内自检覆盖到它 --------------------------------------------------------
 
 
-func test_package_check_covers_the_character_visual() -> void:
+func test_package_check_covers_both_visual_assets() -> void:
 	var report: Dictionary = PackageCheck.report()
 	var checks: Dictionary = report["checks"]
-	assert_true(checks.has("character_visual_loadable"), "包内自检没查视觉资产")
-	var loadable: bool = checks.get("character_visual_loadable", false)
-	assert_true(loadable, "源码工程里视觉资产就已经加载不出来")
-	var reported_path: String = report.get("character_visual_path", "")
-	assert_eq(reported_path, SharedVisualAssetCatalog.CHARACTER_SCENE_PATH)
+	for key: String in ["character_visual_loadable", "terrain_tile_visual_loadable"]:
+		assert_true(checks.has(key), "包内自检没查 %s" % key)
+		var loadable: bool = checks.get(key, false)
+		assert_true(loadable, "源码工程里 %s 就已经不成立" % key)
+	var character_path: String = report.get("character_visual_path", "")
+	assert_eq(character_path, SharedVisualAssetCatalog.CHARACTER_SCENE_PATH)
+	var tile_path: String = report.get("terrain_tile_visual_path", "")
+	assert_eq(tile_path, SharedVisualAssetCatalog.TERRAIN_TILE_SCENE_PATH)
 
 
 # --- helpers -----------------------------------------------------------------
@@ -218,6 +403,50 @@ func test_package_check_covers_the_character_visual() -> void:
 
 func _player_body() -> Dictionary:
 	return {"x": 0, "y": 0, "z": 0, "yaw_bam": 0}
+
+
+func _record_plain(entity_id: int) -> SharedComponentRecord:
+	return SharedComponentRecord.create(entity_id, {
+		"transform": {"x": 0, "y": 0, "z": 0, "yaw_bam": 0},
+	})
+
+
+func _record_solid(entity_id: int) -> SharedComponentRecord:
+	return SharedComponentRecord.create(entity_id, {
+		"transform": {"x": 0, "y": 0, "z": 0, "yaw_bam": 0},
+		"zone": {
+			"shape": {"kind": "box", "hx": 32768, "hy": 32768, "hz": 32768},
+			"tags": ["solid"],
+		},
+	})
+
+
+func _record_hazard(entity_id: int) -> SharedComponentRecord:
+	return SharedComponentRecord.create(entity_id, {
+		"transform": {"x": 0, "y": 0, "z": 0, "yaw_bam": 0},
+		"hazard": {"damage": 0, "knockback": 0, "cooldown_ticks": 1},
+	})
+
+
+func _record_crate(entity_id: int) -> SharedComponentRecord:
+	return SharedComponentRecord.create(entity_id, {
+		"transform": {"x": 0, "y": 0, "z": 0, "yaw_bam": 0},
+		"destructible": {"durability": 1, "regen_policy_id": 0},
+	})
+
+
+## 贴合把缩放写在节点上，所以要把节点 transform 也算进去才是"最终看到的大小"。
+func _fitted_bounds(visual: Node3D) -> AABB:
+	return visual.transform * SharedVisualAssetCatalog.local_bounds(visual)
+
+
+func _first_solid_entity_id() -> int:
+	for child: Node in _solids.get_children():
+		var name_text: String = str(child.name)
+		if not name_text.begins_with(MatchSolidMap.SOLID_PREFIX):
+			continue
+		return int(name_text.trim_prefix(MatchSolidMap.SOLID_PREFIX))
+	return 0
 
 
 func _seat_albedo(node: MeshInstance3D) -> Color:
