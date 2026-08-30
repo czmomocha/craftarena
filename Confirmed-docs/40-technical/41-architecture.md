@@ -125,6 +125,7 @@ repo/
 ├─ tools/
 │  ├─ dev-launcher/
 │  ├─ bot-runner/
+│  ├─ asset-budget/
 │  ├─ content-validator/
 │  ├─ redline-scanner/
 │  ├─ shell-guard/

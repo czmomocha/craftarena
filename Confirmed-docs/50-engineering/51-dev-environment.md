@@ -21,6 +21,8 @@
 | 单元测试 | GUT **9.7.1**（MIT）；随仓库入库于 `game/addons/gut/`，升级须同步本行 |
 | 版本管理 | GitHub 私有 Monorepo；受保护 `main`；Git LFS |
 | 3D 工具 | Blender，统一导出 GLB/glTF |
+| 资产预算校验 | `@gltf-transform/core` **4.4.2**（MIT）；锁在根 `devDependencies`，2 个包、`npm audit` 0 漏洞、无 native 依赖。判定 [CD-11 §8.1](../10-product/11-scope-and-platforms.md) 的单资产预算，进 CI（`npm run asset-budget`） |
+| 资产烘焙 | `@gltf-transform/cli` **4.4.2**（MIT）；**刻意不进 `package.json`**，由 [资产烘焙 runbook](../../docs/runbooks/asset-bake.md) 用 `npx @gltf-transform/cli@4.4.2` 显式按版本拉起。理由：它拖 205 个包，其中 `sharp@~0.34.5` 挂 4 个 libvips CVE（`GHSA-f88m-g3jw-g9cj`）且上游未跟进，而 `npm audit fix --force` 会把它降到 2.5.1。烘焙只在开发机跑、不进 CI、不进玩家包，把 CVE 挡在依赖树外比锁进 lock 更划算 |
 | 服务端本地环境 | Godot Headless + Node.js 服务；Docker Compose 可选 |
 | CI | 目标为 GitHub Actions Linux + 自托管 Windows Runner。**当前只有 Linux 一档在跑**，自托管 Windows Runner 尚未搭建；Windows 与 macOS 开发机上的引擎行为都靠人工执行 [环境烟测清单](../../docs/runbooks/environment-smoke-test.md) |
 | 云环境 | 腾讯云香港计算与 COS；本地 + 一个长期测试环境 |
@@ -106,11 +108,26 @@ export GODOT_AI_DISABLE_TELEMETRY=true
 - 语言：GDScript；
 - 类型：`shared/`、`simulation/`、`ugc/`、`server/` 静态类型且警告视为错误；UI/工具可有限使用 `Variant`，进入核心边界前必须校验。Godot 4.7 无法按目录收紧警告，落地方式见 [ADR-0001](../../docs/adr/0001-strict-gdscript-typing-gate.md)；
 - 文件命名：`snake_case`；
-- 资源导入：统一 GLB；
+- 资源导入：统一 GLB，详见 §5.1；
 - 自动加载：只放稳定的基础服务，不把大量玩法状态塞进 Autoload；
 - 日志：开发构建输出结构化日志；
 - 导出：Windows、Linux Headless、Android、iOS 占位预设；
 - Web 预设在核心切片稳定后加入。
+
+### 5.1 资产入库规范（当前生效值）
+
+运行时 3D 资产统一 **GLB**（二进制 glTF，贴图内嵌）。不入库 `.gltf` + 外部 `.bin` 的散装形式：多文件形态让"一个资产一个版本"变成"一组文件各自漂移"，也让 §2 的 LFS 规则难以覆盖完整。
+
+| 项 | 规则 |
+|---|---|
+| 格式 | `.glb`；`.blend` / 高分辨率源图另走 LFS（§2） |
+| 目录 | 平台资产放 `game/content/`；`game/addons/` 属第三方插件，**不受平台预算约束** |
+| 预算 | 单个资产必须过 [CD-11 §8.1](../10-product/11-scope-and-platforms.md)。由 `npm run asset-budget` 机械判定并进 CI |
+| 面数档位 | 由 glTF 是否含 `skin` 决定，**不看文件名** |
+| 判不出就拒 | 认不出的贴图格式、非三角 primitive、LFS 指针一律失败，不放过 |
+| 烘焙 | 生成产物入库前先按 [资产烘焙 runbook](../../docs/runbooks/asset-bake.md) 压到预算内 |
+
+**本节只管单个资产的准入。** 场景总量、Draw call、材质数与骨骼上限仍属 [CD-63 §1.7](../60-plan/63-open-decisions.md) 延期（人类 2026-08-30 明确本期不做），不得由实现自选。自动化烘焙流水线同样不在 C4。
 
 ## 6. AI 环境验证烟测
 

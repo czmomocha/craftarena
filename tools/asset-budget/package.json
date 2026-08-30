@@ -1,0 +1,8 @@
+{
+	"name": "@craftarena/asset-budget",
+	"version": "0.0.0",
+	"private": true,
+	"type": "module",
+	"description": "Decides the CD-11 section 8.1 single-asset budget for GLB files. Reads image headers only; no pixel decode, no native dependency.",
+	"license": "UNLICENSED"
+}

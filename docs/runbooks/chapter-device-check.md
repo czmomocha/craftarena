@@ -53,51 +53,50 @@ Worktree 端口偏移见 README「并行工作区」；本文件不复述端口�
 
 ---
 
-## 本刀：freeze-exception — MatchHost 引擎路径不再静默回退
+## 本刀：纠偏 C4 第 4 章 — 单资产预算门禁与跨平台烘焙
 
-对应：当前 PR（纠偏 [§1.3 例外通道](../plans/course-correction-2026-08.md)，人类 2026-08-30 选 A「单独一刀修」）。它修的是 C4 第 3 章真机验证时坑掉时间的那件事：`GODOT4` 缺失或写错时 MatchHost 悄悄用 PATH 上的 `godot`，一路撑到第一次 `POST /matches` 才回一个**不带原因**的 502，而 `spawn ... ENOENT` 只留在子进程输出里，日志和响应都看不到。
+对应：当前完整章节 PR。[CD-11 §8.1](../../Confirmed-docs/10-product/11-scope-and-platforms.md) 的预算 2026-08-30 已拍板，但当时**没有任何跨平台工具能执行它**——烘焙试验那份脚本硬编码 macOS `sips` 且不入库。这一章补上：一条校验命令（进 CI）+ 一条烘焙命令（开发机）。
 
-**这一章没有 Godot 内的可见行为变化。** 要看的东西全在后端终端与 HTTP 响应里，所以不需要打开 Traprush 窗口，也不需要做「共用启动」的 0.2。
+**本章无 Godot 内可见行为**：不碰 `game/`、不入库任何资产。要看的全在命令行里，所以**不需要** `npm run dev`，也不需要打开 Traprush 窗口。
 
-1. **正常路径没退化**：仓库根 `npm run dev`。
-   - 预期：三个 `/readyz` 都就绪；`match-host` 那行 `match host ready` 里多了 `godotSource`（macOS/Linux 上是 `GODOT4`，Windows 上设了 `_console.exe` 就是 `GODOT4_CONSOLE`），`godot` 仍是你机器上的引擎路径。
-   - 失败：MatchHost 起不来（先确认 `echo $GODOT4` / `$env:GODOT4` 非空），或日志里没有 `godotSource`。
-2. **缺 `GODOT4` 就当场拒绝启动**：另开一个终端，把变量清掉只跑 MatchHost。
-
-   | 平台 | 命令（仓库根） |
-   |---|---|
-   | macOS | `env -u GODOT4 npm run match-host` |
-   | Windows | `$env:GODOT4=""; $env:GODOT4_CONSOLE=""; npm run match-host`（**新开一个** PowerShell，别污染当前会话） |
-
-   - 预期：进程立刻退出，stderr 写明 `GODOT4 must point at the Godot engine executable`（Windows 上是 `GODOT4_CONSOLE or GODOT4 ...`），并提到不会回退到 PATH 上的 `godot`。**没有**任何监听、没有 502。
-   - 失败：进程照样起来了（说明还在静默回退），或报错只有一句 `undefined`。
-   - 提示：仓库根有 `.env` 且里面写了 `GODOT4` 时，`npm run match-host` 不读它（只有 `npm run dev` 会 `loadEnvFile`），所以这一步照上面做就行。
-3. **引擎路径写错时，502 说得出原因**：新终端里把 `GODOT4` 指到一个不存在的文件，只拉起 MatchHost（这一步不需要控制面：失败发生在 listen 之前，还没轮到登记）。
-
+1. **空仓库不假绿**：仓库根 `npm run asset-budget`。
+   - 预期：输出 `no .glb under game/ — nothing was checked.` 加一句 `this is not a pass.`，退出码 0。
+   - 失败：只打一句 `ok` 就退出（那会让人以为门禁查过了）。
+   - 为什么这么设计：仓库现在 0 个 `.glb`（E7 后半在第 5 章），门禁必须说清"没查"而不是"通过"。
+2. **真实生成产物被拒，并逐张点名**：拿一个 4096 贴图的生成产物来跑。
    ```bash
-   GODOT4=/nope/godot npm run match-host
+   npm run asset-budget <你的生成产物>.glb
    ```
-
-   Windows：`$env:GODOT4="C:\nope\godot.exe"; $env:GODOT4_CONSOLE=""; npm run match-host`
-
-   再在另一个终端开一场：
-
+   （我这边用的是 `test-res/test-glb/kofizhou_lightai_1787938054928__AIGC_TEMP.glb`，你本机应该还在。）
+   - 预期：退出码 **1**，逐行列出 `[texture_size] texture "#0" is 4096x4096`（三张各一行，**带 `#索引`**）与 `[file_bytes] 28.36 MB exceeds the 2.00 MB budget`，末尾指向烘焙 runbook。
+   - 失败：绿了；或三张贴图都叫 `<embedded>` 分不出是哪张。
+3. **烘焙一次，再验一次**：
    ```bash
-   curl -sS -i -X POST http://127.0.0.1:8100/matches
+   npx --yes @gltf-transform/cli@4.4.2 resize <产物>.glb /tmp/out.glb --width 512 --height 512
+   npm run asset-budget /tmp/out.glb
    ```
-
-   - 预期：HTTP 502，body 的 `error` 是 `session_listen_failed`，`message` 里能读到 `spawn ... ENOENT`（这是本章的核心：原因进了响应）。MatchHost 终端同时出现一条 `match failed to start` 的 **error** 级日志，带 `godot`、`godotSource`、`recentOutput`。
-   - 失败：502 的 `message` 只写「进程在 listen 前退出」而不含 spawn 原因；或者 MatchHost 终端一行日志都没有（这正是修之前的样子）。
-   - 收尾：Ctrl+C 停掉终端。端口号若被 worktree 偏移过，按 README「并行工作区」换算，不要照抄 8100。
+   - 预期：第一条约 7 秒，打印 `29.74 MB → 803 KB` 量级；第二条 `ok ... largest edge 512, 784.2 KB`，退出码 0。
+   - 失败：`npx` 装不上（Windows 上尤其要确认）；或烘焙后仍被拒。
+   - macOS 上会打印 `objc[...] libvips-cpp` 两个版本冲突的警告，**可以忽略**（runbook 已记）。
+4. **门禁不依赖 native**：确认 `npm audit` 输出 `found 0 vulnerabilities`。
+   - 预期：0 漏洞。校验只用 `@gltf-transform/core`（2 个包）；带 4 个 libvips CVE 的 `sharp` 只在第 3 步的 `npx` 临时环境里，不在本仓库依赖树。
+   - 失败：audit 报 high —— 那说明 cli 被误写进了 `package.json`。
 
 ### 本刀不测
 
-- 任何 Godot 内的表现（本章不碰 `game/`）；
-- 引擎版本是否匹配（只查"能不能派生出来"，不查 `--version`）；
-- compose 镜像里的路径（`Dockerfile` 已经 `ENV GODOT4=/opt/godot/godot`，未改）；
-- C4 第 4 章起的资产预算校验、`.glb` 入库。
+- 任何 `.glb` 入库（第 5 章，E7 后半）；
+- 按用途分档的烘焙参数（baseColor / ORM / normal 各自上限）与自动化流水线 —— 人类 2026-08-30 明确**不放 C4**；
+- 场景总量 / Draw call / 材质数 / 骨骼上限 —— 仍属 [CD-63 §1.7](../../Confirmed-docs/60-plan/63-open-decisions.md) 延期；
+- 动画状态契约、本地化键（第 6 章）；
+- KTX2 / Basis 压缩路径（校验器**能读** KTX2 尺寸，但没有烘焙路径）。
+
+### 诚实边界
+
+- 烘焙工具**不在 lock 里**，传递依赖不保证逐字节可复现。可接受，因为入库物是产物 `.glb` 且由第 1 步的门禁把关；
+- 那 4 个 CVE 仍然存在，只是不在本仓库依赖树。攻击面是"用 libvips 解码不可信图像"，而这里解码的是你自己生成的资产、在开发机上；
+- 第 3 步的时间与体积数字来自 **2026-08-30 本机 macOS arm64 一次运行**，不是性能指标。
 
 ### 仍然欠着（不因本章消失）
 
-24 小时 ICMP 回填、远端协议层 RTT 回填、C3 网络参数锁定、E6 在有美术之后的可玩性签署、E7 后半（第一个 `.glb` 入库）；烘焙试验 §7 第 2、3 项（是否引入烘焙工具依赖、是否把烘焙流水线立为一章）仍待人类拍板。
+24h ICMP 回填、远端协议层 RTT 回填、C3 网络参数锁定、E6 有美术后的可玩性签署、E7 后半（第一个 `.glb` 入库）、扫掠取样代价无上限（宪法第十七条缺口）、`match_lobby_shell.gd` 已 1,510 行（E9 要求 < 400）。
 

@@ -14,6 +14,7 @@
     "backend/realtime-gateway",
     "backend/match-host",
     "tools/dev-launcher",
+    "tools/asset-budget",
     "tools/content-validator",
     "tools/redline-scanner",
     "tools/shell-guard"
@@ -22,6 +23,7 @@
     "typecheck": "tsc --noEmit",
     "test": "node --test \"backend/**/tests/**/*.test.ts\" \"tools/**/tests/**/*.test.ts\"",
     "redline-scan": "node tools/redline-scanner/src/main.ts",
+    "asset-budget": "node tools/asset-budget/src/main.ts",
     "setup-worktree": "node tools/dev-launcher/src/setup_worktree.ts",
     "dev": "node tools/dev-launcher/src/main.ts",
     "control-plane": "node backend/control-plane/src/main.ts",
@@ -29,6 +31,7 @@
     "match-host": "node backend/match-host/src/main.ts"
   },
   "devDependencies": {
+    "@gltf-transform/core": "4.4.2",
     "@types/node": "24.13.3",
     "@types/ws": "8.18.1",
     "typescript": "7.0.2"
