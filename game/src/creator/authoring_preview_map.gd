@@ -54,6 +54,7 @@ var _reach_ok: bool = true
 var _reach_issue_count: int = 0
 ## 空字符串或解析失败 ⇒ 回退占位盒。是变量而不是常量，好让测试两条分支都能跑。
 var character_scene_path: String = SharedVisualAssetCatalog.CHARACTER_SCENE_PATH
+var tile_scene_path: String = SharedVisualAssetCatalog.TERRAIN_TILE_SCENE_PATH
 
 
 static func meters_from_fixed(value: int) -> float:
@@ -281,6 +282,13 @@ func placeholder_node(entity_id: int) -> MeshInstance3D:
 	return get_node_or_null(placeholder_name(entity_id)) as MeshInstance3D
 
 
+func placeholder_visual_node(entity_id: int) -> Node3D:
+	var placeholder: MeshInstance3D = placeholder_node(entity_id)
+	if placeholder == null:
+		return null
+	return placeholder.get_node_or_null(VISUAL_NAME) as Node3D
+
+
 func focus_entity(entity_id: int) -> bool:
 	ensure_rig()
 	var placeholder: MeshInstance3D = placeholder_node(entity_id)
@@ -434,10 +442,12 @@ func _record_has_zone_tag(record: SharedComponentRecord, tag_name: String) -> bo
 
 func _spawn_placeholder(entity_id: int, pose: Dictionary, record: SharedComponentRecord) -> void:
 	var albedo: Color = PlaceholderSpec.ENTITY_STUB_ALBEDO
+	var is_solid: bool = false
 	if record != null and record.components.has(SharedComponentNames.HAZARD):
 		albedo = HAZARD_ALBEDO
 	elif record != null and _record_has_solid_tag(record):
 		albedo = SOLID_ALBEDO
+		is_solid = true
 	elif record != null and record.components.has(SharedComponentNames.DESTRUCTIBLE):
 		albedo = CRATE_ALBEDO
 	elif record != null and _record_has_finish_tag(record):
@@ -452,6 +462,25 @@ func _spawn_placeholder(entity_id: int, pose: Dictionary, record: SharedComponen
 	var yaw_bam: int = pose["yaw_bam"]
 	node.rotation.y = yaw_radians_from_bam(yaw_bam)
 	add_child(node)
+	if is_solid:
+		_attach_tile_visual(node)
+
+
+## 只有 `zone.tags` 含 `solid` 的实体铺地块，与对局 MatchSolidMap 同一条规则。
+## 机关（洋红）与可破坏箱（橙）不铺：D4 已把危险色定成可读性的一部分。
+func _attach_tile_visual(placeholder: MeshInstance3D) -> bool:
+	if tile_scene_path.is_empty():
+		return false
+	var visual: Node3D = SharedVisualAssetCatalog.try_instantiate(tile_scene_path)
+	if visual == null:
+		return false
+	if not SharedVisualAssetCatalog.fit_tile_on_cell(visual):
+		visual.free()
+		return false
+	visual.name = VISUAL_NAME
+	placeholder.add_child(visual)
+	placeholder.layers = 0
+	return true
 
 
 func _spawn_portal_gizmos(world: AuthoringWorld) -> void:

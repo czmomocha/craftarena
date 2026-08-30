@@ -9,19 +9,31 @@ extends Node3D
 ## v1 frames have no solid bag. Official courses compile path floors.
 ## No interpolation or prediction API. Box size and colour come from
 ## PlaceholderSpec; this file keeps the names but no longer owns the values.
+##
+## 当 `tile_scene_path` 能解析出地块视觉（SharedVisualAssetCatalog）时，每个固体
+## 节点多挂一个 `visual` 子节点，占位盒自身退出渲染（`layers = 0`）但网格与石色
+## 原样保留——`live_solid_boxes()` 给的是编译拓扑的权威半长，与视觉无关，本席预测
+## 读的还是同一份。视觉解析失败就是今天的行为，一个石色 1 米盒。
+##
+## 只有**始终固体**铺地块。周期机关走 MatchHazardMap（洋红）、可破坏箱走
+## MatchCrateMap（橙），两者都不铺：D4 已把危险色定成可读性的一部分。
 
 const AuthoringDocumentGd := preload("res://src/creator/authoring_document.gd")
 const TraprushTopologyCompilerGd := preload("res://src/ugc/traprush_topology_compiler.gd")
 
 const SOLID_PREFIX: String = "solid_"
+const VISUAL_NAME: String = "visual"
 const PLACEHOLDER_SIZE: Vector3 = PlaceholderSpec.BOX_SIZE
 const SOLID_ALBEDO: Color = PlaceholderSpec.SOLID_ALBEDO
 
+## 空字符串或解析失败 ⇒ 回退占位盒。是变量而不是常量，好让测试两条分支都能跑。
+var tile_scene_path: String = SharedVisualAssetCatalog.TERRAIN_TILE_SCENE_PATH
 var _has_course: bool = false
 var _cell: int = 0
 var _poses: Array[Dictionary] = []
 var _live_solids: Array[Dictionary] = []
 var _solid_count: int = 0
+var _visual_count: int = 0
 
 
 static func meters_from_fixed(value: int) -> float:
@@ -67,6 +79,18 @@ func solid_total() -> int:
 
 func solid_node(entity_id: int) -> MeshInstance3D:
 	return get_node_or_null(solid_name(entity_id)) as MeshInstance3D
+
+
+func visual_node(entity_id: int) -> Node3D:
+	var solid: MeshInstance3D = solid_node(entity_id)
+	if solid == null:
+		return null
+	return solid.get_node_or_null(VISUAL_NAME) as Node3D
+
+
+## 有多少个固体真的铺上了地块。0 表示全部回退到占位盒。
+func visual_count() -> int:
+	return _visual_count
 
 
 func live_solid_boxes() -> Array:
@@ -191,6 +215,26 @@ func _spawn_box(node_name: String, pose: Dictionary) -> void:
 	node.mesh = mesh
 	node.position = Vector3(meters_from_fixed(x), meters_from_fixed(y), meters_from_fixed(z))
 	add_child(node)
+	_attach_visual(node)
+
+
+## 地块在时：挂 `visual` 子节点并让占位盒本体退出渲染层。用 `layers = 0` 而不是
+## `visible = false`，因为后者会连带隐藏刚挂上的视觉。不染色：固体不需要区分归属，
+## 石色本来就是占位色，地块自带贴图。
+func _attach_visual(solid: MeshInstance3D) -> bool:
+	if tile_scene_path.is_empty():
+		return false
+	var visual: Node3D = SharedVisualAssetCatalog.try_instantiate(tile_scene_path)
+	if visual == null:
+		return false
+	if not SharedVisualAssetCatalog.fit_tile_on_cell(visual):
+		visual.free()
+		return false
+	visual.name = VISUAL_NAME
+	solid.add_child(visual)
+	solid.layers = 0
+	_visual_count += 1
+	return true
 
 
 func _clear_solids() -> void:
@@ -202,6 +246,7 @@ func _clear_solids() -> void:
 		remove_child(node)
 		node.free()
 	_solid_count = 0
+	_visual_count = 0
 
 
 func _unshaded(color: Color) -> StandardMaterial3D:
