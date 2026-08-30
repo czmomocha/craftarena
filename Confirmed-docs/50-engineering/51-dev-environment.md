@@ -54,6 +54,8 @@
 
 第 5 步的环境变量约定：所有命令通过 `GODOT4` 定位引擎，禁止把安装路径写死在脚本里。Windows 上还需要 `GODOT4_CONSOLE` 指向同版本的 `_console.exe`，否则 PowerShell 读不到引擎 stdout。
 
+该变量对 MatchHost 是**必填**：它要为每场对局派生一个 Godot Headless 子进程，缺失时直接拒绝启动，不回退到 PATH 上的 `godot`。要用 PATH 查找必须显式写 `GODOT4=godot`。
+
 ```powershell
 [Environment]::SetEnvironmentVariable("GODOT4", "<安装目录>\Godot_v4.7.2-stable_win64.exe", "User")
 [Environment]::SetEnvironmentVariable("GODOT4_CONSOLE", "<安装目录>\Godot_v4.7.2-stable_win64_console.exe", "User")

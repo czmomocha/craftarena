@@ -32,7 +32,8 @@
 - `web_offline = native_only`：安装版离线；Web 在线但保留本地草稿。
 - `mobile_editor_scope = play_only`；`pc_input_support = keyboard_only`。
 - `localization_scope = zh_en`；`accessibility_baseline = defer_accessibility`。
-- `art_direction = stylized_lowpoly`；`target_age = teen_plus`。
+- `art_direction = stylized_lowpoly`；`target_age = teen_plus`。该行被 `asset_budget_v1 = tri_3k_6k_tex_512_size_2mb`（2026-08-30）补充：单个平台 3D 资产上限为静态无绑定物件 **3,000** 三角面、带动画绑定角色 **6,000** 三角面、贴图边长 **512**（全用途）、单个文件 **2 MB**。覆盖 [CD-63 §1.7](../60-plan/63-open-decisions.md) 中"资产面数 / 贴图 / 体积"这一段空白；§1.7 其余工程性能预算（场景总量、Draw call、材质数、骨骼上限）与香港真实网络门禁**不被覆盖，仍延期**。同时覆盖 [烘焙试验记录](../../docs/plans/asset-bake-trial-2026-08.md) §6 的"推荐预设"作为建议的地位（面数由单档 3000 改为按是否带绑定分两档；`max_total_bytes` 由 1 MB 参考线改为 2 MB 预算），但那份文档的观察值仍只是一次本机试验，不是门禁。该文 §7 第 2 项（烘焙工具与依赖）与第 3 项（烘焙流水线是否立为 C4 一章）**未拍板**。数字只在 [CD-11 §8.1](../10-product/11-scope-and-platforms.md) 维护。
+- `platform_asset_generation = ai_generated_allowed`（2026-08-30）：TRELLIS、混元 3D 等 AI 生成工具的产物只要过 `asset_budget_v1` 即可作为**正式**平台资产入库，不需要人手重做。这是把 D.6 `ai_asset_policy = auto_publish_if_technical` 从"公开策略"落到"平台自有美术生产"上，不覆盖 [CD-11 §5](../10-product/11-scope-and-platforms.md) 的"玩家不得上传自定义 3D 模型、音频和任意贴图"，也不覆盖 [CD-63 §4](../60-plan/63-open-decisions.md) 阻断清单第 6 项（AI 资产来源、投诉和下架流程）。口径见 [CD-11 §8](../10-product/11-scope-and-platforms.md)。
 - `monetization_phase1 = none_no_hooks`。
 - `client_signing = platform_minimum`；`steam_integration_timing = after_core_adapter`。
 

@@ -3,10 +3,14 @@ import { resolve } from "node:path";
 import { MATCH_LISTEN_PROBE_HOST } from "./listen_probe.ts";
 import { buildMatchUpstreamUrl } from "./registrar.ts";
 
+/** 引擎路径是从哪个环境变量来的。写进启动日志，免得排查时还要猜。 */
+export type GodotExecutableSource = "GODOT4" | "GODOT4_CONSOLE";
+
 export interface MatchHostConfig {
 	readonly host: string;
 	readonly port: number;
 	readonly godotExecutable: string;
+	readonly godotExecutableSource: GodotExecutableSource;
 	readonly godotProjectPath: string;
 	readonly matchScene: string;
 	readonly portRangeMin: number;
@@ -75,10 +79,13 @@ export function loadConfig(
 	// 并发上限默认等于端口容量：再多也分不到端口，不如在入口就明确拒绝。
 	const portCapacity = portRangeMax - portRangeMin + 1;
 
+	const godot = resolveGodotExecutable(env, platform);
+
 	return {
 		host: env["MATCH_HOST_HOST"] ?? "127.0.0.1",
 		port: parseInteger(env["MATCH_HOST_PORT"], DEFAULT_PORT, "MATCH_HOST_PORT"),
-		godotExecutable: resolveGodotExecutable(env, platform),
+		godotExecutable: godot.executable,
+		godotExecutableSource: godot.source,
 		godotProjectPath: resolve(env["MATCH_HOST_GODOT_PROJECT"] ?? "./game"),
 		matchScene: env["MATCH_HOST_SCENE"] ?? "res://src/server/match_server.tscn",
 		portRangeMin,
@@ -117,6 +124,11 @@ function parseUpstreamHost(raw: string | undefined): string {
 /**
  * 引擎路径只从环境变量取，不在代码里写死安装位置（与 README 命令表一致）。
  *
+ * **没有 PATH 回退。** 以前 `GODOT4` 缺失时会静默退成 `"godot"`，于是配置错误一路
+ * 潜伏到第一次 `POST /matches`，才以一个不带原因的 HTTP 502 冒出来（`spawn godot
+ * ENOENT` 只留在子进程输出里，没人看得到）。配置缺失属于启动期错误，就在启动期报。
+ * 想用 PATH 上的引擎也要显式写出来：`GODOT4=godot`。
+ *
  * Windows 上多一层选择：普通 `godot.exe` 是 GUI 子系统程序，不会向父进程的管道写
  * stdout，于是 CD-44 §3 要求的"进程异常时尽力保留日志"会退化成一片空白，崩溃了
  * 也看不到原因。同版本的 `_console.exe` 没有这个问题，所以优先用它。
@@ -126,15 +138,36 @@ function parseUpstreamHost(raw: string | undefined): string {
  * 因此 MatchHost 记录的 pid 是外层 wrapper 而不是引擎本体，按 pid 排查时要注意。
  * 已实测确认终止 wrapper 会连带回收内层引擎并释放对局端口，不会留下孤儿进程。
  */
-function resolveGodotExecutable(env: NodeJS.ProcessEnv, platform: NodeJS.Platform): string {
+function resolveGodotExecutable(
+	env: NodeJS.ProcessEnv,
+	platform: NodeJS.Platform,
+): { readonly executable: string; readonly source: GodotExecutableSource } {
 	if (platform === "win32") {
-		const consoleExecutable = env["GODOT4_CONSOLE"];
-		if (consoleExecutable !== undefined && consoleExecutable.trim() !== "") {
-			return consoleExecutable;
+		const consoleExecutable = readNonBlank(env["GODOT4_CONSOLE"]);
+		if (consoleExecutable !== undefined) {
+			return { executable: consoleExecutable, source: "GODOT4_CONSOLE" };
 		}
 	}
 
-	return env["GODOT4"] ?? "godot";
+	const executable = readNonBlank(env["GODOT4"]);
+	if (executable === undefined) {
+		const variables = platform === "win32" ? "GODOT4_CONSOLE or GODOT4" : "GODOT4";
+		throw new Error(
+			`${variables} must point at the Godot engine executable; MatchHost does not fall back to a "godot" ` +
+				`on PATH, because a missing or mismatched engine would otherwise surface much later as an ` +
+				`HTTP 502 with no reason. See CD-51 section 4 and README for the expected value; ` +
+				`set GODOT4=godot to opt into a PATH lookup on purpose.`,
+		);
+	}
+
+	return { executable, source: "GODOT4" };
+}
+
+function readNonBlank(raw: string | undefined): string | undefined {
+	if (raw === undefined || raw.trim() === "") {
+		return undefined;
+	}
+	return raw;
 }
 
 function parsePlayers(raw: string | undefined): number {

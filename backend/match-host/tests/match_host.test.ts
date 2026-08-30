@@ -35,19 +35,24 @@ import {
 	type MatchSessionRegistrar,
 } from "../src/registrar.ts";
 import { parseMatchTickSettlement, parseMatchTickValidInputTick } from "../src/settlement.ts";
-import { MatchCapacityError, MatchRegistry } from "../src/registry.ts";
+import { MatchCapacityError, MatchRegistry, type MatchEvent } from "../src/registry.ts";
 import { buildMatchHost } from "../src/server.ts";
 
 const LEASE_MS = 30 * 60 * 1000;
 const IDLE_MS = 10 * 60 * 1000;
+
+/** 引擎路径现在是必填项，所以每个只关心其他默认值的用例都得先把它给上。 */
+const GODOT_ENV = { GODOT4: "/opt/godot/godot" } as const;
 
 describe("match host config", () => {
 	test("prefers the console build on Windows so crash output is not lost", () => {
 		const env = { GODOT4: "C:\\Tools\\Godot.exe", GODOT4_CONSOLE: "C:\\Tools\\Godot_console.exe" };
 
 		assert.equal(loadConfig(env, "win32").godotExecutable, "C:\\Tools\\Godot_console.exe");
+		assert.equal(loadConfig(env, "win32").godotExecutableSource, "GODOT4_CONSOLE");
 		// 其他平台没有 GUI/console 之分，多一个变量只会让部署配置分叉。
 		assert.equal(loadConfig(env, "linux").godotExecutable, "C:\\Tools\\Godot.exe");
+		assert.equal(loadConfig(env, "linux").godotExecutableSource, "GODOT4");
 	});
 
 	test("falls back to GODOT4 on Windows when no console build is configured", () => {
@@ -58,13 +63,28 @@ describe("match host config", () => {
 		);
 	});
 
+	test("refuses to start without GODOT4 instead of silently using a PATH lookup", () => {
+		// 静默退成 `"godot"` 会把配置错误推迟到第一次 POST /matches，变成一个不带原因的 502。
+		assert.throws(() => loadConfig({}, "linux"), /GODOT4 must point at the Godot engine executable/);
+		assert.throws(() => loadConfig({ GODOT4: "   " }, "linux"), /GODOT4 must point at/);
+		// Windows 上两个变量任一个都算配置过，报错要把两个都点出来。
+		assert.throws(() => loadConfig({}, "win32"), /GODOT4_CONSOLE or GODOT4 must point at/);
+		assert.equal(loadConfig({ GODOT4_CONSOLE: "C:\\Tools\\Godot_console.exe" }, "win32").godotExecutableSource, "GODOT4_CONSOLE");
+		// 想用 PATH 上的引擎仍然可以，但必须自己写出来。
+		assert.equal(loadConfig({ GODOT4: "godot" }, "linux").godotExecutable, "godot");
+	});
+
 	test("match course and players default to the dev placeholder and are overridable", () => {
-		const defaults = loadConfig({}, "linux");
+		const defaults = loadConfig({ ...GODOT_ENV }, "linux");
 		assert.equal(defaults.matchCourse, "res://content/official/traprush/course_01.json");
 		assert.equal(defaults.matchPlayers, 2);
 
 		const overridden = loadConfig(
-			{ MATCH_HOST_COURSE: "res://content/official/traprush/course_03.json", MATCH_HOST_PLAYERS: "8" },
+			{
+				...GODOT_ENV,
+				MATCH_HOST_COURSE: "res://content/official/traprush/course_03.json",
+				MATCH_HOST_PLAYERS: "8",
+			},
 			"linux",
 		);
 		assert.equal(overridden.matchCourse, "res://content/official/traprush/course_03.json");
@@ -72,12 +92,12 @@ describe("match host config", () => {
 	});
 
 	test("match players outside the TRAPRUSH room size are rejected", () => {
-		assert.throws(() => loadConfig({ MATCH_HOST_PLAYERS: "0" }, "linux"), /MATCH_HOST_PLAYERS/);
-		assert.throws(() => loadConfig({ MATCH_HOST_PLAYERS: "9" }, "linux"), /MATCH_HOST_PLAYERS/);
+		assert.throws(() => loadConfig({ ...GODOT_ENV, MATCH_HOST_PLAYERS: "0" }, "linux"), /MATCH_HOST_PLAYERS/);
+		assert.throws(() => loadConfig({ ...GODOT_ENV, MATCH_HOST_PLAYERS: "9" }, "linux"), /MATCH_HOST_PLAYERS/);
 	});
 
 	test("defaults the control-plane URL and advertised upstream host", () => {
-		const defaults = loadConfig({}, "linux");
+		const defaults = loadConfig({ ...GODOT_ENV }, "linux");
 		assert.equal(defaults.controlPlaneUrl, "http://127.0.0.1:8080");
 		assert.equal(defaults.upstreamHost, "127.0.0.1");
 		assert.equal(defaults.listenTimeoutMs, 15_000);
@@ -87,19 +107,22 @@ describe("match host config", () => {
 
 	test("listen timeout and poll interval are overridable and must be positive", () => {
 		const overridden = loadConfig(
-			{ MATCH_HOST_LISTEN_TIMEOUT_MS: "4000", MATCH_HOST_LISTEN_POLL_MS: "25" },
+			{ ...GODOT_ENV, MATCH_HOST_LISTEN_TIMEOUT_MS: "4000", MATCH_HOST_LISTEN_POLL_MS: "25" },
 			"linux",
 		);
 		assert.equal(overridden.listenTimeoutMs, 4000);
 		assert.equal(overridden.listenPollMs, 25);
 
-		assert.throws(() => loadConfig({ MATCH_HOST_LISTEN_TIMEOUT_MS: "0" }, "linux"), /LISTEN_TIMEOUT/);
-		assert.throws(() => loadConfig({ MATCH_HOST_LISTEN_POLL_MS: "0" }, "linux"), /LISTEN_POLL/);
+		assert.throws(
+			() => loadConfig({ ...GODOT_ENV, MATCH_HOST_LISTEN_TIMEOUT_MS: "0" }, "linux"),
+			/LISTEN_TIMEOUT/,
+		);
+		assert.throws(() => loadConfig({ ...GODOT_ENV, MATCH_HOST_LISTEN_POLL_MS: "0" }, "linux"), /LISTEN_POLL/);
 	});
 
 	test("strips a trailing slash on CONTROL_PLANE_URL and accepts an advertised host", () => {
 		const loaded = loadConfig(
-			{ CONTROL_PLANE_URL: "http://10.0.0.8:8080/", MATCH_HOST_UPSTREAM_HOST: "match.internal" },
+			{ ...GODOT_ENV, CONTROL_PLANE_URL: "http://10.0.0.8:8080/", MATCH_HOST_UPSTREAM_HOST: "match.internal" },
 			"linux",
 		);
 		assert.equal(loaded.controlPlaneUrl, "http://10.0.0.8:8080");
@@ -107,12 +130,18 @@ describe("match host config", () => {
 	});
 
 	test("treats a blank MATCH_HOST_UPSTREAM_HOST as the loopback default", () => {
-		assert.equal(loadConfig({ MATCH_HOST_UPSTREAM_HOST: "  " }, "linux").upstreamHost, "127.0.0.1");
+		assert.equal(loadConfig({ ...GODOT_ENV, MATCH_HOST_UPSTREAM_HOST: "  " }, "linux").upstreamHost, "127.0.0.1");
 	});
 
 	test("rejects an advertised host that cannot be turned into a ws upstream", () => {
-		assert.throws(() => loadConfig({ MATCH_HOST_UPSTREAM_HOST: "http://127.0.0.1" }, "linux"), /upstream host/);
-		assert.throws(() => loadConfig({ MATCH_HOST_UPSTREAM_HOST: "127.0.0.1:9" }, "linux"), /upstream host/);
+		assert.throws(
+			() => loadConfig({ ...GODOT_ENV, MATCH_HOST_UPSTREAM_HOST: "http://127.0.0.1" }, "linux"),
+			/upstream host/,
+		);
+		assert.throws(
+			() => loadConfig({ ...GODOT_ENV, MATCH_HOST_UPSTREAM_HOST: "127.0.0.1:9" }, "linux"),
+			/upstream host/,
+		);
 	});
 });
 
@@ -435,6 +464,7 @@ describe("match registry", () => {
 			registrar?: FakeRegistrar;
 			listenProbe?: FakeListenProbe;
 			launcher?: FakeLauncher;
+			onEvent?: (event: MatchEvent) => void;
 		} = {},
 	) {
 		const launcher = overrides.launcher ?? new FakeLauncher();
@@ -452,6 +482,7 @@ describe("match registry", () => {
 			idleTimeoutMs: IDLE_MS,
 			maxConcurrentMatches: overrides.maxConcurrentMatches ?? 10,
 			...(overrides.now === undefined ? {} : { now: overrides.now }),
+			...(overrides.onEvent === undefined ? {} : { onEvent: overrides.onEvent }),
 		});
 		return { launcher, registrar, listenProbe, registry };
 	}
@@ -572,6 +603,44 @@ describe("match registry", () => {
 		listenProbe.gate = undefined;
 		const recovered = await registry.start();
 		assert.equal(recovered.state, "running");
+	});
+
+	test("a failed launch carries the engine output into the error and one event", async () => {
+		// 引擎路径不对时 spawn 只会失败一次，原因写在子进程输出里。失败的场次进不了注册表，
+		// 所以只能靠 start_failed 事件把它带出来；否则 502 与日志两边都不说为什么。
+		const listenProbe = new FakeListenProbe();
+		listenProbe.gate = new Promise<void>(() => {
+			// 永远不放行：真实场景里也是进程先死、listen 永远不会成功。
+		});
+		const launcher = new FakeLauncher();
+		launcher.exitOnLaunch = true;
+		launcher.recentOutputLines = ["spawn failed: spawn /opt/godot/godot ENOENT"];
+		const events: MatchEvent[] = [];
+		const { registrar, registry } = makeRegistry({
+			launcher,
+			listenProbe,
+			onEvent: (event) => events.push(event),
+		});
+
+		await assert.rejects(() => registry.start(), /spawn \/opt\/godot\/godot ENOENT/);
+		assert.deepEqual(registrar.registered, []);
+		assert.equal(events.length, 1);
+		assert.equal(events[0]?.type, "start_failed");
+		assert.deepEqual(events[0]?.recentOutput, ["spawn failed: spawn /opt/godot/godot ENOENT"]);
+		assert.match(events[0]?.message ?? "", /exited before listen/);
+	});
+
+	test("a listen timeout also reports the engine output", async () => {
+		const listenProbe = new FakeListenProbe();
+		listenProbe.failWith = new MatchListenError("timed out waiting for TCP listen on 127.0.0.1:42000");
+		const launcher = new FakeLauncher();
+		launcher.recentOutputLines = ["ERROR: Failed to load project data at path /app/game"];
+		const events: MatchEvent[] = [];
+		const { registry } = makeRegistry({ launcher, listenProbe, onEvent: (event) => events.push(event) });
+
+		await assert.rejects(() => registry.start(), /Failed to load project data/);
+		assert.equal(events.length, 1);
+		assert.equal(events[0]?.type, "start_failed");
 	});
 
 	test("counts an in-flight listen wait against capacity", async () => {
@@ -981,9 +1050,10 @@ describe("match host http", () => {
 		maxConcurrentMatches = 10,
 		registrar: FakeRegistrar = new FakeRegistrar(),
 		listenProbe: FakeListenProbe = new FakeListenProbe(),
+		launcher: FakeLauncher = new FakeLauncher(),
 	) {
 		const registry = new MatchRegistry({
-			launcher: new FakeLauncher(),
+			launcher,
 			registrar,
 			listenProbe,
 			upstreamHost: "127.0.0.1",
@@ -1201,6 +1271,24 @@ describe("match host http", () => {
 
 			const ready = await app.inject({ method: "GET", url: "/readyz" });
 			assert.equal(ready.statusCode, 200);
+		} finally {
+			await app.close();
+		}
+	});
+
+	test("POST /matches returns 502 with the engine output when the process never starts", async () => {
+		// 调用方看不到 MatchHost 日志。502 里不写原因，排查就只能靠猜。
+		const listenProbe = new FakeListenProbe();
+		listenProbe.failWith = new MatchListenError("timed out waiting for TCP listen on 127.0.0.1:42000");
+		const launcher = new FakeLauncher();
+		launcher.recentOutputLines = ["spawn failed: spawn godot ENOENT"];
+		const { app } = makeApp(1, new FakeRegistrar(), listenProbe, launcher);
+		try {
+			const rejected = await app.inject({ method: "POST", url: "/matches" });
+			assert.equal(rejected.statusCode, 502);
+			const body = rejected.json<{ error: string; message: string }>();
+			assert.equal(body.error, "session_listen_failed");
+			assert.match(body.message, /spawn godot ENOENT/);
 		} finally {
 			await app.close();
 		}
