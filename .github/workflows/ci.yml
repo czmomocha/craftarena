@@ -28,6 +28,10 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
+        with:
+          # 资产预算 step 要读真的 .glb。跳过 LFS 会让它拿到文本指针，
+          # 于是门禁在最需要它的时候变红——而且是假红，指向的原因也不对。
+          lfs: true
 
       - uses: actions/setup-node@v4
         with:
@@ -42,6 +46,13 @@ jobs:
 
       - name: Constitution red-line scan
         run: npm run redline-scan
+
+      # CD-11 §8.1 单资产预算。只判单个资产的准入（面数 / 贴图边长 / 文件体积），
+      # 不判场景总量、Draw call、材质数与骨骼上限——那几项仍属 CD-63 §1.7 延期。
+      # 校验器只读图像 header，不解码像素，也不依赖 sharp，所以 native 装不上的
+      # 平台照样有门禁。仓库当前 0 个 .glb 时它会明说"什么都没查"而不是假绿。
+      - name: Single-asset budget
+        run: npm run asset-budget
 
       - name: Unit tests
         run: npm test
