@@ -121,11 +121,18 @@ export GODOT_AI_DISABLE_TELEMETRY=true
 | 项 | 规则 |
 |---|---|
 | 格式 | `.glb`；`.blend` / 高分辨率源图另走 LFS（§2） |
-| 目录 | 平台资产放 `game/content/`；`game/addons/` 属第三方插件，**不受平台预算约束** |
+| 目录 | 平台资产放 `game/content/assets/<类别>/`（如 `characters/`）；`game/addons/` 属第三方插件，**不受平台预算约束** |
+| 贴图 | `.glb.import` 必须设 `gltf/embedded_image_handling=3`（**Embed as Uncompressed**）。默认值 `1`（Extract）会把内嵌贴图解包成外部图片文件，同一份像素入库两遍、LFS 配额翻倍，也让"一个资产一个文件"失效 |
+| 入库形态 | 每个资产只有两个文件：`.glb`（LFS）与 `.glb.import`。出现同名解包贴图即为配置回退 |
 | 预算 | 单个资产必须过 [CD-11 §8.1](../10-product/11-scope-and-platforms.md)。由 `npm run asset-budget` 机械判定并进 CI |
 | 面数档位 | 由 glTF 是否含 `skin` 决定，**不看文件名** |
 | 判不出就拒 | 认不出的贴图格式、非三角 primitive、LFS 指针一律失败，不放过 |
 | 烘焙 | 生成产物入库前先按 [资产烘焙 runbook](../../docs/runbooks/asset-bake.md) 压到预算内 |
+| 包内可读 | 新资产必须被 `--package-check` 覆盖到（**实例化**判定，不是 `file_exists`）：`.glb` 进包后是导入产物，导出过滤配错只在这里暴露 |
+
+**内嵌未压缩只解决入库形态，不解决显存。** 512² 三张未压缩贴图在运行时仍占约 3 MB VRAM；KTX2 / Basis 路径未测（见[烘焙试验 §5.2](../../docs/plans/asset-bake-trial-2026-08.md)"编码格式只省磁盘，不省显存"）。
+
+**视觉与权威几何是两条线。** 本节只管资产文件的准入。视觉资源由客户端按 `latest` 解析（落点 `game/src/shared/visual_asset_catalog.gd`），**不进 SimulationBundle**；权威碰撞 / 占地 / 挂点属不可变 `GameplayAssetVersion`，所有者是 [CD-31 §5](../30-ugc/31-ugc-principles.md) 与 [CD-42 §1.3](../40-technical/42-contracts-and-rulevm.md)。换视觉不产生新内容版本，改碰撞必须升版本。
 
 **本节只管单个资产的准入。** 场景总量、Draw call、材质数与骨骼上限仍属 [CD-63 §1.7](../60-plan/63-open-decisions.md) 延期（人类 2026-08-30 明确本期不做），不得由实现自选。自动化烘焙流水线同样不在 C4。
 

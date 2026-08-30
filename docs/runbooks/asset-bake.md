@@ -57,7 +57,32 @@ npm run asset-budget out.glb
 
 两条命令都是纯 Node，Windows / Linux 同样可用 —— 这正是引入它替掉旧脚本的原因：那份试验脚本硬编码 `/usr/bin/sips`，**只在 macOS 成立**，而且不入库。
 
-## 3. 还没做的事
+## 3. 入库：内嵌贴图，别让像素进两遍
+
+把烘焙好的 `.glb` 放进 `game/content/assets/<类别>/`，然后**必须**改一次导入设置：
+
+```bash
+"$GODOT4" --headless --path game --import          # 先导一次，生成 .glb.import
+# 编辑 game/content/assets/<类别>/<name>.glb.import：
+#   gltf/embedded_image_handling=1   →   gltf/embedded_image_handling=3
+rm -f game/content/assets/<类别>/<name>_*.png game/content/assets/<类别>/<name>_*.jpg  # 删掉刚解包出来的
+rm -f game/.godot/uid_cache.bin                    # 否则会残留已删文件的 UID
+"$GODOT4" --headless --path game --import
+```
+
+为什么：Godot 的 glTF 导入器默认是 `1`（**Extract Textures**），会把内嵌贴图解包成外部图片文件。那些文件也走 LFS，于是**同一份像素入库两遍**（本机实测 803 KB 的 `.glb` 额外带出 683 KB 贴图），而且"一个资产一个文件"变成"一组文件各自漂移"，正是 [CD-51 §5.1](../../Confirmed-docs/50-engineering/51-dev-environment.md) 要避免的形态。`3` 是 **Embed as Uncompressed**（枚举由引擎的 `GLTFState.HANDLE_BINARY_EMBED_AS_UNCOMPRESSED` 自证）。
+
+改完之后，`game/content/assets/<类别>/` 下应该**只有两个文件**：`.glb` 与 `.glb.import`。
+
+代价要说清：内嵌未压缩只解决**磁盘与入库形态**，运行时显存不省——512² 三张未压缩仍是约 3 MB VRAM。这与[烘焙试验 §5.2](../plans/asset-bake-trial-2026-08.md)"编码格式只省磁盘，不省显存"是同一件事。想省显存只能降分辨率或上 KTX2 / Basis，后者仍未测。
+
+最后确认包内真的读得到（**实例化**判定，不是 `file_exists`）：
+
+```bash
+"$GODOT4" --headless --path game -- --package-check
+```
+
+## 4. 还没做的事
 
 - **自动化烘焙流水线**（批量、CI 内烘焙、按用途分档的独立参数）**不在 C4**，人类 2026-08-30 明确。第 2 节是一条手动命令，不是流水线；
 - 按用途分档（baseColor / ORM / normal 各自不同上限）没有实现。CD-11 §8.1 是全用途同一档 512，`resize` 也就一刀切。烘焙试验 §5.1、§5.3 记录了分档的收益与"ORM / normal 不能转 JPEG"的坑，等流水线立项时再用；

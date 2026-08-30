@@ -15,10 +15,16 @@ extends Node3D
 ## with *. Placeholders and gizmos are not hitboxes.
 ## Rebuild after every editor write or preview patch. Overlay reads evaluate();
 ## it is not a write gate.
+##
+## Preview play 的玩家标记与对局映射读同一份视觉资产
+## （SharedVisualAssetCatalog，ADR-0006 Q4），所以 Preview 里看到的角色和真对局
+## 里是同一个；解析失败时两边同样回退到占位盒。实体占位盒不接视觉，理由见
+## SharedVisualAssetCatalog 文件头（一期唯一内置资产被 7 类袋共用）。
 
 const CAMERA_NAME: String = "PreviewCamera"
 const LIGHT_NAME: String = "PreviewLight"
 const PLAYER_NAME: String = "player_marker"
+const VISUAL_NAME: String = "visual"
 const PLACEHOLDER_PREFIX: String = "entity_"
 const LINK_PREFIX: String = "portal_link_"
 const DANGLE_PREFIX: String = "portal_dangle_"
@@ -46,6 +52,8 @@ const CRATE_ALBEDO: Color = PlaceholderSpec.CRATE_ALBEDO
 
 var _reach_ok: bool = true
 var _reach_issue_count: int = 0
+## 空字符串或解析失败 ⇒ 回退占位盒。是变量而不是常量，好让测试两条分支都能跑。
+var character_scene_path: String = SharedVisualAssetCatalog.CHARACTER_SCENE_PATH
 
 
 static func meters_from_fixed(value: int) -> float:
@@ -200,6 +208,22 @@ func show_player_pose(pose: Dictionary) -> void:
 	node.position = Vector3(meters_from_fixed(x), meters_from_fixed(y), meters_from_fixed(z))
 	node.rotation.y = yaw_radians_from_bam(yaw_bam)
 	add_child(node)
+	_attach_player_visual(node)
+
+
+## 与 MatchSnapshotMap._attach_visual 同一套：挂 `visual` 子节点、占位盒本体
+## `layers = 0` 退出渲染但保留网格与色值。Preview 只有一个人，用 Preview 的
+## 玩家色染薄膜。
+func _attach_player_visual(player: MeshInstance3D) -> bool:
+	var visual: Node3D = SharedVisualAssetCatalog.try_instantiate(character_scene_path)
+	if visual == null:
+		return false
+	visual.name = VISUAL_NAME
+	visual.position = SharedVisualAssetCatalog.CHARACTER_FOOT_LIFT
+	player.add_child(visual)
+	SharedVisualAssetCatalog.tint(visual, PlaceholderSpec.PREVIEW_PLAYER_ALBEDO)
+	player.layers = 0
+	return true
 
 
 func clear_player_pose() -> void:
@@ -212,6 +236,13 @@ func clear_player_pose() -> void:
 
 func player_node() -> MeshInstance3D:
 	return get_node_or_null(PLAYER_NAME) as MeshInstance3D
+
+
+func player_visual_node() -> Node3D:
+	var player: MeshInstance3D = player_node()
+	if player == null:
+		return null
+	return player.get_node_or_null(VISUAL_NAME) as Node3D
 
 
 func mapped_count() -> int:
