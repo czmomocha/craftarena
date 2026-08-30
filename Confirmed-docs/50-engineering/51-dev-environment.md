@@ -132,6 +132,8 @@ export GODOT_AI_DISABLE_TELEMETRY=true
 
 **内嵌未压缩只解决入库形态，不解决显存。** 512² 三张未压缩贴图在运行时仍占约 3 MB VRAM；KTX2 / Basis 路径未测（见[烘焙试验 §5.2](../../docs/plans/asset-bake-trial-2026-08.md)"编码格式只省磁盘，不省显存"）。
 
+**生成产物的材质通道要看一眼。** 已入库的地块把贴图挂在 `emissive`（`baseColorFactor` 纯黑 + `emissiveFactor` 白），角色挂在 `baseColor` + ORM + normal。前者无光也看得清、接近当前占位盒的 `UNSHADED` 基线，但**不吃光照**；引入光照方案时必须逐资产复核，不能假定所有生成产物都是 PBR 标准通道。
+
 **视觉与权威几何是两条线。** 本节只管资产文件的准入。视觉资源由客户端按 `latest` 解析（落点 `game/src/shared/visual_asset_catalog.gd`），**不进 SimulationBundle**；权威碰撞 / 占地 / 挂点属不可变 `GameplayAssetVersion`，所有者是 [CD-31 §5](../30-ugc/31-ugc-principles.md) 与 [CD-42 §1.3](../40-technical/42-contracts-and-rulevm.md)。换视觉不产生新内容版本，改碰撞必须升版本。
 
 **本节只管单个资产的准入。** 场景总量、Draw call、材质数与骨骼上限仍属 [CD-63 §1.7](../60-plan/63-open-decisions.md) 延期（人类 2026-08-30 明确本期不做），不得由实现自选。自动化烘焙流水线同样不在 C4。
