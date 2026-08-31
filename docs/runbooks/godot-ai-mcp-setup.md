@@ -271,16 +271,20 @@ echo "exit code: $?"
 ## 第 9 步：丢掉 `project.godot` 上的 MCP 脏写入
 
 ```bash
-git diff -- game/project.godot
+npm run godot-settings:check
 ```
 
-若出现 `res://addons/godot_ai/plugin.cfg` 或 `_mcp_game_helper`，恢复已提交副本：
+脏则退出码 1 并列出条目（`autoload/_mcp_game_helper`、`editor_plugins/enabled/res://addons/godot_ai/plugin.cfg`）。还原：
 
 ```bash
-git checkout -- game/project.godot
+npm run godot-settings:scrub
 ```
 
+它只摘这两类条目，`project.godot` 上别的未提交改动一个不碰，且是幂等的（对干净副本跑一次得到它自己）。手工兜底仍是 `git checkout -- game/project.godot`，但那会把该文件上其他未提交改动一起丢掉，所以不再是首选。
+
 本机编辑器下次打开可能提示插件未启用：那是预期。日常用 MCP 时再在本机启用即可，**仍然不要提交这两处**。Headless MatchServer 跑的是源码工程；autoload 一旦进 Git，就会进权威进程。
+
+忘了跑也不会漏进历史：Agent 发出的 `git commit` / `git add` 由 [`tools/shell-guard/`](../../tools/shell-guard/) fail closed 拦下，拒绝消息里直接给还原命令（口径见 [CD-51 §7.3](../../Confirmed-docs/50-engineering/51-dev-environment.md)）。人手敲的 git 不经过该 hook，所以本步仍然要做。
 
 确认插件目录未入库：
 

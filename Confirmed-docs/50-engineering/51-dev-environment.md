@@ -206,10 +206,15 @@ export GODOT_AI_DISABLE_TELEMETRY=true
 5. 点 **Clients & Tools**：**Tools** 页关 Telemetry 并 Apply；**Settings** 页 Vision Routing 保持关，Remote access 保持空；只绑 `127.0.0.1`；
 6. Dock 为 **Cursor** 执行 Configure，关遥测后再 Configure 一次，然后重启 Cursor；
 7. 按接入烟测清单做 UndoRedo / 运行 / 错误读取 / Headless 退路 / 遥测核实；
-8. 删除临时场景；`git checkout -- game/project.godot` 丢掉插件列表与 `_mcp_game_helper`；确认 `game/addons/godot_ai/` 未进入 `git status`。下次打开编辑器时 Authoring Editor 会再次自动启用本机插件。
+8. 删除临时场景；跑 `npm run godot-settings:scrub` 丢掉插件列表与 `_mcp_game_helper`（等价的手工兜底仍是 `git checkout -- game/project.godot`，但那会把该文件上**别的**未提交改动一起丢掉）；确认 `game/addons/godot_ai/` 未进入 `git status`。下次打开编辑器时 Authoring Editor 会再次自动启用本机插件。
 
 `_mcp_game_helper` 是插件为编辑器「试玩进程」注入的 autoload。上游导出时可从内存剥掉它，但 **Headless MatchServer 跑的是源码工程**。因此已提交的 `project.godot` 不得出现该 autoload，也不得把 `godot_ai` 写进 `editor_plugins`（CI `--import` 在缺目录时会从启用列表摘掉该项）。本机日常用 MCP 时由 Authoring Editor 在打开编辑器时自动启用已安装的插件；提交前必须还原这两处脏写入。
 
+插件**每次运行都会重新写回**这两处（含 headless），而它在 `.gitignore` 里、不是本仓库代码，我们改不了它的写入行为。因此本仓库不承诺「工作树永远干净」，只承诺这两条：
+
+- **一条命令还原**：`npm run godot-settings:scrub` 只摘掉 `autoload/*`（名字命中 `_mcp_game_helper` 或路径指向 `addons/godot_ai/`）与 `editor_plugins/enabled` 里指向该目录的元素，其余原样，幂等，纯文本编辑不起 Godot。`npm run godot-settings:check` 只报不改（脏则退出码 1，可进任何检查链）。
+- **进不了提交**：`tools/shell-guard/` 在 Agent 发出的 `git` 命令前 fail closed —— 索引里带这两处就拒绝 `git commit`；工作树里带就拒绝任何会把它塞进索引的 `git add` / `git commit -a`。它已经漏进过一个 commit，所以这条是拦，不是提醒。
+
 ### 7.4 与自动加载政策的关系
 
-§5 规定自动加载只放稳定的基础服务。Godot AI 的 helper **不是**基础服务，只允许存在于未提交的本机 `project.godot`。Agent 若发现工作区把 `_mcp_game_helper` 或 `godot_ai` 插件项写进了待提交 diff，必须在提交前还原，不得当作「项目设置的一部分」保留。
+§5 规定自动加载只放稳定的基础服务。Godot AI 的 helper **不是**基础服务，只允许存在于未提交的本机 `project.godot`。Agent 若发现工作区把 `_mcp_game_helper` 或 `godot_ai` 插件项写进了待提交 diff，必须在提交前还原（`npm run godot-settings:scrub`），不得当作「项目设置的一部分」保留。这条有三层守卫，各守不同的东西：磁盘上的文件由 `npm test` 里的 `godot-project-settings` 用例守；运行中的 `ProjectSettings` 由 GUT 的 `test_authoring_editor_plugin` / `test_package_check` 守；提交动作本身由 `tools/shell-guard/` 守。

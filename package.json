@@ -16,6 +16,7 @@
     "tools/dev-launcher",
     "tools/asset-budget",
     "tools/content-validator",
+    "tools/godot-project-settings",
     "tools/redline-scanner",
     "tools/shell-guard"
   ],
@@ -24,6 +25,8 @@
     "test": "node --test \"backend/**/tests/**/*.test.ts\" \"tools/**/tests/**/*.test.ts\"",
     "redline-scan": "node tools/redline-scanner/src/main.ts",
     "asset-budget": "node tools/asset-budget/src/main.ts",
+    "godot-settings:check": "node tools/godot-project-settings/src/main.ts",
+    "godot-settings:scrub": "node tools/godot-project-settings/src/main.ts --scrub",
     "setup-worktree": "node tools/dev-launcher/src/setup_worktree.ts",
     "dev": "node tools/dev-launcher/src/main.ts",
     "control-plane": "node backend/control-plane/src/main.ts",

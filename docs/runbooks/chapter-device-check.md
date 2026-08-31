@@ -1,4 +1,4 @@
-# 章节真机清单
+﻿# 章节真机清单
 
 本文件是 [CD-52 §3.2](../../Confirmed-docs/50-engineering/52-ai-workflow.md) 的可执行版本：人类验收**当前完整章节 PR** 时照「本刀」逐步做。
 
@@ -53,57 +53,67 @@ Worktree 端口偏移见 README「并行工作区」；本文件不复述端口�
 
 ---
 
-## 本刀：纠偏 C4 第 8 章 — Preview 每帧不再重建节点树
+## 本刀：Godot AI 脏写入不再进提交（freeze-exception，单项）
 
-对应：当前完整章节 PR。这刀还的是上一刀（C4 第 7 章）明确记账的那一笔：共享 `Mesh` 把「每帧重新实例化模型」压到几乎为零之后，**剩下的 6.7 ms 是节点树本身**——49 个占位盒每帧仍在 `free` + `new`。上一刀说「要真正修掉需要 diff 机制」，本刀就是那一刀。
+对应：当前完整章节 PR。这刀不属于任何 C 批次，还的是 C4 第 7 章记的第二笔账：**Godot AI 插件每次运行都把 `autoload/_mcp_game_helper` 与 `res://addons/godot_ai/plugin.cfg` 写回 `game/project.godot`**。它让守卫测试反复变红，并已经漏进过一个 commit。第一笔（Preview 每帧全量重建）已由 C4 第 8 章合入，与本刀无依赖。
 
-改法：`AuthoringPreviewMap.rebuild()` 从「无条件重建」改成**脏检查**。它记住上次建图用的世界指纹（`AuthoringWorld` 实例身份 / `revision` / 实体数 / 格边 + 两条视觉资产路径），指纹没变就整段跳过。Preview 试玩里 `AuthoringWorld` 根本不变，所以每帧成本从「重建 49 个节点」降到「几次 `get_node_or_null`」。
+**先看清这刀能做什么、不能做什么。** 插件在 `.gitignore` 里、不是本仓库代码，所以**没有办法阻止它写**。这刀做的是另外两件：一条命令把工作树还原、以及让那次写入进不了提交。因此本刀的验收不是「工作树永远干净」，而是「脏了能一键还原，且脏着提交会被拦」。
 
-跳过重建之后另外两个每帧入口必须自己幂等，否则会留脏画面，本刀一起改：
+本刀**不需要**跑 `npm run dev`，也不改 `game/` 下任何玩法代码。
 
-- 玩家标记不再每帧 free/new，而是复用同一个节点只改姿态（换视觉资产路径时才重造）；
-- 检查点验收标记按传入集合**重写**文本，而不是只往已验收的追加 `*`。
-
-**先做一次导入**：
-
-```bash
-"$GODOT4" --headless --path game --import     # Windows: & $env:GODOT4_CONSOLE --headless --path game --import
-```
-
-1. **Preview 里按住方向键是连续的**（本刀的主验收项，也是上一刀留的账）：编辑器里 Project > Tools > Authoring Editor，摆几个检查点/固体，点 **Preview**，点 **Play**，**按住** W 或方向键走一段。
-   - 预期：移动连续、不再一顿一顿。上一刀之后这里还剩每帧 6.7 ms 的节点重建；现在那部分只在世界真变化时才发生。
-   - 失败：仍然一顿一顿（那说明脏检查没生效，或者有人在每帧路径上改了世界）。
-2. **画面和上一刀一模一样**（本刀只该更快）：同一个 Preview 窗口里对着看。
-   - 预期：占位盒颜色、位置、大小、传送连线、检查点 `order` 数字、`finish` 标、可达性叠加全都和改前一致；地砖仍是黄黑警示条。
-   - 失败：任何盒子少了、位置变了、或退回纯色（说明跳过了本该做的重建）。
-3. **编辑一下立刻反映到 Preview**（脏检查最容易踩的坑：该重建时不重建）：Preview 开着不关，回 Authoring Editor 窗口 **Place checkpoint** / **Place solid** 各一次，再 **Delete last**，再 **Undo** / **Redo** 各一次。
-   - 预期：每一次操作后 Preview 窗口里当场出现 / 消失对应占位盒，Editor 窗口同步。
-   - 失败：新盒子不出现、或删掉的盒子还在（脏检查漏判）。
-4. **R 复位会把验收标记去掉**（跳过重建之后最容易留脏的一处）：Preview 里 **Play**，走上至少一个检查点垫，看到该数字后面出现 `*`，然后按 **R**（或点 **Reset**）。
-   - 预期：被撤销验收的检查点数字后面的 `*` 当场消失，仍被验收的保留 `*`。
-   - 失败：`*` 赖着不走。
-5. **停玩之后机关重新出现**：Preview 里 **Play**，点几次 **Advance tick** 直到洋红机关进入非固体半周期（它会消失），然后点 **Stop**。
-   - 预期：Stop 之后洋红占位盒回到可见。
-   - 失败：机关停玩后仍然隐身（说明开玩/停玩没有强制重建）。
-6. **赛道玩法一点没动**：Preview 里走、跳、Q 打箱、Shift 冲刺、踩机关被击退、冲线。另外 `npm run dev` 后 **Quick play** 进一场对局。
-   - 预期：与上一刀逐项一致。这刀只碰 Preview / Editor 的表现映射，不碰仿真，也不碰对局大厅。
+1. **在干净仓库上是空转**（先建立基线）：
+   ```bash
+   npm run godot-settings:check
+   ```
+   - 预期：一行 JSON，`"ok":true`、`entries` 为空，退出码 0。
+   - 失败：`ok:false` —— 那说明你的工作树现在就是脏的，先做第 3 步再回来。
+2. **插件真的会写**（这一步是让你亲眼看见问题存在，不是本刀的产出）：本机已装 `game/addons/godot_ai/` 时，打开一次编辑器：
+   ```bash
+   & $env:GODOT4 --editor --path game      # macOS: "$GODOT4" --editor --path game
+   ```
+   关掉编辑器，然后 `git diff -- game/project.godot`。
+   - 预期：出现 `+[autoload]` / `+_mcp_game_helper=...`，`editor_plugins/enabled` 里多出 `res://addons/godot_ai/plugin.cfg`。
+   - 本机没装该插件：跳过本步，直接手工造一次同样的两行再做第 3、4 步。
+3. **一条命令精确还原**：
+   ```bash
+   npm run godot-settings:scrub
+   git diff -- game/project.godot
+   ```
+   - 预期：scrub 打印被摘掉的条目；`git diff` 之后**完全没有输出**（回到字节一致，不是「差不多」）。再跑一次 scrub 是空转（幂等）。
+   - 失败：`git diff` 仍有内容（说明还原不完整，比如空的 `[autoload]` 段没删掉）。
+4. **别的改动不会被顺手丢掉**（这是它比 `git checkout --` 好的唯一理由）：先手工在 `game/project.godot` 里随便改一个无关值（例如把 `window/size/window_width_override` 改成 `1601`），再让它同时带上第 2 步那两行，然后 `npm run godot-settings:scrub`。
+   - 预期：两行 MCP 条目被摘掉，`1601` **还在**。
+   - 失败：`1601` 被一起还原了（那就是 `git checkout --` 的行为，不是本刀要的）。
+   - 做完记得把 `1601` 改回去。
+5. **脏着提交会被拦**（Agent 路径。人手敲的 git 不经过这个 hook，所以这条只对 IDE Agent 生效）：把第 2 步那两行弄回去，然后
+   ```bash
+   '{"command":"git add .","cwd":"<仓库绝对路径>"}' | node tools/shell-guard/src/main.ts
+   ```
+   - 预期：`"permission":"deny"`，消息里含 `game/project.godot` 与 `npm run godot-settings:scrub`。
+   - 再试 `git add README.md`：应为 `"permission":"allow"`（守卫只拦会把该文件塞进索引的形式）。
+   - 收尾：`npm run godot-settings:scrub`，确认 `git status --short` 里没有 `game/project.godot`，也没有 `game/addons/godot_ai/`。
+6. **自动化仍然全绿**：
+   ```bash
+   npm run typecheck; npm test
+   ```
+   - 预期：`npm test` 全绿，其中含新工具用例与 shell-guard 新增用例。
 
 ### 本刀不测
 
-- **按实体 diff**（一次编辑只重建被改的那个实体）。本刀修的是**每帧**路径；编辑一次仍然全量重建一次 49 个节点，那是编辑操作而不是每帧成本，见「仍然欠着」；
-- **渲染侧**：49 个 `MeshInstance3D` 还是 49 次 draw call，本刀省的仍然只有 CPU 侧节点操作；
-- 字体与本地化键、动画状态契约、D7 输入抽象层（C4 剩余项）；
-- 导出包内的表现（本机无 4.7.2 导出模板）。
+- **让插件不写**。做不到，见上面那段；
+- **人手 git 的拦截**。`.cursor/hooks.json` 只在 IDE Agent 发命令时生效，本仓库没有安装 git 原生 `pre-commit` 钩子（那要改 `core.hooksPath`，属人类门禁）；
+- 任何玩法、协议、Preview / 对局表现。这刀一行 `game/` 代码都没改。
 
 ### 诚实边界
 
-- **这是脏检查，不是按实体 diff**。世界一变就整棵重建，成本和改前一样；省下来的是「世界没变却重建」那部分，而那正好是每帧路径的全部。按实体 diff 只能帮编辑单次操作，收益比这刀小得多，所以没在这刀里做；
-- **毫秒数没有新观察值**。本刀没有在开发机上重测 6.7 ms 降到多少，只在算法上把「世界没变时的重建次数」变成 0，由 12 条新守卫钉住。CD-53 §1.1 不建自动性能门禁，所以**不要**把「6.7 ms → 0」写成已测数字；
-- **脏检查会把「别人偷偷改了节点树」判成没变**。`apply_hazard_visibility` 改的是逐实例 `visible`，世界指纹不变，所以想让占位盒回到默认可见必须先 `invalidate()`。目前只有开玩 / 停玩这一处需要，已经接上并有守卫；将来任何新的「绕过 rebuild 改节点」的代码都必须自己 `invalidate()`；
-- **`try_restore` 能把 `revision` 写回旧值**，所以指纹里额外记了实体数与格边，`import_document` / `restore_document` 另外强制重建。这三条都有守卫，但它们证明的是代码分支正确，不是「某份真实文档导入过」。
+- **这不是「工作树永远干净」**。插件照旧写，只是现在有一条命令能精确撤销、并且脏着提交会被拦。任何写成「已经不会污染工作树了」的说法都是虚报；
+- **拦截只覆盖 Agent 发出的 git**，靠 `.cursor/hooks.json` 的 `beforeShellExecution`（`failClosed: true`）。人手在终端敲 `git commit` 不经过它。CI 拦的是最后一道：磁盘副本脏就让 `npm test` 变红；
+- **检测按插件目录名而不是固定 autoload 名**：`addons/godot_ai` 下的任何 autoload 都算本机条目，插件换版本改名也拦得住。反过来，**其他** autoload 一个不碰 —— 将来真要加基础服务 autoload（CD-51 §5）不会被误删，有用例钉着；
+- **`enabled` 数组被摘空时保留 `enabled=PackedStringArray()`**，不删这个键。删键与留空键在 Godot 里语义相同，但留空键的 diff 更小；
+- 纯文本编辑，不解析完整 ini 语义。不认识的 `enabled=` 写法（例如手工换行过的）会被**原样留下**而不是猜着改，这是故意的：宁可漏报一次让 CI 变红，也不要改坏 `project.godot`。
 
 ### 仍然欠着（不因本章消失）
 
-- **按实体 diff**：一次编辑仍然重建全部 49 个节点。它不在每帧路径上，优先级低于下面这些；
-- 远端协议层 RTT 回填、C3 网络参数锁定、E6 有美术后的可玩性签署、字体与本地化键、动画状态契约、D7 输入抽象层、角色胶囊尚未进资产表、垫 / 门 / 终点仍无独立视觉、扫掠取样代价无上限（宪法第十七条缺口）、`match_lobby_shell.gd` 已 1,516 行（E9 要求 < 400）；
-- **Godot AI 插件每次运行都把 `autoload/_mcp_game_helper` 写回 `project.godot`**（headless 也写）。它让守卫测试反复变红，并已经漏进过一个 commit。**另一条分支正在单独还这笔**，与本刀无依赖。
+- **git 原生钩子**：装 `pre-commit` 能覆盖人手 git，但需要改本机 `core.hooksPath`，属宪法第十八条的人类门禁项，本刀没做；
+- **按实体 diff**：C4 第 8 章已修掉 Preview 的**每帧**重建，但一次编辑仍然全量重建 49 个节点。它不在每帧路径上，优先级低于下面这些；
+- 远端协议层 RTT 回填、C3 网络参数锁定、E6 有美术后的可玩性签署、字体与本地化键、动画状态契约、D7 输入抽象层、角色胶囊尚未进资产表、垫 / 门 / 终点仍无独立视觉、扫掠取样代价无上限（宪法第十七条缺口）、`match_lobby_shell.gd` 已 1,516 行（E9 要求 < 400）。
