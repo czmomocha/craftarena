@@ -32,6 +32,10 @@ extends RefCounted
 ## 本文件，视觉网格从来不是碰撞体。
 ##
 ## 资产入库规范（格式、目录、预算、烘焙）的所有者是 [CD-51 §5.1]。
+##
+## 单网格资产的实例化走**共享 Mesh**，不走 `PackedScene.instantiate()`
+## （见 `try_instantiate`）。共享的是 `Mesh` 资源，所以**不要改它的 surface
+## material**；per-instance 的颜色一律用 `material_overlay` / `material_override`。
 
 ## 角色占位视觉。TRELLIS / 混元 3D 类生成产物，按 CD-51 §5.1 烘焙到预算内后入库。
 ## 这是**占位美术**：比例、朝向轴与配色都没有经过美术定稿，只用来把
@@ -54,6 +58,17 @@ const SEAT_TINT_ALPHA: float = 0.42
 
 ## 贴合计算的下限。零尺寸或退化 AABB 算不出缩放，直接放弃贴合而不是除以 0。
 const _MIN_EXTENT: float = 0.0001
+
+## 扁平化模板缓存：资产路径 → `{ "mesh": Mesh, "transform": Transform3D }`，
+## 或空字典表示"这个资产不能扁平化，走 instantiate"。见 `_template_for`。
+static var _templates: Dictionary = {}
+
+
+## 清空模板缓存。给测试用，也给"在编辑器里重新导入了 `.glb`"这种开发期情况：
+## 缓存握着的是旧 `Mesh` 资源引用，重新导入产生的是新资源，缓存不会自己失效。
+## 运行时资产不变，所以生产路径不需要调它。
+static func clear_template_cache() -> void:
+	_templates = {}
 
 
 static func has_character() -> bool:
@@ -86,7 +101,27 @@ static func try_instantiate_fitted_tile() -> Node3D:
 ## 解析失败一律返回 `null`，让调用方回退到占位盒。缺资产、导入产物没生成、
 ## 导入成了别的类型都算失败：表现层宁可显示一个盒子，也不该因为美术没到位
 ## 就整个大厅不出人。
+##
+## 单网格资产走**共享 Mesh** 快路径，不走 `PackedScene.instantiate()`。这不是
+## 微优化：开发机实测实例化 36 个地砖 **55.9 ms**，而把同一份 `Mesh` 挂到 36 个
+## 新 `MeshInstance3D` 上是 **0.099 ms**（564×）。那 55.9 ms 此前直接落在两个
+## 可感知的地方——挂课程时 `MatchSolidMap.apply_bundle` 一次 64.6 ms，以及
+## Preview 每帧 `AuthoringPreviewMap.rebuild` 74.3 ms（同一份世界不带 `.glb`
+## 只要 7.6 ms）。
+##
+## 多网格或带 skin 的资产**回退到 instantiate**，因为共享一份 `Mesh` 表达不了
+## 多个 surface 各自的层级与蒙皮。今天两个资产都是单网格无 skin，但下一个未必。
 static func try_instantiate(path: String) -> Node3D:
+	if path.is_empty():
+		return null
+	var template: Dictionary = _template_for(path)
+	if not template.is_empty():
+		return _spawn_from_template(template)
+	return _instantiate_scene(path)
+
+
+## 原始路径：整棵子树照搬。多网格 / 带 skin 的资产只能走这条。
+static func _instantiate_scene(path: String) -> Node3D:
 	if path.is_empty():
 		return null
 	if not ResourceLoader.exists(path):
@@ -105,6 +140,84 @@ static func try_instantiate(path: String) -> Node3D:
 		instance.free()
 		return null
 	return node
+
+
+## 按模板造一个"根 Node3D + 一个子 MeshInstance3D"的两层结构。
+##
+## **故意复刻原有层级，而不是直接返回那个 MeshInstance3D。** 调用方与
+## `local_bounds` / `tint` 都假设"根是容器、网格在子节点"：`_bounds` 对根节点
+## 跳过自身 transform（`is_root`），若把带非 identity transform 的网格当根返回，
+## AABB 就会算漏那一层，`fit_tile_on_cell` 随之贴错。多一个 Node3D 是纳秒级
+## 代价，换掉一整类"今天恰好对"的隐患。
+static func _spawn_from_template(template: Dictionary) -> Node3D:
+	var mesh: Mesh = template["mesh"]
+	var local: Transform3D = template["transform"]
+	var root: Node3D = Node3D.new()
+	var instance: MeshInstance3D = MeshInstance3D.new()
+	instance.mesh = mesh
+	instance.transform = local
+	root.add_child(instance)
+	return root
+
+
+## 惰性求值一次，之后常驻。空字典 = 已经判过、不能扁平化，不会每次重试。
+static func _template_for(path: String) -> Dictionary:
+	if _templates.has(path):
+		return _templates[path]
+	var built: Dictionary = _build_template(path)
+	_templates[path] = built
+	return built
+
+
+## 只有"恰好一个 MeshInstance3D、有网格、无 skin、无 skeleton 绑定"的资产能扁平化。
+##
+## 共享的是 `Mesh` 资源本身，所以**谁都不能改它的 surface material**——那会串到
+## 所有实例上。座位色走 `material_overlay`（`MeshInstance3D` 自己的属性，不碰
+## `Mesh`），固体不染色，所以今天成立；以后要给单个实例改材质，用
+## `material_override` / `material_overlay`，不要动 `mesh`。
+static func _build_template(path: String) -> Dictionary:
+	var probe: Node3D = _instantiate_scene(path)
+	if probe == null:
+		return {}
+	var found: Array[Dictionary] = []
+	_collect_meshes(probe, Transform3D.IDENTITY, true, found)
+	var template: Dictionary = {}
+	if found.size() == 1:
+		var only: Dictionary = found[0]
+		template = {
+			"mesh": only["mesh"],
+			"transform": only["transform"],
+		}
+	probe.free()
+	return template
+
+
+## 收集子树里每个带网格的 MeshInstance3D 及其相对根的累积 transform。
+## 带 skin 或 skeleton 的直接让整个资产判为不可扁平化（返回一个哨兵项，
+## 使 size() != 1），因为蒙皮网格离开原层级就不再是同一个东西。
+static func _collect_meshes(
+	node: Node,
+	accumulated: Transform3D,
+	is_root: bool,
+	into: Array[Dictionary]
+) -> void:
+	var here: Transform3D = accumulated
+	var spatial: Node3D = node as Node3D
+	if spatial != null and not is_root:
+		here = accumulated * spatial.transform
+	var instance: MeshInstance3D = node as MeshInstance3D
+	if instance != null and instance.mesh != null:
+		if instance.skin != null or instance.skeleton != NodePath(""):
+			# 两个哨兵项，保证 size() != 1 ⇒ 回退 instantiate
+			into.append({})
+			into.append({})
+			return
+		into.append({
+			"mesh": instance.mesh,
+			"transform": here,
+		})
+	for child: Node in node.get_children():
+		_collect_meshes(child, here, false, into)
 
 
 ## 给整棵子树套一层座位色薄膜，返回套上的实例数。`material_overlay` 不改模型
