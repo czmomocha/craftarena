@@ -62,3 +62,92 @@ describe("shell-guard unwraps quoted wrappers", () => {
 		assert.equal(decideShellCommand(wrapped).code, "push-protected");
 	});
 });
+
+describe("shell-guard keeps machine-local Godot AI settings out of a commit", () => {
+	const STAGED = { stagedProjectSettingsLocalOnly: ["autoload/_mcp_game_helper"] } as const;
+	const WORKTREE = { worktreeProjectSettingsLocalOnly: ["autoload/_mcp_game_helper"] } as const;
+
+	it("blocks commit when the index already carries the entry", () => {
+		assert.equal(
+			decideShellCommand("git commit -m x", { currentBranch: "feat/x", ...STAGED }).code,
+			"godot-ai-project-settings",
+		);
+		assert.equal(
+			decideShellCommand("git commit --amend --no-edit", { currentBranch: "feat/x", ...STAGED }).code,
+			"godot-ai-project-settings",
+		);
+	});
+
+	it("blocks commit -a while only the working tree carries the entry", () => {
+		assert.equal(
+			decideShellCommand("git commit -am x", { currentBranch: "feat/x", ...WORKTREE }).code,
+			"godot-ai-project-settings",
+		);
+		assert.equal(
+			decideShellCommand("git commit --all -m x", { currentBranch: "feat/x", ...WORKTREE }).code,
+			"godot-ai-project-settings",
+		);
+	});
+
+	it("allows a plain commit of other staged files while only the working tree is dirty", () => {
+		assert.equal(
+			decideShellCommand("git commit -m x", { currentBranch: "feat/x", ...WORKTREE }).permission,
+			"allow",
+		);
+	});
+
+	it("blocks the git add forms that would stage the file", () => {
+		for (const command of [
+			"git add .",
+			"git add -A",
+			"git add -u",
+			"git add --all",
+			"git add game/project.godot",
+			"git add game",
+			"git add game/",
+			"git add -- game/project.godot",
+			"git stage game/project.godot",
+			"git add game\\project.godot",
+		]) {
+			assert.equal(
+				decideShellCommand(command, { currentBranch: "feat/x", ...WORKTREE }).code,
+				"godot-ai-project-settings",
+				command,
+			);
+		}
+	});
+
+	it("allows adding unrelated paths and read-only git", () => {
+		for (const command of [
+			"git add README.md",
+			"git add backend/control-plane/src/main.ts",
+			"git status",
+			"git diff -- game/project.godot",
+			"git checkout -- game/project.godot",
+			"git commit --dry-run",
+		]) {
+			assert.equal(
+				decideShellCommand(command, { currentBranch: "feat/x", ...WORKTREE }).permission,
+				"allow",
+				command,
+			);
+		}
+	});
+
+	it("stays out of the way when nothing is polluted", () => {
+		assert.equal(decideShellCommand("git add .", { currentBranch: "feat/x" }).permission, "allow");
+		assert.equal(
+			decideShellCommand("git commit -am x", { currentBranch: "feat/x" }).permission,
+			"allow",
+		);
+	});
+
+	it("reports the settings problem before the protected-branch problem", () => {
+		// 两个原因同时成立时消息里必须写「怎么修 project.godot」，
+		// 否则人只看到「main 上不许提交」，还原那一步会被漏掉。
+		assert.equal(
+			decideShellCommand("git commit -m x", { currentBranch: "main", ...STAGED }).code,
+			"godot-ai-project-settings",
+		);
+	});
+});

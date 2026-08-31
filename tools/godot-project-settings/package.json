@@ -1,0 +1,8 @@
+{
+	"name": "@craftarena/godot-project-settings",
+	"version": "0.0.0",
+	"private": true,
+	"type": "module",
+	"description": "Detects and strips machine-local Godot AI entries from game/project.godot (CD-51 section 7.3). Pure text edit; no Godot, no extra runtime dependencies.",
+	"license": "UNLICENSED"
+}

@@ -16,7 +16,20 @@ const ALLOW: Decision = {
 
 export type DecideOptions = {
 	readonly currentBranch?: string | undefined;
+	/**
+	 * `game/project.godot` 在**索引**里带着的本机 Godot AI 条目（CD-51 §7.3）。
+	 * 非空就等于「下一条 commit 会把它带进历史」，必须拦。
+	 */
+	readonly stagedProjectSettingsLocalOnly?: readonly string[] | undefined;
+	/**
+	 * 同上，但在**工作树**里。非空时任何会把该文件塞进索引的 `git add` / `commit -a`
+	 * 都要拦，否则就变成上一条。
+	 */
+	readonly worktreeProjectSettingsLocalOnly?: readonly string[] | undefined;
 };
+
+const PROJECT_SETTINGS_PATH = "game/project.godot";
+const SCRUB_COMMAND = "npm run godot-settings:scrub";
 
 export function isProtectedBranch(name: string): boolean {
 	const normalized = name.replace(/^refs\/heads\//, "").replace(/^refs\/remotes\/[^/]+\//, "");
@@ -55,6 +68,10 @@ export function decideShellCommand(command: string, options: DecideOptions = {})
 	if (subcommand === "push") {
 		return decidePush(afterGit.slice(1), options.currentBranch);
 	}
+	const settings = decideProjectSettings(subcommand, afterGit.slice(1), options);
+	if (settings.permission === "deny") {
+		return settings;
+	}
 	if (isProtectedWrite(subcommand, afterGit.slice(1)) && branchIsProtected(options.currentBranch)) {
 		return deny(
 			"commit-on-protected",
@@ -62,6 +79,89 @@ export function decideShellCommand(command: string, options: DecideOptions = {})
 		);
 	}
 	return ALLOW;
+}
+
+/**
+ * Godot AI 插件每次运行都会把 `autoload/_mcp_game_helper` 与
+ * `res://addons/godot_ai/plugin.cfg` 写回 `game/project.godot`。插件在
+ * `.gitignore` 里、不是我们的代码，改不了它的写入；能做的是让那次写入进不了
+ * 提交。它已经漏进过一个 commit（PR #193 前的分支上有修正提交），所以这里
+ * fail closed：只要索引脏就不许 commit，只要工作树脏就不许把它 add 进索引。
+ */
+function decideProjectSettings(
+	subcommand: string,
+	args: readonly string[],
+	options: DecideOptions,
+): Decision {
+	const stagedEntries = options.stagedProjectSettingsLocalOnly ?? [];
+	const worktreeEntries = options.worktreeProjectSettingsLocalOnly ?? [];
+
+	if (subcommand === "commit") {
+		if (args.includes("--help") || args.includes("-h") || args.includes("--dry-run")) {
+			return ALLOW;
+		}
+		if (stagedEntries.length > 0) {
+			return denyProjectSettings("index", stagedEntries);
+		}
+		if (worktreeEntries.length > 0 && stagesEverything(args)) {
+			return denyProjectSettings("working tree", worktreeEntries);
+		}
+		return ALLOW;
+	}
+	if (subcommand !== "add" && subcommand !== "stage") {
+		return ALLOW;
+	}
+	if (worktreeEntries.length === 0) {
+		return ALLOW;
+	}
+	if (!addTouchesProjectSettings(args)) {
+		return ALLOW;
+	}
+	return denyProjectSettings("working tree", worktreeEntries);
+}
+
+function denyProjectSettings(where: string, entries: readonly string[]): Decision {
+	return deny(
+		"godot-ai-project-settings",
+		`${PROJECT_SETTINGS_PATH} in the ${where} carries machine-local Godot AI entries (${entries.join(", ")}); CD-51 section 7.3 forbids committing them. Run \`${SCRUB_COMMAND}\` first.`,
+	);
+}
+
+function stagesEverything(args: readonly string[]): boolean {
+	return args.some((arg) => arg === "-a" || arg === "--all" || /^-[a-zA-Z]*a[a-zA-Z]*$/.test(arg));
+}
+
+function addTouchesProjectSettings(args: readonly string[]): boolean {
+	const paths: string[] = [];
+	let onlyPaths = false;
+	for (const arg of args) {
+		if (arg === "--") {
+			onlyPaths = true;
+			continue;
+		}
+		if (!onlyPaths && arg.startsWith("-")) {
+			if (arg === "-A" || arg === "--all" || arg === "-u" || arg === "--update") {
+				return true;
+			}
+			continue;
+		}
+		paths.push(arg);
+	}
+	return paths.some(coversProjectSettings);
+}
+
+function coversProjectSettings(pathArg: string): boolean {
+	const normalized = pathArg.replace(/\\/g, "/").replace(/^\.\//, "").replace(/\/+$/, "");
+	if (normalized === "" || normalized === "." || normalized === "*") {
+		return true;
+	}
+	if (normalized === PROJECT_SETTINGS_PATH) {
+		return true;
+	}
+	if (PROJECT_SETTINGS_PATH.startsWith(`${normalized}/`)) {
+		return true;
+	}
+	return normalized.endsWith("*") && PROJECT_SETTINGS_PATH.startsWith(normalized.slice(0, -1));
 }
 
 function decideWorktree(args: readonly string[]): Decision {

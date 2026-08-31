@@ -53,64 +53,67 @@ Worktree 端口偏移见 README「并行工作区」；本文件不复述端口�
 
 ---
 
-## 本刀：纠偏 C4 第 7 章 — 单网格视觉资产共享 Mesh
+## 本刀：Godot AI 脏写入不再进提交（freeze-exception，单项）
 
-对应：当前完整章节 PR。上一刀（C4 第 6 章）修掉了对局大厅**每帧**重建角色的开销，但当时还留了两笔账，本刀把它们一起还掉。两处症状同一个根因：`PackedScene.instantiate()` 太贵。
+对应：当前完整章节 PR。这刀不属于任何 C 批次，还的是上一刀记的另一笔账：**Godot AI 插件每次运行都把 `autoload/_mcp_game_helper` 与 `res://addons/godot_ai/plugin.cfg` 写回 `game/project.godot`**。它让守卫测试反复变红，并已经漏进过一个 commit。
 
-开发机实测（**观察值，不是门禁**，见 [CD-53 §1.1](../../Confirmed-docs/50-engineering/53-testing-and-ci.md)）：
+**先看清这刀能做什么、不能做什么。** 插件在 `.gitignore` 里、不是本仓库代码，所以**没有办法阻止它写**。这刀做的是另外两件：一条命令把工作树还原、以及让那次写入进不了提交。因此本刀的验收不是「工作树永远干净」，而是「脏了能一键还原，且脏着提交会被拦」。
 
-| 场景 | 修复前 | 修复后 | |
-|---|---|---|---|
-| 实例化 36 个地砖 | 55.9 ms | **0.16 ms** | 349× |
-| `MatchSolidMap.apply_bundle`（挂 / 换课程一次） | 64.6 ms | **1.4 ms** | 46× |
-| `AuthoringPreviewMap.rebuild`（**Preview 每帧**，49 实体） | 74.3 ms | **7.1 ms** | 10× |
+本刀**不需要**跑 `npm run dev`，也不改 `game/` 下任何玩法代码。
 
-改法：单网格资产不再 `instantiate` 整棵场景，而是把它的 `Mesh` 提取一次并共享，每个实例只 new 一个节点。多网格或带 skin 的资产**回退**到原来的 `instantiate`（共享一份 `Mesh` 表达不了多个 surface 的层级与蒙皮）。今天两个资产都是单网格无 skin，但下一个未必。
-
-**先做一次导入**：
-
-```bash
-"$GODOT4" --headless --path game --import     # Windows: & $env:GODOT4_CONSOLE --headless --path game --import
-```
-
-1. **画面和上一刀一模一样**（这是本刀的主要验收标准 —— 它只该更快，不该更好看也不该更难看）：按 0.2 打开窗口，点 **Solo play**。
-   - 预期：角色仍是那个约 1 米高的机器人，覆青色薄膜，脚踩在地砖顶面；地砖仍是黄黑警示条、一格一块、互不重叠、不浮空不半埋；机关仍洋红、箱子仍橙、垫/门/终点仍是色块盒。
-   - 失败：地砖大小或位置变了（共享路径的 AABB 与原路径不一致）；角色浮空或半埋；任何东西退回成纯色盒（说明解析失败、回退了）。
-2. **换课程不再顿一下**：在课程 id 框里输入 `course_03`，点 **Create room**（或 **Solo play**）重挂一次；来回换几次 `course_01` / `course_02` / `course_03`。
-   - 预期：切换瞬间完成，没有可感知的卡顿。
-   - 失败：每次换课程都明显顿一下（那说明共享路径没生效，先回去跑 `--import`）。
-3. **Preview 里按住方向键是连续的**（本刀最值得确认的一条）：编辑器里打开 Preview 壳，开玩，**按住** W 或方向键走一段。
-   - 预期：移动连续。上一刀之后 Preview 仍然是卡的，因为它每帧重建整个世界、含每一块地砖的模型；现在那部分几乎归零。
-   - 失败：仍然一顿一顿。
-   - 诚实边界：Preview 仍然**每帧全量重建节点树**，只是不再每帧重新实例化模型。49 个实体的占位盒重建本身还要约 6.7 ms（60 FPS 预算 16.7 ms 的 40%）。要真正修掉需要 diff 机制，见「仍然欠着」。
-4. **两个席位仍然分色**（共享 `Mesh` 最容易踩的坑）：`npm run dev` 后 **Quick play**，人数 `2`，第二个客户端进同一场。
-   - 预期：本席**青**膜、远端**海军蓝**膜，两个机器人颜色不同。
-   - 失败：两个机器人**同色** —— 那正是共享 `Mesh` 串色。座位色走 `material_overlay`（逐实例属性，不碰 `Mesh`），有守卫测试钉着，但这条值得人眼确认一次。
-5. **赛道玩法一点没动**：WASD 走、空格跳、Q 打箱、Shift 冲刺、R 复位、踩洋红机关被击退。
-   - 预期：与上一刀逐项一致。视觉资产不参与裁决。
-6. **包内自检仍覆盖两个资产**：
+1. **在干净仓库上是空转**（先建立基线）：
    ```bash
-   "$GODOT4" --headless --path game -- --package-check
+   npm run godot-settings:check
    ```
-   - 预期：`character_visual_loadable` 与 `terrain_tile_visual_loadable` 都是 `true`，`ok=true`。地块那条**连贴合一起判**，所以它同时验证了共享路径算出的 AABB 是对的。
+   - 预期：一行 JSON，`"ok":true`、`entries` 为空，退出码 0。
+   - 失败：`ok:false` —— 那说明你的工作树现在就是脏的，先做第 3 步再回来。
+2. **插件真的会写**（这一步是让你亲眼看见问题存在，不是本刀的产出）：本机已装 `game/addons/godot_ai/` 时，打开一次编辑器：
+   ```bash
+   & $env:GODOT4 --editor --path game      # macOS: "$GODOT4" --editor --path game
+   ```
+   关掉编辑器，然后 `git diff -- game/project.godot`。
+   - 预期：出现 `+[autoload]` / `+_mcp_game_helper=...`，`editor_plugins/enabled` 里多出 `res://addons/godot_ai/plugin.cfg`。
+   - 本机没装该插件：跳过本步，直接手工造一次同样的两行再做第 3、4 步。
+3. **一条命令精确还原**：
+   ```bash
+   npm run godot-settings:scrub
+   git diff -- game/project.godot
+   ```
+   - 预期：scrub 打印被摘掉的条目；`git diff` 之后**完全没有输出**（回到字节一致，不是「差不多」）。再跑一次 scrub 是空转（幂等）。
+   - 失败：`git diff` 仍有内容（说明还原不完整，比如空的 `[autoload]` 段没删掉）。
+4. **别的改动不会被顺手丢掉**（这是它比 `git checkout --` 好的唯一理由）：先手工在 `game/project.godot` 里随便改一个无关值（例如把 `window/size/window_width_override` 改成 `1601`），再让它同时带上第 2 步那两行，然后 `npm run godot-settings:scrub`。
+   - 预期：两行 MCP 条目被摘掉，`1601` **还在**。
+   - 失败：`1601` 被一起还原了（那就是 `git checkout --` 的行为，不是本刀要的）。
+   - 做完记得把 `1601` 改回去。
+5. **脏着提交会被拦**（Agent 路径。人手敲的 git 不经过这个 hook，所以这条只对 IDE Agent 生效）：把第 2 步那两行弄回去，然后
+   ```bash
+   '{"command":"git add .","cwd":"<仓库绝对路径>"}' | node tools/shell-guard/src/main.ts
+   ```
+   - 预期：`"permission":"deny"`，消息里含 `game/project.godot` 与 `npm run godot-settings:scrub`。
+   - 再试 `git add README.md`：应为 `"permission":"allow"`（守卫只拦会把该文件塞进索引的形式）。
+   - 收尾：`npm run godot-settings:scrub`，确认 `git status --short` 里没有 `game/project.godot`，也没有 `game/addons/godot_ai/`。
+6. **自动化仍然全绿**：
+   ```bash
+   npm run typecheck; npm test
+   ```
+   - 预期：`npm test` 全绿，其中含新工具用例与 shell-guard 新增用例。
 
 ### 本刀不测
 
-- **Preview 的全量重建本身**（那 6.7 ms 占位盒重建），需要 diff 机制，是独立一刀；
-- 字体与本地化键、动画状态契约、D7 输入抽象层（C4 剩余项）；
-- 导出包内的表现（本机无 4.7.2 导出模板）；
-- `MultiMesh` / 实例化渲染（这一刀省的是 CPU 侧的场景实例化，**不是** draw call；draw call 与场景总量预算按人类 2026-08-30 明确不做）。
+- **让插件不写**。做不到，见上面那段；
+- **人手 git 的拦截**。`.cursor/hooks.json` 只在 IDE Agent 发命令时生效，本仓库没有安装 git 原生 `pre-commit` 钩子（那要改 `core.hooksPath`，属人类门禁）；
+- 任何玩法、协议、Preview / 对局表现。这刀一行 `game/` 代码都没改。
 
 ### 诚实边界
 
-- **省的是 CPU 侧实例化，不是渲染**。36 个地砖仍然是 36 个 `MeshInstance3D`、36 次 draw call。帧率如果还有问题，下一个瓶颈在渲染侧，那是另一类工作；
-- **毫秒数是开发机一次性观察值**。新测试断言的是**共享与隔离这对性质**（两个实例引用同一个 `Mesh` 对象、改一个的颜色不串到另一个），不是耗时阈值 —— CD-53 §1.1 不建自动性能门禁；
-- **模板缓存不会自己失效**。它握着的是 `Mesh` 资源引用；在编辑器里重新导入 `.glb` 之后，同一进程内仍会用旧网格。开发期重启即可，运行时资产不变。留了 `clear_template_cache()`；
-- **不要改共享 `Mesh` 的 surface material**。那会串到所有实例上。逐实例颜色一律用 `material_overlay` / `material_override`；
-- 回退路径（多网格 / 带 skin）用测试里现造的场景验证，**仓库里还没有这类真资产**，所以那两条断言证明的是代码分支正确，不是"某个真实蒙皮角色能用"。
+- **这不是「工作树永远干净」**。插件照旧写，只是现在有一条命令能精确撤销、并且脏着提交会被拦。任何写成「已经不会污染工作树了」的说法都是虚报；
+- **拦截只覆盖 Agent 发出的 git**，靠 `.cursor/hooks.json` 的 `beforeShellExecution`（`failClosed: true`）。人手在终端敲 `git commit` 不经过它。CI 拦的是最后一道：磁盘副本脏就让 `npm test` 变红；
+- **检测按插件目录名而不是固定 autoload 名**：`addons/godot_ai` 下的任何 autoload 都算本机条目，插件换版本改名也拦得住。反过来，**其他** autoload 一个不碰 —— 将来真要加基础服务 autoload（CD-51 §5）不会被误删，有用例钉着；
+- **`enabled` 数组被摘空时保留 `enabled=PackedStringArray()`**，不删这个键。删键与留空键在 Godot 里语义相同，但留空键的 diff 更小；
+- 纯文本编辑，不解析完整 ini 语义。不认识的 `enabled=` 写法（例如手工换行过的）会被**原样留下**而不是猜着改，这是故意的：宁可漏报一次让 CI 变红，也不要改坏 `project.godot`。
 
 ### 仍然欠着（不因本章消失）
 
-- **Preview 每帧仍全量重建节点树**（约 6.7 ms / 49 实体）。要修需要按实体 diff，独立一刀；
-- 远端协议层 RTT 回填、C3 网络参数锁定、E6 有美术后的可玩性签署、字体与本地化键、动画状态契约、D7 输入抽象层、角色胶囊尚未进资产表、垫 / 门 / 终点仍无独立视觉、扫掠取样代价无上限（宪法第十七条缺口）、`match_lobby_shell.gd` 已 1,516 行（E9 要求 < 400）；
-- **Godot AI 插件每次运行都把 `autoload/_mcp_game_helper` 写回 `project.godot`**（headless 也写）。它让守卫测试反复变红，并已经漏进过一个 commit（见上一分支的修正提交）。值得单独一刀让它不再污染工作树。
+- **git 原生钩子**：装 `pre-commit` 能覆盖人手 git，但需要改本机 `core.hooksPath`，属宪法第十八条的人类门禁项，本刀没做；
+- **Preview 每帧仍全量重建节点树**（约 6.7 ms / 49 实体）——**另一条分支正在单独还这笔**，与本刀无依赖；
+- 远端协议层 RTT 回填、C3 网络参数锁定、E6 有美术后的可玩性签署、字体与本地化键、动画状态契约、D7 输入抽象层、角色胶囊尚未进资产表、垫 / 门 / 终点仍无独立视觉、扫掠取样代价无上限（宪法第十七条缺口）、`match_lobby_shell.gd` 已 1,516 行（E9 要求 < 400）。

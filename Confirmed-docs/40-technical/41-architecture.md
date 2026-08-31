@@ -128,6 +128,7 @@ repo/
 │  ├─ bot-runner/
 │  ├─ asset-budget/
 │  ├─ content-validator/
+│  ├─ godot-project-settings/
 │  ├─ redline-scanner/
 │  ├─ shell-guard/
 │  └─ replay-inspector/
@@ -140,7 +141,7 @@ repo/
    └─ runbooks/
 ```
 
-Godot 主 MCP 已选定为 Godot AI（[ADR-0003](../../docs/adr/0003-godot-mcp-selection.md)）。插件只出现在本机 `game/addons/godot_ai/`，**不预建、不入库**；已提交的 `project.godot` 不启用该插件、不写入 `_mcp_game_helper`。打开编辑器时 Authoring Editor 若发现该目录则自动启用，避免每次手动勾选。同时只允许这一套 Godot MCP。安装与遥测开关见 [CD-51 §7](../50-engineering/51-dev-environment.md)。
+Godot 主 MCP 已选定为 Godot AI（[ADR-0003](../../docs/adr/0003-godot-mcp-selection.md)）。插件只出现在本机 `game/addons/godot_ai/`，**不预建、不入库**；已提交的 `project.godot` 不启用该插件、不写入 `_mcp_game_helper`。打开编辑器时 Authoring Editor 若发现该目录则自动启用，避免每次手动勾选。插件每次运行都会把这两处写回本机 `project.godot`，那是**改不了的第三方行为**；`tools/godot-project-settings/` 负责检测与一条命令还原，见 [CD-51 §7.3](../50-engineering/51-dev-environment.md)。同时只允许这一套 Godot MCP。安装与遥测开关见 [CD-51 §7](../50-engineering/51-dev-environment.md)。
 
 `Confirmed-docs/` 保留在仓库根，是产品与工程规范的唯一事实源；`docs/adr/` 只记录实现级架构决策。
 
