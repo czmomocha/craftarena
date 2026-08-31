@@ -29,6 +29,10 @@ func test_open_window_keeps_authoring_session() -> void:
 	assert_eq(_shell.window.size, AuthoringPreviewShell.WINDOW_SIZE)
 	assert_eq(_shell.window.min_size, AuthoringPreviewShell.WINDOW_MIN_SIZE)
 	assert_eq(_shell.window.mode, Window.MODE_MAXIMIZED)
+	# C4 第 6 章回归守卫：嵌入子窗口不得自己设 content_scale（渲染与鼠标命中
+	# 会错开）。D4 的 UI 基准由主窗口 stretch 承担。
+	assert_eq(_shell.window.content_scale_mode, Window.CONTENT_SCALE_MODE_DISABLED)
+	assert_eq(_shell.window.content_scale_size, Vector2i(0, 0))
 	assert_false(_shell.window.exclusive)
 	assert_false(_shell.window.transient)
 	assert_true(_shell.preview.world.has_entity(1))

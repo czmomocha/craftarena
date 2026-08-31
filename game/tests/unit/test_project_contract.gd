@@ -91,9 +91,32 @@ func test_required_input_actions_exist() -> void:
 		)
 
 
-func test_dev_run_window_defaults_are_not_product_fov() -> void:
+func test_ui_base_resolution_is_the_d4_baseline() -> void:
+	# D4：UI 分辨率基准 1920×1080。它是**设计基准**，不是窗口尺寸——
+	# 下一条断言的 window_*_override 才是开发机运行窗。
 	var width_raw: Variant = ProjectSettings.get_setting("display/window/size/viewport_width", 0)
 	var height_raw: Variant = ProjectSettings.get_setting("display/window/size/viewport_height", 0)
+	assert_eq(typeof(width_raw), TYPE_INT)
+	assert_eq(typeof(height_raw), TYPE_INT)
+	var width: int = width_raw
+	var height: int = height_raw
+	assert_eq(
+		Vector2i(width, height),
+		PlaceholderSpec.UI_BASE_SIZE,
+		"UI 基准必须与 PlaceholderSpec.UI_BASE_SIZE 是同一个数（D4）"
+	)
+	# 没有 canvas_items 拉伸，1920×1080 只是个更大的视口，HUD 字号仍随屏幕缩水。
+	var stretch_mode: String = ProjectSettings.get_setting("display/window/stretch/mode", "")
+	var stretch_aspect: String = ProjectSettings.get_setting("display/window/stretch/aspect", "")
+	assert_eq(stretch_mode, "canvas_items", "UI 基准要生效必须按 canvas_items 缩放 2D")
+	assert_eq(stretch_aspect, "expand", "expand 才不会在非 16:9 屏上加黑边")
+
+
+func test_dev_run_window_override_is_not_product_fov() -> void:
+	# 开发机运行窗仍是 1600×900 最大化（CD-21 §3.2 / CD-53 §4 的实现落点）。
+	# 接线前它写在 viewport_* 上；UI 基准接管 viewport_* 之后，它搬到 override。
+	var width_raw: Variant = ProjectSettings.get_setting("display/window/size/window_width_override", 0)
+	var height_raw: Variant = ProjectSettings.get_setting("display/window/size/window_height_override", 0)
 	var mode_raw: Variant = ProjectSettings.get_setting("display/window/size/mode", -1)
 	assert_eq(typeof(width_raw), TYPE_INT)
 	assert_eq(typeof(height_raw), TYPE_INT)

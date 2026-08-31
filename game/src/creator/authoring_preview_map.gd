@@ -155,6 +155,7 @@ func ensure_rig() -> void:
 		camera = Camera3D.new()
 		camera.name = CAMERA_NAME
 		camera.position = PlaceholderSpec.CAMERA_OFFSET
+		camera.fov = PlaceholderSpec.CAMERA_FOV_DEG
 		camera.current = true
 		add_child(camera)
 		if is_inside_tree():

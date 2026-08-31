@@ -1,6 +1,7 @@
 extends GutTest
 
 ## C4 第 5 章：第一批 `.glb` 入库 + 视觉资产解析链路（纠偏 §3 C4 产出 5、E7 后半）。
+## C4 第 6 章追加末节三条：席位节点每帧复用（见「每帧预算」小节）。
 ##
 ## 覆盖两个资产：角色（玩家节点）与地块（`solids` 袋 / `zone.tags` 含 solid）。
 ##
@@ -178,6 +179,73 @@ func test_visual_count_resets_between_snapshots() -> void:
 	assert_eq(_map.visual_count(), 2)
 	assert_true(_map.apply_players([_player_body()]))
 	assert_eq(_map.visual_count(), 1, "重建后视觉计数没跟着收回")
+
+
+# --- 每帧预算：席位节点必须被复用，不是每帧重新 instantiate -------------------
+
+
+## `MatchLobbyShell._process` 每帧调一次 `apply_players`。这条断言钉住的是
+## **同一个实例被留下来了**，而不是"结果看起来一样"。
+##
+## 为什么要断言身份而不是耗时：耗时断言在 CI 上不稳，且 [CD-53 §1.1] 不建自动
+## 性能门禁。但"节点是不是同一个对象"是确定性的，而它恰好等价于"这一帧有没有
+## 重新 `PackedScene.instantiate()` 一个 3000 三角面的角色"。
+## 开发机实测：全清全建 2 席 12.76 ms/帧，复用 0.015 ms/帧。
+func test_apply_players_reuses_seat_nodes_across_frames() -> void:
+	assert_true(_map.apply_players([_player_body(), _player_body()]))
+	var first_seat: MeshInstance3D = _map.player_node(0)
+	var first_visual: Node3D = _map.visual_node(0)
+	var first_face: MeshInstance3D = _map.facing_node(0)
+	assert_not_null(first_visual)
+	# 连续 5 帧同样的快照
+	for _frame: int in 5:
+		assert_true(_map.apply_players([_player_body(), _player_body()]))
+	assert_same(_map.player_node(0), first_seat, "席位节点被重建了")
+	assert_same(_map.visual_node(0), first_visual, "角色视觉实例被重建了")
+	assert_same(_map.facing_node(0), first_face, "朝向标记被重建了")
+	assert_eq(_map.visual_count(), 2, "复用不该让视觉计数漂移")
+	assert_eq(_map.player_count(), 2)
+
+
+## 复用不能让位姿或座位色变成过期值——那会让"省了开销"变成"画错了"。
+func test_reused_seat_node_still_tracks_pose_and_seat_colour() -> void:
+	_map.follow_slot = 0
+	assert_true(_map.apply_players([_player_body(), _player_body()]))
+	var seat: MeshInstance3D = _map.player_node(1)
+	assert_eq(_seat_albedo(seat), MatchSnapshotMap.REMOTE_ALBEDO)
+	# 第 1 席动了，并且镜头改跟第 1 席
+	_map.follow_slot = 1
+	var moved: Dictionary = _player_body()
+	moved["x"] = 3 * Fixed.SCALE
+	moved["yaw_bam"] = Fixed.BAM_TURN / 4
+	assert_true(_map.apply_players([_player_body(), moved]))
+	assert_same(_map.player_node(1), seat, "这条测的是复用路径，节点不该换")
+	assert_almost_eq(seat.position.x, 3.0, 0.0001, "复用节点没跟上新位置")
+	assert_almost_eq(seat.rotation.y, TAU / 4.0, 0.0001, "复用节点没跟上新朝向")
+	assert_eq(_seat_albedo(seat), MatchSnapshotMap.OWN_ALBEDO, "follow_slot 变了但座位色没改")
+	assert_almost_eq(
+		_overlay_albedo(_map.visual_node(1)).r,
+		MatchSnapshotMap.OWN_ALBEDO.r,
+		0.001,
+		"视觉薄膜没跟着座位色改"
+	)
+
+
+## 席位数变化才增删。变少要真的删掉尾部，否则上一场的人会留在场上。
+func test_seat_count_changes_add_and_remove_nodes() -> void:
+	assert_true(_map.apply_players([_player_body(), _player_body(), _player_body()]))
+	assert_eq(_map.player_count(), 3)
+	var kept: MeshInstance3D = _map.player_node(0)
+	assert_true(_map.apply_players([_player_body()]))
+	assert_eq(_map.player_count(), 1)
+	assert_same(_map.player_node(0), kept, "缩到 1 席时第 0 席不该被牵连重建")
+	assert_null(_map.player_node(1), "第 1 席没被删掉")
+	assert_null(_map.player_node(2), "第 2 席没被删掉")
+	assert_eq(_map.visual_count(), 1, "删席位时视觉计数没跟着减")
+	assert_true(_map.apply_players([]))
+	assert_eq(_map.player_count(), 0)
+	assert_eq(_map.visual_count(), 0)
+	assert_null(_map.player_node(0))
 
 
 # --- Preview 与对局读同一份 --------------------------------------------------

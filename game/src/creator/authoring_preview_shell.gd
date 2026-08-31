@@ -26,7 +26,9 @@ extends Node
 ## The window defaults to 1280×720 maximized; HUD buttons use
 ## FOCUS_NONE so Space stays jump, not Play. Re-open raises the existing
 ## window (grab_focus) and rebuilds it if the native instance was freed.
-## Not a product FOV.
+## UI scales from the D4 1920×1080 base (PlaceholderSpec.UI_BASE_SIZE).
+## The camera is the D4 45° / 45° rig; distance and FOV are unchanged
+## placeholders, so this is not a product FOV.
 ## Never settlement.
 
 const OutOfRangeReset := preload("res://src/games/traprush/out_of_range_reset.gd")
@@ -380,6 +382,9 @@ func status_label_text() -> String:
 	return _status.text
 
 
+## D4 的 UI 基准 1920×1080 由**主窗口**的 stretch 承担；嵌入子窗口作为 canvas
+## item 继承它，所以这里**故意不设** `content_scale_*`（设了会让渲染与鼠标命中
+## 错开，理由见 `match_lobby_shell.gd` 同名注释）。
 func _ensure_window() -> void:
 	if _window_alive():
 		return

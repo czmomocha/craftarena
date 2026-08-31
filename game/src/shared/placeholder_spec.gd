@@ -15,11 +15,16 @@ extends RefCounted
 ## `creator` → `client` 方向今天没有依赖，不应为一份色板新建一条。
 ##
 ## D4 已拍板且已生效：1 格 = 1 表现米；角色高 0.125 格 / 半径 0.125 格；
-## TRAPRUSH 危险色 = 洋红。
+## TRAPRUSH 危险色 = 洋红；相机斜 45°（C4 第 6 章接线）；UI 基准 1920×1080
+## （C4 第 6 章接线，见 `UI_BASE_SIZE`）。
 ##
-## D4 已拍板但**尚未接线**：相机斜 45°（`CAMERA_OFFSET` 的水平角已是 45°，
-## 俯角与距离没按 D4 重算，FOV D4 也没给）；UI 基准 1920×1080（大厅窗口仍
-## 1600×900）。本刀只收敛引用点、不改数值，接线会改开发机可见行为，留 C4 后续章。
+## D4 已拍板但仍未接线的**只剩字体**：思源黑体 / Noto Sans SC 子集化入包。
+## 它不住在本文件——字体是新增第三方资产与许可证（宪法第十八条人类门禁），
+## 且与「本地化键补齐」是同一条文本链路，留 C4 后续章一并做。
+##
+## D4 那一行里**没被回答**的是「安全区」（表头是「UI 分辨率基准 + 安全区」，
+## 人类只答了 1920×1080）。今天不阻塞：一期没有移动端导出，没有刘海与手势条
+## 要避让。等 D7 的触控 UI 立项时必须回来补答，不得由 AI 自选。
 ##
 ## 权威碰撞与视觉网格的**分离**不在本文件：那要等 `GameplayAsset` 契约
 ## （纠偏方案 C4 第 2–4 章）。今天二者仍靠 1 格 = 1 米隐式对齐。
@@ -46,13 +51,42 @@ const CHARACTER_HEIGHT: int = Fixed.SCALE / 8
 ## 出生偏移环的步长：slot i 向 -Z 退 i 格的一半。不是产品出生布局。
 const SPAWN_STRIDE: int = Fixed.SCALE / 2
 
-# 相机与灯光
+# 相机与灯光（D4：斜 45°）
 
-## 大厅与 Preview 共用的跟随偏移。x = z 所以水平方位角已经是 D4 要的 45°，
-## 但俯角约 43° 而不是 45°，距离与 FOV D4 也没给。按 D4 重算是后续章的事，
-## 本刀只把这一份从两个文件收敛到一处。
-const CAMERA_OFFSET: Vector3 = Vector3(6.0, 8.0, 6.0)
+## 跟随相机到目标的直线距离。D4 只给了角度，**没给距离**，所以这里是接线前
+## 那个 Vector3(6, 8, 6) 的长度 √136，一位数字都没动。改距离要回去问人类。
+const CAMERA_DISTANCE: float = 11.661903789690601
+## D4 的「斜 45°」两个角都取 45：水平方位角 45°（等量偏 +X 与 +Z），俯角 45°。
+## 接线前水平角已经是 45°，俯角却是 43.3°——差的那 1.7° 不是设计，是
+## Vector3(6, 8, 6) 里 8 与 6√2 不相等的副产物。
+const CAMERA_YAW_DEG: float = 45.0
+const CAMERA_PITCH_DEG: float = 45.0
+## sin(45°) = cos(45°) = 1/√2。const 表达式里不能调 `sqrt()`，所以写成字面量，
+## 由 `test_placeholder_spec.gd` 反算角度来守。
+const _SIN_45: float = 0.7071067811865476
+## 俯角 45° ⇒ 竖直分量 = d/√2，水平半径也 = d/√2；水平方位角 45° ⇒
+## x = z = 水平半径/√2 = d/2。三个分量因此都由 CAMERA_DISTANCE 推出。
+const CAMERA_OFFSET: Vector3 = Vector3(
+	CAMERA_DISTANCE / 2.0,
+	CAMERA_DISTANCE * _SIN_45,
+	CAMERA_DISTANCE / 2.0
+)
+## Godot `Camera3D.fov` 的默认值。**D4 没给 FOV**，所以维持默认；显式写在这里
+## 是为了让下一个想改镜头的人必须改 spec，而不是在某个 map 里悄悄设一个数。
+const CAMERA_FOV_DEG: float = 75.0
 const LIGHT_ROTATION_DEG: Vector3 = Vector3(-50.0, -30.0, 0.0)
+
+# UI（D4：分辨率基准 1920×1080）
+
+## UI 的设计基准分辨率，不是窗口尺寸。落点是**主窗口**的 stretch
+## （project.godot `display/window/stretch/mode=canvas_items`），由
+## `test_project_contract.gd` 断言两处是同一个数。
+##
+## **嵌入子窗口不得自己设 `content_scale_*`。** `gui_embed_subwindows = true` 的
+## 子窗口，`content_scale` 在渲染路径不生效、输入路径生效，于是画出来的按钮与
+## 鼠标命中的按钮错开 `1/factor` 倍，右侧还会被切出可视区。两条壳各有一条回归
+## 守卫钉住这件事。子窗口继承主窗口那一层缩放，不需要也不能再叠一层。
+const UI_BASE_SIZE: Vector2i = Vector2i(1920, 1080)
 
 # 色板（D4：TRAPRUSH 危险色 = 洋红；其余仍是占位色块，见 D8「不做描边」）
 
