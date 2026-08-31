@@ -16,6 +16,15 @@ extends Node3D
 ## Rebuild after every editor write or preview patch. Overlay reads evaluate();
 ## it is not a write gate.
 ##
+## rebuild() 是幂等的脏检查，不是无条件重建。Preview play 每帧都调它，而
+## AuthoringWorld 在一局试玩里根本不变，所以之前每帧都在 free + new 整棵节点树
+## （49 实体约 6.7 ms）。现在只有「世界身份 / revision / 实体数 / 格宽 / 两条视觉
+## 资产路径」任一变化才真重建，否则整段跳过。世界没变但节点树被别人改过时
+## （典型是 apply_hazard_visibility 改显隐）调用方必须先 invalidate()。
+## 另外两个每帧入口也改成幂等：show_player_pose 复用已有标记，
+## mark_accepted_checkpoints 按传入集合**重写**文本而不是只追加 *，
+## 否则跳过重建之后 R 复位掉的检查点会留着陈旧的 *。
+##
 ## Preview play 的玩家标记与对局映射读同一份视觉资产
 ## （SharedVisualAssetCatalog，ADR-0006 Q4），所以 Preview 里看到的角色和真对局
 ## 里是同一个；解析失败时两边同样回退到占位盒。实体占位盒不接视觉，理由见
@@ -49,12 +58,27 @@ const HAZARD_ALBEDO: Color = PlaceholderSpec.HAZARD_ALBEDO
 const SOLID_ALBEDO: Color = PlaceholderSpec.SOLID_ALBEDO
 const FINISH_ALBEDO: Color = PlaceholderSpec.FINISH_PENDING_ALBEDO
 const CRATE_ALBEDO: Color = PlaceholderSpec.CRATE_ALBEDO
+const ENTITY_META: String = "entity_id"
+const ORDER_META: String = "checkpoint_order"
+const VISUAL_PATH_META: String = "visual_path"
+const ACCEPTED_SUFFIX: String = "*"
 
 var _reach_ok: bool = true
 var _reach_issue_count: int = 0
 ## 空字符串或解析失败 ⇒ 回退占位盒。是变量而不是常量，好让测试两条分支都能跑。
 var character_scene_path: String = SharedVisualAssetCatalog.CHARACTER_SCENE_PATH
 var tile_scene_path: String = SharedVisualAssetCatalog.TERRAIN_TILE_SCENE_PATH
+## 上次真重建时的世界指纹。`_built_revision < 0` 表示还没建过任何一次。
+## 记 instance_id 是因为 duplicate() / 回滚快照会换成同 revision 的另一个实例；
+## 记 entity_count 与 cell 是因为 try_restore 能把 revision 设回一个旧值。
+var _built_world_id: int = 0
+var _built_revision: int = -1
+var _built_entity_count: int = 0
+var _built_cell: int = 0
+var _built_character_path: String = ""
+var _built_tile_path: String = ""
+var _rebuild_count: int = 0
+var _skipped_count: int = 0
 
 
 static func meters_from_fixed(value: int) -> float:
@@ -170,6 +194,11 @@ func ensure_rig() -> void:
 
 func rebuild(world: AuthoringWorld) -> void:
 	ensure_rig()
+	if _built_fingerprint_matches(world):
+		_skipped_count += 1
+		return
+	_rebuild_count += 1
+	_remember_built(world)
 	_clear_meshes()
 	_reset_reachability()
 	if world == null:
@@ -187,13 +216,71 @@ func rebuild(world: AuthoringWorld) -> void:
 	_spawn_reachability_overlay(world)
 
 
+## 强制下一次 rebuild 真做。调用方在自己改过节点树（显隐、标记）而世界指纹
+## 没变时必须用它，否则脏检查会认为「已经是想要的样子」。
+func invalidate() -> void:
+	_built_revision = -1
+
+
+## 真正重建过几次。测试用它证明「世界没变就不重建」，不是性能阈值。
+func rebuild_count() -> int:
+	return _rebuild_count
+
+
+func skipped_rebuild_count() -> int:
+	return _skipped_count
+
+
+func _built_fingerprint_matches(world: AuthoringWorld) -> bool:
+	if _built_revision < 0:
+		return false
+	if _built_character_path != character_scene_path:
+		return false
+	if _built_tile_path != tile_scene_path:
+		return false
+	if world == null:
+		return _built_world_id == 0
+	if _built_world_id != world.get_instance_id():
+		return false
+	if _built_revision != world.revision:
+		return false
+	if _built_entity_count != world.entity_count():
+		return false
+	return _built_cell == _cell_of(world)
+
+
+func _remember_built(world: AuthoringWorld) -> void:
+	_built_character_path = character_scene_path
+	_built_tile_path = tile_scene_path
+	if world == null:
+		_built_world_id = 0
+		_built_revision = 0
+		_built_entity_count = 0
+		_built_cell = 0
+		return
+	_built_world_id = world.get_instance_id()
+	_built_revision = world.revision
+	_built_entity_count = world.entity_count()
+	_built_cell = _cell_of(world)
+
+
+func _cell_of(world: AuthoringWorld) -> int:
+	if world.grid == null:
+		return 0
+	return world.grid.cell
+
+
+## 每帧都被调用，所以复用已有标记：只有还没有标记、或者标记是按另一条视觉资产
+## 路径建的（测试会切 character_scene_path），才重新造一个。
 func show_player_pose(pose: Dictionary) -> void:
-	clear_player_pose()
 	if typeof(pose.get("x", null)) != TYPE_INT:
+		clear_player_pose()
 		return
 	if typeof(pose.get("y", null)) != TYPE_INT:
+		clear_player_pose()
 		return
 	if typeof(pose.get("z", null)) != TYPE_INT:
+		clear_player_pose()
 		return
 	var x: int = pose["x"]
 	var y: int = pose["y"]
@@ -201,16 +288,36 @@ func show_player_pose(pose: Dictionary) -> void:
 	var yaw_bam: int = 0
 	if typeof(pose.get("yaw", null)) == TYPE_INT:
 		yaw_bam = pose["yaw"]
+	var node: MeshInstance3D = _reusable_player_node()
+	if node == null:
+		clear_player_pose()
+		node = _create_player_node()
+	node.position = Vector3(meters_from_fixed(x), meters_from_fixed(y), meters_from_fixed(z))
+	node.rotation.y = yaw_radians_from_bam(yaw_bam)
+
+
+func _reusable_player_node() -> MeshInstance3D:
+	var node: MeshInstance3D = player_node()
+	if node == null:
+		return null
+	if not node.has_meta(VISUAL_PATH_META):
+		return null
+	if str(node.get_meta(VISUAL_PATH_META)) != character_scene_path:
+		return null
+	return node
+
+
+func _create_player_node() -> MeshInstance3D:
 	var mesh: BoxMesh = BoxMesh.new()
 	mesh.size = PLACEHOLDER_SIZE
 	mesh.material = _unshaded(PlaceholderSpec.PREVIEW_PLAYER_ALBEDO)
 	var node: MeshInstance3D = MeshInstance3D.new()
 	node.name = PLAYER_NAME
 	node.mesh = mesh
-	node.position = Vector3(meters_from_fixed(x), meters_from_fixed(y), meters_from_fixed(z))
-	node.rotation.y = yaw_radians_from_bam(yaw_bam)
+	node.set_meta(VISUAL_PATH_META, character_scene_path)
 	add_child(node)
 	_attach_player_visual(node)
+	return node
 
 
 ## 与 MatchSnapshotMap._attach_visual 同一套：挂 `visual` 子节点、占位盒本体
@@ -331,14 +438,31 @@ func finish_node(entity_id: int) -> Label3D:
 	return get_node_or_null(finish_name(entity_id)) as Label3D
 
 
+## 按传入集合重写每个检查点标签的文本，而不是只往已验收的那些追加 *。
+## rebuild 会被脏检查跳过，所以「取消验收」（R 复位）只能靠这里把 * 去掉。
 func mark_accepted_checkpoints(entity_ids: PackedInt32Array) -> void:
+	var accepted: Dictionary[int, bool] = {}
 	for index: int in range(entity_ids.size()):
-		var node: Label3D = checkpoint_node(entity_ids[index])
-		if node == null:
+		accepted[entity_ids[index]] = true
+	for child: Node in get_children():
+		var label: Label3D = child as Label3D
+		if label == null:
 			continue
-		if node.text.ends_with("*"):
+		if not str(label.name).begins_with(CHECKPOINT_PREFIX):
 			continue
-		node.text = "%s*" % node.text
+		if not label.has_meta(ENTITY_META) or not label.has_meta(ORDER_META):
+			continue
+		var entity_raw: Variant = label.get_meta(ENTITY_META)
+		var order_raw: Variant = label.get_meta(ORDER_META)
+		if typeof(entity_raw) != TYPE_INT or typeof(order_raw) != TYPE_INT:
+			continue
+		var entity_id: int = entity_raw
+		var order: int = order_raw
+		var wanted: String = str(order)
+		if accepted.has(entity_id):
+			wanted = "%s%s" % [wanted, ACCEPTED_SUFFIX]
+		if label.text != wanted:
+			label.text = wanted
 
 
 func sequence_node(from_id: int, to_id: int) -> MeshInstance3D:
@@ -398,6 +522,8 @@ func _unshaded(color: Color) -> StandardMaterial3D:
 	return material
 
 
+## 逐实例改显隐，不动世界。因此它改过之后世界指纹仍然没变：想让占位盒回到
+## 默认可见，调用方必须 invalidate() 再 rebuild()（Preview 在开玩 / 停玩切换时做）。
 func apply_hazard_visibility(solid_by_entity: Dictionary) -> void:
 	for key: Variant in solid_by_entity.keys():
 		if typeof(key) != TYPE_INT:
@@ -628,6 +754,8 @@ func _spawn_checkpoint_mark(entity_id: int, order: int, from: Vector3, duplicate
 	var label: Label3D = Label3D.new()
 	label.name = checkpoint_name(entity_id)
 	label.text = str(order)
+	label.set_meta(ENTITY_META, entity_id)
+	label.set_meta(ORDER_META, order)
 	label.font_size = 64
 	label.pixel_size = 0.02
 	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
