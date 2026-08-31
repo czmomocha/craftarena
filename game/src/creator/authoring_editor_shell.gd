@@ -65,7 +65,7 @@ func open() -> bool:
 		return false
 	_restore_draft_if_empty()
 	_sync_tools_from_world()
-	_rebuild_map()
+	_rebuild_map(true)
 	_refresh_status()
 	window.visible = true
 	return true
@@ -234,7 +234,7 @@ func import_document(data: Dictionary) -> bool:
 	if ok:
 		_persist_draft()
 		preview_follows = false
-	_rebuild_map()
+	_rebuild_map(true)
 	_refresh_status()
 	return ok
 
@@ -285,7 +285,7 @@ func restore_document(data: Dictionary) -> bool:
 		return false
 	preview_follows = false
 	_sync_tools_from_world()
-	_rebuild_map()
+	_rebuild_map(true)
 	_refresh_status()
 	return true
 
@@ -410,9 +410,13 @@ func _ensure_window() -> void:
 		validator.mount(map)
 
 
-func _rebuild_map() -> void:
+## force=true 给「revision 可能被整体换掉而不是 +1」的入口用：try_restore 会把
+## revision 设成文档里的值，理论上能和当前值撞上，脏检查就会误判「没变」。
+func _rebuild_map(force: bool = false) -> void:
 	if map == null or session == null:
 		return
+	if force:
+		map.invalidate()
 	map.rebuild(session.world)
 	if validator != null:
 		validator.refresh(session.world)
