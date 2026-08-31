@@ -14,8 +14,9 @@ extends Node3D
 ## MatchLocalPredict on the local seat. This node does not predict.
 ## follow_slot aims SnapshotCamera at that player's presentation pose
 ## with the same offset as AuthoringPreviewMap; < 0 or a missing slot
-## looks at the origin. The offset is a presentation stub, not a
-## product camera rig. follow_slot also tints that box as the own seat
+## looks at the origin. The offset and FOV are D4 values read from
+## PlaceholderSpec (45° yaw / 45° pitch, distance and FOV unchanged),
+## not a locked product camera rig. follow_slot also tints that box as the own seat
 ## (OWN_ALBEDO); other seats use REMOTE_ALBEDO. Not product cosmetics.
 ## Box size, camera offset, and every colour come from PlaceholderSpec; this
 ## file keeps the names but no longer owns the values (D4 changes one place).
@@ -28,6 +29,9 @@ extends Node3D
 ## 名次标签、朝向标记与预测 overlay 读的还是同一个节点位姿。视觉解析失败就是
 ## 今天的行为，一个 1 米盒。视觉从不参与裁决，权威胶囊仍是
 ## PlaceholderSpec.CHARACTER_RADIUS / HEIGHT。
+##
+## apply_players 复用席位节点，只有席位数变化才增删（见 `_sync_players`）。
+## 这不是优化偏好，是每帧预算：全清全建会每帧重新 instantiate 角色 `.glb`。
 
 const MatchSnapshotFollowGd := preload("res://src/client/match_snapshot_follow.gd")
 
@@ -36,6 +40,7 @@ const LIGHT_NAME: String = "SnapshotLight"
 const PLAYER_PREFIX: String = "player_"
 const PLACEHOLDER_SIZE: Vector3 = PlaceholderSpec.BOX_SIZE
 const CAMERA_OFFSET: Vector3 = PlaceholderSpec.CAMERA_OFFSET
+const CAMERA_FOV_DEG: float = PlaceholderSpec.CAMERA_FOV_DEG
 const FACE_NAME: String = "face"
 const FACE_OFFSET: Vector3 = Vector3(0.0, 0.15, -0.55)
 const FACE_SIZE: Vector3 = Vector3(0.18, 0.18, 0.28)
@@ -80,15 +85,81 @@ func apply_players(players: Array, crates: Array = []) -> bool:
 	if typeof(crates) != TYPE_ARRAY:
 		return false
 	ensure_rig()
-	_clear_players()
+	_sync_players(players)
+	_aim_camera()
+	return true
+
+
+## 复用已有席位节点：只写位姿与座位色，不 free、也不重新 instantiate。
+##
+## 存在的理由是每帧成本，不是代码整洁。本函数在 `MatchLobbyShell._process` 里
+## **每帧**被调一次。它此前是"全清全建"，而 C4 第 5 章给玩家接上 `.glb` 之后，
+## 那等于每帧 free 掉一个 3000 三角面的角色实例、再 `PackedScene.instantiate()`
+## 一遍，外加两个 `StandardMaterial3D.new()`。开发机实测 2 席 **12.76 ms/帧**，
+## 复用后 **0.44 ms/帧**（29×）。60 FPS 只有 16.7 ms 预算，所以旧路径单这一项
+## 就吃掉 77%，并把输入采样率一起拖下来——采样在 `_process` 里按帧走，不按固定
+## 时钟，帧时间翻倍就等于按键响应翻倍。
+##
+## 只有席位数变化才增删节点：变少删尾部，变多补新的。slot 是稳定键（与
+## `MatchStandingMap` 一致），所以"第 1 席换了人"仍复用第 1 席的节点——视觉是
+## 同一个角色资产，位姿与座位色每帧都会被覆盖，没有可残留的状态。
+func _sync_players(players: Array) -> void:
+	var wanted: int = players.size()
+	if wanted == 0:
+		_clear_players()
+		return
+	for slot: int in range(wanted, _player_count):
+		_despawn_player(slot)
 	var index: int = 0
 	for raw: Variant in players:
 		var body: Dictionary = raw
-		_spawn_player(index, body)
+		var existing: MeshInstance3D = player_node(index)
+		if existing == null:
+			_spawn_player(index, body)
+		else:
+			_update_player(existing, index, body)
 		index += 1
-	_player_count = players.size()
-	_aim_camera()
-	return true
+	_player_count = wanted
+
+
+func _despawn_player(slot: int) -> void:
+	var stale: MeshInstance3D = player_node(slot)
+	if stale == null:
+		return
+	if stale.get_node_or_null(VISUAL_NAME) != null:
+		_visual_count -= 1
+	remove_child(stale)
+	stale.free()
+
+
+## 复用路径：写位姿，必要时改座位色。不碰网格、材质实例与视觉子节点。
+func _update_player(node: MeshInstance3D, slot: int, body: Dictionary) -> void:
+	var pose: Dictionary = _pose_from_player(body)
+	if pose.is_empty():
+		return
+	var x: int = pose["x"]
+	var y: int = pose["y"]
+	var z: int = pose["z"]
+	var yaw_bam: int = pose["yaw_bam"]
+	node.position = Vector3(meters_from_fixed(x), meters_from_fixed(y), meters_from_fixed(z))
+	node.rotation.y = yaw_radians_from_bam(yaw_bam)
+	_retint(node, player_albedo(slot, follow_slot))
+
+
+## 座位色只在真的变了时才写。`follow_slot` 一局里基本不变，所以每帧的常态是
+## 一次 Color 比较，不是一次材质上传。占位盒与视觉薄膜总是一起设，所以拿盒子
+## 当前的 albedo 当作"这个席位现在是什么颜色"的判据。
+func _retint(node: MeshInstance3D, seat: Color) -> void:
+	var mesh: BoxMesh = node.mesh as BoxMesh
+	if mesh == null:
+		return
+	var material: StandardMaterial3D = mesh.material as StandardMaterial3D
+	if material == null or material.albedo_color == seat:
+		return
+	material.albedo_color = seat
+	var visual: Node3D = node.get_node_or_null(VISUAL_NAME) as Node3D
+	if visual != null:
+		SharedVisualAssetCatalog.tint(visual, seat)
 
 
 func player_count() -> int:
@@ -144,6 +215,7 @@ func ensure_rig() -> void:
 		camera = Camera3D.new()
 		camera.name = CAMERA_NAME
 		camera.position = CAMERA_OFFSET
+		camera.fov = CAMERA_FOV_DEG
 		camera.current = true
 		add_child(camera)
 		_look_at_target(camera, Vector3.ZERO)

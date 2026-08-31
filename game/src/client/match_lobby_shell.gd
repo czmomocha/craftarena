@@ -27,7 +27,8 @@ extends Node
 ## capsule/crate/hazard/solid geometry, not 1 m placeholders).
 ## Remotes are not extrapolated.
 ## SnapshotCamera follows the own-seat presentation pose (predicted
-## online, local authority offline) with the Preview camera offset.
+## online, local authority offline) with the Preview camera offset (D4:
+## 45° yaw / 45° pitch, PlaceholderSpec.CAMERA_OFFSET).
 ## The own-seat box uses OWN_ALBEDO; remotes use REMOTE_ALBEDO. Standing
 ## labels prefix the own seat with "*". Remotes do not pull the camera.
 ## Own-seat accepted_count tints course pads: done / current / pending.
@@ -57,7 +58,9 @@ extends Node
 ## not type into seats / course / room. Play sampling pauses while a
 ## LineEdit has focus.
 ## The window defaults to 1280×720 maximized; that is a developer
-## run size, not a locked product FOV.
+## run size, not a locked product FOV. UI scales from the D4 1920×1080
+## base (PlaceholderSpec.UI_BASE_SIZE, canvas_items), which sub-windows do
+## not inherit from project.godot.
 ## Unexpected socket close while connecting or in-match reissues the
 ## consumed ticket and follows the latest snapshot again.
 ## Cancel stops solo play, cancels a waiting queue, and locally leaves
@@ -850,6 +853,14 @@ func _process(delta: float) -> void:
 		_refresh_status()
 
 
+## D4 的 UI 基准是 1920×1080。它由**主窗口**的 stretch 承担（project.godot 的
+## `display/window/stretch/*`），嵌入子窗口作为 canvas item 自动继承那一层缩放。
+##
+## 这里**故意不设** `content_scale_*`。设了会坏：`gui_embed_subwindows = true` 的
+## 子窗口，`content_scale` 在**渲染路径不生效、输入路径生效**，于是画出来的按钮和
+## 鼠标命中的按钮错开 `1/factor` 倍（实测 4K 屏上点 Solo play 命中的是 Poll），
+## 同时布局撑到 1920 宽却只有 1280 可视，右侧 1/3 被切出屏幕。
+## `test_match_lobby_shell.gd` 有一条回归守卫钉住这件事。
 func _ensure_window() -> void:
 	if window != null:
 		return
