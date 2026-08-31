@@ -77,6 +77,7 @@ var _use_item_held: bool = false
 var _sprint_held: bool = false
 var _jump_held: bool = false
 var _play_view_busy: bool = false # rebuilds must not re-enter _process sampling
+var _map_playing: bool = false # 上次建图时是不是在试玩，用来判「该强制重建」
 
 
 static func create(p_kind: String) -> AuthoringPreviewShell:
@@ -390,6 +391,7 @@ func _ensure_window() -> void:
 		return
 	window = null
 	map = null
+	_map_playing = false
 	_status = null
 	var host_viewport: Viewport = get_viewport()
 	if host_viewport != null:
@@ -545,11 +547,18 @@ func _add_button(row: BoxContainer, node_name: String, text: String, handler: Ca
 	row.add_child(button)
 
 
+## AuthoringPreviewMap.rebuild 现在是脏检查（世界没变就不重建），所以这里要把
+## 「世界没变但节点树该换个样子」的两个时刻显式说出来：开玩与停玩会改占位盒显隐
+## 和检查点标记。其余每帧调用（按住方向键、Advance）世界指纹不变，整段跳过。
 func _rebuild_map() -> void:
 	if map == null or preview == null:
 		return
+	var playing: bool = preview.is_playing() and preview.play_world != null
+	if playing != _map_playing:
+		map.invalidate()
+		_map_playing = playing
 	map.rebuild(preview.world)
-	if preview.is_playing() and preview.play_world != null:
+	if playing:
 		map.show_player_pose(preview.play_world.get_pose(preview.player_id))
 		map.mark_accepted_checkpoints(preview.play_accepted_ids())
 		_apply_play_hazard_visibility()
