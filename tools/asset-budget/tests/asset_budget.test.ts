@@ -299,4 +299,48 @@ describe("asset budget over real files", () => {
 			rmSync(directory, { recursive: true, force: true });
 		}
 	});
+
+	test("discovery skips the generated-source drop point", async () => {
+		// 混元 3D 等的原始产物：烘焙前的 4096 贴图 + 十几 MB glb，按定义过不了预算。
+		// 它们被 .gitignore 排除，所以 CI checkout 不到、CI 永远绿；若这里不跳过，
+		// 开发机上就是「本地红、CI 绿」——门禁只在其中一处成立。
+		const directory = mkdtempSync(join(tmpdir(), "asset-discover-src-"));
+		try {
+			const io = new NodeIO();
+			const document = makeDocument({ meshes: [{ triangles: 1 }] });
+
+			mkdirSync(join(directory, "_source_refs", "traprush3D", "crate_glb"), { recursive: true });
+			mkdirSync(join(directory, "characters"), { recursive: true });
+			await io.write(join(directory, "_source_refs", "traprush3D", "crate_glb", "crate.glb"), document);
+			await io.write(join(directory, "characters", "runner.glb"), document);
+
+			const found = findAssets(directory).map((path) => relative(directory, path));
+			assert.deepEqual(found, [join("characters", "runner.glb")]);
+		} finally {
+			rmSync(directory, { recursive: true, force: true });
+		}
+	});
+
+	test("discovery treats .gdignore as recursive, exactly like Godot", async () => {
+		// 递归性不是推断：Godot 4.7.2 实测（2026-09-01），一次性工程里 ignored/ 放了
+		// .gdignore 之后，ignored/child/nested.glb 也**没有**被导入，只有 kept/ 生成了
+		// .import。所以子目录里的资产同样不在门禁视野内，与引擎看成同一份目录树。
+		const directory = mkdtempSync(join(tmpdir(), "asset-discover-gdignore-"));
+		try {
+			const io = new NodeIO();
+			const document = makeDocument({ meshes: [{ triangles: 1 }] });
+
+			mkdirSync(join(directory, "ignored", "child"), { recursive: true });
+			mkdirSync(join(directory, "kept"), { recursive: true });
+			writeFileSync(join(directory, "ignored", ".gdignore"), "");
+			await io.write(join(directory, "ignored", "skipped.glb"), document);
+			await io.write(join(directory, "ignored", "child", "nested.glb"), document);
+			await io.write(join(directory, "kept", "found.glb"), document);
+
+			const found = findAssets(directory).map((path) => relative(directory, path));
+			assert.deepEqual(found, [join("kept", "found.glb")]);
+		} finally {
+			rmSync(directory, { recursive: true, force: true });
+		}
+	});
 });
