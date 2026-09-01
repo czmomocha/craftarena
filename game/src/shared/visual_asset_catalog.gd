@@ -40,7 +40,14 @@ extends RefCounted
 ## 角色占位视觉。TRELLIS / 混元 3D 类生成产物，按 CD-51 §5.1 烘焙到预算内后入库。
 ## 这是**占位美术**：比例、朝向轴与配色都没有经过美术定稿，只用来把
 ## DCC → GLB → LFS → 导入 → 表现层这条链路跑通。
-const CHARACTER_SCENE_PATH: String = "res://content/assets/characters/robot_placeholder.glb"
+##
+## 换过一次模型（2026-09-01）：`robot_placeholder.glb`（0.74 × 1.03 × 0.61 m）
+## 换成同批混元 3D 生成的 `char_runner_base.glb`（0.7492 × 1.1340 × 0.4174 m）。
+## 旧文件**留着不删**，它是这条链路上第一个跑通的样本，也是共享 Mesh 快路径
+## 第一个真实用例；而且两者都不被任何测试写死尺寸，留着不产生维护成本。
+## 换它不产生新内容版本、不改 ContentHash、不动任何权威碰撞 —— 这正是
+## ADR-0006 Q4 = A（视觉不进 bundle、客户端按 `latest` 解析）要的效果。
+const CHARACTER_SCENE_PATH: String = "res://content/assets/characters/char_runner_base.glb"
 
 ## 地块占位视觉，画在**始终固体**占用上（官方赛道的路面、立足面与上层楼板都在
 ## `solids` 袋里）。周期机关与可破坏箱**不用**它：洋红危险色与橙色箱是 D4 已定

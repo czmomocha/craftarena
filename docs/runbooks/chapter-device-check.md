@@ -22,7 +22,7 @@
 
 ## 共用启动（大厅窗口）
 
-机关狂奔匹配大厅是代码创建的 `Window`，标题 **Traprush**。第一行是状态 Label。按钮（从左到右）：**Quick play**、**Create room**、**Join room**、**Solo play**、**Cancel**、**Poll**。其下一行是服务器地址：输入框（placeholder `Server host`，默认填当前控制面主机）加 **Apply server** 按钮。再往下三个输入框：房间码（placeholder `Room code`）、课程 id（默认 `course_01`）、人数（默认 `2`）。窗口里的 3D：玩家是**角色视觉资产**（一个约 1 米高的机器人），本席覆青色薄膜（`OWN_ALBEDO`），远端覆海军蓝薄膜（`REMOTE_ALBEDO`）。橙色盒是可破坏箱；洋红盒是周期机关（固体半周期才出现；官方赛道出生点 −Z 1 个）；**始终固体铺地块视觉**（黄黑警示条地砖，一格一块；官方赛道沿必经路铺立足面，`course_01` 另有出生点 −X 1 个，上层楼板在 −Z 三格）；视觉资产解析不出来时，角色与地块各自回退成原来的占位盒（青色 / 石色）。垫 / 门 / 终点仍是赛道占位盒（未开玩时垫是原绿、终点是原金；开玩后本席已验收垫是暗绿，当前目标垫是亮薄荷；全部垫完成后终点变亮金，冲线后变暗金）；条是传送连线与检查点顺序 gizmos。玩家盒上方有名次 Label；本席名次标以 `*` 开头。开玩时状态行含 `pads=n/m`、`floor=n`、`finish=n`、`crates=n/m`、`hazards=n/m` 与 `solids=n/m`。
+机关狂奔匹配大厅是代码创建的 `Window`，标题 **Traprush**。第一行是状态 Label。按钮（从左到右）：**Quick play**、**Create room**、**Join room**、**Solo play**、**Cancel**、**Poll**。其下一行是服务器地址：输入框（placeholder `Server host`，默认填当前控制面主机）加 **Apply server** 按钮。再往下三个输入框：房间码（placeholder `Room code`）、课程 id（默认 `course_01`）、人数（默认 `2`）。窗口里的 3D：玩家是**角色视觉资产**（一个约 1.13 m 高的角色，脚底在原点），本席覆青色薄膜（`OWN_ALBEDO`），远端覆海军蓝薄膜（`REMOTE_ALBEDO`）。橙色盒是可破坏箱；洋红盒是周期机关（固体半周期才出现；官方赛道出生点 −Z 1 个）；**始终固体铺地块视觉**（黄黑警示条地砖，一格一块；官方赛道沿必经路铺立足面，`course_01` 另有出生点 −X 1 个，上层楼板在 −Z 三格）；视觉资产解析不出来时，角色与地块各自回退成原来的占位盒（青色 / 石色）。垫 / 门 / 终点仍是赛道占位盒（未开玩时垫是原绿、终点是原金；开玩后本席已验收垫是暗绿，当前目标垫是亮薄荷；全部垫完成后终点变亮金，冲线后变暗金）；条是传送连线与检查点顺序 gizmos。玩家盒上方有名次 Label；本席名次标以 `*` 开头。开玩时状态行含 `pads=n/m`、`floor=n`、`finish=n`、`crates=n/m`、`hazards=n/m` 与 `solids=n/m`。
 
 ### 0.1 后端（本刀需要在线入场时）
 
@@ -53,9 +53,135 @@ Worktree 端口偏移见 README「并行工作区」；本文件不复述端口�
 
 ---
 
-## 本刀：Godot AI 脏写入不再进提交（freeze-exception，单项）
+## 本刀：Windows 烘焙可用 + 换掉角色视觉资产（两件独立的事）
 
-对应：当前完整章节 PR。这刀不属于任何 C 批次，还的是 C4 第 7 章记的第二笔账：**Godot AI 插件每次运行都把 `autoload/_mcp_game_helper` 与 `res://addons/godot_ai/plugin.cfg` 写回 `game/project.godot`**。它让守卫测试反复变红，并已经漏进过一个 commit。第一笔（Preview 每帧全量重建）已由 C4 第 8 章合入，与本刀无依赖。
+对应：当前完整章节 PR。两件事被放进同一刀，因为第二件依赖第一件：角色模型要能入库，先得有一台 Windows 机器能把它压到预算内。
+
+| # | 事 | 改了什么 |
+|---|---|---|
+| 1 | **Windows 烘焙可用** | `@gltf-transform/cli` 4.4.2 → **4.5.0**；`_source_refs/` 加 `.gitignore`（353.8 MB 源产物不入库）；`asset-budget` 扫描跳过 `_source_refs/` 与认 `.gdignore` |
+| 2 | **换掉角色视觉资产** | `CHARACTER_SCENE_PATH` 由 `robot_placeholder.glb`（0.74 × 1.03 × 0.61 m）换成 `char_runner_base.glb`（0.749 × 1.134 × 0.417 m） |
+
+**为什么 1 不只是"补测"**：4.4.2 在 Windows 上**必失败**（`error: colourspace: parameter space not set`，exit 1，无产物）。根因是传递依赖漂移装进两份 `sharp`（0.34.5 与 0.35.4），两份 libvips 枚举对不上。`ndarray-pixels@5.2.0` 发布于 8-30 之后，所以那天在 mac 上跑通的命令后来会失败——**`npx` + `^` 区间钉不住传递依赖**。
+
+第 1 件不需要 `npm run dev`；第 2 件需要（要在线大厅才看得到本席与远端）。
+
+---
+
+### 一、Windows 烘焙
+
+1. **先确认旧的确实是坏的**（建立基线，别跳过——否则你无法区分"修好了"和"本来就好"）：
+   ```bash
+   npx --yes @gltf-transform/cli@4.4.2 resize <任意 .glb> %TEMP%\old.glb --width 512 --height 512
+   ```
+   - 预期：`GLib-GObject-CRITICAL ... property 'space' of type 'VipsInterpretation'`、`error: colourspace: parameter space not set`、**exit 1、无产物**。
+   - 失败（说明本刀的前提不成立）：它居然成功了 ⇒ 依赖树又漂了，把实际版本贴回 PR 讨论，别合入。
+
+2. **新版本能跑**（README 命令表里那条）：
+   ```bash
+   npx --yes @gltf-transform/cli@4.5.0 resize <同一个 .glb> %TEMP%\new.glb --width 512 --height 512
+   npm run asset-budget %TEMP%\new.glb
+   ```
+   - 预期：打印 `info: x.glb (N MB) → new.glb (N KB)`；`asset-budget` 输出 `ok`，贴图 `largest edge 512`，exit 0。
+   - 失败：仍报 `colourspace` ⇒ 依赖树里出现了第二份 `sharp`，见第 3 步。
+
+3. **看是不是又装成两份 sharp**（根因自检）：
+   ```bash
+   cd %TEMP% && mkdir sharpprobe && cd sharpprobe && npm init -y
+   npm install @gltf-transform/cli@4.5.0
+   npm ls sharp --all
+   ```
+   - 预期：`sharp@0.35.4` 只出现一次，且子依赖那一行带 `deduped`。
+   - 失败：出现两个不同版本 ⇒ 复现了 4.4.2 的病，需要再钉一次版本。
+
+4. **批量**：对 `_source_refs/traprush3D/` 下 7 个 glb 逐个跑第 2 步那条命令。
+   - 预期：7/7 成功，合计约 16 秒（首次含下载 173 个包）。`asset-budget` 对 7 个产物 **7/7 `ok`**，最大 801.1 KB / 2 MB、贴图边 512、面数 1000–1056 / 3000。
+   - 失败：任何一个 FAIL ⇒ 别入库那一个，先看它超的是哪一项。
+
+5. **门禁在"有源产物的开发机"上也绿**（这刀真正要修的缺口）：
+   ```bash
+   npm run asset-budget
+   ```
+   - 预期：只列出 `game/content/assets/` 下的 3 个已入库资产，全 `ok`，exit 0。**一条 `_source_refs` 的 FAIL 都不该出现**。
+   - 失败：又出现 `_source_refs/.../xxx.glb` 的 FAIL ⇒ 扫描跳过没生效。这处的危害是"本地红、CI 绿"，两种红都不是好的那个。
+
+6. **353.8 MB 不会进 LFS**：
+   ```bash
+   git add -An --dry-run game/content/assets/_source_refs
+   ```
+   - 预期：只有 3 行——`.gdignore`、`.gitignore`、`traprush/MANIFEST.md`。**没有任何 `.png` / `.glb`**。
+   - 失败：出现源产物 ⇒ `.gitignore` 没生效。用 `git check-ignore -v <那个文件>` 看是谁放行了他。
+
+---
+
+### 二、换掉角色视觉资产
+
+7. **大厅里玩家换成了新模型**。按「共用启动」打开窗口，`Solo play` 或 `Quick play`（2 人）。
+   - 预期：玩家不再是原来那个约 1.03 m 的机器人，而是高约 **1.13 m**、更瘦长的一个角色。本席仍覆青色薄膜、远端仍覆海军蓝薄膜，且薄膜是半透明的（模型细节还看得见）。
+   - 失败：还是旧机器人 ⇒ 改的是 `SharedVisualAssetCatalog.CHARACTER_SCENE_PATH`，确认 `res://` 能解析到新文件。
+
+8. **脚底踩在地板上，不浮空也不半埋**（这是 `CHARACTER_FOOT_LIFT` 那条约定还成不成立）：
+   - 预期：角色站在铺了地块（黄黑警示条地砖）的格子上，脚底与地砖表面齐平。
+   - 失败：整体浮空约半米 ⇒ 新模型的原点不在脚底（`minY` 不是 0）；半埋 ⇒ 反过来了。用 `gltf-transform inspect` 看 POSITION 的 min，别去调 `CHARACTER_FOOT_LIFT`。
+
+9. **比一格高是预期的，不是 bug**：新模型 1.134 m > 1 格，所以头会穿出占位盒顶一点。旧模型（1.03 m）也会，只是少一点。**只要第 8 步的脚底是对的，这一步就算过。**
+
+10. **Preview / 对局两条路径用同一个模型**：
+    ```bash
+    & $env:GODOT4_CONSOLE --headless --path game -- --package-check
+    ```
+    - 预期：`ok=true`、`character_visual_loadable=true`、`character_visual_path` 以 `char_runner_base.glb` 结尾。
+    - 失败：`character_visual_loadable=false` ⇒ 资产在包里读不到，通常落在 `.import` 配置或导出过滤上。
+
+11. **入库形态是每个资产两个文件**：
+    ```bash
+    ls game/content/assets/characters/
+    ```
+    - 预期：`char_runner_base.glb` + `char_runner_base.glb.import`；`robot_placeholder.glb`(+ `.import`) **仍在**（故意留着，它是这条链路上第一个跑通的样本）。
+    - 失败：出现 `char_runner_base_0.png` 之类解包贴图 ⇒ `.import` 的 `gltf/embedded_image_handling` 又退回 `1` 了，同一份像素会入库两遍。
+
+12. **自动化全绿**（换视觉不该动任何裁决）：
+    ```bash
+    npm run typecheck; npm test; npm run asset-budget; npm run redline-scan
+    & $env:GODOT4_CONSOLE --headless --path game -s res://addons/gut/gut_cmdln.gd -gdir=res://tests/unit,res://tests/integration,res://tests/replay -gexit
+    ```
+    - 预期：388 npm 用例全绿；GUT **1153/1153 全绿**（16,731 断言，约 5.6 分钟）。其中 `test_character_visual_asset.gd` 那组断言的是**关系**（视觉尺寸 ≠ 权威胶囊 ≠ 占位盒），换模型后一条都没改就仍然通过——这正是本刀想要的。
+    - 失败：任何一条红 ⇒ 换视觉意外影响了裁决，停下来看，别先想着改断言。
+
+### 本刀不测
+
+- **macOS 上 4.5.0 的烘焙**：那台机器不在我手上，实测矩阵里那一格是空的。请你在 mac 上第一次烘焙时补进 `docs/runbooks/asset-bake.md` 的矩阵表；
+- **烘焙是否改变几何**：已由脚本逐项对比 AABB / 顶点数 / primitive 数 / 材质数 / skin 数（`GEOM_DIFF_COUNT=0`），那不是人眼能验的，不列进真机；
+- **新模型好不好看**：它是**占位美术**，比例、朝向轴与配色都未经美术定稿，只用来跑通链路；
+- **动画**：新模型无 `skin`、无动画，与旧模型一致。动画状态契约仍欠着；
+- **垫 / 门 / 终点的视觉**：本刀一点没动；
+- **导出包内的表现**：本机没有 4.7.2 导出模板，未实测。
+
+### 诚实边界
+
+- **Windows 烘焙已实测；macOS 上 4.5.0 一次都没跑过**。"它是纯 Node 所以跨平台"正是本刀证伪过的那句推断，不要再写一遍；
+- **这次修复依赖当下这份 sharp/libvips 组合**。换一台机器、或者再过一段时间，`^` 区间下的传递依赖仍可能漂走，症状会一模一样。第 3 步那个自检就是为了下次快速确认；
+- 4.4.2 与 4.5.0 烘焙同一文件**产物字节相同**（801.1 KB / 497.6 KB 各测过一次）。这不是"必须相同"的承诺，只是本次观察；
+- **烘焙只降贴图、不减面**，所以贴图边 512 意味着近景会糊。那是 CD-11 §8.1 的预算决定的，不是烘焙的锅；
+- 新模型高 1.134 m，**视觉上会穿出占位盒顶**（见第 9 步），这是预期；
+- 两个角色模型都在仓库里：旧的留着但**没有任何代码引用它**。它不是"上一版备份"，只是这条链路的第一个样本，别因为看到它就去猜还有个开关能切回去；
+- 本刀的真机步骤判断的是"看得见、脚底对"，**不判断美观度**。可玩性结论（E6）要等有美术之后另签。
+
+### 仍然欠着（不因本章消失）
+
+- **烘焙流水线**（CI 内烘焙、按用途分档、产物自动入库）：人类 2026-08-30 明确不在 C4。**批量本身不是流水线**——逐个跑同一条命令不引入新工具、不进 CI、不分档；
+- **P0 地形块没生成**：`block_static` / `block_slope` 是清单里用量最大的两项，本批次 7 个里没有它们；
+- **其余 6 个资产没有解析入口**：`SharedVisualAssetCatalog` 只有角色与地块两个常量，按 `asset_id` 解析那张表仍是 ADR-0006 §7 的遗留项；
+- **门比人矮**（gate 0.76–0.79 m vs 角色 1.134 m）与**滚柱超一格**（1.200 m）：两个已实测的美术问题，等解析入口那刀一起处理；
+- 按实体 diff（Preview 一次编辑仍全量重建）、远端协议层 RTT 回填、C3 网络参数锁定、字体与本地化键、动画状态契约、D7 输入抽象层、角色胶囊尚未进资产表、扫掠取样代价无上限（宪法第十七条缺口）、`match_lobby_shell.gd` 已 1,516 行（E9 要求 < 400）。
+
+---
+
+## 上一刀：Godot AI 脏写入不再进提交（freeze-exception，单项）
+
+> **本节已随上一刀合入，保留只为追溯。验当前 PR 只看上面的「本刀」。**
+
+这刀不属于任何 C 批次，还的是 C4 第 7 章记的第二笔账：**Godot AI 插件每次运行都把 `autoload/_mcp_game_helper` 与 `res://addons/godot_ai/plugin.cfg` 写回 `game/project.godot`**。它让守卫测试反复变红，并已经漏进过一个 commit。第一笔（Preview 每帧全量重建）已由 C4 第 8 章合入，与本刀无依赖。
 
 **先看清这刀能做什么、不能做什么。** 插件在 `.gitignore` 里、不是本仓库代码，所以**没有办法阻止它写**。这刀做的是另外两件：一条命令把工作树还原、以及让那次写入进不了提交。因此本刀的验收不是「工作树永远干净」，而是「脏了能一键还原，且脏着提交会被拦」。
 
