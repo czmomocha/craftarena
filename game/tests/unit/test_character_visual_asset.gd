@@ -328,11 +328,15 @@ func test_tile_is_scaled_from_its_own_aabb_to_exactly_one_cell() -> void:
 	if visual == null:
 		return
 	var raw: AABB = SharedVisualAssetCatalog.local_bounds(visual)
-	# 前提：这块砖本来就不是一格宽，否则这条用例什么也没验证。
-	assert_gt(
-		maxf(raw.size.x, raw.size.z),
+	# 前提：样本本身不能已经是一格宽，否则缩放系数为 1，这条用例什么也没验证。
+	# 两个方向都成立：比一格宽的是**缩小**（floor_tile 1.84 m，
+	# 贴合实测 0.5427），比一格窄的是**放大**（block_static 0.768 m，
+	# 贴合实测 1.3017）。原先只断言了前者，换了资产才发现后者从未被覆盖。
+	var raw_widest: float = maxf(raw.size.x, raw.size.z)
+	assert_ne(
+		raw_widest,
 		PlaceholderSpec.METERS_PER_CELL,
-		"样本本来就 ≤ 一格宽，贴合逻辑没被这条用例覆盖"
+		"样本本来就恰好一格宽，贴合逻辑没被这条用例覆盖"
 	)
 	assert_true(SharedVisualAssetCatalog.fit_tile_on_cell(visual))
 	var fitted: AABB = _fitted_bounds(visual)
@@ -341,6 +345,15 @@ func test_tile_is_scaled_from_its_own_aabb_to_exactly_one_cell() -> void:
 		PlaceholderSpec.METERS_PER_CELL,
 		EPS,
 		"水平最长边应恰好一格"
+	)
+	# 等比：厚度按同一个系数走，所以宽高比贴合前后不变。只压 x/z 会把板厚留在
+	# 原尺寸、砖面比例被压扁——那正是这条规则要避免的。
+	var fitted_widest: float = maxf(fitted.size.x, fitted.size.z)
+	assert_almost_eq(
+		raw.size.y / raw_widest,
+		fitted.size.y / fitted_widest,
+		EPS,
+		"贴合必须等比，厚薄关系要保住"
 	)
 	# 等比：三轴同一个系数，模型自己的厚薄比例不被压扁。
 	assert_almost_eq(visual.scale.x, visual.scale.y, EPS)
