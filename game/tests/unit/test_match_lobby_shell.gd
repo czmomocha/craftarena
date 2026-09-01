@@ -8,10 +8,12 @@ extends GutTest
 ## Own-seat accepted_count tints course pads done / current / pending.
 ## Own-seat finish_tick tints the finish zone; HUD shows pads/floor/finish/crates/hazards/result.
 ## Online matches sample protocol RTT after a pong; HUD then shows rtt= / rtt_n=.
+## HUD 第一行是 FrameRateMeter 的帧率读数：可见帧才计，窗口隐藏丢弃半窗。
 ## Online all-finished GET writes settled=; Solo never GETs. Client never POSTs.
 ## Reset rising-edge returns to the last accepted pad without dropping progress.
 ## Online overlay stays off latest live crates, solid hazards, and latest remote capsules.
 
+const FrameRateMeter := preload("res://src/client/frame_rate_meter.gd")
 const MatchFrameCodec := preload("res://src/shared/protocol/match_frame_codec.gd")
 const MatchJoinSession := preload("res://src/client/match_join_session.gd")
 const MatchLobbyShell := preload("res://src/client/match_lobby_shell.gd")
@@ -163,6 +165,31 @@ func test_online_pong_shows_rtt_on_status_line() -> void:
 	assert_true(_shell.status_label_text().contains("rtt=7"))
 	assert_true(_shell.status_label_text().contains("rtt_n=1"))
 	assert_eq(_shell.play.follow.tick, 2)
+
+
+func test_frame_rate_row_counts_visible_frames_only() -> void:
+	_shell = _open_shell()
+	var fps: FrameRateMeter = _shell.window.find_child(MatchLobbyShell.FPS_NAME, true, false)
+	assert_not_null(fps)
+	# 帧率是 HUD 的**第一行**，不是状态行的一部分：状态行只在事件发生时重画，
+	# 帧率必须每帧累计，掺进去就得每帧重写整行状态。
+	assert_eq(fps.get_index(), 0)
+	assert_eq(fps.get_parent().name, "VBoxContainer")
+	assert_eq(_shell.fps_label_text(), FrameRateMeter.PLACEHOLDER)
+	assert_eq(fps.text, FrameRateMeter.PLACEHOLDER)
+	# 60 帧 × 0.01 s：第 50 帧满 0.5 s 刷新一次，50 / 0.5 = 100。再喂 10 帧
+	# 不该改这个数字——刷新是节流的，不是每帧一次。
+	for _i: int in range(60):
+		_shell._process(0.01)
+	assert_eq(_shell.fps_label_text(), "FPS 100")
+	assert_eq(fps.text, "FPS 100")
+	assert_false(_shell.status_label_text().contains("FPS"))
+	# 窗口隐藏期间不计帧：隐藏时先丢弃半窗，再显示时不会读出一个假的卡顿。
+	_shell._process(0.01)
+	assert_eq(_shell.fps_label_text(), "FPS 100")
+	_shell.hide_window()
+	_shell._process(0.01)
+	assert_eq(_shell.fps_label_text(), FrameRateMeter.PLACEHOLDER)
 
 
 func test_hud_buttons_do_not_steal_space_and_window_is_dev_default() -> void:

@@ -34,7 +34,10 @@ extends Node
 ## Own-seat accepted_count tints course pads: done / current / pending.
 ## Own-seat finish_tick tints the finish zone: pending / current / done.
 ## HUD shows pads=n/m, floor=n, finish=n, crates=n/m, hazards=n/m, and solids=n/m; result= appears
-## when every snapshot seat has finished. Online matches then GET the
+## when every snapshot seat has finished. HUD 的第一行是 FrameRateMeter 的运行时
+## 帧率读数（`FPS 60`，首窗之前 `FPS --`）：它每帧累计 delta、每 0.5 s 才写一次
+## 文本，窗口隐藏时丢弃累计。它是观察工具，不进裁决、不进快照、不发网络，也
+## 不锁帧率目标。Online matches then GET the
 ## control-plane board; 200 adds settled=. Online in-match also samples protocol
 ## RTT (ping type=3 / pong type=4) and shows rtt= / rtt_n= after the first pong.
 ## floor uses own-seat authority y
@@ -79,6 +82,7 @@ const MatchFrameCodec := preload("res://src/shared/protocol/match_frame_codec.gd
 const MatchJoinSessionGd := preload("res://src/client/match_join_session.gd")
 const MatchOfflineSessionGd := preload("res://src/client/match_offline_session.gd")
 const MatchPlaySessionGd := preload("res://src/client/match_play_session.gd")
+const FrameRateMeterGd := preload("res://src/client/frame_rate_meter.gd")
 const MatchCheckpointOrderMapGd := preload("res://src/client/match_checkpoint_order_map.gd")
 const MatchCourseMapGd := preload("res://src/client/match_course_map.gd")
 const MatchCrateMapGd := preload("res://src/client/match_crate_map.gd")
@@ -114,6 +118,8 @@ const COURSE_ID_NAME: String = "CourseId"
 const SEATS_NAME: String = "Seats"
 const SERVER_NAME: String = "ServerHost"
 const APPLY_SERVER_NAME: String = "ApplyServer"
+## 帧率读数不是状态行的一部分：状态行只在事件发生时重画，帧率必须每帧累计。
+const FPS_NAME: String = "Fps"
 const _STATUS_NAME: String = "Status"
 const _MAP_NAME: String = "SnapshotMap"
 const _COURSE_NAME: String = "CourseMap"
@@ -146,6 +152,7 @@ var solids: MatchSolidMapGd = null
 var links: MatchPortalLinkMapGd = null
 var orders: MatchCheckpointOrderMapGd = null
 var standings: MatchStandingMapGd = null
+var frame_rate: FrameRateMeterGd = null
 var window: Window = null
 var live_io: bool = false
 var web_platform: bool = false
@@ -769,6 +776,13 @@ func status_label_text() -> String:
 	return _status.text
 
 
+## 帧率读数当前显示的整行，例如 `FPS 60`；首窗之前是 `FPS --`。
+func fps_label_text() -> String:
+	if frame_rate == null:
+		return ""
+	return frame_rate.fps_text()
+
+
 func try_advance_interp() -> bool:
 	if window == null or not window.visible:
 		return false
@@ -826,7 +840,12 @@ func _process(delta: float) -> void:
 		_poll_settlement_clock(delta)
 		_poll_gateway()
 	if window == null or not window.visible:
+		## 隐藏期间不计帧：前后两窗不可比，混在一起会读出一个假的「卡顿」。
+		if frame_rate != null:
+			frame_rate.reset()
 		return
+	if frame_rate != null:
+		frame_rate.sample(delta)
 	if _edit_has_focus():
 		if _offline_playing():
 			offline.try_advance()
@@ -885,6 +904,9 @@ func _ensure_window() -> void:
 	root.offset_top = 8
 	root.offset_right = -8
 	window.add_child(root)
+	frame_rate = FrameRateMeterGd.new()
+	frame_rate.name = FPS_NAME
+	root.add_child(frame_rate)
 	_status = Label.new()
 	_status.name = _STATUS_NAME
 	_status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
