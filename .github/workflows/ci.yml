@@ -100,21 +100,20 @@ jobs:
       #
       # 四个目录全跑：fast（unit + integration + replay）+ slow（官方赛道完整搜索）。
       #
-      # 5 分钟预算：开发机实测全量 24.4 s，按 CI 慢约 1.5 倍折算约 37 s，留约 8 倍
-      # 余量，同时保证在 job 上限之前先触发——预算比 job 上限晚触发就等于没加。
-      # 余量给得大是因为这个数刚刚掉了一个数量级（此前 CI 上是 8.9 分钟），还没有
-      # CI 实测样本；第一次真跑完之后按下面 "Report slowest test scripts" 的 total
-      # 复核并收紧。改测试规模时一并复核。
+      # 2 分钟预算：本 runner 实测 **16.4 s / 120 个脚本**（PR #199 首跑；此前同一套
+      # 是 8.9 分钟，定点数快路径把它压掉了一个数量级）。留约 7 倍余量，同时保证在
+      # job 的 10 分钟上限之前先触发——预算比 job 上限晚触发就等于没加。
+      # 改测试规模时按下面 "Report slowest test scripts" 的 total 一并复核这个数。
       - name: GUT unit, integration, replay, and slow tests
         run: |
           set -uo pipefail
-          timeout -k 30 300 "$GODOT4" --headless --path game \
+          timeout -k 30 120 "$GODOT4" --headless --path game \
             -s res://addons/gut/gut_cmdln.gd \
             -gdir=res://tests/unit,res://tests/integration,res://tests/replay,res://tests/slow \
             -gjunit_xml_file=res://.gut-results.xml -gexit
           status=$?
           if [ "$status" -eq 124 ] || [ "$status" -eq 137 ]; then
-            echo "::error::GUT 超过 5 分钟预算被终止。这是失败，不是排队。"
+            echo "::error::GUT 超过 2 分钟预算被终止。这是失败，不是排队。"
           fi
           exit "$status"
 
