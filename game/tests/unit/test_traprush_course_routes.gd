@@ -1,8 +1,9 @@
 extends GutTest
 
 ## 纠偏 C3 第 7 章：封掉捷径传送源之后，探针必须走另一条路。
-## 合成课用贪心证明约束本身。官方 course_01 安全路重放 C3 第 5 章四向序列
-## （与语义测试 `_safe_moves` 相同），不把无快照三十步 A* 塞进 GUT。
+## 合成课用贪心证明约束本身——两个岛屿的 bundle 是现造的，搜索空间小、代价有界。
+## 官方 course_01 走一遍安全路属完整搜索，已移到
+## `tests/slow/test_traprush_official_course_completability.gd`；本文件只留常量守卫。
 ## 不锁产品重力、不加第 4 张课、不改 STUB_HALF / play_move_step。
 
 const AuthoringDocument := preload("res://src/creator/authoring_document.gd")
@@ -78,35 +79,11 @@ func test_course_01_shortcut_portal_matches_cli_constant() -> void:
 	assert_true(found)
 
 
-func test_course_01_safe_script_finishes_without_shortcut_portal() -> void:
+## 安全路线脚本的长度是常量，跑不跑搜索都该守住；真的走一遍在 slow 层
+## `test_traprush_official_course_completability.gd`。
+func test_course_01_safe_script_keeps_its_length() -> void:
 	assert_eq(CourseCompletionProbe.COURSE_01_SAFE_CARDINAL.size(), 29)
-	var forbid: PackedInt32Array = PackedInt32Array([SHORTCUT_PORTAL])
-	var result: Dictionary = CourseCompletionProbe.run_path(
-		COURSE_01,
-		CourseCompletionProbe.SAFE_ROUTE_MAX_TICKS,
-		CourseCompletionProbe.DEFAULT_MAX_DEPTH,
-		forbid,
-		CourseCompletionProbe.ACTION_SET_CARDINAL,
-		CourseCompletionProbe.course_01_safe_cardinal()
-	)
-	var outcome: String = result["outcome"]
-	var reason: String = result.get("reason", "")
-	assert_eq(outcome, CourseCompletionProbe.OUTCOME_COMPLETABLE, reason)
-	var steps: int = result["steps"]
-	assert_gte(steps, 20)
-	var forbid_view: Array = result["forbid_portals"]
-	assert_eq(forbid_view, [SHORTCUT_PORTAL])
-	var world: AuthoringWorld = AuthoringDocument.load_from_path(COURSE_01)
-	assert_not_null(world)
-	var bundle: SimulationBundle = TraprushTopologyCompiler.compile(world)
-	assert_not_null(bundle)
-	var filtered: SimulationBundle = CourseCompletionProbe.without_portals(bundle, forbid)
-	var actions: Array = result["actions"]
-	var replay: Dictionary = CourseCompletionProbe.try_replay(filtered, actions)
-	var replay_ok: bool = replay["ok"]
-	assert_true(replay_ok, str(replay.get("reason", "")))
-	var finish_tick: int = replay["finish_tick"]
-	assert_gte(finish_tick, 0)
+	assert_eq(CourseCompletionProbe.course_01_safe_cardinal().size(), 29)
 
 
 func _two_portal_islands() -> SimulationBundle:

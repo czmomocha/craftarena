@@ -60,9 +60,43 @@ static func to_whole_trunc(fixed_value: int) -> int:
 	return fixed_value / SCALE
 
 
+## 128 位中间积是**正确性**需要的：`try_mul` 是 `a * b / SCALE`，两个 Q48.16 相乘
+## 会先冲出 int64，再被 SCALE 除回来。但它不该是**常见**路径。
+##
+## 绝大多数调用的中间积根本不溢出（碰撞检测里是格子尺度的坐标差平方），此时
+## 原生 int64 乘除给出的结果与限位长除法**逐位相同**——两者都向零截断，符号都
+## 由三个操作数的符号异或决定。所以先试原生，溢出了才回退。
+##
+## 为什么值得：`_div_mags` 是逐位长除 128 轮，每轮 `_shl1` / `_sub_limbs` /
+## `_with_bit` 各新建一个 `PackedInt32Array`。开发机实测单次 `try_mul` **176 µs**，
+## 而 `try_add` 只要 1.1 µs。对局里 `is_pose_blocked` 要对 49 个静态盒各做 4 次
+## `try_mul`，于是一次碰撞查询 25 ms、整帧 33.7 ms（约 30 FPS）——这就是 2026-09-01
+## 之前 Solo 掉帧的全部原因，见 [docs/audits/2026-09-01-offline-frame-cost.md]。
+##
+## 「两条路径必须给出同一个值」由 `test_fixed_mul_div_paths.gd` 的差分用例钉死：
+## 任何时候改了这里，那组用例会先红。不要把快路径的适用条件放宽到未被它覆盖的
+## 输入上。
 static func try_mul_div(left: int, right: int, divisor: int) -> FixedResult:
 	if divisor == 0:
 		return FixedResult.fail()
+	if divisor != INT64_MIN and _product_fits_int64(left, right):
+		return FixedResult.success(left * right / divisor)
+	return _mul_div_limbs(left, right, divisor)
+
+
+## `|left * right| <= INT64_MAX` 吗。用除法判而不是先乘再看，因为先乘就已经溢出了。
+static func _product_fits_int64(left: int, right: int) -> bool:
+	if left == 0 or right == 0:
+		return true
+	# INT64_MIN 取不了绝对值，交给限位路径。
+	if left == INT64_MIN or right == INT64_MIN:
+		return false
+	var left_magnitude: int = absi(left)
+	var right_magnitude: int = absi(right)
+	return left_magnitude <= INT64_MAX / right_magnitude
+
+
+static func _mul_div_limbs(left: int, right: int, divisor: int) -> FixedResult:
 	var negative: bool = false
 	if left < 0:
 		negative = not negative

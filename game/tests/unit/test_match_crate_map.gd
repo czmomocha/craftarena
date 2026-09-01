@@ -170,6 +170,51 @@ func _crate(entity_id: int, durability: int) -> Dictionary:
 	}
 
 
+## 箱子不会移动，快照只带耐久，所以耐久没变的帧一个节点都不该动。原来是全清全建，
+## 对局壳每渲染帧 free 一个 MeshInstance3D 连同它独占的 BoxMesh 与材质再新建一个。
+## 钉节点身份而不是毫秒数（CD-53 §1.1 不建自动性能门禁）。
+func test_unchanged_durability_reuses_the_crate_node() -> void:
+	_map = MatchCrateMap.new()
+	add_child(_map)
+	assert_true(_map.apply_path(COURSE_01_PATH))
+	var first_id: int = _map.crate_node(40).get_instance_id()
+
+	for _frame: int in range(5):
+		assert_true(_map.apply_crates([_crate(40, 1)]))
+
+	assert_eq(_map.crate_node(40).get_instance_id(), first_id, "耐久没变却重建了箱子节点")
+	assert_eq(_map.crate_count(), 1)
+
+
+## 复用不能吃掉「打碎了要撤盒、复活了要补盒」这一侧。
+func test_durability_change_still_adds_and_drops_the_node() -> void:
+	_map = MatchCrateMap.new()
+	add_child(_map)
+	assert_true(_map.apply_path(COURSE_01_PATH))
+	assert_true(_map.apply_crates([_crate(40, 0)]))
+	assert_null(_map.crate_node(40), "耐久 0 的箱子还留在场上")
+	assert_eq(_map.live_solid_boxes().size(), 0)
+
+	assert_true(_map.apply_crates([_crate(40, 1)]))
+	assert_not_null(_map.crate_node(40))
+	assert_eq(_map.live_solid_boxes().size(), 1)
+
+
+## 换课时 entity_id 相同、位姿不同。只在节点缺失时写位姿会把上一张课的坐标留下来。
+func test_switching_course_moves_the_reused_node() -> void:
+	_map = MatchCrateMap.new()
+	add_child(_map)
+	assert_true(_map.apply_path(COURSE_01_PATH))
+	assert_almost_eq(_map.crate_node(40).position.z, 1.0, EPS)
+
+	assert_true(_map.apply_path(COURSE_03_PATH))
+
+	var moved: MeshInstance3D = _map.crate_node(40)
+	assert_not_null(moved)
+	assert_almost_eq(moved.position.x, 1.0, EPS)
+	assert_almost_eq(moved.position.z, 0.0, EPS)
+
+
 func _snapshot(tick: int, crates: Array[Dictionary]) -> PackedByteArray:
 	var players: Array[Dictionary] = [{
 		"x": 0,

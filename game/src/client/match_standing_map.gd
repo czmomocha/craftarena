@@ -58,8 +58,7 @@ func apply_players(players: Array, pad_total: int = 0) -> bool:
 	var standing: Dictionary = TraprushStandingGd.from_players(players, pad_total)
 	if not standing.get("ok", false):
 		return false
-	_clear_marks()
-	_spawn_marks(players, standing)
+	_sync_marks(players, standing)
 	var mvp_raw: Variant = standing.get("mvp_slot", -1)
 	if typeof(mvp_raw) == TYPE_INT:
 		_mvp_slot = mvp_raw
@@ -133,10 +132,18 @@ func _pose_from_player(body: Dictionary) -> Dictionary:
 	}
 
 
-func _spawn_marks(players: Array, standing: Dictionary) -> void:
+## 按 slot 复用已有 Label3D，只写文本、位姿与颜色；席位变少才删尾部。
+##
+## 存在的理由是每帧成本，不是代码整洁。本函数在对局壳的每渲染帧被调一次，原来
+## 是「全清全建」——每帧 free 掉一个带 64 px 字体 + 12 px 描边 + billboard 的
+## Label3D，再新建一个。与 `MatchSnapshotMap._sync_players`（C4 第 6 章）是同一
+## 笔账、同一种修法：slot 是稳定键，「第 1 席换了人」仍复用第 1 席那个标，文本与
+## 颜色每帧都会被覆盖，没有可残留的状态。
+func _sync_marks(players: Array, standing: Dictionary) -> void:
 	var by_slot: Dictionary = {}
 	var rows_raw: Variant = standing.get("rows", [])
 	if typeof(rows_raw) != TYPE_ARRAY:
+		_clear_marks()
 		return
 	var rows: Array = rows_raw
 	for raw: Variant in rows:
@@ -147,38 +154,41 @@ func _spawn_marks(players: Array, standing: Dictionary) -> void:
 		if typeof(slot) != TYPE_INT:
 			continue
 		by_slot[slot] = row
+	var wanted: Dictionary = {}
 	var index: int = 0
 	for raw: Variant in players:
 		var body: Dictionary = raw
 		var pose: Dictionary = _pose_from_player(body)
-		if not by_slot.has(index):
-			index += 1
-			continue
-		var row_raw: Variant = by_slot[index]
-		if typeof(row_raw) != TYPE_DICTIONARY:
-			index += 1
-			continue
-		var row: Dictionary = row_raw
-		_spawn_mark(index, pose, row)
+		if by_slot.has(index):
+			var row_raw: Variant = by_slot[index]
+			if typeof(row_raw) == TYPE_DICTIONARY:
+				var row: Dictionary = row_raw
+				_write_mark(index, pose, row)
+				wanted[index] = true
 		index += 1
+	_despawn_marks_except(wanted)
 
 
-func _spawn_mark(slot: int, pose: Dictionary, row: Dictionary) -> void:
+func _write_mark(slot: int, pose: Dictionary, row: Dictionary) -> void:
 	var x: int = pose["x"]
 	var y: int = pose["y"]
 	var z: int = pose["z"]
-	var label: Label3D = Label3D.new()
-	label.name = mark_name(slot)
-	label.text = mark_text(row)
+	var label: Label3D = standing_node(slot)
+	if label == null:
+		label = Label3D.new()
+		label.name = mark_name(slot)
+		label.font_size = 64
+		label.pixel_size = 0.02
+		label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+		label.outline_size = 12
+		add_child(label)
+	var text: String = mark_text(row)
 	if follow_slot >= 0 and slot == follow_slot:
-		label.text = "%s%s" % [OWN_MARK_PREFIX, label.text]
+		text = "%s%s" % [OWN_MARK_PREFIX, text]
 		label.outline_modulate = PlaceholderSpec.STANDING_OWN_OUTLINE
 	else:
 		label.outline_modulate = PlaceholderSpec.STANDING_REMOTE_OUTLINE
-	label.font_size = 64
-	label.pixel_size = 0.02
-	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
-	label.outline_size = 12
+	label.text = text
 	var finished: bool = row.get("finished", false)
 	if finished:
 		label.modulate = PlaceholderSpec.STANDING_FINISHED_ALBEDO
@@ -189,7 +199,21 @@ func _spawn_mark(slot: int, pose: Dictionary, row: Dictionary) -> void:
 		meters_from_fixed(y) + STANDING_LIFT,
 		meters_from_fixed(z)
 	)
-	add_child(label)
+
+
+## 这一份名单里没有的标一律撤掉——人数变少不能留幽灵标。
+func _despawn_marks_except(wanted: Dictionary) -> void:
+	var stale: Array[Node] = []
+	for child: Node in get_children():
+		var child_name: String = str(child.name)
+		if not child_name.begins_with(MARK_PREFIX):
+			continue
+		var slot: int = child_name.substr(MARK_PREFIX.length()).to_int()
+		if not wanted.has(slot):
+			stale.append(child)
+	for node: Node in stale:
+		remove_child(node)
+		node.free()
 
 
 func _clear_marks() -> void:

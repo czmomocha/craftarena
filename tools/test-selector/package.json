@@ -1,0 +1,8 @@
+{
+	"name": "@craftarena/test-selector",
+	"version": "0.0.0",
+	"private": true,
+	"type": "module",
+	"description": "Picks the GUT scripts affected by the working tree changes. Local loop only; never a merge gate. No extra runtime dependencies.",
+	"license": "UNLICENSED"
+}

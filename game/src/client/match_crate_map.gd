@@ -213,9 +213,15 @@ func _durability_from_snapshot(crates: Array) -> Dictionary:
 	return lookup
 
 
+## 按 entity_id 复用节点：活着的箱补上，打碎的撤掉，其余一个不动。
+##
+## 箱子**不会移动**——位姿来自编译拓扑，快照只带耐久。所以每帧唯一可能变的是
+## 「还在不在」。原来这里是全清全建，于是对局壳每渲染帧都 free 掉一个
+## MeshInstance3D 连同它独占的 BoxMesh 与 StandardMaterial3D，再原样新建一个。
+## 与 `MatchSnapshotMap._sync_players`（C4 第 6 章）同一笔账。
 func _rebuild(lookup: Dictionary) -> void:
-	_clear_crates()
 	_live_solids = []
+	var wanted: Dictionary = {}
 	for pose: Dictionary in _poses:
 		var entity_id: int = pose["entity_id"]
 		if not lookup.has(entity_id):
@@ -228,8 +234,35 @@ func _rebuild(lookup: Dictionary) -> void:
 			"y": pose["y"],
 			"z": pose["z"],
 		})
-		_spawn_box(crate_name(entity_id), pose)
+		wanted[crate_name(entity_id)] = true
+		_ensure_box(crate_name(entity_id), pose)
+	_despawn_crates_except(wanted)
 	_crate_count = _visible_count()
+
+
+## 位姿**每次都写**。同一个 entity_id 在不同官方赛道上位置不同，只在节点缺失时
+## 写会让换课之后箱子留在上一张课的坐标上（`test_official_courses_map_distinct_crate_layouts`
+## 抓到过）。写一个 Vector3 与 free 再 new 一个 MeshInstance3D 不是一个量级。
+func _ensure_box(node_name: String, pose: Dictionary) -> void:
+	var node: MeshInstance3D = get_node_or_null(node_name) as MeshInstance3D
+	if node == null:
+		_spawn_box(node_name, pose)
+		return
+	var x: int = pose["x"]
+	var y: int = pose["y"]
+	var z: int = pose["z"]
+	node.position = Vector3(meters_from_fixed(x), meters_from_fixed(y), meters_from_fixed(z))
+
+
+func _despawn_crates_except(wanted: Dictionary) -> void:
+	var stale: Array[Node] = []
+	for child: Node in get_children():
+		var child_name: String = str(child.name)
+		if child_name.begins_with(CRATE_PREFIX) and not wanted.has(child_name):
+			stale.append(child)
+	for node: Node in stale:
+		remove_child(node)
+		node.free()
 
 
 func _visible_count() -> int:

@@ -4,7 +4,12 @@ name: CI
 # 集成测试、回放测试、L0 Schema 正反例、宪法红线扫描。
 # L0 Schema 由根目录 `npm test` 收集。红线扫描另有 `npm run redline-scan` step。
 # PR Web 预览仍未落地。不要把本流水线描述成"已覆盖 §4.1 全部门禁"（宪法第二十四条）。
-# `--bot-run` 不进 CI（C2 第一章明确不做；45 秒搜索不是每次变更门禁）。
+#
+# GUT 自 2026-09-01 起按目录分层（fast / slow），但**两层都是每次 PR 的门禁**：
+# 分层是为了让本地能只跑一层，不是为了把哪一层挪出合并门禁。同日的定点数快路径
+# 把整套 GUT 从 354.6 s 压到 24.4 s（开发机），slow 层只剩 7 s，没有任何理由把它
+# 移出 PR。口径见 CD-53 §4.1 与 CD-91。
+# `--bot-run` 仍不进 PR CI（C2 第一章明确不做），改由 nightly.yml 每天跑一次。
 
 on:
   push:
@@ -60,40 +65,16 @@ jobs:
   godot:
     name: Godot check-only and GUT
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
         with:
           # GUT 与后续内容资源走 LFS，跳过会让 check-only 读到指针文件而不是真文件。
           lfs: true
 
-      - name: Cache Godot binary
-        id: godot-cache
-        uses: actions/cache@v4
+      - uses: ./.github/actions/setup-godot
         with:
-          path: ~/godot
-          key: godot-${{ env.GODOT_VERSION }}-linux
-
-      - name: Download Godot
-        if: steps.godot-cache.outputs.cache-hit != 'true'
-        run: |
-          set -euo pipefail
-          mkdir -p ~/godot
-          name="Godot_v${GODOT_VERSION}-stable_linux.x86_64"
-          curl -fsSL -o /tmp/godot.zip \
-            "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/${name}.zip"
-          unzip -q /tmp/godot.zip -d ~/godot
-          chmod +x ~/godot/"${name}"
-
-      - name: Expose GODOT4
-        run: echo "GODOT4=$HOME/godot/Godot_v${GODOT_VERSION}-stable_linux.x86_64" >> "$GITHUB_ENV"
-
-      - name: Report engine version
-        run: "\"$GODOT4\" --version"
-
-      # 干净检出没有 .godot 导入缓存，后面的 check-only 和 GUT 都依赖它先生成。
-      - name: Import resources
-        run: "\"$GODOT4\" --headless --path game --import"
+          version: ${{ env.GODOT_VERSION }}
 
       - name: Syntax and type check
         run: |
@@ -117,19 +98,23 @@ jobs:
       # docs/audits/2026-08-28-ci-gate-timeout.md。这里自己掐一个预算：超了由
       # timeout 结束进程，step 变红并打印下面那行，不再是灰色的 cancelled。
       #
-      # 12 分钟是按 CI 实测定的，不是拍的：本 runner 上这套 GUT 是 8.9 分钟，
-      # 前面几步合计 1.4 分钟。留约 35% 余量，同时保证在 job 的 15 分钟上限之前
-      # 先触发——预算比 job 上限晚触发就等于没加。改测试规模时一并复核这个数。
-      - name: GUT unit, integration, and replay tests
+      # 四个目录全跑：fast（unit + integration + replay）+ slow（官方赛道完整搜索）。
+      #
+      # 5 分钟预算：开发机实测全量 24.4 s，按 CI 慢约 1.5 倍折算约 37 s，留约 8 倍
+      # 余量，同时保证在 job 上限之前先触发——预算比 job 上限晚触发就等于没加。
+      # 余量给得大是因为这个数刚刚掉了一个数量级（此前 CI 上是 8.9 分钟），还没有
+      # CI 实测样本；第一次真跑完之后按下面 "Report slowest test scripts" 的 total
+      # 复核并收紧。改测试规模时一并复核。
+      - name: GUT unit, integration, replay, and slow tests
         run: |
           set -uo pipefail
-          timeout -k 30 720 "$GODOT4" --headless --path game \
+          timeout -k 30 300 "$GODOT4" --headless --path game \
             -s res://addons/gut/gut_cmdln.gd \
-            -gdir=res://tests/unit,res://tests/integration,res://tests/replay \
+            -gdir=res://tests/unit,res://tests/integration,res://tests/replay,res://tests/slow \
             -gjunit_xml_file=res://.gut-results.xml -gexit
           status=$?
           if [ "$status" -eq 124 ] || [ "$status" -eq 137 ]; then
-            echo "::error::GUT 超过 12 分钟预算被终止。这是失败，不是排队。"
+            echo "::error::GUT 超过 5 分钟预算被终止。这是失败，不是排队。"
           fi
           exit "$status"
 

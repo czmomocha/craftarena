@@ -197,6 +197,40 @@ func test_live_solid_boxes_block_own_slot_overlay() -> void:
 	assert_eq(_int(_first(opened), "x"), CELL)
 
 
+## 周期远长于一帧，所以同一个固体半周期内的每一帧，节点名单都没变。原来
+## `apply_tick` 只要 tick 变就全清全建，于是对局壳每渲染帧拆掉洋红盒再搭一个。
+## 钉节点身份而不是毫秒数（CD-53 §1.1 不建自动性能门禁）。
+func test_ticks_inside_one_solid_half_reuse_the_hazard_node() -> void:
+	_map = MatchHazardMap.new()
+	add_child(_map)
+	assert_true(_map.apply_bundle(_hazard_bundle(8)))
+	assert_true(_map.apply_tick(0))
+	var first_id: int = _map.hazard_node(HAZARD_ID).get_instance_id()
+
+	for tick: int in range(1, 8):
+		assert_true(_map.apply_tick(tick))
+
+	assert_eq(_map.hazard_node(HAZARD_ID).get_instance_id(), first_id, "同一半周期内重建了机关节点")
+	assert_eq(_map.hazard_count(), 1)
+
+
+## 复用不能吃掉「切到开放半周期要撤盒、切回来要补盒」这一侧。
+func test_crossing_the_cycle_boundary_still_toggles_the_node() -> void:
+	_map = MatchHazardMap.new()
+	add_child(_map)
+	assert_true(_map.apply_bundle(_hazard_bundle(1)))
+	assert_true(_map.apply_tick(0))
+	assert_not_null(_map.hazard_node(HAZARD_ID))
+
+	assert_true(_map.apply_tick(1))
+	assert_null(_map.hazard_node(HAZARD_ID), "开放半周期还留着机关盒")
+	assert_eq(_map.live_solid_boxes().size(), 0)
+
+	assert_true(_map.apply_tick(2))
+	assert_not_null(_map.hazard_node(HAZARD_ID))
+	assert_eq(_map.live_solid_boxes().size(), 1)
+
+
 func _hazard_bundle(cooldown_ticks: int) -> SimulationBundle:
 	var world: AuthoringWorld = AuthoringWorld.new()
 	assert_true(world.put(_checkpoint_record(1, 0, 0, 0, 0)))

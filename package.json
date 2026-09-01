@@ -18,11 +18,16 @@
     "tools/content-validator",
     "tools/godot-project-settings",
     "tools/redline-scanner",
-    "tools/shell-guard"
+    "tools/shell-guard",
+    "tools/test-selector"
   ],
   "scripts": {
     "typecheck": "tsc --noEmit",
     "test": "node --test \"backend/**/tests/**/*.test.ts\" \"tools/**/tests/**/*.test.ts\"",
+    "test:gut:affected": "node tools/test-selector/src/main.ts",
+    "test:gut:fast": "node tools/test-selector/src/run_tier.ts fast",
+    "test:gut:slow": "node tools/test-selector/src/run_tier.ts slow",
+    "test:gut:full": "node tools/test-selector/src/run_tier.ts full",
     "redline-scan": "node tools/redline-scanner/src/main.ts",
     "asset-budget": "node tools/asset-budget/src/main.ts",
     "godot-settings:check": "node tools/godot-project-settings/src/main.ts",
