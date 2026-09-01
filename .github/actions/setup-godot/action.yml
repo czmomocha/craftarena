@@ -1,0 +1,47 @@
+name: Setup Godot
+description: 缓存并解压 Godot Linux 二进制，导出 GODOT4，并生成 .godot 导入缓存。
+
+# 抽成复合 action 而不是在两个 job 里各抄一遍：godot-fast 与 godot-slow 需要
+# 完全相同的引擎与导入缓存，抄两份的唯一确定结果是有一天只改了其中一份。
+# 版本的所有者是 CD-51 §1，升级引擎必须同时改那里和调用方传进来的 version。
+
+inputs:
+  version:
+    description: Godot 版本号，例如 4.7.2
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Cache Godot binary
+      id: godot-cache
+      uses: actions/cache@v4
+      with:
+        path: ~/godot
+        key: godot-${{ inputs.version }}-linux
+
+    - name: Download Godot
+      if: steps.godot-cache.outputs.cache-hit != 'true'
+      shell: bash
+      run: |
+        set -euo pipefail
+        mkdir -p ~/godot
+        name="Godot_v${{ inputs.version }}-stable_linux.x86_64"
+        curl -fsSL -o /tmp/godot.zip \
+          "https://github.com/godotengine/godot/releases/download/${{ inputs.version }}-stable/${name}.zip"
+        unzip -q /tmp/godot.zip -d ~/godot
+        chmod +x ~/godot/"${name}"
+
+    - name: Expose GODOT4
+      shell: bash
+      run: |
+        echo "GODOT4=$HOME/godot/Godot_v${{ inputs.version }}-stable_linux.x86_64" >> "$GITHUB_ENV"
+
+    - name: Report engine version
+      shell: bash
+      run: '"$GODOT4" --version'
+
+    # 干净检出没有 .godot 导入缓存，check-only 与 GUT 都依赖它先生成。
+    - name: Import resources
+      shell: bash
+      run: '"$GODOT4" --headless --path game --import'

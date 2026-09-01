@@ -11,7 +11,6 @@ const AuthoringDocument := preload("res://src/creator/authoring_document.gd")
 const AuthoringPortalKinds := preload("res://src/creator/authoring_portal_kinds.gd")
 const AuthoringReachability := preload("res://src/creator/authoring_reachability.gd")
 const AuthoringWorld := preload("res://src/creator/authoring_world.gd")
-const CourseCompletionProbe := preload("res://src/games/traprush/course_completion_probe.gd")
 const PlayStubs := preload("res://src/games/traprush/play_stubs.gd")
 const PlayerIntentNames := preload("res://src/shared/commands/player_intent_names.gd")
 const SimulationBundle := preload("res://src/ugc/simulation_bundle.gd")
@@ -132,21 +131,6 @@ func test_stepping_off_the_safe_route_falls_and_resets() -> void:
 	assert_true(saw_fall)
 	assert_true(reset)
 	assert_eq(session.player_accepted_count(0), 2)
-
-
-func test_bot_still_completes_on_the_authority() -> void:
-	## 默认探针仍走 +X 捷径。安全路由 test_traprush_course_routes.gd 封掉 entity 10 另测。
-	var result: Dictionary = CourseCompletionProbe.run_path(COURSE_01)
-	var outcome: String = result["outcome"]
-	assert_eq(outcome, CourseCompletionProbe.OUTCOME_COMPLETABLE)
-	var actions: Array = result["actions"]
-	var replay: Dictionary = CourseCompletionProbe.try_replay(_compile(COURSE_01), actions)
-	var ok: bool = replay["ok"]
-	var reason: String = replay["reason"]
-	assert_true(ok, reason)
-	var finish_tick: int = replay["finish_tick"]
-	assert_gte(finish_tick, 0)
-	assert_lte(actions.size(), 12)
 
 
 func _safe_moves() -> Array[Vector2i]:

@@ -167,6 +167,10 @@ var queue_poll_s: float = DEFAULT_QUEUE_POLL_S
 var last_sent_command: PackedByteArray = PackedByteArray()
 var _interp_t: int = 0
 var _interp_tick: int = -1
+## 表现映射真正跑了多少次。只给守卫测试读——「一帧只重映射一次」这条性质，
+## 除了数它没有别的可观测出口，而它恰好是 2026-09-01 之前退化过的那一条
+## （一帧三次 `_apply_snapshot_map` + 四次 `_refresh_status`）。
+var _snapshot_map_applies: int = 0
 
 var _status: Label = null
 var _room_edit: LineEdit
@@ -548,7 +552,10 @@ func try_sample_play_move(forward: bool, back: bool, left: bool, right: bool) ->
 		var offline_bytes: PackedByteArray = offline.try_encode_move_axes(
 			forward, back, left, right, play_move_step
 		)
-		_apply_snapshot_map()
+		## 空字节 = 没按键 / 意图被拒，什么都没动。原来这里无条件重映射，而在线
+		## 分支一直有 `is_empty()` 保护——同一个函数两只手不一样。
+		if not offline_bytes.is_empty():
+			_apply_snapshot_map()
 		return offline_bytes
 	if play == null:
 		return PackedByteArray()
@@ -568,7 +575,8 @@ func try_sample_play_reset(pressed: bool) -> PackedByteArray:
 		var offline_bytes: PackedByteArray = offline.try_encode_intent(
 			PlayerIntentNames.RESET_TO_CHECKPOINT, 0, 0, 0
 		)
-		_apply_snapshot_map()
+		if not offline_bytes.is_empty():
+			_apply_snapshot_map()
 		return offline_bytes
 	if play == null:
 		return PackedByteArray()
@@ -586,7 +594,8 @@ func try_sample_play_use_item(pressed: bool) -> PackedByteArray:
 		var offline_bytes: PackedByteArray = offline.try_encode_intent(
 			PlayerIntentNames.USE_ITEM, 0, 0, 0
 		)
-		_apply_snapshot_map()
+		if not offline_bytes.is_empty():
+			_apply_snapshot_map()
 		return offline_bytes
 	if play == null:
 		return PackedByteArray()
@@ -604,7 +613,8 @@ func try_sample_play_jump(pressed: bool) -> PackedByteArray:
 		var offline_bytes: PackedByteArray = offline.try_encode_intent(
 			PlayerIntentNames.JUMP, 0, 0, 0
 		)
-		_apply_snapshot_map()
+		if not offline_bytes.is_empty():
+			_apply_snapshot_map()
 		return offline_bytes
 	if play == null:
 		return PackedByteArray()
@@ -624,7 +634,8 @@ func try_sample_play_shove(pressed: bool) -> PackedByteArray:
 		var offline_bytes: PackedByteArray = offline.try_encode_intent(
 			PlayerIntentNames.SHOVE, 0, 0, 0
 		)
-		_apply_snapshot_map()
+		if not offline_bytes.is_empty():
+			_apply_snapshot_map()
 		return offline_bytes
 	if play == null:
 		return PackedByteArray()
@@ -642,7 +653,8 @@ func try_sample_play_sprint(pressed: bool) -> PackedByteArray:
 		var offline_bytes: PackedByteArray = offline.try_encode_intent(
 			PlayerIntentNames.SPRINT, 0, 0, 0
 		)
-		_apply_snapshot_map()
+		if not offline_bytes.is_empty():
+			_apply_snapshot_map()
 		return offline_bytes
 	if play == null:
 		return PackedByteArray()
@@ -805,6 +817,10 @@ func interp_progress() -> int:
 	return _interp_t
 
 
+func snapshot_map_apply_count() -> int:
+	return _snapshot_map_applies
+
+
 func try_fetch_settlement() -> bool:
 	if _offline_playing():
 		return false
@@ -834,6 +850,17 @@ func allows_online_writes() -> bool:
 	return false
 
 
+## 表现层：每渲染帧一次。离线的权威推进与输入采样在 `_physics_process`。
+##
+## 分开不是为了整洁，是**正确性**。离线 Solo 原本在这里 `offline.try_advance()`，
+## 于是仿真节拍就等于帧率：帧成本修好之前是 30 FPS 慢放，修好之后会变成
+## 120 tick/s 的两倍速——而服务端 `match_server.gd` 一直是 `_physics_process` 的
+## 60 Hz。按住 W 的位移同理：离线意图是**立即应用**、不按 tick 排队的，帧率翻倍
+## 就走两倍远。宪法第五条要的正是这条分界。
+##
+## 顺带把每帧的重复工作收掉。原来一帧里 `_apply_snapshot_map()` 会被调三次
+## （`try_sample_play_move` 的离线分支一次、`try_advance_interp` 一次、末尾显式
+## 一次），`_refresh_status()` 四次；现在渲染帧里只有一次。
 func _process(delta: float) -> void:
 	if live_io and not _offline_playing():
 		_poll_queue_clock(delta)
@@ -846,15 +873,34 @@ func _process(delta: float) -> void:
 		return
 	if frame_rate != null:
 		frame_rate.sample(delta)
+	if _offline_playing():
+		## 插值先走，`_apply_snapshot_map` 末尾自带 `_refresh_status`。
+		try_advance_interp()
+		_apply_snapshot_map()
+		return
 	if _edit_has_focus():
-		if _offline_playing():
-			offline.try_advance()
-			_apply_snapshot_map()
-			_refresh_status()
 		try_advance_interp()
 		return
-	if _offline_playing():
-		offline.try_advance()
+	## 在线采样仍按渲染帧。发送频率属 CD-63 未锁参数，改它要 C1 的真网络样本，
+	## 不是本刀能拍的。
+	_sample_play_input()
+	try_advance_interp()
+
+
+## 离线权威：固定 60 Hz，与 `match_server.gd` 的 `_physics_process` 同一节拍。
+## 在线不进这里，理由见 `_process` 里那句「发送频率属 CD-63」。
+func _physics_process(_delta: float) -> void:
+	if not _offline_playing():
+		return
+	if window == null or not window.visible:
+		return
+	offline.try_advance()
+	if _edit_has_focus():
+		return
+	_sample_play_input()
+
+
+func _sample_play_input() -> void:
 	try_sample_play_move(
 		Input.is_action_pressed(_MOVE_FORWARD),
 		Input.is_action_pressed(_MOVE_BACK),
@@ -866,10 +912,6 @@ func _process(delta: float) -> void:
 	try_sample_play_jump(Input.is_action_pressed(_JUMP))
 	try_sample_play_shove(Input.is_physical_key_pressed(KEY_F))
 	try_sample_play_sprint(Input.is_physical_key_pressed(KEY_SHIFT))
-	try_advance_interp()
-	if _offline_playing():
-		_apply_snapshot_map()
-		_refresh_status()
 
 
 ## D4 的 UI 基准是 1920×1080。它由**主窗口**的 stretch 承担（project.godot 的
@@ -1353,6 +1395,7 @@ func _apply_snapshot_map() -> void:
 	if typeof(players_raw) != TYPE_ARRAY:
 		return
 	var players: Array = players_raw
+	_snapshot_map_applies += 1
 	if crates != null:
 		crates.apply_follow(follow)
 	if hazards != null:

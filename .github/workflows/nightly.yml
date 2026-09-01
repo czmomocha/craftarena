@@ -1,0 +1,52 @@
+name: Nightly
+
+# `--bot-run` 的定时兜底。
+#
+# `--bot-run` 与 GUT 的 slow 层有重叠但不是同一件事：GUT 那边断言「探针说可完成，
+# 且给出的动作序列能被独立重放到终点」，这里跑的是真正的 CLI 入口，连参数解析、
+# 逐课 JSON 输出与汇总行一起验，任一张课走不通它自己 exit 1。
+#
+# 它**不进 PR CI**，这是 C2 第一章就拍过的事，本文件没有改变它。GUT 的 slow 层
+# （`tests/slow`）相反，**是**每次 PR 的门禁——2026-09-01 定点数快路径把它压到
+# 7 秒之后没有理由再把它挪出去。口径见 CD-53 §4.1/§4.2。
+
+on:
+  schedule:
+    # 18:00 UTC = 次日 02:00 Asia/Shanghai。挑一个没人在推代码的时段，
+    # 免得和 PR 的 CI 抢 runner。
+    - cron: "0 18 * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: nightly
+  cancel-in-progress: true
+
+env:
+  # 版本的所有者是 CD-51 §1，升级引擎必须同时改那里和本行。
+  GODOT_VERSION: 4.7.2
+
+jobs:
+  bot-run:
+    name: Bot run over the official courses
+    runs-on: ubuntu-latest
+    # 定时任务不抢关键路径。开发机实测三张课合计 5.7 s（2026-09-01 定点数快路径
+    # 之前是 108.6 s），给足余量；超时就是真出事了。
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          lfs: true
+
+      - uses: ./.github/actions/setup-godot
+        with:
+          version: ${{ env.GODOT_VERSION }}
+
+      - name: Bot run the default route on all official courses
+        run: '"$GODOT4" --headless --path game -- --bot-run'
+
+      # 默认探针会走 +X 捷径。安全路线是另一条代码路径（封掉捷径传送源），
+      # 只在这里跑。`if: always()` 是为了上一步失败时仍能看到这条的结论——
+      # 两条路线一起红和只有一条红，指向的原因完全不同。
+      - name: Bot run the safe route on course_01
+        if: always()
+        run: '"$GODOT4" --headless --path game -- --bot-run --course=course_01 --route=safe'

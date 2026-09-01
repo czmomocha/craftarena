@@ -3,11 +3,14 @@ extends GutTest
 ## 纠偏 C3 第 2 章：官方赛道沿路立足固体，±8 出界 AABB 只在走下路面时复位。
 ## 必经格有固体支撑；停在路上不会掉进坑；从侧面走下路面才会触发出界。
 ## course_03 地面箱子挡住 +X，−Z 有绕行立足面，不把道具章提前做进来。
-## BotRunner 探针三张课都能走通。不锁产品重力、不改 STUB_HALF 数值。
+## 不锁产品重力、不改 STUB_HALF 数值。
+##
+## 「三张课能被探针走通」原本也在本文件，已移到
+## `tests/slow/test_traprush_official_course_completability.gd`——那是一次完整
+## 搜索，属 slow 层。本文件只留下便宜且必须每次 PR 守住的地板与重力断言。
 
 const AuthoringDocument := preload("res://src/creator/authoring_document.gd")
 const AuthoringWorld := preload("res://src/creator/authoring_world.gd")
-const CourseCompletionProbe := preload("res://src/games/traprush/course_completion_probe.gd")
 const PlayStubs := preload("res://src/games/traprush/play_stubs.gd")
 const PlayerIntentNames := preload("res://src/shared/commands/player_intent_names.gd")
 const SimulationBundle := preload("res://src/ugc/simulation_bundle.gd")
@@ -103,25 +106,6 @@ func test_stepping_off_the_path_falls_and_resets_to_spawn() -> void:
 	assert_true(saw_fall)
 	assert_true(reset)
 	assert_eq(session.player_accepted_count(0), 1)
-
-
-func test_official_courses_are_completable_on_the_authority() -> void:
-	_assert_completable(COURSE_01)
-	_assert_completable(COURSE_02)
-	_assert_completable(COURSE_03)
-
-
-func _assert_completable(path: String) -> void:
-	var result: Dictionary = CourseCompletionProbe.run_path(path)
-	var outcome: String = result["outcome"]
-	assert_eq(outcome, CourseCompletionProbe.OUTCOME_COMPLETABLE, path)
-	var actions: Array = result["actions"]
-	var replay: Dictionary = CourseCompletionProbe.try_replay(_compile(path), actions)
-	var ok: bool = replay["ok"]
-	var reason: String = replay["reason"]
-	assert_true(ok, "%s %s" % [path, reason])
-	var finish_tick: int = replay["finish_tick"]
-	assert_true(finish_tick >= 0, "%s finish_tick=%d" % [path, finish_tick])
 
 
 func _assert_supported(path: String, stands: Array[Vector3i]) -> void:

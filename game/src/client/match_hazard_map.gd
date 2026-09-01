@@ -180,9 +180,14 @@ func _copy_poses(bags: Array[Dictionary]) -> Array[Dictionary]:
 	return poses
 
 
+## 按 entity_id 复用节点：本 tick 处于固体半周期的补上，开放半周期的撤掉。
+##
+## 机关**不会移动**，每 tick 唯一会变的是显隐，而周期通常远长于一帧——也就是说
+## 绝大多数帧里这份名单一个都没变。原来每次 `apply_tick` 都全清全建，于是对局壳
+## 每渲染帧都把洋红盒连同它独占的 BoxMesh 与 StandardMaterial3D 拆了重搭。
 func _rebuild() -> void:
-	_clear_hazards()
 	_live_solids = []
+	var wanted: Dictionary = {}
 	for pose: Dictionary in _poses:
 		var cooldown_raw: Variant = pose.get("cooldown_ticks", -1)
 		if typeof(cooldown_raw) != TYPE_INT:
@@ -196,8 +201,34 @@ func _rebuild() -> void:
 			"z": pose["z"],
 		})
 		var entity_id: int = pose["entity_id"]
-		_spawn_box(hazard_name(entity_id), pose)
+		wanted[hazard_name(entity_id)] = true
+		_ensure_box(hazard_name(entity_id), pose)
+	_despawn_hazards_except(wanted)
 	_hazard_count = _visible_count()
+
+
+## 位姿每次都写，理由同 `MatchCrateMap._ensure_box`：换课之后同一个 entity_id
+## 的位置会变，只在节点缺失时写会留下上一张课的坐标。
+func _ensure_box(node_name: String, pose: Dictionary) -> void:
+	var node: MeshInstance3D = get_node_or_null(node_name) as MeshInstance3D
+	if node == null:
+		_spawn_box(node_name, pose)
+		return
+	var x: int = pose["x"]
+	var y: int = pose["y"]
+	var z: int = pose["z"]
+	node.position = Vector3(meters_from_fixed(x), meters_from_fixed(y), meters_from_fixed(z))
+
+
+func _despawn_hazards_except(wanted: Dictionary) -> void:
+	var stale: Array[Node] = []
+	for child: Node in get_children():
+		var child_name: String = str(child.name)
+		if child_name.begins_with(HAZARD_PREFIX) and not wanted.has(child_name):
+			stale.append(child)
+	for node: Node in stale:
+		remove_child(node)
+		node.free()
 
 
 func _visible_count() -> int:

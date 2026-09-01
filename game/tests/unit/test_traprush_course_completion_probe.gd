@@ -1,11 +1,13 @@
 extends GutTest
 
-## 走路可达探针：官方 course_01 能走通，且给出的路线可以被独立重放。
-## 反例覆盖三种「走不通」：没有终点、检查点够不到、预算先耗尽。
+## 走路可达探针的**反例形状**：没有终点、检查点够不到、预算先耗尽，以及重放
+## 拒绝未知动作名。全部走合成 bundle 或紧预算，不做完整搜索。
 ##
-## 最后一条是本组测试的重点。探针的价值在于它**不谎报**：预算用完时必须说
-## budget_exhausted，而不是把「没搜完」说成「走不通」。三张官方课在沿路地板
-## 章里用 GUT 断言 completable；本文件只锁 course_01 的正反例形状。
+## 「预算耗尽」是本组测试的重点。探针的价值在于它**不谎报**：预算用完时必须说
+## budget_exhausted，而不是把「没搜完」说成「走不通」。
+##
+## 正例（官方 course_01 能走通、给出的路线可独立重放）需要一次完整搜索，已移到
+## `tests/slow/test_traprush_official_course_completability.gd`。
 
 const AuthoringDocument := preload("res://src/creator/authoring_document.gd")
 const CourseCompletionProbe := preload("res://src/games/traprush/course_completion_probe.gd")
@@ -17,35 +19,6 @@ const TraprushTopologyCompiler := preload("res://src/ugc/traprush_topology_compi
 const COURSE_01_PATH: String = "res://content/official/traprush/course_01.json"
 const CELL: int = 65536
 const UNREACHABLE_Y: int = 5 * CELL
-
-
-func test_official_course_01_is_completable() -> void:
-	var result: Dictionary = CourseCompletionProbe.run_path(COURSE_01_PATH)
-	var outcome: String = result["outcome"]
-	var accepted: int = result["accepted"]
-	var checkpoints: int = result["checkpoints"]
-	var steps: int = result["steps"]
-	assert_eq(outcome, CourseCompletionProbe.OUTCOME_COMPLETABLE)
-	assert_eq(accepted, checkpoints)
-	assert_gt(steps, 0)
-
-
-func test_reported_route_replays_to_a_finish() -> void:
-	var result: Dictionary = CourseCompletionProbe.run_path(COURSE_01_PATH)
-	var outcome: String = result["outcome"]
-	assert_eq(outcome, CourseCompletionProbe.OUTCOME_COMPLETABLE)
-	var actions: Array = result["actions"]
-	var bundle: SimulationBundle = _compile_path(COURSE_01_PATH)
-	assert_not_null(bundle)
-	var replay: Dictionary = CourseCompletionProbe.try_replay(bundle, actions)
-	var ok: bool = replay["ok"]
-	var reason: String = replay["reason"]
-	assert_true(ok, reason)
-	var finish_tick: int = replay["finish_tick"]
-	var replay_accepted: int = replay["accepted"]
-	var replay_checkpoints: int = replay["checkpoints"]
-	assert_true(finish_tick >= 0, "finish_tick=%d" % finish_tick)
-	assert_eq(replay_accepted, replay_checkpoints)
 
 
 func test_course_without_finish_is_not_completable() -> void:

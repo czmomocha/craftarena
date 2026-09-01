@@ -1263,6 +1263,45 @@ func test_split_endpoint_shows_gateway_host_separately() -> void:
 	assert_true(_shell.status_label_text().contains("gw=198.51.100.8"))
 
 
+## 权威节拍与表现节拍分开：`_physics_process` 推 tick（固定 60 Hz，和
+## `match_server.gd` 同一节拍），`_process` 只画。绑在一起时帧率就是仿真速度——
+## 慢的时候慢放，快的时候两倍速。
+func test_only_physics_process_advances_the_offline_tick() -> void:
+	_shell = _open_shell()
+	assert_true(_shell.try_solo())
+	var before: int = _shell.offline.session.tick_index()
+
+	for _frame: int in range(5):
+		_shell._process(0.016)
+
+	assert_eq(_shell.offline.session.tick_index(), before, "渲染帧推进了权威 tick")
+
+	_shell._physics_process(0.016)
+
+	assert_eq(_shell.offline.session.tick_index(), before + 1, "固定步长没有推进权威 tick")
+
+
+## 一帧只重映射一次。原来是三次 `_apply_snapshot_map` 加四次 `_refresh_status`：
+## `try_sample_play_move` 的离线分支无条件来一次（在线分支一直有 `is_empty()`
+## 保护，两只手不一样）、`try_advance_interp` 一次、`_process` 末尾再显式一次。
+func test_one_render_frame_remaps_once_and_idle_input_remaps_never() -> void:
+	_shell = _open_shell()
+	assert_true(_shell.try_solo())
+
+	var before: int = _shell.snapshot_map_apply_count()
+	_shell._process(0.016)
+	assert_eq(_shell.snapshot_map_apply_count(), before + 1, "一个渲染帧重映射了不止一次")
+
+	## 没按键 = 什么都没动，不该重映射。
+	var idle: int = _shell.snapshot_map_apply_count()
+	assert_true(_shell.try_sample_play_move(false, false, false, false).is_empty())
+	assert_eq(_shell.snapshot_map_apply_count(), idle, "空手采样也触发了重映射")
+
+	## 真按了键仍然立即反映，否则本席会等到下一渲染帧才动。
+	assert_false(_shell.try_sample_play_move(false, false, false, true).is_empty())
+	assert_eq(_shell.snapshot_map_apply_count(), idle + 1)
+
+
 func _open_shell() -> MatchLobbyShell:
 	var shell: MatchLobbyShell = MatchLobbyShell.create()
 	add_child(shell)

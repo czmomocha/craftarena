@@ -12,7 +12,7 @@ Godot 4 + UGC 双玩法（TRAPRUSH / BASTION）项目 Monorepo。代码与仓库
 ```text
 game/       Godot 4 工程（src 按 L0–L5 分层、content、tests）
 backend/    control-plane / realtime-gateway / match-host / contracts
-tools/      dev-launcher / bot-runner / asset-budget / content-validator / godot-project-settings / redline-scanner / replay-inspector
+tools/      dev-launcher / bot-runner / asset-budget / content-validator / godot-project-settings / redline-scanner / replay-inspector / test-selector
 infra/      compose / tencent-cloud
 docs/       adr / plans / runbooks
 ```
@@ -79,8 +79,22 @@ export GODOT_AI_DISABLE_TELEMETRY=true
 | Headless 导入检查 | `& $env:GODOT4_CONSOLE --headless --path game --import` | `"$GODOT4" --headless --path game --import` |
 | Headless 启动主场景 | `& $env:GODOT4_CONSOLE --headless --path game --quit` | `"$GODOT4" --headless --path game --quit` |
 | 单文件语法与类型检查 | `& $env:GODOT4_CONSOLE --headless --path game --check-only -s res://src/client/main.gd` | `"$GODOT4" --headless --path game --check-only -s res://src/client/main.gd` |
-| 运行 GUT（unit + integration + replay） | `& $env:GODOT4_CONSOLE --headless --path game -s res://addons/gut/gut_cmdln.gd -gdir=res://tests/unit,res://tests/integration,res://tests/replay -gexit` | `"$GODOT4" --headless --path game -s res://addons/gut/gut_cmdln.gd -gdir=res://tests/unit,res://tests/integration,res://tests/replay -gexit` |
+| 运行 GUT fast 层（unit + integration + replay） | `& $env:GODOT4_CONSOLE --headless --path game -s res://addons/gut/gut_cmdln.gd -gdir=res://tests/unit,res://tests/integration,res://tests/replay -gexit` | `"$GODOT4" --headless --path game -s res://addons/gut/gut_cmdln.gd -gdir=res://tests/unit,res://tests/integration,res://tests/replay -gexit` |
+| 运行 GUT slow 层（官方赛道完整搜索） | `& $env:GODOT4_CONSOLE --headless --path game -s res://addons/gut/gut_cmdln.gd -gdir=res://tests/slow -gexit` | `"$GODOT4" --headless --path game -s res://addons/gut/gut_cmdln.gd -gdir=res://tests/slow -gexit` |
 | 官方赛道能不能走通 | `& $env:GODOT4_CONSOLE --headless --path game -- --bot-run` | `"$GODOT4" --headless --path game -- --bot-run` |
+
+上面那两行 GUT 是**底层写法**，两个平台不一样。日常用下面的 npm 包装，一条命令跨平台，引擎路径由 Node 解析（与 MatchHost 同一套 `GODOT4_CONSOLE` / `GODOT4` 规则，没有 PATH 回退）：
+
+| 用途 | 命令 | 开发机实测 |
+|---|---|---|
+| 只跑这一刀碰得到的脚本 | `npm run test:gut:affected` | 几秒～全量 |
+| fast 层（unit + integration + replay） | `npm run test:gut:fast` | 18.5 s |
+| slow 层（官方赛道完整搜索） | `npm run test:gut:slow` | 7 s |
+| 四个目录全跑，**CI 每次 PR 跑的就是它** | `npm run test:gut:full` | 24.4 s |
+
+`test:gut:affected` 扫 `preload` / `load` 的 `res://` 字面量建反向依赖图，按 `git diff` 算出受影响的 fast 层脚本。它**只服务本地循环，从来不是门禁**——算错方向一律偏向多跑：`game/` 下的非 `.gd` 改动、`tests/support/`、`addons/`、图里没有的路径都直接退回 fast 层全量；实参不是字面量的 `load()` 会把依赖它的脚本标成「永远跑」。加 `--dry-run` 只看会跑什么、不真跑。
+
+分 fast / slow 只是为了本地能少跑一层，**两层都是每次 PR 的门禁**。整套 GUT 在 2026-09-01 从 354.6 s 掉到 24.4 s，主因是[定点数快路径](docs/audits/2026-09-01-offline-frame-cost.md)，不是少测了。
 
 ### 赛道能不能走通（BotRunner）
 
@@ -95,11 +109,11 @@ export GODOT_AI_DISABLE_TELEMETRY=true
 
 `outcome=completable` 时同时给出走通用的动作序列，可以照着重放复验。**`not_completable` 不等于「人也过不去」**：bot 的动作集是离散的（八向各走一整格、跳、用道具、等一 tick），`reason` 会说明是搜索穷尽（`search_exhausted`，较强）还是预算先用完（`budget_exhausted`，只说明没搜完）。完整边界见 `game/src/games/traprush/course_completion_probe.gd` 文件头。
 
-`--route=safe` **只接受** `course_01`：搜索前拿掉 +X 捷径上楼 two_way（entity 10），再重放 C3 第 5 章已经走通的四向安全路。其它课没有这条语义，带这个旗就 exit 1。默认 `--bot-run` 仍走捷径、仍用完整动作集搜索。`--bot-run` 仍不进 CI。
+`--route=safe` **只接受** `course_01`：搜索前拿掉 +X 捷径上楼 two_way（entity 10），再重放 C3 第 5 章已经走通的四向安全路。其它课没有这条语义，带这个旗就 exit 1。默认 `--bot-run` 仍走捷径、仍用完整动作集搜索。`--bot-run` **不进 PR CI**，但自 2026-09-01 起每天由 `.github/workflows/nightly.yml` 跑一次。
 
 C3 第 2 章沿路地板后（2026-08-27，Windows 开发机）：三张课均为 `completable`（`course_01` / `course_02` 各 5 步；`course_03` 12 步）。C3 第 5 章给 `course_01` 加了更长安全路之后，默认探针仍走捷径。C3 第 7 章用 `--route=safe` 在封掉捷径门后重放那条更长安全路，证明它也能完赛。
 
-跑得不快，这是权威仿真本身的开销：开发机上一次 `commit_tick` 约 8 ms，一次整格移动约 27 ms（胶囊半径决定扫掠要走八步）。会话没有快照/恢复接口，搜索每展开一步都要从头重放。当前三张课分别约 8 / 8 / 77 秒。这些是 Windows 开发机 debug 解释器的数字，不是产品性能指标，也还没在导出包或 Linux 服务器上量过。
+会话没有快照/恢复接口，搜索每展开一步都要从头重放，所以它天生比一次对局贵。2026-09-01 的[定点数快路径](docs/audits/2026-09-01-offline-frame-cost.md)之后，三张课合计约 5.7 秒（此前是 108.6 秒：25 / 8 / 74）。这些是 Windows 开发机 debug 解释器的数字，不是产品性能指标，也还没在导出包或 Linux 服务器上量过。
 
 ### 导出
 
@@ -125,6 +139,7 @@ macOS 把 `& $env:GODOT4_CONSOLE` 换成 `"$GODOT4"`。包内自检也能对源�
 | 安装依赖 | `npm install` |
 | 类型检查 | `npm run typecheck` |
 | 后端与工具单元测试 | `npm test` |
+| GUT 分层（affected / fast / slow / full） | 见上面 [Godot 命令表](#godot)，四条 `npm run test:gut:*` |
 | 宪法红线扫描 | `npm run redline-scan` |
 | 查 `game/project.godot` 有没有本机 Godot AI 脏写入 | `npm run godot-settings:check`（脏则退出码 1；`--staged` 查索引副本） |
 | 还原那两处脏写入（[CD-51 §7.3](Confirmed-docs/50-engineering/51-dev-environment.md)） | `npm run godot-settings:scrub`（幂等；只摘 `_mcp_game_helper` 与 `addons/godot_ai` 启用项） |
@@ -172,9 +187,11 @@ DevLauncher 只管本地开发编排，不做守护、重启和资源限制；�
 
 ## 持续集成
 
-`.github/workflows/ci.yml` 在推送 `main` 和所有 PR 上运行两个 job：`backend`（`npm run typecheck` + `npm run redline-scan` + `npm run asset-budget` + `npm test`）与 `godot`（导入、逐文件 `--check-only`、Headless 启动烟测、GUT unit/integration/replay）。用的都是上面表里那些命令，本地跑一遍就能复现 CI 的结论。`--bot-run` 不进 CI。两个 job 都带 `lfs: true`：资产预算必须读到真 `.glb`，读到 LFS 指针会被判为失败。
+`.github/workflows/ci.yml` 在推送 `main` 和所有 PR 上运行两个 job：`backend`（`npm run typecheck` + `npm run redline-scan` + `npm run asset-budget` + `npm test`）与 `godot`（导入、逐文件 `--check-only`、Headless 启动烟测、GUT 四个目录全量）。用的都是上面表里那些命令，本地跑一遍就能复现 CI 的结论。两个 job 都带 `lfs: true`：资产预算必须读到真 `.glb`，读到 LFS 指针会被判为失败。
 
-CI 当前实际启用了哪些门禁、哪些还没实现，以 [CD-53 §4.1](Confirmed-docs/50-engineering/53-testing-and-ci.md) 的「当前实现状态」表为准。§4.2–§4.4 的每日 / 每周 / 发布候选清单同样有状态列；没有独立 cron，已落地的集成与回放用例挂在每次 PR 的 GUT 步骤上。`tests/content/` 与 `tests/security/` 仍空，不进 CI（C2 不做 UGC 安全全集）。
+`.github/workflows/nightly.yml` 每天 02:00（Asia/Shanghai）跑 `--bot-run` 三张官方课与 `--course=course_01 --route=safe`，也可以 `workflow_dispatch` 手动触发。`--bot-run` 不进 PR CI 是 C2 第一章拍板的，与 GUT 分层无关。
+
+CI 当前实际启用了哪些门禁、哪些还没实现，以 [CD-53 §4.1](Confirmed-docs/50-engineering/53-testing-and-ci.md) 的「当前实现状态」表为准。§4.2–§4.4 的每日 / 每周 / 发布候选清单同样有状态列。`tests/content/` 与 `tests/security/` 仍空，不进 CI（C2 不做 UGC 安全全集）。
 
 ## 协作规则
 

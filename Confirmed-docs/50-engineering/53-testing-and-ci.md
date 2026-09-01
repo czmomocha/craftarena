@@ -252,7 +252,8 @@ AI 生成代码必须比普通手写代码有**更强的自动化证据**，因�
 |---|---|---|
 | 语法与类型检查 | 已启用 | 逐个 `.gd` 文件跑 `--check-only`（`game/src`、`game/tests`、`game/addons/authoring_editor`；不含 GUT）；`backend/`、`tools/` 跑 `tsc --noEmit` |
 | 核心目录警告视为错误 | 已启用 | GDScript 由 `project.godot` 全局配置（[ADR-0001](../../docs/adr/0001-strict-gdscript-typing-gate.md)）并由 GUT 断言守护；TypeScript 由 `tsconfig.json` 的 strict 系列保证 |
-| 单元测试 | 已启用（全量，非"受影响"） | GUT 跑 `res://tests/unit`；后端跑 `node --test` |
+| 单元测试 | 已启用（全量） | GUT 跑 `res://tests/unit` + `res://tests/slow`；后端跑 `node --test`。搜索类用例分到 `tests/slow` 只为让本地能少跑一层，**两层都是每次 PR 的门禁**，见本节末「GUT 分层」 |
+| 受影响单元测试 | 已启用（**仅本地循环，不是门禁**） | `tools/test-selector/`（`npm run test:gut:affected`）：扫 `preload` / `load` 的 `res://` 字面量建反向依赖图，按 `git diff` 选出受影响的 fast 层脚本。`game/` 下非 `.gd` 改动、`tests/support/`、`addons/`、图里没有的路径一律退回 fast 层全量；实参非字面量的 `load()` 把依赖它的脚本标成「永远跑」。CI **不**用它，仍跑 fast 层全量——它算错的上限是「某个失败晚几分钟被发现」，不是「某个失败进了 main」 |
 | 集成测试 | 已启用（每次 PR，非独立 daily） | GUT 跑 `res://tests/integration`：AuthoringWorld 编译进双人 Headless 冲线、Preview 安全 Tick、离线不写库、进程内断线再占。不是多 OS 进程、不是真 socket |
 | 回放测试 | 已启用（每次 PR，非独立 daily） | GUT 跑 `res://tests/replay`：官方课同磁带同哈希 / 同快照字节；改磁带或换课则分叉。环形缓冲只存哈希，**不能**从快照恢复世界再继续 |
 | Schema 验证 | 已启用（L0 信封 + Component Schema v1 + AuthoringDocument + SimulationBundle） | `tools/content-validator/` 对 `backend/contracts/schemas/` 做正反例（含 `component_record`、`authoring_document` 与 `simulation_bundle`），并由根目录 `npm test` 收集。未覆盖 Rule VM 图。未引入 Ajv（新依赖属宪法第十八条人类门禁）。字段名单见 [CD-42 §1.2](../40-technical/42-contracts-and-rulevm.md#12-字段标识符v1)、[CD-32 §1.4](../30-ugc/32-editor-and-preview.md#14-共同数据模型) 与 [CD-42 §3.4](../40-technical/42-contracts-and-rulevm.md#34-实现落点) |
@@ -265,6 +266,27 @@ AI 生成代码必须比普通手写代码有**更强的自动化证据**，因�
 
 按宪法第二十四条，**未在本表标为"已启用"的项目不得在任何材料中描述为已覆盖**。新增门禁时同时改本表和 workflow。
 
+#### GUT 分层（2026-09-01 起，人类拍板）
+
+**分层是为了让本地能只跑一层，不是为了把哪一层挪出合并门禁。四个目录都是每次 PR 的门禁。**
+
+| 层 | 目录 | 谁在跑 |
+|---|---|---|
+| fast | `tests/unit` + `tests/integration` + `tests/replay` | 每个 PR；本地 `npm run test:gut:fast` |
+| slow | `tests/slow`（官方赛道在权威上的完整 `CourseCompletionProbe` 搜索） | 每个 PR（与 fast 同一个 GUT step）；本地 `npm run test:gut:slow` |
+
+起因是耗时高度集中：Windows 开发机 354.6 秒里，`test_traprush_official_path_floors.gd`(121.8 s)、`test_traprush_course_completion_probe.gd`(58.2 s)、`test_traprush_semantic_course.gd`(41.7 s) 占 63%，三者做的都是完整搜索。三条措施：
+
+- **确定性重夹具记忆化**：`game/tests/support/course_probe_cache.gd` 按入参缓存 `CourseCompletionProbe.run_path()`，同一组参数整场 GUT 只真搜一次（原来 course_01 被四个脚本各搜一遍）。交出去的一律是 `duplicate(true)` 副本，用例之间不会互相污染。前提是探针为纯函数——它一旦引入随机重启或时间预算，这个缓存必须同时废掉。
+- **按用例而非按文件分层**：进 `tests/slow` 的只有「对真实官方课跑完整搜索」那 5 条。沿路地板数量、必经格有支撑、待机不复位、走路不掉、走下路面才复位这些 C3 核心玩法断言仍在 fast 层。
+- **定点数快路径**（同日，[audit](../../docs/audits/2026-09-01-offline-frame-cost.md)）：`Fixed.try_mul_div` 的中间积不溢出 int64 时改走原生乘除。这一条的收益远超前两条——它让搜索本身快了一个数量级。
+
+开发机实测：**全量 354.6 s → 24.4 s**（fast 18.5 s + slow 7 s）。
+
+> 分层最初拍板时附带「slow 层移出 PR 门禁、改 nightly」，理由是它要 130 s 以上。定点数快路径把它压到 7 秒之后**这个理由不成立了**，人类同日改判：slow 层回到每次 PR。所以本项**没有**任何被接受的覆盖损失，分支保护的必过检查名单也不需要改（`godot` job 的 `name` 未动）。
+>
+> 仍然在 PR 之外的只有 `--bot-run`（`nightly.yml`）——那是 C2 第一章就拍过的事，不是本次分层造成的。
+
 另有一条平台缺口：CI 目前只跑 Linux runner。CD-51 §1 规划的自托管 Windows Runner 尚未搭建，因此 **Windows 与 macOS 上的引擎行为都没有任何自动回归**，只能靠开发机按 [环境烟测清单](../../docs/runbooks/environment-smoke-test.md) 人工执行。macOS 上 `--check-only` 在类型错误时退出码仍为 0，本地门禁看日志；Linux CI 仍按退出码收集失败，这条失败路径未在桌面开发机上按 Linux 复测。
 
 ### 4.2 每日
@@ -276,14 +298,15 @@ AI 生成代码必须比普通手写代码有**更强的自动化证据**，因�
 
 #### 当前实现状态
 
-上面是目标清单。仓库**没有**独立的每日 cron；下面每项是否被每次 PR 的 CI 覆盖，以本表为准。按宪法第二十四条，未标「已启用」的不得描述为已覆盖。
+上面是目标清单。仓库自 2026-09-01 起有一条每日 cron（`.github/workflows/nightly.yml`，18:00 UTC = 次日 02:00 Asia/Shanghai，可 `workflow_dispatch` 手动触发），只跑 `--bot-run`。下面每项由谁覆盖，以本表为准。按宪法第二十四条，未标「已启用」的不得描述为已覆盖。
 
 | 门禁项 | 状态 | 实现方式 |
 |---|---|---|
-| 全量 GUT | 已启用（每次 PR，不是每日定时） | 与 [§4.1](#41-每次变更) 同一 GUT 步骤，目录为 `unit` + `integration` + `replay`。没有 nightly workflow |
+| 全量 GUT | 已启用（每次 PR，不是每日定时） | [§4.1](#41-每次变更) 的同一个 GUT 步骤，目录为 `unit` + `integration` + `replay` + `slow`。2026-09-01 起分了 fast / slow 两层，但**两层都在每次 PR 跑**；分层理由与实测数字见 [§4.1 的「GUT 分层」](#gut-分层2026-09-01-起人类拍板) |
+| UGC 可完成性（`--bot-run`） | 已启用（每日，**不进 PR**） | `nightly.yml` 跑 `--bot-run` 三张官方课与 `--course=course_01 --route=safe`。任一张走不通就 exit 1。PR 上一次都不跑（C2 第一章拍板）。它与 `tests/slow` 的 GUT 断言重叠但不等价：这里验的是 CLI 入口本身（参数解析、逐课 JSON、汇总行） |
 | Headless 多客户端集成 | 部分 | `game/tests/integration/test_traprush_authoring_to_match.gd` 用进程内 `MatchRealtime` 跑官方 `course_01` 双人冲线。不是两个 OS 客户端、不是真 WebSocket。真多机仍是 [§2.5](#25-网络仿真人工清单非门禁) 人工清单 |
 | 固定回放 | 部分 | `game/tests/replay/test_traprush_official_tape_replay.gd`：同课同种子同磁带 → 同 `hash_state` 与同快照字节。没有独立回放文件格式；`SimSnapshotRing` 只存哈希，不能恢复执行 |
-| UGC Golden Content | 未实现 | 官方三张课有 unit 解码 / 编译断言，没有独立 `tests/content/` golden 门禁。C2 不把 `--bot-run` 接进 CI |
+| UGC Golden Content | 未实现 | 官方三张课有 unit 解码 / 编译断言，没有独立 `tests/content/` golden 门禁。`--bot-run` 自 2026-09-01 起进 `nightly.yml`，仍不进 PR CI |
 
 ### 4.3 每周
 
@@ -336,7 +359,9 @@ PR 合并必须 CI 全绿并至少获得一次人类批准；AI 审查不能替�
 - 要求一次人类批准；
 - `CODEOWNERS` 覆盖 `game/src/shared/`、`backend/contracts/`、`Confirmed-docs/`、`.github/`。
 
-**当前（2026-08-21）：`main` 分支保护已由 GitHub API 复核。** 已启用：要求 1 次批准、过期 review 作废、Require review from Code Owners、禁止 force push、禁止删除 `main`、要求状态检查通过且分支与 `main` 同步。必过检查：`Backend typecheck and tests`、`Godot check-only and GUT`。未启用：`enforce_admins`（仓库管理员仍可绕过）。`.github/CODEOWNERS` 覆盖 `game/src/shared/`、`backend/contracts/`、`Confirmed-docs/`、`.github/`。A4 回路已走通一次： [PR #1](https://github.com/czmomocha/craftarena/pull/1)。此后 Agent 可在隔离分支上创建提交，仍不得向 `main` 提交或推送（[CD-52 §1.1](52-ai-workflow.md)）。
+**当前（2026-08-21）：`main` 分支保护已由 GitHub API 复核。** 已启用：要求 1 次批准、过期 review 作废、Require review from Code Owners、禁止 force push、禁止删除 `main`、要求状态检查通过且分支与 `main` 同步。必过检查：`Backend typecheck and tests`、`Godot check-only and GUT`。未启用：`enforce_admins`（仓库管理员仍可绕过）。
+
+> 2026-09-01 的 GUT 分层**没有改必过检查名单**：`godot` job 的 `name` 仍是 `Godot check-only and GUT`，它现在跑四个目录（fast + slow）。没有新增需要设为必过的 job。`.github/CODEOWNERS` 覆盖 `game/src/shared/`、`backend/contracts/`、`Confirmed-docs/`、`.github/`。A4 回路已走通一次： [PR #1](https://github.com/czmomocha/craftarena/pull/1)。此后 Agent 可在隔离分支上创建提交，仍不得向 `main` 提交或推送（[CD-52 §1.1](52-ai-workflow.md)）。
 
 每个 PR 的 Web 预览公开访问，但必须使用独立临时沙盒命名空间、测试数据和可销毁凭据，关闭 PR 后清理。合入 `main` 后更新稳定测试链接。
 
