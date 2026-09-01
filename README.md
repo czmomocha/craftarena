@@ -129,7 +129,7 @@ macOS 把 `& $env:GODOT4_CONSOLE` 换成 `"$GODOT4"`。包内自检也能对源�
 | 查 `game/project.godot` 有没有本机 Godot AI 脏写入 | `npm run godot-settings:check`（脏则退出码 1；`--staged` 查索引副本） |
 | 还原那两处脏写入（[CD-51 §7.3](Confirmed-docs/50-engineering/51-dev-environment.md)） | `npm run godot-settings:scrub`（幂等；只摘 `_mcp_game_helper` 与 `addons/godot_ai` 启用项） |
 | 单资产预算门禁（[CD-11 §8.1](Confirmed-docs/10-product/11-scope-and-platforms.md)） | `npm run asset-budget`（扫 `game/`）／ `npm run asset-budget <file>.glb` |
-| 资产烘焙（开发机，压到预算内） | `npx --yes @gltf-transform/cli@4.4.2 resize in.glb out.glb --width 512 --height 512`（见 [runbook](docs/runbooks/asset-bake.md)） |
+| 资产烘焙（开发机，压到预算内） | `npx --yes @gltf-transform/cli@4.5.0 resize in.glb out.glb --width 512 --height 512`（见 [runbook](docs/runbooks/asset-bake.md)；**不要用 4.4.2**，它在 Windows 上必失败，根因与实测矩阵写在 runbook §2） |
 | 手动补跑 worktree setup | `npm run setup-worktree` |
 | **一键拉起三个后端进程** | `npm run dev` |
 | 单独启动控制面 | `npm run control-plane` |

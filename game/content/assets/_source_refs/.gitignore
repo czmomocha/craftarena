@@ -1,0 +1,53 @@
+# 3D 生成工具的原始产物：**不入库，只留本地**。
+#
+# 本目录是 AI 生成工具（TRELLIS、混元 3D 等）的落盘点，不是资产目录。
+# 内容是烘焙前的原始 glb 与 4K 源贴图——2026-09-01 实测 99 个文件、353.8 MB：
+#   traprush3D/ 7 个源 glb 143.6 MB + 28 张 4096 源 PNG 155.3 MB；
+#   traprush/   62 个多视角参考图（three_quarter / front / side / top）54.8 MB。
+# 它们**一项都过不了 [CD-11 §8.1](../../../../Confirmed-docs/10-product/11-scope-and-platforms.md) 的准入线**
+# （贴图边 4096 / 512，单文件最大 25.53 MB / 2 MB），因此按定义不是平台资产，
+# 也没有进 Git LFS 的理由：LFS 配额应该留给**入库物**。
+#
+# 可再生的才是这里的全部内容：真正有版本价值的是烘焙后、过门禁的那些 .glb——
+# 它们入库在本目录之外的 game/content/assets/<类别>/，每个只有 .glb + .glb.import
+# 两个文件。规则与烘焙命令见 [资产烘焙 runbook](../../../../docs/runbooks/asset-bake.md)，
+# 入库形态见 [CD-51 §5.1](../../../../Confirmed-docs/50-engineering/51-dev-environment.md)。
+#
+# 与根目录 /early-concepts/ 和 /test-res/ 是同一条口径（AI 生成的原始样本不入库），
+# 是这三处里最大的一处：353.8 MB。
+#
+# **为什么是扩展名清单，而不是一行 `*` 加例外**：先写 `*` 会把所有子目录一并排除，
+# 而 Git 不会再去读被排除目录内部的文件，于是 `!MANIFEST.md` 对
+# traprush/MANIFEST.md **无效**（实测确认）。生成工具的输出扩展名是可枚举的，
+# 按扩展名排除既能留住那两份要入库的文本，也不会出现"规则看起来生效其实没有"。
+
+# 生成工具的模型输出
+*.glb
+*.gltf
+*.obj
+*.fbx
+*.usdz
+*.bin
+
+# 源贴图与参考图。混元 3D 每个物件导出 base_color / metallic / normal / roughness
+# 四张 4096 图；traprush/ 下另存多视角参考图（three_quarter / front / side / top）。
+*.png
+*.jpg
+*.jpeg
+*.webp
+*.tga
+*.exr
+*.hdr
+*.psd
+
+# 源工程与中间产物
+*.blend
+*.blend1
+*.zip
+*.7z
+
+# .gdignore **故意不排除**：它是 Godot 的导入忽略标记，由 Godot 自己读、不靠 Git
+# 生效，但它是零体积文本且说明了这一层为什么存在，入库比再写一行例外更简单。
+# 两层分工要说清，别混为一谈：Godot 那层（.gdignore）挡的是**本机编辑器导入**这些
+# PNG，Git 这层（本文件）挡的是**入库**。少任何一层都不行——只有 .gdignore 的话，
+# 一次 git add . 仍会把 213 MB 灌进 LFS；只有本文件的话，本机编辑器会去导入它们。

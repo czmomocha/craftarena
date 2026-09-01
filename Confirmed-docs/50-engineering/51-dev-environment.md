@@ -22,7 +22,7 @@
 | 版本管理 | GitHub 私有 Monorepo；受保护 `main`；Git LFS |
 | 3D 工具 | Blender，统一导出 GLB/glTF |
 | 资产预算校验 | `@gltf-transform/core` **4.4.2**（MIT）；锁在根 `devDependencies`，2 个包、`npm audit` 0 漏洞、无 native 依赖。判定 [CD-11 §8.1](../10-product/11-scope-and-platforms.md) 的单资产预算，进 CI（`npm run asset-budget`） |
-| 资产烘焙 | `@gltf-transform/cli` **4.4.2**（MIT）；**刻意不进 `package.json`**，由 [资产烘焙 runbook](../../docs/runbooks/asset-bake.md) 用 `npx @gltf-transform/cli@4.4.2` 显式按版本拉起。理由：它拖 205 个包，其中 `sharp@~0.34.5` 挂 4 个 libvips CVE（`GHSA-f88m-g3jw-g9cj`）且上游未跟进，而 `npm audit fix --force` 会把它降到 2.5.1。烘焙只在开发机跑、不进 CI、不进玩家包，把 CVE 挡在依赖树外比锁进 lock 更划算 |
+| 资产烘焙 | `@gltf-transform/cli` **4.5.0**（MIT）；**刻意不进 `package.json`**，由 [资产烘焙 runbook](../../docs/runbooks/asset-bake.md) 用 `npx @gltf-transform/cli@4.5.0` 显式按版本拉起。理由：它拖 173 个包（`sharp@0.35.4`，`npm audit` 0 漏洞），不该成为每次 `npm install` 与 CI 都要付的成本；烘焙只在开发机、偶尔跑、只在你决定入库新资产时跑。**从 4.4.2 升级的原因不是新特性**：4.4.2 的传递依赖 `@gltf-transform/functions@^4.4.2` 会解析到 4.5.0 并带进第二份 `sharp`（0.35.4），与 cli 自己的 `sharp@~0.34.5` 在依赖树里共存，两份 libvips 的枚举对不上，Windows 上 `resize` 直接失败（`error: colourspace: parameter space not set`，exit 1，无产物）。4.5.0 把两处 dedupe 成一份 0.35.4。升级属宪法第十八条的新版本门禁，由人类 2026-09-01 拍板 |
 | 服务端本地环境 | Godot Headless + Node.js 服务；Docker Compose 可选 |
 | CI | 目标为 GitHub Actions Linux + 自托管 Windows Runner。**当前只有 Linux 一档在跑**，自托管 Windows Runner 尚未搭建；Windows 与 macOS 开发机上的引擎行为都靠人工执行 [环境烟测清单](../../docs/runbooks/environment-smoke-test.md) |
 | 云环境 | 腾讯云香港计算与 COS；本地 + 一个长期测试环境 |
@@ -124,10 +124,11 @@ export GODOT_AI_DISABLE_TELEMETRY=true
 | 目录 | 平台资产放 `game/content/assets/<类别>/`（如 `characters/`）；`game/addons/` 属第三方插件，**不受平台预算约束** |
 | 贴图 | `.glb.import` 必须设 `gltf/embedded_image_handling=3`（**Embed as Uncompressed**）。默认值 `1`（Extract）会把内嵌贴图解包成外部图片文件，同一份像素入库两遍、LFS 配额翻倍，也让"一个资产一个文件"失效 |
 | 入库形态 | 每个资产只有两个文件：`.glb`（LFS）与 `.glb.import`。出现同名解包贴图即为配置回退 |
-| 预算 | 单个资产必须过 [CD-11 §8.1](../10-product/11-scope-and-platforms.md)。由 `npm run asset-budget` 机械判定并进 CI |
+| 预算 | 单个资产必须过 [CD-11 §8.1](../10-product/11-scope-and-platforms.md)。由 `npm run asset-budget` 机械判定并进 CI。扫描跳过 `addons/`（第三方插件）与 `_source_refs/`（见下行），并认 `.gdignore`（**递归**，与 Godot 4.7.2 实测一致）；显式指定路径时这两层跳过都不生效 |
 | 面数档位 | 由 glTF 是否含 `skin` 决定，**不看文件名** |
 | 判不出就拒 | 认不出的贴图格式、非三角 primitive、LFS 指针一律失败，不放过 |
 | 烘焙 | 生成产物入库前先按 [资产烘焙 runbook](../../docs/runbooks/asset-bake.md) 压到预算内 |
+| 生成源产物 | AI 生成工具（TRELLIS、混元 3D 等）的原始 `.glb` 与 4K 源贴图**不入库、不进 LFS**，只留本地，落点 `game/content/assets/_source_refs/`。它们按定义过不了 [CD-11 §8.1](../10-product/11-scope-and-platforms.md)，LFS 配额应留给**入库物**。该目录带自己的 `.gitignore`（扩展名清单，规则随目录走），只放行 `MANIFEST.md` / `.gitignore` / `.gdignore` 三份文本。两层分工：`MANIFEST.md` 是生成排队依据，有留存价值；`.gdignore` 挡**本机编辑器导入**，`.gitignore` 挡**入库**，少任何一层都不成立 |
 | 包内可读 | 新资产必须被 `--package-check` 覆盖到（**实例化**判定，不是 `file_exists`）：`.glb` 进包后是导入产物，导出过滤配错只在这里暴露 |
 
 **内嵌未压缩只解决入库形态，不解决显存。** 512² 三张未压缩贴图在运行时仍占约 3 MB VRAM；KTX2 / Basis 路径未测（见[烘焙试验 §5.2](../../docs/plans/asset-bake-trial-2026-08.md)"编码格式只省磁盘，不省显存"）。
