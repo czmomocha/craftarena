@@ -54,45 +54,58 @@ Worktree 端口偏移见 README「并行工作区」；本文件不复述端口�
 
 ---
 
-## 本刀：E9 剩余 + E3/E6 回写（C5 第 13 章）
+## 本刀：E1 真导出（C5 第 14 章）
 
-把控制面 `server.ts` / `database.ts`、MatchHost `registry.ts`、`visual_asset_catalog.gd`、`match_snapshot_map.gd` 拆到 400 行以下。公开 API 与 `--bot-run` 步数不变。人类把现有网络桩升为 E3 锁定值（**不改数字**），并签署 E6 = 好玩。**没有新的窗口外观，控制面无新 GUI**。不需要 `npm run dev`。
+按 [导出包核查清单](desktop-export-check.md) 打出 Windows 包，并修到 `--package-check` 全绿。**真机是导出的 `CraftArena.exe`，不是编辑器里的 `--path game`。** Headless 自检不能代替开窗。不需要 `npm run dev`。
 
-1. 仓库根目录跑 GUT fast 层（或至少 `test_c5_e9_remaining_split.gd`、`test_visual_asset_sharing.gd`）：
-   ```bash
-   npm run test:gut:fast
-   ```
-   - 预期：全绿；新拆分用例断言视觉目录 / 快照映射各文件均 < 400 行。
-   - 失败：`try_instantiate` / `apply_players` 红 ⇒ 门面把公开方法转丢了。
-
-2. 官方课步数：
+1. 若本机还没有本分支刚打的包，仓库根目录导出 Windows：
    ```powershell
-   & $env:GODOT4_CONSOLE --headless --path game -- --bot-run
+   & $env:GODOT4_CONSOLE --headless --path game --export-release "Windows Desktop" "../export/windows/CraftArena.exe"
    ```
-   - 预期：三张课仍是 `completable`，步数 **5 / 5 / 12**。
-   - 失败：步数变了或 `not_completable` ⇒ 拆分误改了权威仿真。
+   - 预期：退出码 0；`export\windows\CraftArena.exe` 与 `.pck` 都在。
+   - 失败：缺导出模板、或 `Cannot export project with preset` ⇒ 先看清单 §1 / §5。
 
-3. 大厅 **F5**（不要 F6）。点 **单人试玩**，WASD 走两步，空格跳一下。
-   - 预期：角色视觉还在（不是突然只剩 1 米盒）；能走、能跳。
-   - 失败：人消失、不能动、或跳不起来 ⇒ 快照映射 / 视觉目录委托坏了。
+2. 包内自检（机器判定，先于开窗）：
+   ```powershell
+   & "export\windows\CraftArena.exe" --headless -- --package-check
+   ```
+   - 预期：一行 JSON，`ok=true`，`failures=[]`，`locale_banner_zh` 为 **离线试玩，成绩不上传**，七条 `*_visual_loadable` 为 true。
+   - 失败：`locale_table_loadable` 红且横幅变成键名 ⇒ `UiCopy` 又绕开了 `get_csv_line`。视觉项红 ⇒ `.glb` 没进包或贴合失败。
+
+3. 双击 `export\windows\CraftArena.exe`（**不要**加 `--headless`）。
+   - 预期：出现大厅窗口。本机 locale 为 `zh*` 时窗题是 **机关狂奔**，按钮从左到右含 **单人试玩**；其余 locale 仍是 **Traprush** / **Solo play**。状态行含 `join=idle`、`play=idle`、`tls=off`、`course=3/5/1`。
+   - 失败：闪退、黑窗、只有控制台、或窗题/按钮变成 `craft_arena.ui.window_traprush` / `craft_arena.ui.solo_play`。
+
+4. 点 **单人试玩** / **Solo play**，点窗口内部一次，按 WASD 与空格。
+   - 预期：角色视觉会走、会跳、会落回脚下地块（不是突然只剩 1 米盒）。
+   - 失败：人消失、不能动、或跳不起来 ⇒ 导出包里的视觉 / 输入与源码大厅不一致。
 
 ### 本刀不测
 
 - 解冻令、协议帧、Schema、官方课 JSON；
 - 改 `SNAPSHOT_EVERY_TICKS` / `HEARTBEAT_EVERY_TICKS` / `INTERP_STEP` 数字；
-- 在线匹配、控制面 GUI（本刀无新窗口）。
+- 在线匹配、控制面 GUI；
+- 字体入包、触控 UI。
 
 ### 诚实边界
 
-- 冻结令仍在；E3 锁定的是现桩，不是新测出来的 Hz；
-- 测试 / addons / GUT 不在 E9 本口径；
+- 冻结令仍在；E1 只证明包能打出来且清单全绿；
+- Web 包本刀已导出，本地 http.server 开窗仍须人做（清单 §4.2）；
 - 扫掠步数仍无上限（宪法第十七条缺口）。
 
 ---
 
-## 上一刀：编辑壳 + 拓扑编译器（C5 第 11–12 章）
+## 上一刀：E9 剩余 + E3/E6 回写（C5 第 13 章）
 
-> **本节随上一章 PR 提交；验当前 PR 只看上面的「本刀」。**
+> **本节随 [#217](https://github.com/czmomocha/craftarena/pull/217) 合入；验当前 PR 只看上面的「本刀」。**
+
+把控制面 `server.ts` / `database.ts`、MatchHost `registry.ts`、`visual_asset_catalog.gd`、`match_snapshot_map.gd` 拆到 400 行以下。公开 API 与 `--bot-run` 步数不变。人类把现有网络桩升为 E3 锁定值（**不改数字**），并签署 E6 = 好玩。**没有新的窗口外观**。
+
+---
+
+## 上上刀：编辑壳 + 拓扑编译器（C5 第 11–12 章）
+
+> **本节已随上一章 PR 合入，保留只为追溯。验当前 PR 只看上面的「本刀」。**
 
 第 11 章把 `AuthoringEditorShell` 拆成 chrome / place / follow。第 12 章把 `TraprushTopologyCompiler` 拆成 bags / fields。全部压到 400 行以下。公开 API 与 `--bot-run` 步数不变。**没有新的窗口外观**。不需要 `npm run dev`。
 

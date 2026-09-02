@@ -332,7 +332,7 @@ AI 生成代码必须比普通手写代码有**更强的自动化证据**，因�
 | 门禁项 | 状态 | 实现方式 |
 |---|---|---|
 | 依赖与许可证变化检查 | 未实现 | 无自动化 diff。引入依赖必须人类批准；许可证不进 CI |
-| Windows/Android 导出烟测 | 未实现 | C1 有 Windows / Linux Headless / Web 导出预设与[包内核查清单](../../docs/runbooks/desktop-export-check.md)，人工跑，不在 CI。不做 Android 导出（纠偏方案 C1 不做移动端） |
+| Windows/Android 导出烟测 | 人工已跑（E1，不在 CI） | C1 有 Windows / Linux Headless / Web 导出预设与[包内核查清单](../../docs/runbooks/desktop-export-check.md)。2026-09-02 Windows `--package-check` `ok=true`。不做 Android 导出（纠偏方案 C1 不做移动端）；不把导出放进 CI（宪法第二十四条） |
 | 内容发布和回滚演练 | 未实现 | M4 冻结；无签名发布管线、无 `latest` 指针演练 |
 
 ### 4.4 发布候选

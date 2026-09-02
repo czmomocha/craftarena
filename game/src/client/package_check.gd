@@ -106,6 +106,10 @@ static func _body(checks: Dictionary, failures: Array[String]) -> Dictionary:
 		"crate_visual_path": SharedVisualAssetCatalog.CRATE_SCENE_PATH,
 		"hazard_roller_visual_path": SharedVisualAssetCatalog.HAZARD_ROLLER_SCENE_PATH,
 		"locale_table_path": UiCopy.TABLE_PATH,
+		"locale_file_exists": FileAccess.file_exists(UiCopy.TABLE_PATH),
+		"locale_open_ok": _locale_open_ok(),
+		"locale_banner_zh": UiCopy.text(UiCopy.OFFLINE_BANNER, "zh_CN"),
+		"locale_parse": UiCopy.parse_stats(),
 		"user_data_dir": OS.get_user_data_dir(),
 		"draft_path": ProjectSettings.globalize_path(AuthoringDraftStoreGd.DEFAULT_PATH),
 	}
@@ -132,7 +136,16 @@ static func _courses_readable() -> bool:
 	return true
 
 
+static func _locale_open_ok() -> bool:
+	var file: FileAccess = FileAccess.open(UiCopy.TABLE_PATH, FileAccess.READ)
+	if file == null:
+		return false
+	file.close()
+	return true
+
+
 static func _locale_table_loadable() -> bool:
+	UiCopy.reset_for_tests()
 	if not UiCopy.ensure_loaded():
 		return false
 	var banner: String = UiCopy.text(UiCopy.OFFLINE_BANNER, "zh_CN")

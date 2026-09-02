@@ -32,6 +32,27 @@ func test_offline_banner_zh_is_the_cd13_sentence() -> void:
 	assert_eq(UiCopyGd.text(UiCopyGd.OFFLINE_BANNER, "zh_CN"), CD13_ZH)
 	assert_eq(UiCopyGd.text(UiCopyGd.OFFLINE_BANNER, "en"), CD13_EN)
 	assert_eq(MatchOfflineSessionGd.BANNER_KEY, UiCopyGd.OFFLINE_BANNER)
+	# The exported `.gdc` copy-on-assign bug looks like "file present, key
+	# returned". This assertion is the editor-side twin of package-check.
+	assert_true(UiCopyGd.has_locale("zh_CN"))
+	assert_ne(UiCopyGd.text(UiCopyGd.OFFLINE_BANNER, "zh_CN"), UiCopyGd.OFFLINE_BANNER)
+
+
+func test_loader_uses_engine_csv_line() -> void:
+	var file: FileAccess = FileAccess.open("res://src/shared/ui_copy.gd", FileAccess.READ)
+	assert_not_null(file)
+	if file == null:
+		return
+	var source: String = file.get_as_text()
+	file.close()
+	assert_true(
+		source.contains("get_csv_line"),
+		"导出后的 .gdc 里手写拆行会拆出 0 行，生产路径必须走 get_csv_line"
+	)
+	assert_false(
+		source.contains("source.substr(i, 1)"),
+		"不要把已证伪的按字符拆行器留在生产路径"
+	)
 
 
 func test_quoted_comma_survives_csv() -> void:
