@@ -24,7 +24,7 @@ func mount(p_map: AuthoringPreviewMap) -> void:
 	add_child(_list)
 	var focus: Button = Button.new()
 	focus.name = FOCUS_NAME
-	focus.text = "Focus issue"
+	focus.text = UiCopy.text(UiCopy.FOCUS_ISSUE)
 	focus.pressed.connect(focus_selected)
 	add_child(focus)
 

@@ -96,7 +96,7 @@ func test_offline_finish_does_not_allow_online_writes() -> void:
 	assert_false(offline.allows_settlement())
 	assert_false(offline.allows_online_writes())
 	var banner: String = str(offline.status_view().get("banner", ""))
-	assert_eq(banner, MatchOfflineSession.BANNER)
+	assert_eq(banner, UiCopy.text(MatchOfflineSession.BANNER_KEY))
 
 
 func test_disconnect_keeps_authority_and_drops_queued_command() -> void:

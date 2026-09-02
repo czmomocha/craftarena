@@ -33,7 +33,7 @@ extends Node
 
 const OutOfRangeReset := preload("res://src/games/traprush/out_of_range_reset.gd")
 const PlayStubs := preload("res://src/games/traprush/play_stubs.gd")
-const TITLE: String = "Preview"
+const TITLE: String = UiCopy.WINDOW_PREVIEW
 const WINDOW_SIZE: Vector2i = Vector2i(1280, 720)
 const WINDOW_MIN_SIZE: Vector2i = Vector2i(960, 540)
 const PLAY_NAME: String = "Play"
@@ -399,7 +399,7 @@ func _ensure_window() -> void:
 	if host_viewport != null:
 		host_viewport.gui_embed_subwindows = true
 	window = Window.new()
-	window.title = TITLE
+	window.title = UiCopy.text(TITLE)
 	window.size = WINDOW_SIZE
 	window.min_size = WINDOW_MIN_SIZE
 	window.mode = Window.MODE_MAXIMIZED
@@ -420,13 +420,13 @@ func _ensure_window() -> void:
 	var action_row: HBoxContainer = HBoxContainer.new()
 	action_row.name = "PlayActions"
 	overlay.add_child(action_row)
-	_add_button(action_row, PLAY_NAME, "Play", _on_play)
-	_add_button(action_row, STOP_NAME, "Stop", _on_stop)
-	_add_button(action_row, RESET_NAME, "Reset", _on_reset)
-	_add_button(action_row, USE_ITEM_NAME, "Use item", _on_use_item)
-	_add_button(action_row, SPRINT_NAME, "Sprint", _on_sprint)
-	_add_button(action_row, JUMP_NAME, "Jump", _on_jump)
-	_add_button(action_row, ADVANCE_TICK_NAME, "Advance tick", _on_advance_tick)
+	_add_button(action_row, PLAY_NAME, UiCopy.PLAY, _on_play)
+	_add_button(action_row, STOP_NAME, UiCopy.STOP, _on_stop)
+	_add_button(action_row, RESET_NAME, UiCopy.RESET, _on_reset)
+	_add_button(action_row, USE_ITEM_NAME, UiCopy.USE_ITEM, _on_use_item)
+	_add_button(action_row, SPRINT_NAME, UiCopy.SPRINT, _on_sprint)
+	_add_button(action_row, JUMP_NAME, UiCopy.JUMP, _on_jump)
+	_add_button(action_row, ADVANCE_TICK_NAME, UiCopy.ADVANCE_TICK, _on_advance_tick)
 	map = AuthoringPreviewMap.new()
 	map.name = _MAP_NAME
 	window.add_child(map)
@@ -536,10 +536,10 @@ func _process(_delta: float) -> void:
 	_apply_play_anim()
 
 
-func _add_button(row: BoxContainer, node_name: String, text: String, handler: Callable) -> void:
+func _add_button(row: BoxContainer, node_name: String, copy_key: String, handler: Callable) -> void:
 	var button: Button = Button.new()
 	button.name = node_name
-	button.text = text
+	button.text = UiCopy.text(copy_key)
 	button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	button.focus_mode = Control.FOCUS_NONE
 	button.pressed.connect(handler)

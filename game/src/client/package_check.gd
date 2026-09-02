@@ -60,6 +60,7 @@ static func _run_checks(failures: Array[String]) -> Dictionary:
 	_record(checks, failures, "finish_gate_visual_loadable", _fitted_prop_loadable(SharedVisualAssetCatalog.FINISH_GATE_SCENE_PATH), true)
 	_record(checks, failures, "crate_visual_loadable", _fitted_prop_loadable(SharedVisualAssetCatalog.CRATE_SCENE_PATH), true)
 	_record(checks, failures, "hazard_roller_visual_loadable", _fitted_prop_loadable(SharedVisualAssetCatalog.HAZARD_ROLLER_SCENE_PATH), true)
+	_record(checks, failures, "locale_table_loadable", _locale_table_loadable(), true)
 	_record(checks, failures, "user_draft_roundtrip", _user_draft_roundtrip(), true)
 	_record(checks, failures, "no_mcp_autoload", not _autoload_names().has(MCP_AUTOLOAD), true)
 	_record(checks, failures, "runtime_material", _runtime_material_ok(), true)
@@ -104,6 +105,7 @@ static func _body(checks: Dictionary, failures: Array[String]) -> Dictionary:
 		"finish_gate_visual_path": SharedVisualAssetCatalog.FINISH_GATE_SCENE_PATH,
 		"crate_visual_path": SharedVisualAssetCatalog.CRATE_SCENE_PATH,
 		"hazard_roller_visual_path": SharedVisualAssetCatalog.HAZARD_ROLLER_SCENE_PATH,
+		"locale_table_path": UiCopy.TABLE_PATH,
 		"user_data_dir": OS.get_user_data_dir(),
 		"draft_path": ProjectSettings.globalize_path(AuthoringDraftStoreGd.DEFAULT_PATH),
 	}
@@ -128,6 +130,13 @@ static func _courses_readable() -> bool:
 		if AuthoringDocumentGd.load_from_path(path) == null:
 			return false
 	return true
+
+
+static func _locale_table_loadable() -> bool:
+	if not UiCopy.ensure_loaded():
+		return false
+	var banner: String = UiCopy.text(UiCopy.OFFLINE_BANNER, "zh_CN")
+	return banner != "" and banner != UiCopy.OFFLINE_BANNER
 
 
 ## Instantiating, not just ResourceLoader.exists: a `.glb` reaches the package as

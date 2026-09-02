@@ -40,7 +40,7 @@ func after_each() -> void:
 
 func test_open_window_quick_play_ready_begins_play() -> void:
 	_shell = _open_shell()
-	assert_eq(_shell.window.title, MatchLobbyShell.TITLE)
+	assert_eq(_shell.window.title, UiCopy.text(MatchLobbyShell.TITLE))
 	assert_eq(_shell.window.size, MatchLobbyShell.WINDOW_SIZE)
 	assert_eq(_shell.window.min_size, MatchLobbyShell.WINDOW_MIN_SIZE)
 	assert_eq(_shell.window.mode, Window.MODE_MAXIMIZED)
@@ -501,7 +501,7 @@ func test_solo_play_maps_local_authority_without_http() -> void:
 	assert_eq(_shell.map.player_count(), 1)
 	assert_eq(_shell.standings.standing_count(), 1)
 	assert_eq(_shell.standings.standing_node(0).text, "*#1 P0 1/3")
-	assert_true(_shell.status_label_text().contains(MatchOfflineSession.BANNER))
+	assert_true(_shell.status_label_text().contains(UiCopy.text(MatchOfflineSession.BANNER_KEY)))
 	assert_true(_shell.status_label_text().contains("offline=playing"))
 	assert_true(_shell.status_label_text().contains("standings=#1s0 mvp=-"))
 	assert_false(_shell.try_quick())
@@ -516,7 +516,7 @@ func test_solo_play_maps_local_authority_without_http() -> void:
 	assert_eq(_shell.map.player_count(), 0)
 	assert_eq(_shell.standings.standing_count(), 0)
 	assert_eq(_shell.crates.crate_count(), 1)
-	assert_false(_shell.status_label_text().contains(MatchOfflineSession.BANNER))
+	assert_false(_shell.status_label_text().contains(UiCopy.text(MatchOfflineSession.BANNER_KEY)))
 	assert_false(_shell.allows_settlement())
 	assert_false(_shell.allows_online_writes())
 

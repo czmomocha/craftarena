@@ -1,0 +1,34 @@
+keys,en,zh_CN
+craft_arena.ui.window_traprush,Traprush,机关狂奔
+craft_arena.ui.window_editor,Editor,编辑器
+craft_arena.ui.window_preview,Preview,预览
+craft_arena.ui.quick_play,Quick play,快速游戏
+craft_arena.ui.create_room,Create room,创建房间
+craft_arena.ui.join_room,Join room,加入房间
+craft_arena.ui.solo_play,Solo play,单人试玩
+craft_arena.ui.cancel,Cancel,取消
+craft_arena.ui.poll,Poll,查询队列
+craft_arena.ui.sprint,Sprint,冲刺
+craft_arena.ui.apply_server,Apply server,应用服务器
+craft_arena.ui.server_host,Server host,服务器地址
+craft_arena.ui.room_code,Room code,房间码
+craft_arena.ui.offline_banner,"Offline play, scores are not uploaded",离线试玩，成绩不上传
+craft_arena.ui.undo,Undo,撤销
+craft_arena.ui.redo,Redo,重做
+craft_arena.ui.preview,Preview,预览
+craft_arena.ui.play,Play,开始
+craft_arena.ui.stop,Stop,停止
+craft_arena.ui.reset,Reset,重置
+craft_arena.ui.use_item,Use item,使用道具
+craft_arena.ui.jump,Jump,跳跃
+craft_arena.ui.advance_tick,Advance tick,推进一步
+craft_arena.ui.place_checkpoint,Place checkpoint,放置检查点
+craft_arena.ui.place_portal,Place portal,放置传送门
+craft_arena.ui.remove_last,Remove last,删除上一个
+craft_arena.ui.place_solid,Place solid,放置固体
+craft_arena.ui.place_hazard,Place hazard,放置机关
+craft_arena.ui.place_crate,Place crate,放置箱子
+craft_arena.ui.place_finish,Place finish,放置终点
+craft_arena.ui.floor_up,Floor up,上一层
+craft_arena.ui.floor_down,Floor down,下一层
+craft_arena.ui.focus_issue,Focus issue,聚焦问题

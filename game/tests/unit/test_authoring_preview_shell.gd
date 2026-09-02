@@ -25,7 +25,7 @@ func test_open_window_keeps_authoring_session() -> void:
 	add_child(_shell)
 	assert_true(_shell.open_from(session))
 	assert_true(_shell.is_window_visible())
-	assert_eq(_shell.window.title, AuthoringPreviewShell.TITLE)
+	assert_eq(_shell.window.title, UiCopy.text(AuthoringPreviewShell.TITLE))
 	assert_eq(_shell.window.size, AuthoringPreviewShell.WINDOW_SIZE)
 	assert_eq(_shell.window.min_size, AuthoringPreviewShell.WINDOW_MIN_SIZE)
 	assert_eq(_shell.window.mode, Window.MODE_MAXIMIZED)

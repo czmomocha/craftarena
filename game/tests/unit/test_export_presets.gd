@@ -8,7 +8,7 @@ extends GutTest
 ## 第一次真导出暴露了两件事，这里各留一条断言：
 ## 1. `res://addons/godot_ai/` 的脚本会被打进 release 包（`plugin.cfg` 不是资源、
 ##    不进包，所以按文件探测会误判为干净）；
-## 2. 官方赛道是普通 `.json`，不是引擎资源，不写 include_filter 就不会进包。
+## 2. 官方赛道 JSON 与本地化 CSV 都是普通文件，不是引擎资源，不写 include_filter 就不会进包。
 
 const PRESETS_PATH: String = "res://export_presets.cfg"
 
@@ -17,6 +17,7 @@ const EXPECTED_PLATFORMS: PackedStringArray = ["Windows Desktop", "Linux", "Web"
 
 const REQUIRED_EXCLUDES: PackedStringArray = ["addons/*", "tests/*"]
 const REQUIRED_INCLUDE: String = "content/official/*.json"
+const REQUIRED_LOCALE_INCLUDE: String = "content/locale/*.csv"
 
 
 func _load_presets() -> ConfigFile:
@@ -68,6 +69,10 @@ func test_every_preset_ships_the_official_courses() -> void:
 		assert_true(
 			include.contains(REQUIRED_INCLUDE),
 			"%s 不带 %s，官方赛道 JSON 不会进包" % [section, REQUIRED_INCLUDE]
+		)
+		assert_true(
+			include.contains(REQUIRED_LOCALE_INCLUDE),
+			"%s 不带 %s，本地化 CSV 不会进包" % [section, REQUIRED_LOCALE_INCLUDE]
 		)
 
 

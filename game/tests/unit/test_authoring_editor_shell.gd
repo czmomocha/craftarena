@@ -24,7 +24,7 @@ func test_place_checkpoint_on_lattice_and_keeps_session() -> void:
 	add_child(_shell)
 	assert_true(_shell.open())
 	assert_true(_shell.is_window_visible())
-	assert_eq(_shell.window.title, AuthoringEditorShell.TITLE)
+	assert_eq(_shell.window.title, UiCopy.text(AuthoringEditorShell.TITLE))
 	assert_false(_shell.window.exclusive)
 	assert_false(_shell.window.transient)
 	assert_true(_shell.try_place_checkpoint(1, 0, 0, 0, 0))

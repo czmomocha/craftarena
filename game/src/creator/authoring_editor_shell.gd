@@ -15,7 +15,7 @@ extends Node
 
 signal world_committed
 
-const TITLE: String = "Editor"
+const TITLE: String = UiCopy.WINDOW_EDITOR
 const ACTOR_ID: int = 2
 const CONTENT_VERSION: String = "content-v1"
 const TRACE_ID: String = "trace-authoring-editor"
@@ -373,7 +373,7 @@ func _ensure_window() -> void:
 		if host_viewport != null:
 			host_viewport.gui_embed_subwindows = true
 	window = Window.new()
-	window.title = TITLE
+	window.title = UiCopy.text(TITLE)
 	window.size = Vector2i(640, 560)
 	window.exclusive = false
 	window.transient = false
@@ -398,9 +398,9 @@ func _ensure_window() -> void:
 	var action_row: HBoxContainer = HBoxContainer.new()
 	action_row.name = "SharedActions"
 	root.add_child(action_row)
-	_add_button(action_row, _UNDO_NAME, "Undo", _on_undo)
-	_add_button(action_row, _REDO_NAME, "Redo", _on_redo)
-	_add_button(action_row, _PREVIEW_NAME, "Preview", _on_preview)
+	_add_button(action_row, _UNDO_NAME, UiCopy.UNDO, _on_undo)
+	_add_button(action_row, _REDO_NAME, UiCopy.REDO, _on_redo)
+	_add_button(action_row, _PREVIEW_NAME, UiCopy.PREVIEW, _on_preview)
 	map = AuthoringPreviewMap.new()
 	map.name = _MAP_NAME
 	window.add_child(map)
@@ -422,10 +422,10 @@ func _rebuild_map(force: bool = false) -> void:
 		validator.refresh(session.world)
 
 
-func _add_button(row: BoxContainer, node_name: String, text: String, handler: Callable) -> void:
+func _add_button(row: BoxContainer, node_name: String, copy_key: String, handler: Callable) -> void:
 	var button: Button = Button.new()
 	button.name = node_name
-	button.text = text
+	button.text = UiCopy.text(copy_key)
 	button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	button.pressed.connect(handler)
 	row.add_child(button)

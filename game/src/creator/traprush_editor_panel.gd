@@ -83,21 +83,21 @@ func mount(p_host: AuthoringEditorShell) -> void:
 	var place_row: HBoxContainer = HBoxContainer.new()
 	place_row.name = "PlaceRow"
 	add_child(place_row)
-	_add_button(place_row, PLACE_CHECKPOINT_NAME, "Place checkpoint", place_next_checkpoint)
-	_add_button(place_row, PLACE_PORTAL_NAME, "Place portal", place_next_portal)
-	_add_button(place_row, REMOVE_LAST_NAME, "Remove last", remove_last)
+	_add_button(place_row, PLACE_CHECKPOINT_NAME, UiCopy.PLACE_CHECKPOINT, place_next_checkpoint)
+	_add_button(place_row, PLACE_PORTAL_NAME, UiCopy.PLACE_PORTAL, place_next_portal)
+	_add_button(place_row, REMOVE_LAST_NAME, UiCopy.REMOVE_LAST, remove_last)
 	var occupancy_row: HBoxContainer = HBoxContainer.new()
 	occupancy_row.name = "OccupancyRow"
 	add_child(occupancy_row)
-	_add_button(occupancy_row, PLACE_SOLID_NAME, "Place solid", place_next_solid)
-	_add_button(occupancy_row, PLACE_HAZARD_NAME, "Place hazard", place_next_hazard)
-	_add_button(occupancy_row, PLACE_CRATE_NAME, "Place crate", place_next_crate)
-	_add_button(occupancy_row, PLACE_FINISH_NAME, "Place finish", place_next_finish)
+	_add_button(occupancy_row, PLACE_SOLID_NAME, UiCopy.PLACE_SOLID, place_next_solid)
+	_add_button(occupancy_row, PLACE_HAZARD_NAME, UiCopy.PLACE_HAZARD, place_next_hazard)
+	_add_button(occupancy_row, PLACE_CRATE_NAME, UiCopy.PLACE_CRATE, place_next_crate)
+	_add_button(occupancy_row, PLACE_FINISH_NAME, UiCopy.PLACE_FINISH, place_next_finish)
 	var floor_row: HBoxContainer = HBoxContainer.new()
 	floor_row.name = "FloorRow"
 	add_child(floor_row)
-	_add_button(floor_row, FLOOR_UP_NAME, "Floor up", floor_up)
-	_add_button(floor_row, FLOOR_DOWN_NAME, "Floor down", floor_down)
+	_add_button(floor_row, FLOOR_UP_NAME, UiCopy.FLOOR_UP, floor_up)
+	_add_button(floor_row, FLOOR_DOWN_NAME, UiCopy.FLOOR_DOWN, floor_down)
 
 
 func place_next_checkpoint() -> bool:
@@ -219,10 +219,10 @@ func _refresh_host_status() -> void:
 		host.refresh_status()
 
 
-func _add_button(row: HBoxContainer, node_name: String, text: String, handler: Callable) -> void:
+func _add_button(row: HBoxContainer, node_name: String, copy_key: String, handler: Callable) -> void:
 	var button: Button = Button.new()
 	button.name = node_name
-	button.text = text
+	button.text = UiCopy.text(copy_key)
 	button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	button.pressed.connect(handler)
 	row.add_child(button)
