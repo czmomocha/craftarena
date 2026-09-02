@@ -61,6 +61,19 @@ func test_wasd_axes_map_to_world_xz() -> void:
 	assert_true(no_step.is_empty())
 
 
+func test_vector_payload_matches_boolean_axes() -> void:
+	var from_axes: Dictionary = AuthoringPreviewShell.move_payload_from_axes(
+		true, false, false, true, CELL
+	)
+	var from_vector: Dictionary = AuthoringPreviewShell.move_payload_from_vector(1.0, -1.0, CELL)
+	var weak_right: Dictionary = AuthoringPreviewShell.move_payload_from_vector(0.2, 0.0, CELL)
+	var right: Dictionary = AuthoringPreviewShell.move_payload_from_axes(
+		false, false, false, true, CELL
+	)
+	assert_eq(from_vector, from_axes)
+	assert_eq(weak_right, right)
+
+
 func test_play_move_changes_xz_without_tick_or_settlement() -> void:
 	var preview: AuthoringPreview = _connected_course()
 	assert_true(preview.try_start_play(1, PLAY_RADIUS, PLAY_RADIUS))

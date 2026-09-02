@@ -50,6 +50,10 @@ var play_respawn_stun_ticks: int = 0
 var play_range_half: int = 0
 
 
+static func move_vector(move_x: float, move_z: float, step: int) -> Dictionary:
+	return MatchMoveFacingGd.move_vector(move_x, move_z, step)
+
+
 static func move_axes(forward: bool, back: bool, left: bool, right: bool, step: int) -> Dictionary:
 	return MatchMoveFacingGd.move_axes(forward, back, left, right, step)
 
@@ -131,14 +135,19 @@ func try_encode_intent(intent_name: String, dx: int, dz: int, yaw_bam: int) -> P
 	return bytes
 
 
-func try_encode_move_axes(forward: bool, back: bool, left: bool, right: bool, step: int) -> PackedByteArray:
-	var payload: Dictionary = move_axes(forward, back, left, right, step)
+func try_encode_move_vector(move_x: float, move_z: float, step: int) -> PackedByteArray:
+	var payload: Dictionary = move_vector(move_x, move_z, step)
 	if payload.is_empty():
 		return PackedByteArray()
 	var dx: int = payload.get("dx", 0)
 	var dz: int = payload.get("dz", 0)
 	var yaw_bam: int = payload.get("yaw_bam", _YAW_OMITTED)
 	return try_encode_intent(PlayerIntentNames.MOVE, dx, dz, yaw_bam)
+
+
+func try_encode_move_axes(forward: bool, back: bool, left: bool, right: bool, step: int) -> PackedByteArray:
+	var vector: Vector2 = PlayInput.vector_from_axes(forward, back, left, right)
+	return try_encode_move_vector(vector.x, vector.y, step)
 
 
 func try_apply_command(bytes: PackedByteArray) -> bool:

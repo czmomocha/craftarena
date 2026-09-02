@@ -11,7 +11,8 @@ extends RefCounted
 ## local overlay via MatchLocalPredict; a newer snapshot tick hard-snaps.
 ## After a close, a new ticket from reconnect can try_begin again.
 ## try_leave returns the session to idle and drops followed snapshots.
-## WASD Move writes discrete 8-way yaw_bam; 0 is face -Z, not omitted.
+## WASD Move writes discrete 8-way yaw_bam via PlayInput then MatchMoveFacing;
+## 0 is face -Z, not omitted. Analog magnitude is not a product speed.
 
 const MatchFrameCodec := preload("res://src/shared/protocol/match_frame_codec.gd")
 const MatchJoinSessionGd := preload("res://src/client/match_join_session.gd")
@@ -65,6 +66,10 @@ static func tls_client_options(url: String) -> TLSOptions:
 	if not uses_tls(url):
 		return null
 	return TLSOptions.client_unsafe()
+
+
+static func move_vector(move_x: float, move_z: float, step: int) -> Dictionary:
+	return MatchMoveFacingGd.move_vector(move_x, move_z, step)
 
 
 static func move_axes(forward: bool, back: bool, left: bool, right: bool, step: int) -> Dictionary:
@@ -158,14 +163,19 @@ func try_encode_intent(intent_name: String, dx: int, dz: int, yaw_bam: int) -> P
 	return bytes
 
 
-func try_encode_move_axes(forward: bool, back: bool, left: bool, right: bool, step: int) -> PackedByteArray:
-	var payload: Dictionary = move_axes(forward, back, left, right, step)
+func try_encode_move_vector(move_x: float, move_z: float, step: int) -> PackedByteArray:
+	var payload: Dictionary = move_vector(move_x, move_z, step)
 	if payload.is_empty():
 		return PackedByteArray()
 	var dx: int = payload.get("dx", 0)
 	var dz: int = payload.get("dz", 0)
 	var yaw_bam: int = payload.get("yaw_bam", _YAW_OMITTED)
 	return try_encode_intent(PlayerIntentNames.MOVE, dx, dz, yaw_bam)
+
+
+func try_encode_move_axes(forward: bool, back: bool, left: bool, right: bool, step: int) -> PackedByteArray:
+	var vector: Vector2 = PlayInput.vector_from_axes(forward, back, left, right)
+	return try_encode_move_vector(vector.x, vector.y, step)
 
 
 func status_view() -> Dictionary:

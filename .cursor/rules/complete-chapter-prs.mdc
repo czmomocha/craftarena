@@ -15,12 +15,12 @@ alwaysApply: true
 
 真机：PR Test plan 与 [章节真机清单](docs/runbooks/chapter-device-check.md) 本刀必须是编号步骤（怎么开、点什么、期望 / 失败）；禁止只写「真机再看一眼」。无 GUI 的章写「无」加原因。人工检查，不是 CI 门禁。口径见 [CD-52 §3.2](Confirmed-docs/50-engineering/52-ai-workflow.md)。
 
-- 做（本刀 = 纠偏 C4：按袋类型把 5 个已烘焙占用视觉接到大厅与 Preview）：检查点垫 + 检查点门、终点门、箱子、滚柱入库并接线。垫走 `fit_tile_on_cell`（顶面对齐），门 / 终点 / 箱 / 滚柱走 `fit_prop_on_cell`（脚底对齐占位盒底）。占位盒 `layers = 0` 退出渲染，进度色与 D4 危险色走 `material_overlay`。箱与滚柱**保留**橙色 / 洋红 overlay（人类 2026-09-02 拍板）。传送门仍是色块。`--package-check` 对 5 个资产做实例化 + 贴合判定。**数值一个不改**：GUT 全绿 + `--bot-run` 三张课步数与动作序列逐项不变（5 / 5 / 12）。
-- 不做：按 `asset_id` 解析；改 Schema / 官方课 JSON；`spawn_grid` / `block_slope` / `bridge`；传送门 GLB；靠拉伸修「门比人矮 / 滚柱超格」；字体与本地化键；D7 输入抽象；C5 拆壳；角色胶囊进资产表。
-- 仍欠着（不因本章合入而消失）：按 `asset_id` 解析视觉；传送门模型；远端协议层 RTT 回填；C3 网络参数锁定；E6 有美术之后的可玩性签署；扫掠取样代价无上限（宪法第十七条缺口）；`match_lobby_shell.gd` 超 E9 行数上限。
-- 仍不做：把 `assets` 袋当成视觉清单。视觉永远不进 bundle，客户端按袋类型（将来按 `asset_id`）取 `latest`。
+- 做（本刀 = 纠偏 C4：D7 输入抽象）：大厅与 Preview 的玩法采样改为方向向量 + 上升沿动作事件。键盘是适配器；`shove` / `sprint` / `reset_checkpoint` 进 Input Map（F / Shift / R）。量化成 8 向 `dx/dz` 仍走 `MatchMoveFacing`，模拟量按符号变成整步，不把未锁定的模拟速度写进 MoveIntent。**数值一个不改**：GUT 全绿 + `--bot-run` 三张课步数与动作序列逐项不变（5 / 5 / 12）。
+- 不做：触控 UI / 虚拟摇杆；按键重映射界面；手柄承诺；改协议 / Schema / 官方课 JSON；改 `play_move_step`；Preview Move 加 `yaw_bam`；动画状态契约；字体与本地化键；C5 拆壳。
+- 仍欠着（不因本章合入而消失）：触控 UI；动画状态契约；按 `asset_id` 解析视觉；传送门模型；字体与本地化键；远端协议层 RTT 回填；C3 网络参数锁定；E6 有美术之后的可玩性签署；扫掠取样代价无上限；`match_lobby_shell.gd` 超 E9 行数上限。
+- 仍不做：把模拟摇杆的幅度当成产品速度；把 Input Map 死区写成产品常量。
 
 纠偏归属：C4
 是否新增冻结常量引用：否
-审查级别：轻审（表现层接线；权威占用半长与官方课 JSON 一个字节没动）
-隔离方式：`feat/c4-occupancy-visuals`
+审查级别：常审（输入层接线；权威命令仍是同一套 8 向整步）
+隔离方式：`feat/c4-play-input`

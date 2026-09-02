@@ -53,9 +53,59 @@ Worktree 端口偏移见 README「并行工作区」；本文件不复述端口�
 
 ---
 
-## 本刀：按袋类型把 5 个占用视觉接到大厅与 Preview（箱 / 滚柱保留 overlay）
+## 本刀：D7 输入抽象（方向向量 + 动作事件）
 
-上一刀（[#199](https://github.com/czmomocha/craftarena/pull/199)）修掉 Solo 掉帧。本刀把已经烘焙过预算的 5 个占用 `.glb` 接到表现层：检查点垫 + 检查点门、终点门、箱子、滚柱。接线按**袋类型**，不按 `asset_id`。箱与滚柱保留 D4 危险色薄膜（人类 2026-09-02 拍板）。传送门仍是色块。
+上一刀（[#200](https://github.com/czmomocha/craftarena/pull/200)）按袋类型接上 5 个占用视觉。本刀把玩法采样从四个 WASD 布尔 / 物理键改成 `PlayInput`：方向向量 + 上升沿动作。键盘仍是现在这套键，只是走 Input Map。触控 UI 不做。
+
+本刀**不需要** `npm run dev`（Solo 就能看完前 3 步；Preview 用 F6 沙箱）。
+
+1. **Solo 移动仍是 8 向**：按「共用启动」打开大厅，点 **Solo play**，按 W / D / W+D。
+   - 预期：W 朝世界 −Z 走；D 朝 +X；W+D 走对角。角色面向跟着 8 向走，不是自由 atan2。
+   - 失败：WASD 没反应 ⇒ Input Map 的 `move_*` 没接到 `PlayInput`。走成任意角度 ⇒ 量化被改成 atan2 了，应打回。
+
+2. **动作键仍是原来那套**：空格跳、Q 或鼠标左键用道具、F 推击、Left Shift 冲刺、R 复位。
+   - 预期：与上一刀同一套键，按一下触发一次（按住不连发）。
+   - 失败：F / Shift / R 没反应 ⇒ 新动作名 `shove` / `sprint` / `reset_checkpoint` 没进 Input Map，或绑定的 physical keycode 不对。
+
+3. **Preview 同一套采样**：编辑器打开 `res://src/creator/course_sandbox.tscn`，**F6**（不要 F5），点 **Play**。
+   - 预期：WASD / 空格 / Q / Shift / R 与大厅同一套键。Preview 角色移动仍不写 `yaw_bam`（面向标记可以不转）。
+   - 失败：大厅能动、Preview 不能 ⇒ Preview `_process` 没走 `PlayInput`。
+
+4. **自动化全绿 + 裁决不变**：
+   ```bash
+   npm run typecheck; npm test; npm run redline-scan
+   npm run test:gut:full
+   & $env:GODOT4_CONSOLE --headless --path game -- --bot-run
+   ```
+   - 预期：`npm run typecheck` 无输出；`redline-scan` `no findings`；GUT 全绿；`--bot-run` 三张课 `completable`，**动作序列与步数逐项不变**（5 / 5 / 12 步）。
+   - 失败：bot-run 步数变了 ⇒ 输入抽象意外改了命令幅度，停下来查，别先改断言。
+
+### 本刀不测
+
+- **触控 / 虚拟摇杆**：本章只做抽象层；
+- **按键重映射界面**：原型期不做；
+- **模拟摇杆手感**：幅度不进 MoveIntent，接上摇杆也仍是 8 向整步；
+- **导出包内按键**：本机无 4.7.2 导出模板。
+
+### 诚实边界
+
+- 看起来「什么都没变」是成功判据：D7 要的是以后触控能插进来，不是新手感；
+- 复位仍是上升沿，不是 CD-21 §3.2 写的「长按」——时长未锁；
+- Preview 仍不把 8 向写入 Move `yaw_bam`（大厅才写）。
+
+### 仍然欠着（不因本章消失）
+
+- 触控 UI；动画状态契约；字体与本地化键；
+- 按 `asset_id` 解析视觉；传送门没有专用模型；
+- 扫掠步数无上限；`match_lobby_shell.gd` 仍超 E9 行数上限。
+
+---
+
+## 上一刀：按袋类型把 5 个占用视觉接到大厅与 Preview（箱 / 滚柱保留 overlay）
+
+> **本节已随 [#200](https://github.com/czmomocha/craftarena/pull/200) 合入，保留只为追溯。验当前 PR 只看上面的「本刀」。**
+
+上一刀（[#199](https://github.com/czmomocha/craftarena/pull/199)）修掉 Solo 掉帧。该刀把已经烘焙过预算的 5 个占用 `.glb` 接到表现层：检查点垫 + 检查点门、终点门、箱子、滚柱。接线按**袋类型**，不按 `asset_id`。箱与滚柱保留 D4 危险色薄膜（人类 2026-09-02 拍板）。传送门仍是色块。
 
 本刀**不需要** `npm run dev`（Solo 就能看完前 4 步；Preview 用 F6 沙箱）。
 

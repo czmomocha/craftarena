@@ -48,8 +48,9 @@ extends Node
 ## (in-process TLS); default local npm run dev stays ws / tls=off. Reset rising-edge encodes the
 ## existing ResetToCheckpointIntent. result= is local presentation; settled=
 ## is a read-only GET. The client never POSTs settlement.
-## WASD encodes Move plus discrete 8-way yaw_bam; Jump / Reset / Use item
-## encode existing intents. F rising-edge encodes ShoveIntent (no target id).
+## WASD / analog sticks both go through PlayInput (direction vector +
+## rising-edge actions) before MatchMoveFacing quantizes 8-way yaw_bam.
+## F rising-edge encodes ShoveIntent (no target id).
 ## Shift rising-edge encodes SprintIntent (consumes a granted dash).
 ## Solo copies the match-server jump/support/fall stubs; _process advances
 ## (falls) before sampling Space so a hop is not landed in the same frame.
@@ -129,12 +130,6 @@ const _SOLID_NAME: String = "SolidMap"
 const _LINK_NAME: String = "PortalLinkMap"
 const _ORDER_NAME: String = "CheckpointOrderMap"
 const _STANDING_NAME: String = "StandingMap"
-const _MOVE_FORWARD: String = "move_forward"
-const _MOVE_BACK: String = "move_back"
-const _MOVE_LEFT: String = "move_left"
-const _MOVE_RIGHT: String = "move_right"
-const _USE_ITEM: String = "use_item"
-const _JUMP: String = "jump"
 
 
 static func floor_index_from_y(y: int) -> int:
@@ -187,6 +182,7 @@ var _use_item_held: bool = false
 var _jump_held: bool = false
 var _shove_held: bool = false
 var _sprint_held: bool = false
+var _play_input: PlayInput = PlayInput.new()
 var _opened_socket: bool = false
 
 
@@ -545,12 +541,12 @@ func on_binary(bytes: PackedByteArray, now_ms: int = -1) -> bool:
 	return ok
 
 
-func try_sample_play_move(forward: bool, back: bool, left: bool, right: bool) -> PackedByteArray:
+func try_sample_play_vector(move_x: float, move_z: float) -> PackedByteArray:
 	if window == null or not window.visible:
 		return PackedByteArray()
 	if _offline_playing():
-		var offline_bytes: PackedByteArray = offline.try_encode_move_axes(
-			forward, back, left, right, play_move_step
+		var offline_bytes: PackedByteArray = offline.try_encode_move_vector(
+			move_x, move_z, play_move_step
 		)
 		## 空字节 = 没按键 / 意图被拒，什么都没动。原来这里无条件重映射，而在线
 		## 分支一直有 `is_empty()` 保护——同一个函数两只手不一样。
@@ -559,11 +555,16 @@ func try_sample_play_move(forward: bool, back: bool, left: bool, right: bool) ->
 		return offline_bytes
 	if play == null:
 		return PackedByteArray()
-	var bytes: PackedByteArray = play.try_encode_move_axes(forward, back, left, right, play_move_step)
+	var bytes: PackedByteArray = play.try_encode_move_vector(move_x, move_z, play_move_step)
 	_note_command(bytes)
 	if not bytes.is_empty():
 		_apply_snapshot_map()
 	return bytes
+
+
+func try_sample_play_move(forward: bool, back: bool, left: bool, right: bool) -> PackedByteArray:
+	var vector: Vector2 = PlayInput.vector_from_axes(forward, back, left, right)
+	return try_sample_play_vector(vector.x, vector.y)
 
 
 func try_sample_play_reset(pressed: bool) -> PackedByteArray:
@@ -901,17 +902,13 @@ func _physics_process(_delta: float) -> void:
 
 
 func _sample_play_input() -> void:
-	try_sample_play_move(
-		Input.is_action_pressed(_MOVE_FORWARD),
-		Input.is_action_pressed(_MOVE_BACK),
-		Input.is_action_pressed(_MOVE_LEFT),
-		Input.is_action_pressed(_MOVE_RIGHT)
-	)
-	try_sample_play_reset(Input.is_physical_key_pressed(KEY_R))
-	try_sample_play_use_item(Input.is_action_pressed(_USE_ITEM))
-	try_sample_play_jump(Input.is_action_pressed(_JUMP))
-	try_sample_play_shove(Input.is_physical_key_pressed(KEY_F))
-	try_sample_play_sprint(Input.is_physical_key_pressed(KEY_SHIFT))
+	var events: Dictionary = _play_input.sample_keyboard()
+	try_sample_play_vector(PlayInput.move_x_of(events), PlayInput.move_z_of(events))
+	try_sample_play_reset(PlayInput.flag_of(events, "reset"))
+	try_sample_play_use_item(PlayInput.flag_of(events, "use_item"))
+	try_sample_play_jump(PlayInput.flag_of(events, "jump"))
+	try_sample_play_shove(PlayInput.flag_of(events, "shove"))
+	try_sample_play_sprint(PlayInput.flag_of(events, "sprint"))
 
 
 ## D4 的 UI 基准是 1920×1080。它由**主窗口**的 stretch 承担（project.godot 的

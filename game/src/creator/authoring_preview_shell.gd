@@ -6,8 +6,8 @@ extends Node
 ## portal gizmos, checkpoint-order labels, and reachability-issue overlay.
 ## Play compiles the connected Preview world into a SimulationBundle, loads
 ## it, and draws the player pose as a presentation stub. While playing and
-## visible, WASD maps to world-space MoveIntent; play_move_step is a
-## presentation stub, not a product speed. Reset button and R rising-edge
+## visible, PlayInput maps WASD / analog to a world-space MoveIntent;
+## play_move_step is a presentation stub, not a product speed. Reset button and R rising-edge
 ## encode ResetToCheckpointIntent; that sample is a stub, not a hold
 ## duration. Use item button and use_item rising-edge encode UseItemIntent;
 ## play_use_item_damage / reach are stubs, not a blast table. A granted
@@ -43,15 +43,9 @@ const USE_ITEM_NAME: String = "UseItem"
 const SPRINT_NAME: String = "Sprint"
 const JUMP_NAME: String = "Jump"
 const ADVANCE_TICK_NAME: String = "AdvanceTick"
-const _USE_ITEM: String = "use_item"
-const _JUMP: String = "jump"
 const _STATUS_NAME: String = "Status"
 const _MAP_NAME: String = "PreviewMap"
 const _OVERLAY_NAME: String = "Overlay"
-const _MOVE_FORWARD: String = "move_forward"
-const _MOVE_BACK: String = "move_back"
-const _MOVE_LEFT: String = "move_left"
-const _MOVE_RIGHT: String = "move_right"
 
 var kind: String = AuthoringPreviewHostKinds.WINDOW
 var preview: AuthoringPreview = null
@@ -76,6 +70,7 @@ var _reset_held: bool = false
 var _use_item_held: bool = false
 var _sprint_held: bool = false
 var _jump_held: bool = false
+var _play_input: PlayInput = PlayInput.new()
 var _play_view_busy: bool = false # rebuilds must not re-enter _process sampling
 var _map_playing: bool = false # 上次建图时是不是在试玩，用来判「该强制重建」
 
@@ -179,6 +174,7 @@ func try_stop_play() -> bool:
 	_use_item_held = false
 	_sprint_held = false
 	_jump_held = false
+	_play_input.reset_held()
 	_play_view_busy = true
 	var ok: bool = preview.try_stop_play()
 	_rebuild_map()
@@ -198,6 +194,17 @@ func try_advance_play() -> bool:
 	return ok
 
 
+static func move_payload_from_vector(move_x: float, move_z: float, step: int) -> Dictionary:
+	var axes: Vector2i = PlayInput.step_from_vector(move_x, move_z, step)
+	if axes == Vector2i.ZERO:
+		return {}
+	return {
+		"intent": PlayerIntentNames.MOVE,
+		"dx": axes.x,
+		"dz": axes.y,
+	}
+
+
 static func move_payload_from_axes(
 	forward: bool,
 	back: bool,
@@ -205,25 +212,8 @@ static func move_payload_from_axes(
 	right: bool,
 	step: int
 ) -> Dictionary:
-	if step < 1:
-		return {}
-	var dx: int = 0
-	var dz: int = 0
-	if right:
-		dx += step
-	if left:
-		dx -= step
-	if back:
-		dz += step
-	if forward:
-		dz -= step
-	if dx == 0 and dz == 0:
-		return {}
-	return {
-		"intent": PlayerIntentNames.MOVE,
-		"dx": dx,
-		"dz": dz,
-	}
+	var vector: Vector2 = PlayInput.vector_from_axes(forward, back, left, right)
+	return move_payload_from_vector(vector.x, vector.y, step)
 
 
 func try_apply_play_intent(payload: Dictionary) -> bool:
@@ -237,15 +227,20 @@ func try_apply_play_intent(payload: Dictionary) -> bool:
 	return ok
 
 
-func try_sample_play_move(forward: bool, back: bool, left: bool, right: bool) -> bool:
+func try_sample_play_vector(move_x: float, move_z: float) -> bool:
 	if preview == null or not preview.is_playing():
 		return false
 	if not _window_alive() or not window.visible:
 		return false
-	var payload: Dictionary = move_payload_from_axes(forward, back, left, right, play_move_step)
+	var payload: Dictionary = move_payload_from_vector(move_x, move_z, play_move_step)
 	if payload.is_empty():
 		return false
 	return try_apply_play_intent(payload)
+
+
+func try_sample_play_move(forward: bool, back: bool, left: bool, right: bool) -> bool:
+	var vector: Vector2 = PlayInput.vector_from_axes(forward, back, left, right)
+	return try_sample_play_vector(vector.x, vector.y)
 
 
 func try_sample_play_use_item(pressed: bool) -> bool:
@@ -525,16 +520,12 @@ func _process(_delta: float) -> void:
 		return
 	if not _window_alive() or not window.visible:
 		return
-	try_sample_play_move(
-		Input.is_action_pressed(_MOVE_FORWARD),
-		Input.is_action_pressed(_MOVE_BACK),
-		Input.is_action_pressed(_MOVE_LEFT),
-		Input.is_action_pressed(_MOVE_RIGHT)
-	)
-	try_sample_play_reset(Input.is_physical_key_pressed(KEY_R))
-	try_sample_play_use_item(Input.is_action_pressed(_USE_ITEM))
-	try_sample_play_sprint(Input.is_physical_key_pressed(KEY_SHIFT))
-	try_sample_play_jump(Input.is_action_pressed(_JUMP))
+	var events: Dictionary = _play_input.sample_keyboard()
+	try_sample_play_vector(PlayInput.move_x_of(events), PlayInput.move_z_of(events))
+	try_sample_play_reset(PlayInput.flag_of(events, "reset"))
+	try_sample_play_use_item(PlayInput.flag_of(events, "use_item"))
+	try_sample_play_sprint(PlayInput.flag_of(events, "sprint"))
+	try_sample_play_jump(PlayInput.flag_of(events, "jump"))
 
 
 func _add_button(row: BoxContainer, node_name: String, text: String, handler: Callable) -> void:

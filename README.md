@@ -57,7 +57,7 @@ export GODOT_AI_DISABLE_TELEMETRY=true
 
 - 渲染基线 `gl_compatibility`，桌面、移动、Web 三个平台一致（宪法第七条）；
 - 类型相关警告全局设为 Error，`res://addons` 例外（宪法第二十三条，理由见 [ADR-0001](docs/adr/0001-strict-gdscript-typing-gate.md)）；
-- CD-51 §5 要求的 17 个输入动作，移动类绑定 physical keycode；
+- CD-51 §5 要求的 20 个输入动作，移动类绑定 physical keycode；玩法推击 / 冲刺 / 复位走 `shove` / `sprint` / `reset_checkpoint`（F / Shift / R），不再只认物理键；
 - 脚本与场景文件名 `snake_case`；
 - UI 分辨率基准 1920×1080（D4，见 [CD-11 §8.2](Confirmed-docs/10-product/11-scope-and-platforms.md)），按 `canvas_items` / `expand` 等比缩放；开发机运行窗仍是 1600×900 最大化，写在 `window_width_override` / `window_height_override` 上。**代码创建的嵌入子窗口不得自己设 `content_scale_*`**：`gui_embed_subwindows = true` 下它渲染不生效、输入生效，会让鼠标命中与画面错位；
 - 启动场景 `res://src/client/main.tscn`，打印一行结构化启动日志并打开机关狂奔匹配大厅（代码创建 Window，相邻快照采样后的玩家位姿、所选官方赛道占用与可破坏箱映射为 1 米占位盒，classified portal 画 gizmo 条，检查点垫标 `order` 且唯一 `order` 连线，最新快照直播名次标到玩家盒上方；本席 Move/Jump 在最新权威上叠加本地 overlay；大厅 WASD 写入 8 向离散水平朝向，玩家盒带面向标记；快速游戏 / 建房发送官方赛道 id 与本场人数，按码加入跟从该房课程与人数；Solo play 走本地内嵌权威并持续显示「离线试玩，成绩不上传」；HUD 第一行是运行时帧率读数（`FrameRateMeter`，`FPS 60`，首窗之前 `FPS --`，每 0.5 s 刷新一次，窗口隐藏时丢弃半窗；观察工具，不进裁决、不进快照、不发网络，不锁帧率目标）；Headless 不发起 live HTTP/WS）。

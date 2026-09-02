@@ -413,6 +413,20 @@ func test_visible_window_encodes_intents_hidden_does_not() -> void:
 	assert_true(_shell.is_window_visible())
 
 
+func test_vector_move_encodes_the_same_bytes_as_boolean_axes() -> void:
+	_shell = _open_shell()
+	assert_true(_shell.try_quick())
+	assert_true(_shell.accept_http(201, _join("ABCD23", "ticket-vector")))
+	assert_true(_shell.on_socket_open())
+	var from_bool: PackedByteArray = _shell.try_sample_play_move(true, false, false, true)
+	var from_vector: PackedByteArray = _shell.try_sample_play_vector(1.0, -1.0)
+	var weak: PackedByteArray = _shell.try_sample_play_vector(0.3, 0.0)
+	var right: PackedByteArray = _shell.try_sample_play_move(false, false, false, true)
+	assert_false(from_bool.is_empty())
+	assert_eq(from_vector, from_bool)
+	assert_eq(weak, right)
+
+
 func test_stale_or_bad_snapshot_keeps_mapped_pose() -> void:
 	_shell = _open_shell()
 	assert_true(_shell.try_quick())
