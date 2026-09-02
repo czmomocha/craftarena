@@ -104,7 +104,7 @@ export GODOT_AI_DISABLE_TELEMETRY=true
 - 渲染器：Compatibility；
 - 物理 Tick：由每个玩法的 `SimulationCore` 自己固定推进，不直接依赖帧率；
 - 数值：核心位置、速度、计时、经济和伤害使用定点整数；
-- 输入动作：移动、跳跃、使用道具、交互、编辑器相机、建造、升级、出售；
+- 输入动作：移动、跳跃、使用道具、推击、冲刺、复位到检查点、交互、编辑器相机、建造、升级、出售；
 - 语言：GDScript；
 - 类型：`shared/`、`simulation/`、`ugc/`、`server/` 静态类型且警告视为错误；UI/工具可有限使用 `Variant`，进入核心边界前必须校验。Godot 4.7 无法按目录收紧警告，落地方式见 [ADR-0001](../../docs/adr/0001-strict-gdscript-typing-gate.md)；
 - 文件命名：`snake_case`；

@@ -50,6 +50,8 @@
 
 一期 PC/Web 不承诺手柄支持。
 
+实现落点（2026-09-02，纠偏 D7）：玩法壳消费 `PlayInput`（方向向量 + 上升沿动作事件），不再直接读四个 WASD 布尔或物理键码。键盘是适配器；`shove` / `sprint` / `reset_checkpoint` 已进 Input Map（当前绑定 F / Shift / R，与接线前一致）。模拟量按符号量化成整步 `play_move_step`，幅度不进 MoveIntent。触控 UI / 虚拟摇杆仍未做。复位仍是上升沿桩，不是产品长按时长。落点见 `game/src/shared/play_input.gd`。
+
 ### 3.3 权威运动模型
 
 采用直立式完整 XYZ kinematic 模型：角色可以移动和短跳，但始终直立，只允许水平朝向，不支持二段跳、攀爬、自由飞行、翻滚、墙面或天花板行走。

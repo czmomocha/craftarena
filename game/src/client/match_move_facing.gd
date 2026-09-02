@@ -1,10 +1,11 @@
 class_name MatchMoveFacing
 extends RefCounted
 
-## Discrete 8-way horizontal facing for lobby WASD (CD-21 §3 / §8).
+## Discrete 8-way horizontal facing (CD-21 §3 / §8).
 ## Signs of dx/dz pick a BAM yaw; W is world -Z at yaw 0. Dual-zero
-## returns the omitted sentinel. Not atan2, not a product turn speed,
-## and not Preview WASD.
+## returns the omitted sentinel. Not atan2, not a product turn speed.
+## Keyboard booleans and analog sticks both go through PlayInput first;
+## this file only quantizes the already-sampled vector.
 
 const PlayerIntentNames := preload("res://src/shared/commands/player_intent_names.gd")
 
@@ -49,24 +50,18 @@ static func yaw_bam_from_dx_dz(dx: int, dz: int) -> int:
 	return YAW_FORWARD_RIGHT
 
 
-static func move_axes(forward: bool, back: bool, left: bool, right: bool, step: int) -> Dictionary:
-	if step < 1:
-		return {}
-	var dx: int = 0
-	var dz: int = 0
-	if right:
-		dx += step
-	if left:
-		dx -= step
-	if back:
-		dz += step
-	if forward:
-		dz -= step
-	if dx == 0 and dz == 0:
+static func move_vector(move_x: float, move_z: float, step: int) -> Dictionary:
+	var axes: Vector2i = PlayInput.step_from_vector(move_x, move_z, step)
+	if axes == Vector2i.ZERO:
 		return {}
 	return {
 		"intent": PlayerIntentNames.MOVE,
-		"dx": dx,
-		"dz": dz,
-		"yaw_bam": yaw_bam_from_dx_dz(dx, dz),
+		"dx": axes.x,
+		"dz": axes.y,
+		"yaw_bam": yaw_bam_from_dx_dz(axes.x, axes.y),
 	}
+
+
+static func move_axes(forward: bool, back: bool, left: bool, right: bool, step: int) -> Dictionary:
+	var vector: Vector2 = PlayInput.vector_from_axes(forward, back, left, right)
+	return move_vector(vector.x, vector.y, step)

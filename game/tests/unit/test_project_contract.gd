@@ -20,7 +20,7 @@ const STRICT_TYPING_WARNINGS: PackedStringArray = [
 	"unsafe_void_return",
 ]
 
-## CD-51 §5 要求的输入动作：移动、跳跃、使用道具、交互、编辑器相机、建造、升级、出售。
+## CD-51 §5 要求的输入动作：移动、跳跃、使用道具、推击、冲刺、复位、交互、编辑器相机、建造、升级、出售。
 const REQUIRED_INPUT_ACTIONS: PackedStringArray = [
 	"move_forward",
 	"move_back",
@@ -28,6 +28,9 @@ const REQUIRED_INPUT_ACTIONS: PackedStringArray = [
 	"move_right",
 	"jump",
 	"use_item",
+	"shove",
+	"sprint",
+	"reset_checkpoint",
 	"interact",
 	"editor_camera_forward",
 	"editor_camera_back",
