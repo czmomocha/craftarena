@@ -5,60 +5,27 @@ extends RefCounted
 ## Pose fields are Q48.16; yaw is BAM; vy is Q48.16 vertical speed in units per tick.
 ## Hash order: tick_index, then id,x,y,z,yaw,vy by id.
 ## Radius, cylinder_height, and static AABBs are Q48.16 geometry and are not part of hash_state.
+## Collaborators are SimulationWorldQuery / SimulationWorldMove so this file stays
+## under E9 400 lines. Public API stays on this type.
 ## set_pose / try_set_pose keep vy so a yaw rewrite is not a landing. Teleports that
 ## should kill a jump (reset, portal, out-of-range) call set_vy(0) themselves.
 ## set_static_box_solid toggles whether a static AABB blocks occupancy; ids stay
 ## 1-based and non-solid boxes stay in the array. Solidity is not part of hash_state.
-## is_static_box_solid reports that flag; unknown ids are false. Queries are not hashed.
-## overlaps_static_box queries the current capsule against one AABB; non-solid boxes
-## stay queryable. Overflowing overlap math counts as intersecting. Queries are not hashed.
-## overlapping_static_boxes lists every intersecting AABB id in spawn order, including
-## non-solid and overflow; unknown entities return empty. Queries are not hashed.
-## overlaps_solid_static_box / overlapping_solid_static_boxes skip non-solid boxes,
-## including overflow against them; unknown ids are false or empty. Queries are not hashed.
-## overlaps_entity queries two current capsules; unknown or identical ids are false.
+## Occupancy, support, bound, and volume queries do not write pose, tick, or hash_state.
 ## Overflowing overlap math counts as intersecting. Queries are not hashed.
-## overlapping_entities lists every other intersecting capsule id in spawn order,
-## including overflow and excluding self; unknown entities return empty. Queries are not hashed.
-## overlaps_static_box_at / overlapping_static_boxes_at / overlaps_entity_at /
-## overlapping_entities_at / overlaps_solid_static_box_at /
-## overlapping_solid_static_boxes_at use the entity's current radius and height at
-## a candidate (x, y, z) without writing pose. Other capsules stay at their current pose.
-## Unknown ids are false or empty; self is false; overflow counts as intersecting
-## except non-solid boxes, which solid queries skip. Geometry queries still include
-## non-solid boxes. Queries are not hashed.
-## supporting_solid_static_boxes / supporting_solid_static_boxes_at add caller-supplied
-## support_dy (Q48.16) to y via Fixed.try_add, then reuse overlapping_solid_static_boxes_at.
-## Unknown ids and y-add overflow return empty. is_supported_by_solid /
-## is_supported_by_solid_at are true when that list is non-empty. These queries do not
-## write pose, tick, or hash_state, and do not invent a default drop distance.
-## is_below_min_y / is_below_min_y_at are true iff y < min_y (on-plane is false).
-## is_above_max_y / is_above_max_y_at are true iff y > max_y. is_outside_xz /
-## is_outside_xz_at are true when (x, z) is not inside the closed interval
-## [min_x, max_x] x [min_z, max_z]; empty intervals (min > max) are always outside.
-## Non-_at methods read the current pose and delegate. _at uses candidate (x, y, z)
-## without writing pose. Unknown ids are false. Integer compare only; no Fixed.try_add.
-## These queries do not tick or change hash_state, and do not invent a drop-count N.
-## is_volume_blocked tests a candidate upright capsule without an entity_id.
-## Solid-box or existing-capsule overlap, including overflow, is blocked.
-## Non-solid boxes are skipped, matching is_pose_blocked. Negative radius or
-## cylinder_height is blocked. Empty legal volume is open. The query does not
-## spawn, write pose, tick, or change hash_state. spawn_capsule still skips
-## occupancy checks.
-## try_set_pose occupancy-checks the landing pose then teleports; it is not a sweep
-## and not phase-through. Occupied or overflow destinations reject. set_pose still
-## writes without occupancy checks so respawn can teleport into a blocked pose.
-## try_move_xz / try_move_y sample the displacement segment with discrete substeps
-## (not continuous analytic TOI) against other upright capsules and static AABBs.
+## try_set_pose occupancy-checks then teleports; it is not a sweep.
+## try_move_* sample the displacement segment with discrete substeps (not TOI).
 ## A blocked sample or overflow rejects the whole move; there is no slide.
-## try_move_y_until_blocked uses the same Y samples but commits the last unblocked
-## y (start if sample_i=1 is blocked). try_move_xz_until_blocked is the XZ counterpart:
-## last unblocked (x, z), leftover displacement discarded, not a wall-slide.
-## Unknown ids and add/mul/div overflow still return false without writing.
-## radius <= 0 keeps destination-only checks: a blocked dest keeps start and
-## returns true. radius is the only step scale.
+## until_blocked commits the last unblocked sample. radius is the only step scale.
+## spawn_capsule still skips occupancy checks. set_pose still writes without checks
+## so respawn can teleport into a blocked pose.
+
+const QueryGd := preload("res://src/simulation/simulation_world_query.gd")
+const MoveGd := preload("res://src/simulation/simulation_world_move.gd")
 
 var tick_index: int = 0
+var query: QueryGd = QueryGd.new()
+var move: MoveGd = MoveGd.new()
 
 var _rng: SimRng = SimRng.new()
 var _x: Array[int] = []
@@ -120,202 +87,99 @@ func is_static_box_solid(box_id: int) -> bool:
 
 
 func overlaps_static_box(entity_id: int, box_id: int) -> bool:
-	if not _has_entity(entity_id):
-		return false
-	var pose_index: int = entity_id - 1
-	return overlaps_static_box_at(
-		entity_id, box_id, _x[pose_index], _y[pose_index], _z[pose_index]
-	)
+	return query.overlaps_static_box(self, entity_id, box_id)
 
 
 func overlaps_static_box_at(entity_id: int, box_id: int, x: int, y: int, z: int) -> bool:
-	if not _has_entity(entity_id) or not _has_box(box_id):
-		return false
-	var pose_index: int = entity_id - 1
-	var capsule: KinematicCapsule = _capsule_at(pose_index, x, y, z)
-	var box: StaticAabb = _boxes[box_id - 1]
-	return box.overlaps_capsule(capsule) or not box.overlap_math_ok
+	return query.overlaps_static_box_at(self, entity_id, box_id, x, y, z)
 
 
 func overlapping_static_boxes(entity_id: int) -> PackedInt32Array:
-	if not _has_entity(entity_id):
-		return PackedInt32Array()
-	var pose_index: int = entity_id - 1
-	return overlapping_static_boxes_at(
-		entity_id, _x[pose_index], _y[pose_index], _z[pose_index]
-	)
+	return query.overlapping_static_boxes(self, entity_id)
 
 
 func overlapping_static_boxes_at(entity_id: int, x: int, y: int, z: int) -> PackedInt32Array:
-	var ids: PackedInt32Array = PackedInt32Array()
-	if not _has_entity(entity_id):
-		return ids
-	for box_id: int in range(1, _boxes.size() + 1):
-		if overlaps_static_box_at(entity_id, box_id, x, y, z):
-			ids.append(box_id)
-	return ids
+	return query.overlapping_static_boxes_at(self, entity_id, x, y, z)
 
 
 func overlaps_solid_static_box(entity_id: int, box_id: int) -> bool:
-	if not _has_entity(entity_id):
-		return false
-	var pose_index: int = entity_id - 1
-	return overlaps_solid_static_box_at(
-		entity_id, box_id, _x[pose_index], _y[pose_index], _z[pose_index]
-	)
+	return query.overlaps_solid_static_box(self, entity_id, box_id)
 
 
 func overlaps_solid_static_box_at(entity_id: int, box_id: int, x: int, y: int, z: int) -> bool:
-	if not is_static_box_solid(box_id):
-		return false
-	return overlaps_static_box_at(entity_id, box_id, x, y, z)
+	return query.overlaps_solid_static_box_at(self, entity_id, box_id, x, y, z)
 
 
 func overlapping_solid_static_boxes(entity_id: int) -> PackedInt32Array:
-	if not _has_entity(entity_id):
-		return PackedInt32Array()
-	var pose_index: int = entity_id - 1
-	return overlapping_solid_static_boxes_at(
-		entity_id, _x[pose_index], _y[pose_index], _z[pose_index]
-	)
+	return query.overlapping_solid_static_boxes(self, entity_id)
 
 
 func overlapping_solid_static_boxes_at(entity_id: int, x: int, y: int, z: int) -> PackedInt32Array:
-	var ids: PackedInt32Array = PackedInt32Array()
-	if not _has_entity(entity_id):
-		return ids
-	for box_id: int in range(1, _boxes.size() + 1):
-		if overlaps_solid_static_box_at(entity_id, box_id, x, y, z):
-			ids.append(box_id)
-	return ids
+	return query.overlapping_solid_static_boxes_at(self, entity_id, x, y, z)
 
 
 func supporting_solid_static_boxes(entity_id: int, support_dy: int) -> PackedInt32Array:
-	if not _has_entity(entity_id):
-		return PackedInt32Array()
-	var pose_index: int = entity_id - 1
-	return supporting_solid_static_boxes_at(
-		entity_id, _x[pose_index], _y[pose_index], _z[pose_index], support_dy
-	)
+	return query.supporting_solid_static_boxes(self, entity_id, support_dy)
 
 
 func supporting_solid_static_boxes_at(
 	entity_id: int, x: int, y: int, z: int, support_dy: int
 ) -> PackedInt32Array:
-	if not _has_entity(entity_id):
-		return PackedInt32Array()
-	var probe_y_res: FixedResult = Fixed.try_add(y, support_dy)
-	if not probe_y_res.ok:
-		return PackedInt32Array()
-	return overlapping_solid_static_boxes_at(entity_id, x, probe_y_res.value, z)
+	return query.supporting_solid_static_boxes_at(self, entity_id, x, y, z, support_dy)
 
 
 func is_supported_by_solid(entity_id: int, support_dy: int) -> bool:
-	return supporting_solid_static_boxes(entity_id, support_dy).size() > 0
+	return query.is_supported_by_solid(self, entity_id, support_dy)
 
 
 func is_supported_by_solid_at(
 	entity_id: int, x: int, y: int, z: int, support_dy: int
 ) -> bool:
-	return supporting_solid_static_boxes_at(entity_id, x, y, z, support_dy).size() > 0
+	return query.is_supported_by_solid_at(self, entity_id, x, y, z, support_dy)
 
 
 func is_below_min_y(entity_id: int, min_y: int) -> bool:
-	if not _has_entity(entity_id):
-		return false
-	var pose_index: int = entity_id - 1
-	return is_below_min_y_at(
-		entity_id, _x[pose_index], _y[pose_index], _z[pose_index], min_y
-	)
+	return query.is_below_min_y(self, entity_id, min_y)
 
 
 func is_below_min_y_at(entity_id: int, x: int, y: int, z: int, min_y: int) -> bool:
-	if not _has_entity(entity_id):
-		return false
-	return y < min_y
+	return query.is_below_min_y_at(self, entity_id, x, y, z, min_y)
 
 
 func is_above_max_y(entity_id: int, max_y: int) -> bool:
-	if not _has_entity(entity_id):
-		return false
-	var pose_index: int = entity_id - 1
-	return is_above_max_y_at(
-		entity_id, _x[pose_index], _y[pose_index], _z[pose_index], max_y
-	)
+	return query.is_above_max_y(self, entity_id, max_y)
 
 
 func is_above_max_y_at(entity_id: int, x: int, y: int, z: int, max_y: int) -> bool:
-	if not _has_entity(entity_id):
-		return false
-	return y > max_y
+	return query.is_above_max_y_at(self, entity_id, x, y, z, max_y)
 
 
 func is_outside_xz(
 	entity_id: int, min_x: int, max_x: int, min_z: int, max_z: int
 ) -> bool:
-	if not _has_entity(entity_id):
-		return false
-	var pose_index: int = entity_id - 1
-	return is_outside_xz_at(
-		entity_id,
-		_x[pose_index],
-		_y[pose_index],
-		_z[pose_index],
-		min_x,
-		max_x,
-		min_z,
-		max_z
-	)
+	return query.is_outside_xz(self, entity_id, min_x, max_x, min_z, max_z)
 
 
 func is_outside_xz_at(
 	entity_id: int, x: int, y: int, z: int, min_x: int, max_x: int, min_z: int, max_z: int
 ) -> bool:
-	if not _has_entity(entity_id):
-		return false
-	return not (min_x <= x and x <= max_x and min_z <= z and z <= max_z)
+	return query.is_outside_xz_at(self, entity_id, x, y, z, min_x, max_x, min_z, max_z)
 
 
 func overlaps_entity(entity_id: int, other_id: int) -> bool:
-	if not _has_entity(entity_id):
-		return false
-	var pose_index: int = entity_id - 1
-	return overlaps_entity_at(
-		entity_id, other_id, _x[pose_index], _y[pose_index], _z[pose_index]
-	)
+	return query.overlaps_entity(self, entity_id, other_id)
 
 
 func overlaps_entity_at(entity_id: int, other_id: int, x: int, y: int, z: int) -> bool:
-	if not _has_entity(entity_id) or not _has_entity(other_id):
-		return false
-	if entity_id == other_id:
-		return false
-	var pose_index: int = entity_id - 1
-	var other_index: int = other_id - 1
-	var mover: KinematicCapsule = _capsule_at(pose_index, x, y, z)
-	var other: KinematicCapsule = _capsule_at(
-		other_index, _x[other_index], _y[other_index], _z[other_index]
-	)
-	return mover.overlaps(other) or not mover.overlap_math_ok
+	return query.overlaps_entity_at(self, entity_id, other_id, x, y, z)
 
 
 func overlapping_entities(entity_id: int) -> PackedInt32Array:
-	if not _has_entity(entity_id):
-		return PackedInt32Array()
-	var pose_index: int = entity_id - 1
-	return overlapping_entities_at(
-		entity_id, _x[pose_index], _y[pose_index], _z[pose_index]
-	)
+	return query.overlapping_entities(self, entity_id)
 
 
 func overlapping_entities_at(entity_id: int, x: int, y: int, z: int) -> PackedInt32Array:
-	var ids: PackedInt32Array = PackedInt32Array()
-	if not _has_entity(entity_id):
-		return ids
-	for other_id: int in range(1, _x.size() + 1):
-		if overlaps_entity_at(entity_id, other_id, x, y, z):
-			ids.append(other_id)
-	return ids
+	return query.overlapping_entities_at(self, entity_id, x, y, z)
 
 
 func set_pose(entity_id: int, x: int, y: int, z: int, yaw: int) -> bool:
@@ -330,42 +194,15 @@ func set_pose(entity_id: int, x: int, y: int, z: int, yaw: int) -> bool:
 
 
 func is_pose_blocked(entity_id: int, x: int, y: int, z: int) -> bool:
-	if not _has_entity(entity_id):
-		return true
-	return (
-		overlapping_solid_static_boxes_at(entity_id, x, y, z).size() > 0
-		or overlapping_entities_at(entity_id, x, y, z).size() > 0
-	)
+	return query.is_pose_blocked(self, entity_id, x, y, z)
 
 
 func is_volume_blocked(x: int, y: int, z: int, radius: int, cylinder_height: int) -> bool:
-	if radius < 0 or cylinder_height < 0:
-		return true
-	var probe: KinematicCapsule = KinematicCapsule.new()
-	probe.x = x
-	probe.y = y
-	probe.z = z
-	probe.radius = radius
-	probe.cylinder_height = cylinder_height
-	for box_index: int in range(_boxes.size()):
-		if not _box_solid[box_index]:
-			continue
-		var box: StaticAabb = _boxes[box_index]
-		if box.overlaps_capsule(probe) or not box.overlap_math_ok:
-			return true
-	for pose_index: int in range(_x.size()):
-		var other: KinematicCapsule = _capsule_at(
-			pose_index, _x[pose_index], _y[pose_index], _z[pose_index]
-		)
-		if probe.overlaps(other) or not probe.overlap_math_ok:
-			return true
-	return false
+	return query.is_volume_blocked(self, x, y, z, radius, cylinder_height)
 
 
 func try_set_pose(entity_id: int, x: int, y: int, z: int, yaw: int) -> bool:
-	if is_pose_blocked(entity_id, x, y, z):
-		return false
-	return set_pose(entity_id, x, y, z, yaw)
+	return move.try_set_pose(self, entity_id, x, y, z, yaw)
 
 
 func get_pose(entity_id: int) -> Dictionary:
@@ -393,74 +230,20 @@ func set_vy(entity_id: int, vy: int) -> bool:
 	return true
 
 
-## dx/dz are this-tick displacement in Q48.16 internal units, not metres per second.
 func try_move_xz(entity_id: int, dx: int, dz: int) -> bool:
-	if not _has_entity(entity_id):
-		return false
-	var pose_index: int = entity_id - 1
-	var new_x_res: FixedResult = Fixed.try_add(_x[pose_index], dx)
-	if not new_x_res.ok:
-		return false
-	var new_z_res: FixedResult = Fixed.try_add(_z[pose_index], dz)
-	if not new_z_res.ok:
-		return false
-	if not _sweep_clear_xz(entity_id, pose_index, dx, dz, new_x_res.value, new_z_res.value):
-		return false
-	_x[pose_index] = new_x_res.value
-	_z[pose_index] = new_z_res.value
-	return true
+	return move.try_move_xz(self, entity_id, dx, dz)
 
 
-## dx/dz are this-tick displacement in Q48.16 internal units, not metres per second.
 func try_move_xz_until_blocked(entity_id: int, dx: int, dz: int) -> bool:
-	if not _has_entity(entity_id):
-		return false
-	var pose_index: int = entity_id - 1
-	var new_x_res: FixedResult = Fixed.try_add(_x[pose_index], dx)
-	if not new_x_res.ok:
-		return false
-	var new_z_res: FixedResult = Fixed.try_add(_z[pose_index], dz)
-	if not new_z_res.ok:
-		return false
-	var contact_xz: Array[int] = _sweep_last_free_xz(
-		entity_id, pose_index, dx, dz, new_x_res.value, new_z_res.value
-	)
-	if contact_xz.size() != 2:
-		return false
-	_x[pose_index] = contact_xz[0]
-	_z[pose_index] = contact_xz[1]
-	return true
+	return move.try_move_xz_until_blocked(self, entity_id, dx, dz)
 
 
-## dy is this-tick displacement in Q48.16 internal units, not metres per second.
 func try_move_y(entity_id: int, dy: int) -> bool:
-	if not _has_entity(entity_id):
-		return false
-	var pose_index: int = entity_id - 1
-	var new_y_res: FixedResult = Fixed.try_add(_y[pose_index], dy)
-	if not new_y_res.ok:
-		return false
-	if not _sweep_clear_y(entity_id, pose_index, dy, new_y_res.value):
-		return false
-	_y[pose_index] = new_y_res.value
-	return true
+	return move.try_move_y(self, entity_id, dy)
 
 
-## dy is this-tick displacement in Q48.16 internal units, not metres per second.
 func try_move_y_until_blocked(entity_id: int, dy: int) -> bool:
-	if not _has_entity(entity_id):
-		return false
-	var pose_index: int = entity_id - 1
-	var new_y_res: FixedResult = Fixed.try_add(_y[pose_index], dy)
-	if not new_y_res.ok:
-		return false
-	var contact_y_res: FixedResult = _sweep_last_free_y(
-		entity_id, pose_index, dy, new_y_res.value
-	)
-	if not contact_y_res.ok:
-		return false
-	_y[pose_index] = contact_y_res.value
-	return true
+	return move.try_move_y_until_blocked(self, entity_id, dy)
 
 
 func hash_state() -> PackedByteArray:
@@ -486,188 +269,6 @@ func hash_state() -> PackedByteArray:
 
 func get_rng() -> SimRng:
 	return _rng
-
-
-func _sweep_clear_xz(
-	entity_id: int, pose_index: int, dx: int, dz: int, dest_x: int, dest_z: int
-) -> bool:
-	var start_x: int = _x[pose_index]
-	var start_y: int = _y[pose_index]
-	var start_z: int = _z[pose_index]
-	var radius: int = _radius[pose_index]
-	if radius <= 0:
-		return not _destination_blocked(entity_id, pose_index, dest_x, start_y, dest_z)
-	var abs_dx_res: FixedResult = _try_abs(dx)
-	if not abs_dx_res.ok:
-		return false
-	var abs_dz_res: FixedResult = _try_abs(dz)
-	if not abs_dz_res.ok:
-		return false
-	var chebyshev: int = abs_dx_res.value
-	if abs_dz_res.value > chebyshev:
-		chebyshev = abs_dz_res.value
-	var step_count: int = _sweep_step_count(chebyshev, radius)
-	var sample_i: int = 1
-	while true:
-		var step_dx_res: FixedResult = Fixed.try_mul_div(dx, sample_i, step_count)
-		if not step_dx_res.ok:
-			return false
-		var step_dz_res: FixedResult = Fixed.try_mul_div(dz, sample_i, step_count)
-		if not step_dz_res.ok:
-			return false
-		var sample_x_res: FixedResult = Fixed.try_add(start_x, step_dx_res.value)
-		if not sample_x_res.ok:
-			return false
-		var sample_z_res: FixedResult = Fixed.try_add(start_z, step_dz_res.value)
-		if not sample_z_res.ok:
-			return false
-		if _destination_blocked(
-			entity_id, pose_index, sample_x_res.value, start_y, sample_z_res.value
-		):
-			return false
-		if sample_i == step_count:
-			break
-		sample_i += 1
-	return true
-
-
-func _sweep_last_free_xz(
-	entity_id: int, pose_index: int, dx: int, dz: int, dest_x: int, dest_z: int
-) -> Array[int]:
-	var failed: Array[int] = []
-	var start_x: int = _x[pose_index]
-	var start_y: int = _y[pose_index]
-	var start_z: int = _z[pose_index]
-	var radius: int = _radius[pose_index]
-	if radius <= 0:
-		if _destination_blocked(entity_id, pose_index, dest_x, start_y, dest_z):
-			var start_xz: Array[int] = [start_x, start_z]
-			return start_xz
-		var dest_xz: Array[int] = [dest_x, dest_z]
-		return dest_xz
-	var abs_dx_res: FixedResult = _try_abs(dx)
-	if not abs_dx_res.ok:
-		return failed
-	var abs_dz_res: FixedResult = _try_abs(dz)
-	if not abs_dz_res.ok:
-		return failed
-	var chebyshev: int = abs_dx_res.value
-	if abs_dz_res.value > chebyshev:
-		chebyshev = abs_dz_res.value
-	var step_count: int = _sweep_step_count(chebyshev, radius)
-	var last_free_x: int = start_x
-	var last_free_z: int = start_z
-	var sample_i: int = 1
-	while true:
-		var step_dx_res: FixedResult = Fixed.try_mul_div(dx, sample_i, step_count)
-		if not step_dx_res.ok:
-			return failed
-		var step_dz_res: FixedResult = Fixed.try_mul_div(dz, sample_i, step_count)
-		if not step_dz_res.ok:
-			return failed
-		var sample_x_res: FixedResult = Fixed.try_add(start_x, step_dx_res.value)
-		if not sample_x_res.ok:
-			return failed
-		var sample_z_res: FixedResult = Fixed.try_add(start_z, step_dz_res.value)
-		if not sample_z_res.ok:
-			return failed
-		if _destination_blocked(
-			entity_id, pose_index, sample_x_res.value, start_y, sample_z_res.value
-		):
-			var blocked_xz: Array[int] = [last_free_x, last_free_z]
-			return blocked_xz
-		last_free_x = sample_x_res.value
-		last_free_z = sample_z_res.value
-		if sample_i == step_count:
-			break
-		sample_i += 1
-	var clear_xz: Array[int] = [last_free_x, last_free_z]
-	return clear_xz
-
-
-func _sweep_clear_y(entity_id: int, pose_index: int, dy: int, dest_y: int) -> bool:
-	var start_x: int = _x[pose_index]
-	var start_y: int = _y[pose_index]
-	var start_z: int = _z[pose_index]
-	var radius: int = _radius[pose_index]
-	if radius <= 0:
-		return not _destination_blocked(entity_id, pose_index, start_x, dest_y, start_z)
-	var abs_dy_res: FixedResult = _try_abs(dy)
-	if not abs_dy_res.ok:
-		return false
-	var step_count: int = _sweep_step_count(abs_dy_res.value, radius)
-	var sample_i: int = 1
-	while true:
-		var step_dy_res: FixedResult = Fixed.try_mul_div(dy, sample_i, step_count)
-		if not step_dy_res.ok:
-			return false
-		var sample_y_res: FixedResult = Fixed.try_add(start_y, step_dy_res.value)
-		if not sample_y_res.ok:
-			return false
-		if _destination_blocked(
-			entity_id, pose_index, start_x, sample_y_res.value, start_z
-		):
-			return false
-		if sample_i == step_count:
-			break
-		sample_i += 1
-	return true
-
-
-func _sweep_last_free_y(
-	entity_id: int, pose_index: int, dy: int, dest_y: int
-) -> FixedResult:
-	var start_x: int = _x[pose_index]
-	var start_y: int = _y[pose_index]
-	var start_z: int = _z[pose_index]
-	var radius: int = _radius[pose_index]
-	if radius <= 0:
-		if _destination_blocked(entity_id, pose_index, start_x, dest_y, start_z):
-			return FixedResult.success(start_y)
-		return FixedResult.success(dest_y)
-	var abs_dy_res: FixedResult = _try_abs(dy)
-	if not abs_dy_res.ok:
-		return FixedResult.fail()
-	var step_count: int = _sweep_step_count(abs_dy_res.value, radius)
-	var last_free_y: int = start_y
-	var sample_i: int = 1
-	while true:
-		var step_dy_res: FixedResult = Fixed.try_mul_div(dy, sample_i, step_count)
-		if not step_dy_res.ok:
-			return FixedResult.fail()
-		var sample_y_res: FixedResult = Fixed.try_add(start_y, step_dy_res.value)
-		if not sample_y_res.ok:
-			return FixedResult.fail()
-		if _destination_blocked(
-			entity_id, pose_index, start_x, sample_y_res.value, start_z
-		):
-			return FixedResult.success(last_free_y)
-		last_free_y = sample_y_res.value
-		if sample_i == step_count:
-			break
-		sample_i += 1
-	return FixedResult.success(last_free_y)
-
-
-func _sweep_step_count(length: int, radius: int) -> int:
-	var step_count: int = length / radius
-	if length % radius != 0:
-		step_count += 1
-	if step_count < 1:
-		step_count = 1
-	return step_count
-
-
-func _try_abs(value: int) -> FixedResult:
-	if value >= 0:
-		return FixedResult.success(value)
-	return Fixed.try_neg(value)
-
-
-func _destination_blocked(
-	entity_id: int, _pose_index: int, dest_x: int, dest_y: int, dest_z: int
-) -> bool:
-	return is_pose_blocked(entity_id, dest_x, dest_y, dest_z)
 
 
 func _capsule_at(pose_index: int, x: int, y: int, z: int) -> KinematicCapsule:

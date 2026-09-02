@@ -54,7 +54,43 @@ Worktree 端口偏移见 README「并行工作区」；本文件不复述端口�
 
 ---
 
-## 本刀：CD-61 回写（C5 第 8 章）
+## 本刀：仿真世界 + bundle；灰盒 + 探针（C5 第 9–10 章）
+
+第 9 章把 `SimulationWorld` 拆成 query / move、把 `SimulationBundle` 拆成 decode / bags。第 10 章把灰盒拆成 layout / assemble / play、把完成探针拆成 heuristic / search。全部压到 400 行以下。公开 API 与 `--bot-run` 步数不变。**没有新的窗口外观**。不需要 `npm run dev`。
+
+1. 仓库根目录跑 GUT fast 层（或至少 `test_simulation_e9_split.gd`、`test_traprush_e9_split.gd`、`test_traprush_graybox_course.gd`、`test_traprush_course_completion_probe.gd`）：
+   ```bash
+   npm run test:gut:fast
+   ```
+   - 预期：全绿；新拆分用例断言仿真世界 / bundle / 灰盒 / 探针各文件均 < 400 行。
+   - 失败：占用 / 扫掠 / v1→v2 解码 / 灰盒 `try_*` / 探针 `run_path` 红 ⇒ 门面把公开方法转丢了。
+
+2. 官方课步数：
+   ```powershell
+   & $env:GODOT4_CONSOLE --headless --path game -- --bot-run
+   ```
+   - 预期：三张课仍是 `completable`，步数 **5 / 5 / 12**。
+   - 失败：步数变了或 `not_completable` ⇒ 扫掠、bundle 解码或探针搜索语义变了。
+
+3. （抽查）`& $env:GODOT4 --path game`，点 **单人试玩**，WASD 走两步、空格跳一下。
+   - 预期：角色仍落在出生点固体上，能走、能跳；状态行仍有 `join=` / `solids=`。
+   - 失败：一开玩掉出世界或走不动 ⇒ 占用查询或扫掠委托坏了。
+
+### 本刀不测
+
+- 控制面 / 编辑壳 / 拓扑编译器拆分（下一章）；
+- 解冻令、协议帧、Schema、官方课 JSON、Tick / 快照 / 插值锁定。
+
+### 诚实边界
+
+- E9 仍欠：控制面 `server.ts` / `database.ts`、MatchHost `registry.ts`、`authoring_editor_shell.gd`、`traprush_topology_compiler.gd`；
+- 扫掠步数仍无上限（宪法第十七条缺口）。
+
+---
+
+## 上一刀：CD-61 回写（C5 第 8 章）
+
+> **本节随 CD-61 回写提交；验当前 PR 只看上面的「本刀」。**
 
 本章只把已批准的重排写进里程碑正文，**没有开发机可见行为**。不需要 `npm run dev`，不必开 Godot 窗口。
 

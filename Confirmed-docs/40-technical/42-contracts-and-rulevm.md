@@ -218,7 +218,7 @@ Undo / Redo 是会话内对成功命令派生的反向 payload（`place`↔`remo
 | 第一张官方 TRAPRUSH 赛道 | `game/content/official/traprush/course_01.json` |
 | 第二张官方 TRAPRUSH 赛道 | `game/content/official/traprush/course_02.json` |
 | 第三张官方 TRAPRUSH 赛道 | `game/content/official/traprush/course_03.json` |
-| SimulationBundle | `game/src/ugc/simulation_bundle.gd`（v2：`assets` 袋 + 每袋 `asset_id`/`gameplay_version`；v1 仍解码并迁移到内置"占满一格"资产） |
+| SimulationBundle | `game/src/ugc/simulation_bundle.gd` + decode / bags（v2：`assets` 袋 + 每袋 `asset_id`/`gameplay_version`；v1 仍解码并迁移到内置"占满一格"资产） |
 | TRAPRUSH 拓扑编译 | `game/src/ugc/traprush_topology_compiler.gd`（资产准入在这里；不读 `zone.shape`） |
 | TRAPRUSH 拓扑加载 | `game/src/games/traprush/traprush_topology_loader.gd`（半长来自 `assets`；只接受 `box`） |
 | 周期机关固体切换 | `game/src/games/traprush/hazard_cycle.gd` |
