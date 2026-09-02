@@ -6,9 +6,12 @@ extends RefCounted
 ## 不再把中文或英文句子写进壳。
 ##
 ## 表是 CSV，不是 Godot 的 Translation 导入产物：`.csv` 默认会被当成
-## 翻译资源，Headless / 导出包对不上同一套 remap。本文件自己解析，
-## `FileAccess` 读 `res://content/locale/craft_arena.csv`，导出预设必须
-## 把它写进 `include_filter`（和官方课 JSON 同一类：不是引擎资源）。
+## 翻译资源，Headless / 导出包对不上同一套 remap。本文件用
+## `FileAccess.get_csv_line` 读 `res://content/locale/craft_arena.csv`，
+## 导出预设必须把它写进 `include_filter`（和官方课 JSON 同一类）。
+## 2026-09-02 真导出：文件在包里、`get_as_text` 也完整，但手写按字符
+## 拆行在导出后的 `.gdc` 里拆出 0 行，大厅会显示键名。不要再写一套
+## 拆行器；引擎的 `get_csv_line` 是生产路径。
 ##
 ## 语言：`zh_CN` 与 `en`（`localization_scope = zh_en`）。当前 locale 以
 ## `TranslationServer.get_locale()` 为准，`zh*` 归一到 `zh_CN`，其余落到
@@ -105,16 +108,19 @@ static func ensure_loaded() -> bool:
 	if _loaded:
 		return not _tables.is_empty()
 	_loaded = true
-	_tables = {}
-	if not FileAccess.file_exists(TABLE_PATH):
-		return false
-	var file: FileAccess = FileAccess.open(TABLE_PATH, FileAccess.READ)
-	if file == null:
-		return false
-	var text: String = file.get_as_text()
-	file.close()
-	_tables = _parse_csv(text)
+	_tables = _parse_csv_file()
 	return not _tables.is_empty()
+
+
+## Exported-package diagnostics. Does not touch the cached tables.
+static func parse_stats() -> Dictionary:
+	var from_file: Dictionary = _parse_csv_file()
+	var zh: Dictionary = _locale_bag(from_file, ZH_LOCALE)
+	return {
+		"locales": from_file.keys(),
+		"zh_keys": zh.size(),
+		"banner_zh": str(zh.get(OFFLINE_BANNER, "")),
+	}
 
 
 static func reset_for_tests() -> void:
@@ -153,80 +159,45 @@ static func has_locale(locale: String) -> bool:
 	return _tables.has(locale)
 
 
-static func _parse_csv(text: String) -> Dictionary:
+static func _locale_bag(tables: Dictionary, locale: String) -> Dictionary:
+	if not tables.has(locale):
+		return {}
+	var raw: Variant = tables[locale]
+	if typeof(raw) != TYPE_DICTIONARY:
+		return {}
+	return raw
+
+
+static func _parse_csv_file() -> Dictionary:
+	var file: FileAccess = FileAccess.open(TABLE_PATH, FileAccess.READ)
+	if file == null:
+		return {}
+	var header: PackedStringArray = file.get_csv_line(",")
+	if header.size() > 0:
+		header[0] = header[0].replace("\uFEFF", "").strip_edges()
 	var tables: Dictionary = {}
-	var rows: Array[PackedStringArray] = _split_csv(text)
-	if rows.is_empty():
-		return tables
-	var header: PackedStringArray = rows[0]
 	if header.size() < 2 or header[0] != "keys":
+		file.close()
 		return tables
 	for col: int in range(1, header.size()):
-		tables[header[col]] = {}
-	for row_index: int in range(1, rows.size()):
-		var row: PackedStringArray = rows[row_index]
-		if row.is_empty():
+		tables[String(header[col])] = {}
+	while not file.eof_reached():
+		var row: PackedStringArray = file.get_csv_line(",")
+		if _row_is_blank(row):
 			continue
-		var key: String = row[0].strip_edges()
+		var key: String = String(row[0]).strip_edges()
 		if key == "" or key.begins_with("#"):
 			continue
 		for col: int in range(1, mini(row.size(), header.size())):
-			var locale: String = header[col]
-			var bag_raw: Variant = tables.get(locale, {})
-			if typeof(bag_raw) != TYPE_DICTIONARY:
+			var locale: String = String(header[col])
+			var existing: Variant = tables.get(locale, null)
+			if typeof(existing) != TYPE_DICTIONARY:
 				continue
-			var bag: Dictionary = bag_raw
-			bag[key] = row[col]
+			var bag: Dictionary = existing
+			bag[key] = String(row[col])
+			tables[locale] = bag
+	file.close()
 	return tables
-
-
-static func _split_csv(text: String) -> Array[PackedStringArray]:
-	var rows: Array[PackedStringArray] = []
-	var fields: PackedStringArray = PackedStringArray()
-	var field: String = ""
-	var in_quotes: bool = false
-	var source: String = text.replace("\r\n", "\n").replace("\r", "\n")
-	if source.begins_with("\uFEFF"):
-		source = source.substr(1)
-	var i: int = 0
-	while i < source.length():
-		var ch: String = source.substr(i, 1)
-		if in_quotes:
-			if ch == "\"":
-				if i + 1 < source.length() and source.substr(i + 1, 1) == "\"":
-					field += "\""
-					i += 2
-					continue
-				in_quotes = false
-				i += 1
-				continue
-			field += ch
-			i += 1
-			continue
-		if ch == "\"":
-			in_quotes = true
-			i += 1
-			continue
-		if ch == ",":
-			fields.append(field)
-			field = ""
-			i += 1
-			continue
-		if ch == "\n":
-			fields.append(field)
-			if not _row_is_blank(fields):
-				rows.append(fields)
-			fields = PackedStringArray()
-			field = ""
-			i += 1
-			continue
-		field += ch
-		i += 1
-	if in_quotes or field != "" or not fields.is_empty():
-		fields.append(field)
-		if not _row_is_blank(fields):
-			rows.append(fields)
-	return rows
 
 
 static func _row_is_blank(fields: PackedStringArray) -> bool:

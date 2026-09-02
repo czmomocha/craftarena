@@ -70,6 +70,11 @@ func test_report_names_all_three_official_courses() -> void:
 		assert_true(path.begins_with("res://content/official/traprush/"), path)
 		assert_true(path.ends_with(".json"), path)
 	assert_eq(str(report["locale_table_path"]), "res://content/locale/craft_arena.csv")
+	var locale_exists: bool = report["locale_file_exists"]
+	var locale_open: bool = report["locale_open_ok"]
+	assert_true(locale_exists, "源码树里 CSV 必须能 exists")
+	assert_true(locale_open, "源码树里 CSV 必须能 open")
+	assert_eq(str(report["locale_banner_zh"]), "离线试玩，成绩不上传")
 
 
 func test_probe_file_does_not_survive_the_check() -> void:

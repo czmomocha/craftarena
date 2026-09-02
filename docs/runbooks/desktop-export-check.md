@@ -64,14 +64,14 @@ macOS 把 `& $env:GODOT4_CONSOLE` 换成 `"$GODOT4"`。
 | 检查项 | 含义 | 何时必须为真 |
 |---|---|---|
 | `courses_readable` | 三张官方赛道 JSON 能**解码成 AuthoringWorld**（不只是文件存在） | 始终 |
-| `character_visual_loadable` | 角色视觉资产能**实例化成 Node3D**。`.glb` 进包后是导入产物 `.scn`，导出过滤配错或漏了 reimport 只在这里暴露；表现层遇到失败会静默回退占位盒，那在成品包里和"美术从来没加进去"长得一模一样 | 始终（2026-08-30 加入；**尚未在真导出包上跑过**，见下） |
-| `terrain_tile_visual_loadable` | 地块视觉资产能实例化**并贴合到一格**。比角色多判贴合，因为地块的缩放是从自身 AABB 算的：退化或无网格的导入会先通过 load，再让整条路静默退回石色盒 | 始终（2026-08-30 加入；**尚未在真导出包上跑过**，见下） |
-| `checkpoint_pad_visual_loadable` | 检查点垫能实例化并按地块规则贴合（顶面对齐） | 始终（2026-09-02 加入；尚未在真导出包上跑过） |
+| `character_visual_loadable` | 角色视觉资产能**实例化成 Node3D**。`.glb` 进包后是导入产物 `.scn`，导出过滤配错或漏了 reimport 只在这里暴露；表现层遇到失败会静默回退占位盒，那在成品包里和"美术从来没加进去"长得一模一样 | 始终（2026-08-30 加入；**2026-09-02 真包已绿**） |
+| `terrain_tile_visual_loadable` | 地块视觉资产能实例化**并贴合到一格**。比角色多判贴合，因为地块的缩放是从自身 AABB 算的：退化或无网格的导入会先通过 load，再让整条路静默退回石色盒 | 始终（2026-08-30 加入；**2026-09-02 真包已绿**） |
+| `checkpoint_pad_visual_loadable` | 检查点垫能实例化并按地块规则贴合（顶面对齐） | 始终（2026-09-02 加入；**同日真包已绿**） |
 | `checkpoint_gate_visual_loadable` | 检查点门能实例化并按站立物规则贴合（脚底对齐） | 始终（同上） |
 | `finish_gate_visual_loadable` | 终点门同上 | 始终（同上） |
 | `crate_visual_loadable` | 箱子同上 | 始终（同上） |
 | `hazard_roller_visual_loadable` | 滚柱同上 | 始终（同上） |
-| `locale_table_loadable` | 本地化 CSV 能被 `UiCopy` 解析，且 `zh_CN` 离线横幅不是键名本身（CSV 与官方课 JSON 一样不是引擎资源，必须写进 `include_filter`） | 始终（2026-09-02 加入；尚未在真导出包上跑过） |
+| `locale_table_loadable` | 本地化 CSV 能被 `UiCopy` 解析，且 `zh_CN` 离线横幅不是键名本身（CSV 与官方课 JSON 一样不是引擎资源，必须写进 `include_filter`；生产路径必须走 `FileAccess.get_csv_line`，见 §5 第 6 条） | 始终（2026-09-02 加入；**同日真包已绿**） |
 | `user_draft_roundtrip` | `user://` 可写可读可删，草稿恢复的落点成立 | 始终 |
 | `no_mcp_autoload` | 没有 `_mcp_game_helper` autoload | 始终 |
 | `runtime_material` | 运行时 `StandardMaterial3D` 能建、能设 albedo、能读回 | 始终 |
@@ -82,9 +82,9 @@ macOS 把 `& $env:GODOT4_CONSOLE` 换成 `"$GODOT4"`。
 
 后三条在源码运行时必然为假（tests 与 addons 就在磁盘上），所以只在 `template_build=true` 时计入失败。
 
-同时报告但不判定的字段：`web`（`OS.has_feature("web")`）、`packed_addons`、`user_data_dir`、`draft_path`、`engine`、`autoloads`、`character_visual_path`、`terrain_tile_visual_path`、`checkpoint_pad_visual_path`、`checkpoint_gate_visual_path`、`finish_gate_visual_path`、`crate_visual_path`、`hazard_roller_visual_path`、`locale_table_path`。
+同时报告但不判定的字段：`web`（`OS.has_feature("web")`）、`packed_addons`、`user_data_dir`、`draft_path`、`engine`、`autoloads`、`character_visual_path`、`terrain_tile_visual_path`、`checkpoint_pad_visual_path`、`checkpoint_gate_visual_path`、`finish_gate_visual_path`、`crate_visual_path`、`hazard_roller_visual_path`、`locale_table_path`、`locale_file_exists`、`locale_open_ok`、`locale_banner_zh`、`locale_parse`。
 
-**关于 `.glb` 为什么不在 `include_filter` 里**：三个预设都是 `export_filter="all_resources"`，`.glb` 是 Godot **导入资源**，由它覆盖；`include_filter` 里那条 `content/official/*.json,content/locale/*.csv` 之所以必须显式写，是因为 JSON 与 CSV 都不是资源类型（CSV 还用 `importer="keep"`，避免默认翻译导入生成 `.translation`）。这条推断**还没有被真导出包验证过**（2026-08-30 写入时开发机没装 4.7.2 导出模板），所以下一次谁跑导出，请把 `character_visual_loadable`、`terrain_tile_visual_loadable`、五个占用 `*_visual_loadable` 与 `locale_table_loadable` 的结果补回本节。
+**关于 `.glb` 为什么不在 `include_filter` 里**：三个预设都是 `export_filter="all_resources"`，`.glb` 是 Godot **导入资源**，由它覆盖；`include_filter` 里那条 `content/official/*.json,content/locale/*.csv` 之所以必须显式写，是因为 JSON 与 CSV 都不是资源类型（CSV 还用 `importer="keep"`，避免默认翻译导入生成 `.translation`）。**2026-09-02 真包已验证**：角色 / 地块 / 五个占用 `*_visual_loadable` 全绿；CSV 文件在 pck 里且 `get_as_text` 完整，但必须用 `get_csv_line` 才能解析（见 §5 第 6 条）。
 
 Linux 包在 VPS 上用同一条：
 
@@ -106,6 +106,27 @@ Linux 包在 VPS 上用同一条：
 
 `user_data_dir` = `C:/Users/<user>/AppData/Roaming/Godot/app_userdata/Craft Arena`，草稿落点 `.../authoring_draft.json`。**注意**：导出包与编辑器运行共用同一个 `user://`，因为 `application/config/name` 相同。要验「干净首次启动」的草稿恢复，先把该目录挪走。
 
+### 2026-09-02 Windows 包实测输出（E1）
+
+Godot 4.7.2-stable，本机已装配套导出模板。`ok=true`，`failures=[]`，`template_build=true`。16 条检查全绿，含第一批 `.glb` 与 locale。
+
+```json
+{"ok":true,"failures":[],"template_build":true,"debug_build":false,"web":false,
+ "packed_addons":[],"rendering_method":"gl_compatibility","autoloads":[],
+ "locale_banner_zh":"离线试玩，成绩不上传",
+ "locale_parse":{"locales":["en","zh_CN"],"zh_keys":33,
+  "banner_zh":"离线试玩，成绩不上传"},
+ "checks":{"courses_readable":true,"character_visual_loadable":true,
+  "terrain_tile_visual_loadable":true,"checkpoint_pad_visual_loadable":true,
+  "checkpoint_gate_visual_loadable":true,"finish_gate_visual_loadable":true,
+  "crate_visual_loadable":true,"hazard_roller_visual_loadable":true,
+  "locale_table_loadable":true,"user_draft_roundtrip":true,"no_mcp_autoload":true,
+  "runtime_material":true,"compatibility_renderer":true,"no_godot_ai_packed":true,
+  "no_addons_packed":true,"tests_excluded":true}}
+```
+
+纠偏方案 **E1 满足**（Windows 包存在且清单全绿）。Headless 自检**不能**代替 §4.1 开窗。
+
 ---
 
 ## 4. 人工步骤（自检覆盖不到的部分）
@@ -115,8 +136,8 @@ Linux 包在 VPS 上用同一条：
 ### 4.1 Windows 包开窗
 
 1. 双击 `export\windows\CraftArena.exe`（不要加 `--headless`）。
-2. 预期：出现标题 **Traprush** 的窗口，状态行含 `join=idle`、`play=idle`、`tls=off`、`course=3/5/1`。失败：闪退、黑窗、或只有控制台。
-3. 点 **Solo play**，点窗口内部一次，按 WASD 与空格。预期：青色本席盒会动、会跳、会落回脚下石色盒。
+2. 预期：出现大厅窗口。本机 locale 为 `zh*` 时窗题是 **机关狂奔**，按钮是 **单人试玩** 等中文；其余 locale 仍是 **Traprush** / **Solo play**。状态行含 `join=idle`、`play=idle`、`tls=off`、`course=3/5/1`。失败：闪退、黑窗、只有控制台、或窗题/按钮变成键名 `craft_arena.ui.*`（CSV 在包里但没解析到）。
+3. 点 **单人试玩** / **Solo play**，点窗口内部一次，按 WASD 与空格。预期：角色视觉会动、会跳、会落回脚下地块（不是突然只剩 1 米盒）。
 4. 对照编辑器里 `& $env:GODOT4 --path game` 的同一画面。预期：**颜色与明暗一致**——这是 Compatibility 下运行时创建的 `StandardMaterial3D` 的目检项，自检只能证明它能建，不能证明它长得对。
 
 ### 4.2 Web 包本地起一次
@@ -144,7 +165,7 @@ python -m http.server 8060 --directory export\web
    - 已修：三个预设 `exclude_filter` 加 `addons/*`；`test_export_presets.gd` 守住这条；自检 `no_godot_ai_packed` / `no_addons_packed` 在包里必须为真。
    - CD-62 状态需按 C5 重新定级。
 
-2. **Web 预设会因为 VRAM 压缩项而拒绝导出。** 报错只有一句 `Cannot export project with preset "Web" due to configuration errors:`，**后面不列具体项**。原因是 `vram_texture_compression/for_desktop` / `for_mobile` 要求工程先开对应的导入设置。当前工程零纹理，两项都设为 false。C4 引入 `.glb` 与纹理时必须与 `rendering/textures/vram_compression/import_*` 一起打开。
+2. **Web 预设会因为 VRAM 压缩项而拒绝导出。** 报错只有一句 `Cannot export project with preset "Web" due to configuration errors:`，**后面不列具体项**。原因是 `vram_texture_compression/for_desktop` / `for_mobile` 要求工程先开对应的导入设置。2026-08-26 工程零纹理，两项都设为 false。**2026-09-02 第一批 `.glb` 入库后，同一预设已能导出**（三项压缩仍关；贴图走 glTF 内嵌未压缩，见 [CD-51 §5.1](../../Confirmed-docs/50-engineering/51-dev-environment.md)）。以后若打开 VRAM 压缩导入，必须与这两项一起开，否则会再次被一句空报错挡住。
 
 3. **官方赛道 JSON 与本地化 CSV 都不是引擎资源，默认不进包。** 三个预设都要 `include_filter="content/official/*.json,content/locale/*.csv"`。自检里的 `courses_readable` / `locale_table_loadable` 做的是解码而不是 `file_exists`，因为存在「文件在包里但引擎读不出来」的情况。CSV 不得走 Godot 默认翻译导入：那会生成 `.translation`，Headless 与导出包对不上同一套 remap。
 
@@ -152,11 +173,15 @@ python -m http.server 8060 --directory export\web
 
 5. **4 个 `.gd` 缺 `.uid` 伴随文件**，导出时引擎打 `Missing .uid file ... re-created from cache` 警告。已补入库。
 
+6. **手写 CSV 拆行在导出后的 `.gdc` 里拆出 0 行。** 2026-09-02 真包里 `res://content/locale/craft_arena.csv` 在 pck 中、`FileAccess.file_exists` / `open` / `get_as_text` 都过（全文 1349 字符，与源文件一致），但 `UiCopy` 按字符拆行的解析器在模板构建里得到 0 行，`zh_CN` 离线横幅退回键名。编辑器 / GUT 源码运行看不出来。已改为生产路径只走 `FileAccess.get_csv_line`；自检要求 `locale_banner_zh` 等于 CD-13 那句「离线试玩，成绩不上传」。不要再把拆行器写回 `ui_copy.gd`。
+
 ---
 
-## 6. 2026-08-26 包体基线
+## 6. 包体观察值
 
-用于 [CD-62](../../Confirmed-docs/60-plan/62-risk-register.md)「网页/微信包体超限」重新定级，以及下次审视趋势对比。当前工程 **0 个 `.glb` / 0 张纹理**，所以这几乎是纯引擎运行时的地板值。
+用于 [CD-62](../../Confirmed-docs/60-plan/62-risk-register.md)「网页/微信包体超限」重新定级，以及下次审视趋势对比。数字是本机导出产物，**不入库**（`export/` 已 gitignore）。
+
+### 2026-08-26（0 个 `.glb`，引擎地板）
 
 | 产物 | 大小 |
 |---|---|
@@ -169,4 +194,17 @@ python -m http.server 8060 --directory export\web
 | └ `index.wasm` brotli | 6.77 MB |
 | └ `index.pck` | 0.46 MB |
 
-读法：Web 首屏下载量取决于服务端压缩，brotli 下约 **7.3 MB**（wasm + pck）。这是**还没有任何美术资源**时的数字。[CD-11 §6](../../Confirmed-docs/10-product/11-scope-and-platforms.md) 平台矩阵里的「微信小游戏，一期后跟进」需要正视这个地板：微信小游戏主包 4 MB 的限制，仅引擎 wasm 就已超出，必须靠分包或引擎裁剪，不是「导出一下」的事。
+### 2026-09-02（第一批 `.glb` + locale CSV，E1）
+
+| 产物 | 大小 |
+|---|---|
+| Windows `CraftArena.exe` | 104.07 MB |
+| Windows `CraftArena.pck` | 8.36 MB |
+| Linux Headless（exe + pck） | 78.48 MB |
+| Web 合计（9 个文件） | 46.37 MB |
+| └ `index.wasm` 原始 | 37.68 MB |
+| └ `index.wasm` gzip | 9.59 MB |
+| └ `index.wasm` brotli | 6.77 MB |
+| └ `index.pck` | 8.36 MB |
+
+读法：引擎 wasm 几乎没动；pck 从 0.46 MB 长到 8.36 MB，就是第一批美术导入产物。Web 首屏若 brotli wasm + 未压 pck，约 **15.1 MB**（2026-08-26 约 7.3 MB）。[CD-11 §6](../../Confirmed-docs/10-product/11-scope-and-platforms.md) 平台矩阵里的「微信小游戏，一期后跟进」仍然成立：微信主包 4 MB，仅引擎 wasm brotli 就已超出，必须靠分包或引擎裁剪，不是「导出一下」的事。**字体仍未入包**，再加子集字体还会涨。

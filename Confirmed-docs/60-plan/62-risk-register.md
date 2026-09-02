@@ -54,7 +54,7 @@
 | SQLite 单实例锁竞争和迁移成本 | 中，已治理 | 仅 Fastify 直接访问；保留 PostgreSQL 迁移边界 |
 | 传送迷路或跳关 | 高，已缓解 | 检查点序列与发布前通路/循环验证已有。**镜头过渡零实现**，不能再标「已治理」 |
 | BASTION 互设障碍不公平 | 高，已治理 | 同预算、盲设、路径硬验证、槽位与补偿预设（机制在文档；玩法未开工） |
-| 网页/微信包体超限 | 中，未开始 | Compatibility 基线与 Web 导出预设已有；**没有**资源变体、分包或按需模块。2026-08-26 无美术时 Web 合计 38.46 MB、wasm brotli 仍约 7 MB，已超过微信主包 4 MB。数字见 [desktop-export-check.md §6](../../docs/runbooks/desktop-export-check.md) |
+| 网页/微信包体超限 | 中，未开始 | Compatibility 基线与 Web 导出预设已有；**没有**资源变体、分包或按需模块。2026-08-26 无美术时 Web 合计 38.46 MB、wasm brotli 仍约 7 MB。2026-09-02 第一批 `.glb` 后 Web 合计 46.37 MB、pck 0.46→8.36 MB、wasm brotli 仍 6.77 MB，首屏约 15.1 MB，已超过微信主包 4 MB。数字见 [desktop-export-check.md §6](../../docs/runbooks/desktop-export-check.md) |
 | Godot 主 MCP 供应链与编辑器权限 | 中，已缓解 | 已选定唯一主 MCP 为 Godot AI（MIT，GDScript 插件 + 本机 Python）。阶段 C 生产级启用已通过（2026-08-23）。插件不入库；仅回环；禁止 `--allow-host` 与 Vision Routing。清单见 [ADR-0003](../../docs/adr/0003-godot-mcp-selection.md) |
 | Godot AI 匿名遥测默认开启 | 中，已治理 | 第一次启用插件前写入 `GODOT_AI_DISABLE_TELEMETRY=true`，Dock 再关 Telemetry，Cursor attach 带 `--disable-telemetry`。口径见 [CD-51 §7.2](../50-engineering/51-dev-environment.md)，不属于 [CD-14](../10-product/14-data-and-telemetry.md) 玩家遥测 |
 | `_mcp_game_helper` 写入 `project.godot` 后进入 Headless / 导出包 | 高，已缓解 | **第一次真导出**（2026-08-26）证明旧「已缓解」不成立：`res://addons/godot_ai/` 会被打进 release 包。现缓解：三预设 `exclude_filter` 含 `addons/*`、包内自检 `no_godot_ai_packed` / `no_addons_packed`、`npm run godot-settings:scrub` / `:check`、Agent `git commit`/`git add` 由 `tools/shell-guard/` fail closed 拦截。残余：插件仍会写回本机 `project.godot`；人手敲的 git 不被拦；源码 Headless 若脏工程仍可能加载 helper。口径见 [CD-51 §7.3](../50-engineering/51-dev-environment.md) 与 [desktop-export-check.md §5](../../docs/runbooks/desktop-export-check.md) |
