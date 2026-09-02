@@ -7,6 +7,17 @@
 > 相关：[CD-32 编辑器与预览](32-editor-and-preview.md)、[CD-33 热修改与热发布](33-hot-publish.md)、[CD-42 数据契约与 Rule VM](../40-technical/42-contracts-and-rulevm.md)、[CD-12 产品结构](../10-product/12-product-structure.md)
 > 派生自：初稿 v0.2 §7
 
+## 当前生效值
+
+> 本节覆盖而非追加。覆盖链见 [CD-91 D.5](../90-reference/91-decision-log.md)。
+
+| 项 | 当前口径 |
+|---|---|
+| 原则 | UGC 是数据，不是代码 |
+| 发布 | 自动公开已接受（测试期）；权利条款仍是阻断项 |
+| 资产版本 | `GameplayAsset` 四项分离已进 Schema（C4） |
+| Fork / 云端草稿 | 未做 |
+
 ## 1. 基本原则
 
 **UGC 是数据，不是代码。**

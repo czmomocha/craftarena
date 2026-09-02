@@ -7,6 +7,10 @@
 > 相关：[CD-63 开发期决策清单](../60-plan/63-open-decisions.md)、[CD-62 风险登记册](../60-plan/62-risk-register.md)
 > 派生自：初稿 v0.2 附录 D
 
+## 当前生效值
+
+本文件不拥有口径。它只记录选择来源与覆盖关系；现行规则在各所有者文档的「当前生效值」节。冲突时以时间较新的明确决策为准，再回写所有者。
+
 ## 使用与追加规则
 
 本文件记录选择来源，防止 AI 把推荐项误当决定。
@@ -86,6 +90,7 @@
 - `authoritative_motion_dof = upright_3d_kinematic`。
 - `traprush_inventory = 延期`。
 - `traprush_respawn_stun = 1_second`（2026-08-28）：纠偏 D5 中档。一期环境失败（出界 / 踩实心机关）固定硬直 **1.0 s**。不锁 Tick Hz。对局 / Solo 经 `TraprushPlayStubs.RESPAWN_STUN_MS` 与 `PHYSICS_TICKS_PER_SECOND_PLACEHOLDER`（当前 60）换成会话 tick；Preview 仍 1 次 Advance。覆盖 CD-63 §1.3 中「复活硬直」秒数空白，以及 D.8 `match_oob_reset` 里「不写复活硬直」的产品秒数空白。§1.3 其余数值仍延期。口径见 [纠偏方案 D5](../../docs/plans/course-correction-2026-08.md) 与 [CD-21 §6](../20-gameplay/21-traprush.md#6-单局流程)。
+- `traprush_min_items = bomb_and_sprint`（2026-08-26 拍板，2026-09-02 C5 回写）：一期最小道具 = **爆破球 + 冲刺**。服务端裁决拾取 / 使用 / 命中；伪造命中被拒。覆盖 CD-63 §1.2 中「正式道具清单」的一期最小集空白，以及 CD-21 旧「不是已锁定的正式道具表」表述。完整道具 / 炮塔 / 单位 / 障碍表与槽位规则仍延期。口径见 [CD-21 §5.3](../20-gameplay/21-traprush.md#53-道具一期最小集已锁)。
 
 ## D.4 BASTION
 
@@ -128,7 +133,7 @@
 ## D.6 AI、协作与项目治理
 
 - `ai_autonomy = edit_test_no_commit_release` 已被 `ai_autonomy_scope = isolated_branch_commit_ok`（2026-08-21）**收窄解释、并未推翻**：禁止的是向 `main` 或受保护分支提交/推送，以及部署、发布与线上回滚；允许在隔离的 agent 分支或 worktree 上 commit/push。人类门禁落在 PR 合并（`pr_merge_gate`）与 GitHub 分支保护。**分支保护落地前仍按原字面执行**——Agent 不得创建任何提交。口径见 [CD-52 §1.1](../50-engineering/52-ai-workflow.md)，来源 [ADR-0004](../../docs/adr/0004-multi-agent-adoption-timing-and-architecture.md)。
-- `human_review_granularity = task_and_gate`。该句被 `pr_scope = complete_chapter`（2026-08-23）**收窄解释、并未推翻**：任务仍是可验证切片，但提交给人类的 PR 必须是完整一章（契约 + 实现 + 测试 + 所有者文档），不得把同一链路拆成不能独立验收的半成品。`git_workflow = trunk_short_pr` 不被推翻，仍禁止整里程碑巨型 PR。口径见 [CD-52 §3.1](../50-engineering/52-ai-workflow.md)。该句再被 `chapter_device_check = numbered_runbook_and_pr`（2026-08-25）补充：完整章节 PR 必须把人类真机写成编号步骤，写入 [章节真机清单](../../docs/runbooks/chapter-device-check.md) 本刀并在 PR Test plan 给出同一份清单；禁止只写「真机再看一眼」。无开发机可见行为的章写「无」加原因。这是人工检查，不是 CI 门禁。口径见 [CD-52 §3.2](../50-engineering/52-ai-workflow.md)。
+- `human_review_granularity = task_and_gate`。该句被 `pr_scope = complete_chapter`（2026-08-23）**收窄解释、并未推翻**：任务仍是可验证切片，但提交给人类的 PR 必须是完整一章（契约 + 实现 + 测试 + 所有者文档），不得把同一链路拆成不能独立验收的半成品。`git_workflow = trunk_short_pr` 不被推翻，仍禁止整里程碑巨型 PR。口径见 [CD-52 §3.1](../50-engineering/52-ai-workflow.md)。该句再被 `chapter_device_check = numbered_runbook_and_pr`（2026-08-25）补充：完整章节 PR 必须把人类窗口验收写成编号步骤，写入 [开发机窗口验收](../../docs/runbooks/dev-window-check.md) 本刀并在 PR Test plan 给出同一份清单；禁止只写「真机再看一眼」。无开发机可见行为的章写「无」加原因。这是人工检查，不是 CI 门禁。口径见 [CD-52 §3.2](../50-engineering/52-ai-workflow.md)。该句再被 `dev_window_check_not_export = runbook_rename`（2026-09-02）补充：文件从 `chapter-device-check.md` 更名为 `dev-window-check.md`，显示名「开发机窗口验收」；「真机」一词留给导出包（[desktop-export-check.md](../../docs/runbooks/desktop-export-check.md)）。不覆盖编号步骤义务本身。
 - `ai_parallelism = lead_isolated_domains`。
 - `multi_agent_runtime = cursor_native_worktree`（2026-08-21）：一期用 Cursor 原生 `/worktree` + `.cursor/agents/` + `.cursor/hooks.json`。不引入 Multica 类平台，不用 Cursor Automations。启用判据、并行度上限与角色表见 [CD-52 §5](../50-engineering/52-ai-workflow.md)。
 - `code_review_assist = bugbot`（2026-08-21）：审查角色不建 Cursor subagent，由 Bugbot 承担。本地 `/review-bugbot` 先行，第一个 PR 走通后再开 PR 侧。不启用 fail-on-unresolved-issues，故不是 CI 门禁。配置与边界见 [CD-52 §5.2](../50-engineering/52-ai-workflow.md)，状态见 [CD-53 §4.1](../50-engineering/53-testing-and-ci.md)。该句被 `bugbot_agents_md = local_injected_pr_rules_exclude`（2026-08-21）补充：本地 `/review-bugbot` 子会话注入了完整 `AGENTS.md`（`always_applied_workspace_rules`）。GitHub PR Bugbot 官方规则源不含 `AGENTS.md`。该句再被 `bugbot_md = gate2_and_cd00_links`（2026-08-21）覆盖：`.cursor/BUGBOT.md` 已入库。PR 侧仍未开。该句再被 `bugbot_pr_side = deferred_ci_human`（2026-08-21）覆盖：GitHub PR 侧 Bugbot 因 SCM 安装对不上而跳过；合入靠 CI + 人类批准。本地 `/review-bugbot` 仍可用。
@@ -240,3 +245,7 @@
 ## D.10 文档体系
 
 - `docs_structure = index_first_single_source`（2026-08-20）：将 2129 行一体化初稿拆分为 `Confirmed-docs/` 文档群；宪法常驻，其余按主题分章按需读取。原初稿退役为归档，不再作为依据。
+- `current_values_section = overwrite_not_append`（2026-09-02，纠偏 C5）：除索引外每份所有者文档文首有「当前生效值」节，覆盖而非追加；30 秒可读完。历史覆盖链留在本文件或 ADR。CD-41 §5 巨段与 CD-21 连续 dated 实现落点在本次收敛。口径见各所有者文首与 [纠偏方案 C5](../../docs/plans/course-correction-2026-08.md)。
+- `cd61_rearrangement = draft_pending_human`（2026-09-02，纠偏 D6 选项 A）：重排草案为 [cd-61-rearrangement-draft.md](../../docs/plans/cd-61-rearrangement-draft.md)。**CD-61 在人类逐条批准并回写之前仍是现行口径**。不得把 M-Export / M-Art / M4a / M4b 写成已拍板里程碑。
+- `web_tls_gate = public_ops_domain_not_c1`（2026-09-02，回写 D2/D11）：Web 仍是一期持续入口；域名 + 受信证书在公开运营前补齐，不在 C1。测试期明文见 D.8 `c1_test_remote`。口径见 [CD-11 §9](../10-product/11-scope-and-platforms.md#9-公开-web-与传输安全d2--d11) 与 [CD-51 §5](../50-engineering/51-dev-environment.md)。
+- `cd62_c5_status_correction = pack_portal_review_netlock`（2026-09-02）：「网页/微信包体超限」改回未开始；「传送迷路或跳关」改为已缓解（镜头过渡零实现）；新增「单人审查带宽超载」与「在零延迟条件下锁定网络参数」。`_mcp_game_helper` 以第一次真导出为准。口径见 [CD-62](../60-plan/62-risk-register.md)。

@@ -7,6 +7,17 @@
 > 相关：[CD-41 架构](../40-technical/41-architecture.md)、[CD-52 AI 协作规范](52-ai-workflow.md)、[CD-53 测试与 CI](53-testing-and-ci.md)、[ADR-0003](../../docs/adr/0003-godot-mcp-selection.md)
 > 派生自：初稿 v0.2 §39–§42
 
+## 当前生效值
+
+> 本节覆盖而非追加。覆盖链见 [CD-91 D.6](../90-reference/91-decision-log.md)。
+
+| 项 | 当前口径 |
+|---|---|
+| 引擎 | Godot **4.7.2-stable** Standard；与导出模板同一精确版本 |
+| 导出 | 三套预设已在 `game/export_presets.cfg`（Windows desktop、Linux Headless、Web） |
+| Android / iOS | 仍占位 |
+| Godot MCP | 不入库；不进 CI / 玩家包 / MatchServer |
+
 ## 1. 基础工具
 
 | 工具 | 选型 |
@@ -111,8 +122,7 @@ export GODOT_AI_DISABLE_TELEMETRY=true
 - 资源导入：统一 GLB，详见 §5.1；
 - 自动加载：只放稳定的基础服务，不把大量玩法状态塞进 Autoload；
 - 日志：开发构建输出结构化日志；
-- 导出：Windows、Linux Headless、Android、iOS 占位预设；
-- Web 预设在核心切片稳定后加入。
+- 导出：三套预设已写入 `game/export_presets.cfg`（Windows desktop、Linux Headless、Web）。Android / iOS 仍占位。
 
 ### 5.1 资产入库规范（当前生效值）
 

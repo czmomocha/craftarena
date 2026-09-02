@@ -7,6 +7,17 @@
 > 相关：[CD-52 AI 协作规范](52-ai-workflow.md)、[CD-43 网络与回放](../40-technical/43-networking-and-replay.md)、[CD-61 里程碑路线](../60-plan/61-milestones.md)、[CD-62 风险登记册](../60-plan/62-risk-register.md)
 > 派生自：初稿 v0.2 §48–§52、附录 B
 
+## 当前生效值
+
+> 本节覆盖而非追加。覆盖链见 [CD-91 D.8](../90-reference/91-decision-log.md)。
+
+| 项 | 当前口径 |
+|---|---|
+| 每次 PR | tsc + GUT fast/slow 全量 + Schema + 红线 + 资产预算 |
+| PR Web 预览 | **未实现**。Web 导出已有，PR 沙盒未做 |
+| 可玩性签署 | **未发生**。C3 已交重力与一期最小道具，不是签署本身 |
+| `--bot-run` | 不进 PR CI |
+
 ## 1. 测试原则
 
 优先级：
@@ -177,12 +188,12 @@ AI 生成代码必须比普通手写代码有**更强的自动化证据**，因�
 - 大厅只读结算面板：MatchHost 对 running 场心跳一旦带 settlement 就 POST（409 已写入），停止前再 POST；大厅线上全员冲线后 GET，200 写 HUD `settled=`；404 不把 join 打成 FAILED；畸形 200 不写面板；Solo 冲线只有 `result=`、不 GET；Cancel 清掉 `settled=`；客户端 `allows_settlement` 仍为 false；
 - 内部开发 EditorPlugin：`plugin.cfg` 入库；`project.godot` 启用 GUT + authoring_editor、不含 `godot_ai` / `_mcp_game_helper`；host 打开已有外壳，关闭只隐藏并保持会话，`detach` 释放，不结算；本机若有 gitignore 的 `game/addons/godot_ai/`，打开编辑器时 Authoring Editor 自动 `set_plugin_enabled("godot_ai")`；无目录则不启用；CI `--import` 缺目录会从启用列表摘掉该项，故不得把 `godot_ai` 写入已提交 `editor_plugins`；
 - 开发机运行窗口与空格跳跃：大厅/Preview 动作按钮 `FOCUS_NONE`，LineEdit `FOCUS_CLICK`；空格不点 Solo play / Play；`jump` 动作仍是空格；项目运行窗 1600×900 最大化，Traprush/Preview 窗 1280×720 最大化；不是产品镜头/FOV；GUT 910/910、`npm test` 319；
-- 固定固体占用：v1 bundle 必含 `solids`（可空）；袋为 `entity_id` / `x` / `y` / `z`；缺键 / 缺坐标 / 重复 id 拒绝；编译自 `zone.tags` 含 `solid` 且有 `transform` 的实体；与检查点/传送/终点/可破坏/机关同实体或 `finish`+`solid` 同实体整份拒绝；官方三张赛道 `solids.size()==0`；加载为始终固体盒、不随 tick 切换；大厅石色 1 米占位；HUD `solids=n/m`；本席 overlay 撞始终固体停在权威；Preview 同色且开玩后仍显示；合成 `solids` 袋可作 Jump 立足点；不改官方赛道、不改 `play_support_dy` 默认 0；不新增 Component Schema 字段；GUT 923/923、`npm test` 323；人类真机步骤见 [章节真机清单](../../docs/runbooks/chapter-device-check.md) 本刀（人工检查，非 CI 门禁）；
+- 固定固体占用：v1 bundle 必含 `solids`（可空）；袋为 `entity_id` / `x` / `y` / `z`；缺键 / 缺坐标 / 重复 id 拒绝；编译自 `zone.tags` 含 `solid` 且有 `transform` 的实体；与检查点/传送/终点/可破坏/机关同实体或 `finish`+`solid` 同实体整份拒绝；官方三张赛道 `solids.size()==0`；加载为始终固体盒、不随 tick 切换；大厅石色 1 米占位；HUD `solids=n/m`；本席 overlay 撞始终固体停在权威；Preview 同色且开玩后仍显示；合成 `solids` 袋可作 Jump 立足点；不改官方赛道、不改 `play_support_dy` 默认 0；不新增 Component Schema 字段；GUT 923/923、`npm test` 323；人类真机步骤见 [开发机窗口验收](../../docs/runbooks/dev-window-check.md) 本刀（人工检查，非 CI 门禁）；
 - 编辑器占用摆放：Place solid 写 `zone.tags` 含 `solid` 且编进 `solids`；Place hazard 写已有 `hazard`（`cooldown_ticks=1` 桩）且编进 `hazards`；Place crate 写已有 `destructible`（耐久 1 桩）且编进 `destructibles`；Editor/Preview 占位石色/洋红/橙色；楼层切换作用于占用摆放；已连接 Preview 跟随；Undo 撤箱；不新增 EDIT `op`；不改官方赛道；GUT 929/929、`npm test` 323；
-- 官方赛道占用：三张官方课各 1 个始终固体（entity 70，出生点 −X 一格）与 1 个周期机关（entity 60，出生点 −Z 两格，`cooldown_ticks=1` 桩；两格避开双人 Shove 邻域）；不挡 +X 必经路；大厅/Preview 石色/洋红；HUD `solids=1/1`、tick 0 时 `hazards=1/1`；本席 overlay 撞官方固体停在权威；不新增 EDIT `op`；GUT 930/930、`npm test` 323；人类真机步骤见 [章节真机清单](../../docs/runbooks/chapter-device-check.md) 本刀（人工检查，非 CI 门禁）；
-- 编辑器 Place finish：Place finish 写 `zone.tags` 含 `finish` 且编进 `finish`；Editor/Preview 金色占位（`FINISH_ALBEDO`，与大厅 pending 金同色、与 solid 石色不同）并标 `finish`；占用 id 跳过悬空传送预留槽；再点 Preview 抬已有窗；第二份终点仍写入、编译整份拒绝；楼层切换作用于 Place finish；已连接 Preview 跟随；Undo 撤盒；不新增 EDIT `op`；不改官方赛道；GUT 938/938、`npm test` 323；人类真机步骤见 [章节真机清单](../../docs/runbooks/chapter-device-check.md) 本刀（人工检查，非 CI 门禁）；
-- 官方赛道立足固体与 Jump：三张官方课各加 entity 80（出生点正下一格 `y = -cell` 始终固体，不挡 +X）；对局 / Solo / Preview 壳 `support_dy = -Fixed.SCALE`；`jump_dy` 为 `Fixed.SCALE / 4` 占位桩（避免 `course_01` 上楼传送盒）；出生点 Jump 接地 hop；大厅 HUD `solids=2/2`；在线 overlay `play_jump_dy` 仍为 0；不锁产品跳跃高度；GUT 940/940、`npm test` 323；人类真机步骤见 [章节真机清单](../../docs/runbooks/chapter-device-check.md) 本刀（人工检查，非 CI 门禁）；
-- 权威下落接到对局 / Solo / Preview：`fall_dy` 默认 0 时 `commit_tick` 保持出生 y；boot / Solo 占位 `-Fixed.SCALE / 16`，Preview 壳占位 `-Fixed.SCALE`；立足盒上 settle 后 Jump hop，再 commit/advance 落回 rest_y；走离立足盒 y 下降，继续下落会触发出界复位弹回出生点；`MatchRealtime` 先下落再意图再 tick，settle 不续租、hop 续租；Solo `_process` 先 advance 再采样空格；Preview 意图不下落，Advance tick 才落；零 `fall_dy` 的 advance 保持 hop；不锁产品重力加速度、不铺官方沿路地板；GUT 949/949、`npm test` 323；人类真机步骤见 [章节真机清单](../../docs/runbooks/chapter-device-check.md) 本刀（人工检查，非 CI 门禁）；
+- 官方赛道占用：三张官方课各 1 个始终固体（entity 70，出生点 −X 一格）与 1 个周期机关（entity 60，出生点 −Z 两格，`cooldown_ticks=1` 桩；两格避开双人 Shove 邻域）；不挡 +X 必经路；大厅/Preview 石色/洋红；HUD `solids=1/1`、tick 0 时 `hazards=1/1`；本席 overlay 撞官方固体停在权威；不新增 EDIT `op`；GUT 930/930、`npm test` 323；人类真机步骤见 [开发机窗口验收](../../docs/runbooks/dev-window-check.md) 本刀（人工检查，非 CI 门禁）；
+- 编辑器 Place finish：Place finish 写 `zone.tags` 含 `finish` 且编进 `finish`；Editor/Preview 金色占位（`FINISH_ALBEDO`，与大厅 pending 金同色、与 solid 石色不同）并标 `finish`；占用 id 跳过悬空传送预留槽；再点 Preview 抬已有窗；第二份终点仍写入、编译整份拒绝；楼层切换作用于 Place finish；已连接 Preview 跟随；Undo 撤盒；不新增 EDIT `op`；不改官方赛道；GUT 938/938、`npm test` 323；人类真机步骤见 [开发机窗口验收](../../docs/runbooks/dev-window-check.md) 本刀（人工检查，非 CI 门禁）；
+- 官方赛道立足固体与 Jump：三张官方课各加 entity 80（出生点正下一格 `y = -cell` 始终固体，不挡 +X）；对局 / Solo / Preview 壳 `support_dy = -Fixed.SCALE`；`jump_dy` 为 `Fixed.SCALE / 4` 占位桩（避免 `course_01` 上楼传送盒）；出生点 Jump 接地 hop；大厅 HUD `solids=2/2`；在线 overlay `play_jump_dy` 仍为 0；不锁产品跳跃高度；GUT 940/940、`npm test` 323；人类真机步骤见 [开发机窗口验收](../../docs/runbooks/dev-window-check.md) 本刀（人工检查，非 CI 门禁）；
+- 权威下落接到对局 / Solo / Preview：`fall_dy` 默认 0 时 `commit_tick` 保持出生 y；boot / Solo 占位 `-Fixed.SCALE / 16`，Preview 壳占位 `-Fixed.SCALE`；立足盒上 settle 后 Jump hop，再 commit/advance 落回 rest_y；走离立足盒 y 下降，继续下落会触发出界复位弹回出生点；`MatchRealtime` 先下落再意图再 tick，settle 不续租、hop 续租；Solo `_process` 先 advance 再采样空格；Preview 意图不下落，Advance tick 才落；零 `fall_dy` 的 advance 保持 hop；不锁产品重力加速度、不铺官方沿路地板；GUT 949/949、`npm test` 323；人类真机步骤见 [开发机窗口验收](../../docs/runbooks/dev-window-check.md) 本刀（人工检查，非 CI 门禁）；
 - 本地草稿恢复：成功写入落 `latest` 且文件非空；空会话打开恢复；恢复后工具条下一个 Place 使用新 id；编辑器 `plugin.gd` `@tool` 落盘；`world_committed`；失败写入不改草稿；损坏 / 多余键拒绝；拒绝写入 `res://`；检查点最多 30；不结算；
 - 编辑写入自动进 Preview：place / remove / Undo / Redo 都到达已连接 Preview 且两个世界 revision 同步；`set_component` 等级按 Preview 世界算（按编辑世界算会低报被拒）；失败写入不转发且仍跟随；越界补丁与整份 `import_document` 脱同步且不回滚编辑；无 Preview 时不谎报跟随；窗口隐藏仍跟随；状态栏 `follow` 可见；不结算；
 - TRAPRUSH 拓扑编译：空世界编成空 bundle；两张官方赛道编出检查点垫、`two_way` 传送、一份终点占用与一份侧向可破坏箱且布局不同；传送袋含源点 `x/y/z`；`finish` 为 0 或 1 个袋；`destructibles` 为 0 或多份袋（含 `durability`）；`hazards` 为 0 或多份袋（含 `cooldown_ticks`）；`solids` 为 0 或多份袋；官方三张赛道 `hazards` 各 1、`solids` 各 2；`dangling` 省略、`one_way` 保留；检查点或缺源点/`finish`/可破坏/机关 `transform` 整份拒绝；两份终点拒绝；可破坏或机关与检查点同实体拒绝；缺 `destructibles` / `hazards` / `solids` 键拒绝；多余键拒绝；加载后垫盒、传送源点盒与终点盒非固体且可占用查询；可破坏箱固体（`durability` 0 已打开）；机关盒固体（tick 0 为固体半周期）；固定固体盒始终固体；`one_way` 可落地；`two_way` 走 `try_land_exit` 而非 `follow`；不 tick 进加载器、不结算；
@@ -260,7 +271,7 @@ AI 生成代码必须比普通手写代码有**更强的自动化证据**，因�
 | 禁止 API 和依赖检查 | 已启用（宪法红线子集） | `tools/redline-scanner/` + CI step `npm run redline-scan`：`simulation/` 禁 SceneTree/`float`、共享核心禁 `.gdextension`、`game/src` 禁 Godot 3 高信号符号、`game/` 禁 `.cs`/`.csproj`/`.sln`（GUT 仍保留同一条）。Godot 3 黑名单是[官方更名表](https://docs.godotengine.org/en/stable/tutorials/migrating/upgrading_to_godot_4.html)的高信号子集，不是穷尽。第二十三条仍由 ADR-0001 覆盖 |
 | 编辑文件的 linter 诊断 | 未实现 | 依赖开发机 IDE，未进 CI |
 | 单资产预算 | 已启用（2026-08-30） | `tools/asset-budget/` + CI step `npm run asset-budget`：按 [CD-11 §8.1](../10-product/11-scope-and-platforms.md) 判每个 `game/**/*.glb` 的三角面（静态 / 带 skin 两档）、贴图边长与文件体积。只读图像 header，不解码像素，无 native 依赖。认不出的贴图格式、非三角 primitive 与 LFS 指针**判为失败而非放过**。扫描范围跳过 `addons/`（第三方插件）与 `_source_refs/`（生成源产物落点，烘焙前的原料按定义过不了预算），并认 `.gdignore`（**递归**，与 Godot 4.7.2 实测一致）——这两处跳过是必需的：这些文件被 `.gitignore` 排除，CI checkout 不到，若不跳过就变成「本地红、CI 绿」。显式指定路径（`npm run asset-budget <file>`）不经过这层跳过，想单独查一个源产物仍查得到。仓库当前 9 个 `.glb`（角色现行 + 旧占位、地块现行 + 旧扁板、5 个占用），都过预算；0 个时它明确输出「什么都没查」而**不是**报绿。**只判单资产准入**：场景总量 / Draw call / 材质数 / 骨骼上限仍属 [CD-63 §1.7](../60-plan/63-open-decisions.md) 延期 |
-| PR Web 预览 | 未实现 | 等 Web 导出与沙盒环境落地 |
+| PR Web 预览 | 未实现 | Web 导出已有；PR 沙盒环境未做 |
 | Godot AI MCP | **不进 CI** | 阶段 C 生产级启用已通过（2026-08-23），仍只服务本机打开的编辑器；Headless / GUT / `npm test` 仍是门禁。不得把 `test_run` / `McpTestSuite` 写成自动回归。见 [CD-51 §7](51-dev-environment.md)、[ADR-0003](../../docs/adr/0003-godot-mcp-selection.md) |
 | Bugbot | **非门禁** | 已拍板引入（[ADR-0004](../../docs/adr/0004-multi-agent-adoption-timing-and-architecture.md) 决策 6）。本地 `/review-bugbot` 已于 2026-08-21 跑过。`.cursor/BUGBOT.md` 已入库。**GitHub PR 侧已跳过**（Cursor SCM 安装对不上）；合入继续靠本表已启用的 CI + [§4.5](#45-pr-合并规则) 人类批准。不得描述为已覆盖的合并门禁。配置见 [CD-52 §5.2](52-ai-workflow.md) |
 
@@ -345,7 +356,7 @@ AI 生成代码必须比普通手写代码有**更强的自动化证据**，因�
 | 回放一致 | 部分 | 与 §4.2「固定回放」同一批每次-PR 用例，不是发布专用回放包 |
 | 新旧内容版本并存 | 未实现 | 无内容平台、无双版本房 |
 | 回滚演练通过 | 未实现 | 同 §4.3 |
-| 玩法清单签署 | 未实现 | 重力与道具仍缺（C3）；人类可玩性结论尚未发生 |
+| 玩法清单签署 | 未实现 | C3 已交重力与一期最小道具（爆破球 + 冲刺）；人类可玩性签署尚未发生（E6） |
 | 人类安全与发布确认 | 未实现 | 正式公开运营前阻断清单见 CD-63 §4 |
 
 ### 4.5 PR 合并规则
@@ -378,7 +389,7 @@ PR 合并必须 CI 全绿并至少获得一次人类批准；AI 审查不能替�
 7. 性能未明显回退；
 8. 文档或 Schema 已同步；
 9. AI 能解释关键实现和失败模式；
-10. 人类完成必要审查；若本章有开发机可见行为，按 [章节真机清单](../../docs/runbooks/chapter-device-check.md) 本刀的编号步骤执行，不得用「AI 说看起来对」代替。未勾选真机不等于自动门禁已覆盖（宪法第二十四条）；义务口径见 [CD-52 §3.2](52-ai-workflow.md)；
+10. 人类完成必要审查；若本章有开发机可见行为，按 [开发机窗口验收](../../docs/runbooks/dev-window-check.md) 本刀的编号步骤执行，不得用「AI 说看起来对」代替。未勾选真机不等于自动门禁已覆盖（宪法第二十四条）；义务口径见 [CD-52 §3.2](52-ai-workflow.md)；
 11. 未把人工临时网络测试或性能观察伪报成自动门禁；
 12. AI 没有违反 [CD-52 §1.1](52-ai-workflow.md) 的提交边界，也没有未经许可部署或发布。
 

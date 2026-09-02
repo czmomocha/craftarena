@@ -7,6 +7,17 @@
 > 相关：[CD-31 UGC 原则](31-ugc-principles.md)、[CD-33 热修改与热发布](33-hot-publish.md)、[CD-21 TRAPRUSH](../20-gameplay/21-traprush.md)、[CD-22 BASTION](../20-gameplay/22-bastion.md)
 > 派生自：初稿 v0.2 §7（草稿与协同部分）、§26、§28
 
+## 当前生效值
+
+> 本节覆盖而非追加。覆盖链见 [CD-91 D.5](../90-reference/91-decision-log.md)。
+
+| 项 | 当前口径 |
+|---|---|
+| 桌面 Edit | 内部 EditorPlugin + 代码创建外壳；Place / Undo / 草稿 `user://` |
+| Preview | 独立 Window；安全点 Patch；试玩已接 Move / Jump / 道具 / 冲刺 |
+| Web 轻量 Edit UI | 未做（导出预设已有） |
+| 多人 Preview / 协同租约 | 未做 |
+
 ## 1. 共享编辑器框架
 
 项目提供三类编辑入口，但**共用同一个编辑器框架**：草稿、EditCommand、历史、Preview、验证和发布流程统一；TRAPRUSH 与 BASTION 只注册各自的 Schema、验证器、工具面板和可视化。

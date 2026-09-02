@@ -4,8 +4,21 @@
 > 单一事实源：人机分工与 AI 权限边界、标准任务循环、任务单模板、完整章节 PR 的人类真机步骤义务、AI 使用规则、多 Agent 协作、项目治理与语言约定、Godot AI MCP 使用边界
 > 加载建议：AI Agent 接手任务时必读；调整协作流程或权限边界时读取
 > 上位约束：[CD-00 宪法](../00-constitution/CONSTITUTION.md) 第九、十、十一、十二、十八、二十条
-> 相关：[CD-53 测试与 CI](53-testing-and-ci.md)、[CD-51 开发环境](51-dev-environment.md)、[CD-61 里程碑路线](../60-plan/61-milestones.md)、[章节真机清单](../../docs/runbooks/chapter-device-check.md)、[ADR-0003](../../docs/adr/0003-godot-mcp-selection.md)、[ADR-0004](../../docs/adr/0004-multi-agent-adoption-timing-and-architecture.md)
+> 相关：[CD-53 测试与 CI](53-testing-and-ci.md)、[CD-51 开发环境](51-dev-environment.md)、[CD-61 里程碑路线](../60-plan/61-milestones.md)、[开发机窗口验收](../../docs/runbooks/dev-window-check.md)、[ADR-0003](../../docs/adr/0003-godot-mcp-selection.md)、[ADR-0004](../../docs/adr/0004-multi-agent-adoption-timing-and-architecture.md)
 > 派生自：初稿 v0.2 §43–§47
+
+## 当前生效值
+
+> 本节覆盖而非追加。覆盖链见 [CD-91 D.6](../90-reference/91-decision-log.md)。
+
+| 项 | 当前口径 |
+|---|---|
+| 提交边界 | 隔离分支可 commit/push；禁止向 `main` 提交/推送、合并、部署、发布 |
+| 章粒度 | 完整一章才开 PR；冻结期约 5× 纠偏前，禁止单字段成章 |
+| 审查分级 | 深审 / 常审 / 轻审，见 §3 |
+| 开发机窗口 | [dev-window-check.md](../../docs/runbooks/dev-window-check.md)；「真机」留给导出包 |
+| 并行 | 2 域；第 3 域未开 |
+| Godot MCP | 唯一主 MCP = Godot AI；不进 CI、不进玩家包 |
 
 ## 1. 角色分工
 
@@ -56,7 +69,7 @@
 → 实现
 → 运行自动化测试
 → 运行场景 / Headless 验证
-→ 将本章真机步骤写入 docs/runbooks/chapter-device-check.md 本刀（见 §3.2）
+→ 将本章开发机窗口步骤写入 docs/runbooks/dev-window-check.md 本刀（见 §3.2）
 → 检查日志与性能
 → 人类审查
 → 人类决定是否合入 main / 部署 / 发布
@@ -80,12 +93,25 @@ AI 不得用"代码看起来正确"代替运行证据。
 必须运行的测试：
 性能或安全预算：
 输出物：
-真机步骤：写入 docs/runbooks/chapter-device-check.md 本刀 | 无（原因）
+开发机窗口步骤：写入 docs/runbooks/dev-window-check.md 本刀 | 无（原因）
+纠偏归属：C0 | C1 | C2 | C3 | C4 | C5 | freeze-exception（原因）
+是否新增冻结常量引用：否 | 是（必须说明为何无法注入）
+审查级别：深审 | 常审 | 轻审
 ```
+
+冻结期内后三行不得留空。口径见 [纠偏方案 §5.2 / §5.3](../../docs/plans/course-correction-2026-08.md) 与 [章粒度下限与审查分级](../../.cursor/rules/chapter-granularity-and-review.mdc)。
 
 `隔离方式` 必填。阶段 A（§5.1 的四条退出条件未全绿）只允许 `无`，即单 Agent 串行、共享当前 checkout。阶段 B 起必须填 `worktree` 或 `cloud`：**Cursor 的 subagent 默认共享父 Agent 的 checkout，不显式要求隔离会静默互相覆盖。** 不得留空。
 
-功能任务应控制在**半天到两天**可验证的粒度。禁止用"实现完整 UGC 平台"这类无法审查的任务驱动 Agent。任务结束时由人类审查后立刻开 PR，不要让未提交产出跨夜留在 worktree 里（Cursor 托管 worktree 会自动清理，见 [CD-62](../60-plan/62-risk-register.md)）。提交粒度见 [§3.1](#31-提交粒度完整章节)。
+功能任务应控制在**半天到两天**可验证的粒度。**冻结期内一章必须是一条完整链路的闭合，规模约为纠偏前的 5 倍**；颜色、单个 HUD 字段、按钮焦点、窗口尺寸、Label 前缀不再单独成章。禁止用"实现完整 UGC 平台"这类无法审查的任务驱动 Agent。任务结束时由人类审查后立刻开 PR，不要让未提交产出跨夜留在 worktree 里（Cursor 托管 worktree 会自动清理，见 [CD-62](../60-plan/62-risk-register.md)）。提交粒度见 [§3.1](#31-提交粒度完整章节)。
+
+审查分级（人类按此分配深度，等权审查的结果是每章都浅）：
+
+| 级别 | 范围 | 要求 |
+|---|---|---|
+| 深审 | `game/src/shared/` 契约、协议帧、权威裁决、Schema、`backend/contracts/`、安全边界 | 逐行 + 开发机窗口 + AI 口头解释失败模式 |
+| 常审 | `game/src/simulation/`、`ugc/`、`server/`、`games/` | 读 diff + 跑测试 + 抽查窗口 |
+| 轻审 | 表现层、HUD、runbook、注释 | 看 CI + 抽样 |
 
 ### 3.1 提交粒度：完整章节
 
@@ -99,13 +125,14 @@ AI 不得用"代码看起来正确"代替运行证据。
 
 并行 2 域时，每个域交出的也必须是完整一章。决策来源见 [CD-91 D.6](../90-reference/91-decision-log.md) `pr_scope = complete_chapter`。
 
-### 3.2 人类真机验收步骤
+### 3.2 人类开发机窗口验收步骤
 
-完整章节 PR 交给人类审查时，Test plan **禁止**只写「真机再看一眼」。必须给出**编号步骤**：启动什么、点哪个控件、期望看见什么、失败长什么样。同一份步骤写入 [章节真机清单](../../docs/runbooks/chapter-device-check.md) 的「本刀」节（**整节替换**上一章），人类只打开这一份就能验当前 PR。PR 正文可写「照 runbook 本刀」并粘贴同一份编号，不得只留一句口号。
+完整章节 PR 交给人类审查时，Test plan **禁止**只写「窗口再看一眼」或「真机再看一眼」。必须给出**编号步骤**：启动什么、点哪个控件、期望看见什么、失败长什么样。同一份步骤写入 [开发机窗口验收](../../docs/runbooks/dev-window-check.md) 的「本刀」节（**整节替换**上一章），人类只打开这一份就能验当前 PR。PR 正文可写「照 runbook 本刀」并粘贴同一份编号，不得只留一句口号。
 
-- 有开发机可见表面（大厅、Preview、编辑器窗口、导出安装包等）：必须写步骤。
+- 有开发机可见表面（大厅、Preview、编辑器窗口）：必须写步骤。这是**开发机窗口**，不是导出包。
+- 导出安装包的核查走 [desktop-export-check.md](../../docs/runbooks/desktop-export-check.md)；那里才用「真机」。
 - 纯契约 / 纯库 / 无 GUI：本刀写「本章无开发机可见行为」加一句原因，避免人类空等窗口。
-- 这是人工检查，不是 CI 门禁（宪法第二十四条）。未勾选真机不等于自动门禁已覆盖。
+- 这是人工检查，不是 CI 门禁（宪法第二十四条）。未勾选窗口步骤不等于自动门禁已覆盖。
 - 命令以 [README.md](../../README.md) 为准；本文件与 Confirmed-docs 不复述引擎路径或端口。
 
 决策来源见 [CD-91 D.6](../90-reference/91-decision-log.md) `chapter_device_check = numbered_runbook_and_pr`。

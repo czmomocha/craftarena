@@ -236,19 +236,15 @@ C1 与 C2 可按 [CD-52 §5](../../Confirmed-docs/50-engineering/52-ai-workflow.
 **产出**
 
 1. **拆分 `game/src/client/match_lobby_shell.gd`**（1,140 行 / 40 KB，全仓最大文件，同时承担窗口 / UI / HTTP / 队列 / WS / 输入 / 8 套映射编排 / 插值 / 预测 / HUD / Solo / 结算 GET）；按 [CD-41](../../Confirmed-docs/40-technical/41-architecture.md) 对 L4 的分层意图拆为 platform / input / prediction / presentation；
-2. **文档去追加化**：每份所有者文档增设幂等的「当前生效值」节（覆盖而非追加），历史覆盖链移入 [CD-91](../../Confirmed-docs/90-reference/91-decision-log.md) 或 ADR。当前 `CD-41 §5` 末尾单段逾 6000 字符、`CD-21` 有 6 个连续「实现落点」段、`CD-91` 一条被覆盖 5 层，已使 AGENTS.md 承诺的"最小上下文约 250 行"失效；
-3. **CD-62 风险状态修正**（按宪法第二十四条）：
-   - 「网页/微信包体超限」已治理 → 未开始（无资源、无变体、无子包、无 Web 导出）；
-   - 「`_mcp_game_helper` 进 Headless」已缓解 → 按 C1 实证结果重新定级；
-   - 「传送迷路或跳关」已治理 → 部分治理（镜头过渡零实现）；
-   - **新增**「单人审查带宽超载」与「在零延迟条件下锁定网络参数」两条；
-4. **CD-61 重排**（人类拍板，见 D6/D9）：
-   - 为三条无归属纵向线补里程碑所有者：表现/美术、平台导出与 Web、账号 + 草稿云 + 内容平台（三者今天都在 [CD-11 §4](../../Confirmed-docs/10-product/11-scope-and-platforms.md) "一期必做"里，却在 CD-61 找不到落点）；
-   - 拆分 M4（L2 Rule VM 与 L6 内容平台粒度不可比）；
-   - 导出与真机从 M5 前移；
-   - 修正 M3 验收条中结构上不可满足的"道具"项；
-5. **裁决 Web 矛盾**（D2 / D11）并同步 CD-11 §6/§9 与 CD-51 §5：Web 仍是一期持续入口；域名 + 证书不在 C1，公开运营前补齐；
-6. 把 `docs/runbooks/chapter-device-check.md` 更名为「开发机窗口验收」，"真机"一词留给导出包（当前命名把编辑器运行叫"真机"，制造与宪法第二十四条同类的误读）。
+2. ~~**文档去追加化**~~ **本刀（C5 第 7 章）**：每份所有者文档增设幂等的「当前生效值」节（覆盖而非追加），历史覆盖链移入 [CD-91](../../Confirmed-docs/90-reference/91-decision-log.md) 或 ADR。CD-41 §5 巨段与 CD-21 dated 实现落点已收敛；其余文档的长「实现落点」仍可能在，文首节可 30 秒读完。
+3. ~~**CD-62 风险状态修正**~~ **本刀**：
+   - 「网页/微信包体超限」→ **未开始**（无资源变体 / 分包；C1 只有导出预设）；
+   - 「`_mcp_game_helper` 进 Headless」→ 按 C1 **第一次真导出**实证后的 exclude + 自检，标已缓解；
+   - 「传送迷路或跳关」→ **已缓解**（镜头过渡零实现）；
+   - **新增**「单人审查带宽超载」与「在零延迟条件下锁定网络参数」；
+4. ~~**CD-61 重排**~~ **本刀输出草案**（人类拍板，见 D6/D9）：[cd-61-rearrangement-draft.md](cd-61-rearrangement-draft.md)。CD-61 **仍是现行口径**，批准前不回写新编号。
+5. ~~**裁决 Web 矛盾**~~ **本刀**：同步 CD-11 §6/§9 与 CD-51 §5。Web 仍是一期持续入口；域名 + 证书不在 C1，**公开运营前**补齐；
+6. ~~把 `docs/runbooks/chapter-device-check.md` 更名为「开发机窗口验收」~~ **已做**（C5 第 7 章）：现文件 `docs/runbooks/dev-window-check.md`，"真机"一词留给导出包。
 
 **验收**
 
@@ -548,7 +544,7 @@ cell = Fixed.SCALE 与由其推导的一切 cell/2 占用半长
 | E8 | D4 全部数值已拍板并落入所有者文档，占位常量收敛到单一配置源 | G4 — **后半已满足**：占位常量 2026-08-29 收敛到 `placeholder_spec.gd`（C4 第 1 章）。**前半 2026-08-31 基本满足**：D4 数值已落 [CD-11 §8.2](../../Confirmed-docs/10-product/11-scope-and-platforms.md) 并接线（相机 45°、UI 1920×1080）。仍空三项：相机距离 / FOV（D4 未问，维持）、UI 安全区（D4 未答）、BASTION 色板（M6/M7 冻结中）；字体已拍板但**未入包** |
 | E9 | 最大文件 < 400 行；`CODEOWNERS` 覆盖 client 与 games | G5 |
 | E10 | 每周合入 PR 数在 D9 上限内，且深审级章有逐行审查记录 | G5 |
-| E11 | CD-53 §4.2–§4.4 与 CD-62 状态与事实一致；`chapter-device-check` 已更名 | G6 |
+| E11 | CD-53 §4.2–§4.4 与 CD-62 状态与事实一致；`chapter-device-check.md` 已更名为 `dev-window-check.md`（开发机窗口验收） | G6 |
 | E12 | CD-61 中 CD-11 §4 每条必做项都有里程碑所有者 | G6 |
 | E13 | `integration/` 与 `replay/` 不再为空并被 CI 收集 | G6 |
 | E14 | 有第一份 AI 返工率数据 | CD-61 §3 第 6 条 |
@@ -591,24 +587,24 @@ cell = Fixed.SCALE 与由其推导的一切 cell/2 占用半长
 
 | 所有者文档 | 变更 | 依据 |
 |---|---|---|
-| CD-11 §6 / §9 | Web 定位按 D2 裁决结果改写；**域名 + 证书从 C1 必须项改为公开运营前** | D2 / D11 |
+| CD-11 §6 / §9 | Web 定位按 D2 裁决结果改写；**域名 + 证书从 C1 必须项改为公开运营前**（C5 第 7 章已写入 §9） | D2 / D11 |
 | CD-11 §8 | 填入 D4 数值；描边按 D8 处理；**单个资产预算与 AI 生成产物的正式资产地位已于 2026-08-30 写入 §8 / 新增 §8.1**（宪法第十七、十八条：预算是准入线且属人类门禁，不等 C5）；**D4 表现规格已于 2026-08-31 写入新增 §8.2**（C4 第 6 章接线，宪法第十九条：接线改变了开发机可见行为，同一任务必须落所有者文档）；**本地化键已于 2026-09-02 写入 §8 实现落点**（C4 第 12 章；字体仍未入包） | D4 / D8 / 烘焙试验 §7 |
 | CD-21 §3.2 | 触控输入按 D7 明确归属 | D7 |
-| CD-21 §5.3 / §6 | 道具与机关最小集按 D5 从"候选"转"已锁一期最小集" | D5 |
+| CD-21 §5.3 / §6 | 道具与机关最小集按 D5 从"候选"转"已锁一期最小集"（C5 第 7 章已回写） | D5 |
 | CD-31 §5 | `GameplayAssetVersion` 四项分离的实现落点 | C4（**2026-08-29 已做**） |
 | CD-33 | 若碰撞分离触及 SimulationBundle Schema，标注 P4 与人类门禁 | C4（**2026-08-29 已做**：§1 记 Bundle v1→v2 与新组件） |
-| CD-41 §5 | 增设「当前生效值」节；巨行拆解；`shared/` 的一句话说明补上「spec」——`game/src/shared/placeholder_spec.gd` 是 D4 数值此后唯一的落点（C4 第 1 章新增，未建新目录，故不在本批改所有者文档）。**`game/content/locale/` 已于 2026-09-02 写入目录树**（C4 第 12 章） | C5 / C4 |
+| CD-41 §5 | 增设「当前生效值」节；巨行拆解；`shared/` 的一句话说明补上「spec」——`game/src/shared/placeholder_spec.gd` 是 D4 数值此后唯一的落点。**`game/content/locale/` 已于 2026-09-02 写入目录树**（C4 第 12 章）。C5 第 7 章已做文首节与巨段收敛 | C5 / C4 |
 | CD-42 | SimulationBundle 因碰撞分离产生的 Schema 变更（P4，需事前批准） | C4（**2026-08-29 已做**：§1.2 加 `gameplay_asset`、新增 §1.3、§3.4 补落点） |
 | CD-43 §2 | 测试远端允许明文 `http`/`ws`；「明文只许本机」改为「测试机明文 / 公开 TLS」。**本决策已于 2026-08-27 先写入 CD-43 实现落点与 CD-91**（安全边界变化，宪法第十八条，不等 C5） | D11 |
 | CD-43 §4 | Tick / 快照 / 插值 / 对账阈值从"未锁定"改为实测值 | C3 |
-| CD-44 §2 | 50 CCU 补实测资源基线；不把某台 VPS 规格写成产品常量；部署手册改为通用 `server-deploy.md` | C1 / D3 / D11 |
-| CD-51 §5 | 导出预设与 Web 预设时机；资源导入规范扩写（**2026-08-30 已做**：新增 §5.1 资产入库规范，并在 §1 版本表登记烘焙与校验工具） | C1 / C4 |
-| CD-52 §3 | 章粒度下限、审查分级、任务单两行新增 | D9 |
-| CD-53 §4.2–§4.4 | 补"当前实现状态" | C2 |
-| CD-61 | 三条纵向线归属、M4 拆分、导出前移、M3 验收条修正 | D6 |
-| CD-62 | 三条状态修正 + 两条新增；**「测试期远端明文网关」已接受**已于 2026-08-27 登记 | C5 / D11 |
-| CD-63 | D5 拍板项迁出；新增未决项（若有） | D5 |
-| `chapter-device-check.md` | 更名为开发机窗口验收 | C5 |
+| CD-44 §2 | 50 CCU 补实测资源基线指针（链 [server-deploy.md §12](../runbooks/server-deploy.md)，不复述数字）；部署手册为通用 `server-deploy.md`（C5 第 7 章） | C1 / D3 / D11 |
+| CD-51 §5 | 导出预设与 Web 预设时机（C5 第 7 章：三套已在 `export_presets.cfg`；删「核心切片稳定后加入」）；资源导入规范扩写（**2026-08-30 已做**：新增 §5.1） | C1 / C4 |
+| CD-52 §3 | 章粒度下限、审查分级、任务单两行新增（已写入任务单模板） | D9 |
+| CD-53 §4.2–§4.4 | 补"当前实现状态"（C2 已做；C5 第 7 章更正「重力与道具仍缺」与 PR Web 预览口径） | C2 / C5 |
+| CD-61 | 三条纵向线归属、M4 拆分、导出前移、M3 验收条修正 → **草案** [cd-61-rearrangement-draft.md](cd-61-rearrangement-draft.md)；正文仍是现行口径 | D6 |
+| CD-62 | 三条状态修正 + 两条新增（C5 第 7 章）；**「测试期远端明文网关」已接受**已于 2026-08-27 登记 | C5 / D11 |
+| CD-63 | D5 拍板项迁出（复活硬直已迁；一期最小道具爆破球 + 冲刺 C5 第 7 章迁出） | D5 |
+| `chapter-device-check.md` → `dev-window-check.md` | 更名为开发机窗口验收（C5 第 7 章已做） | C5 |
 
 ---
 
@@ -643,5 +639,5 @@ cell = Fixed.SCALE 与由其推导的一切 cell/2 占用半长
 | C2 度量与自动可玩性 | 第 1、2 章已合入 | 第 1 章：走路可达探针 + 占位桩收敛。第 2 章：`tests/integration/` 与 `tests/replay/` 真实用例 + CI 收集、CD-53 §4.2–§4.4 状态列、[返工率首份数据](../audits/2026-08-27-ai-rework-rate.md)。不做 Node 包装、不把 `--bot-run` 接进 CI |
 | C3 核心玩法前提 | 第 1–8 章（第 8 章进行中） | 第 1 章：权威重力积分（`TraprushGravity`）+ 跳跃冲量弧 + 落地归零 `vy` + `hash_state` 含 `vy` + 灰盒磁带回放。第 2 章：三张官方课必经路铺始终固体；`course_01` 上层偏到 `z=-3*CELL`；`course_03` 箱子旁绕行立足面；走路上不掉、走下路面才复位。第 3 章：服务端裁决的爆破球拾取/使用与冲刺位移；伪造命中被拒；`SprintIntent` `intent_id=6`；v1 `pickups` 袋。第 4 章：固体半周期占用重叠才命中；注入击退后仍重叠则环境失败复位；出界复位写入同一硬直桩；不读 Authoring damage/knockback。第 5 章：改默认课 `course_01`（不加第 4 张课）：+X 五步仍是危险捷径；从 CP1 向 +Z 走更长安全路，经侧向 two_way 与 one_way 上楼汇合；走下路面下落复位。诚实边界：±8 格 + 冻结 `play_move_step` 下干净完赛做不到 90 秒墙钟。第 6 章：v1 ping/pong（type 3/4）原样回显；在线对局采样协议层 RTT；不改快照/心跳/插值桩。第 7 章：探针 `forbid_portal_ids` + `--route=safe` 封掉 course_01 entity 10，证明安全路可完成；默认 `--bot-run` 仍走捷径。第 8 章：D5 复活硬直 **1.0 s** 接到对局 / Solo（占位 60 physics tick/s → 60 tick）；Preview 仍 1 次 Advance；不锁 Tick Hz、不改快照协议。D10 非正式试玩：色块阶段不签署「好玩」；脑补后认为可玩、值得期待。网络参数锁定仍待远端协议层样本。24h ICMP 已回填（见 [server-deploy.md §12](../runbooks/server-deploy.md#12-本批必须回填的结论)）：近端 ~3ms、全天丢 1 包，10 分钟 0% 可以代表这条路径的全天量级；长尾 max 369ms 记下来。**不得**用 ICMP 锁定 Tick / 快照 / 插值 |
 | C4 资产契约与美术规格 | 第 1–12 章已合入 | 产出 1–6 已齐。产出 5「1 角色 + 1 组地形块」两半均已交，**E7 满足**；**E8 前半 2026-08-31 基本满足**（D4 数值落 [CD-11 §8.2](../../Confirmed-docs/10-product/11-scope-and-platforms.md) 并接线）。**资产预算已于 2026-08-30 拍板**（[CD-11 §8.1](../../Confirmed-docs/10-product/11-scope-and-platforms.md)：静态 3,000 / 角色 6,000 三角面、贴图 512、单文件 2 MB；AI 生成产物可作正式资产），[烘焙试验 §7](asset-bake-trial-2026-08.md) 三项全部关闭。第 12 章（[#203](https://github.com/czmomocha/craftarena/pull/203)）：本地化键 `craft_arena.ui.*`（`en` + `zh_CN`），`UiCopy` 自解析 CSV；**不入字体** |
-| C5 治理与里程碑重排 | 第 6 章（本刀）拆 Preview 壳 | 第 1 章已合入（[#204](https://github.com/czmomocha/craftarena/pull/204)）：大厅壳拆成 chrome / net / sampler / stage / hud / director。第 2 章已合入（[#205](https://github.com/czmomocha/craftarena/pull/205)）：匹配会话拆成 codec / accept / 门面。第 3 章已合入（[#207](https://github.com/czmomocha/craftarena/pull/207)）：对局会话拆成 bootstrap / intents / scan / view。第 4 章已合入（[#208](https://github.com/czmomocha/craftarena/pull/208)）：Preview 会话拆成 bootstrap / intents / scan / view。第 5 章已合入（[#209](https://github.com/czmomocha/craftarena/pull/209)）：Preview 映射拆成 convert / occupancy / gizmos / overlay / player。第 6 章：把 `authoring_preview_shell.gd` 拆成 `authoring_preview_shell_chrome` / `authoring_preview_shell_sampler` / `authoring_preview_shell_hud` / `authoring_preview_shell_play` / `authoring_preview_shell_view` / 门面，六者均 < 400 行；公开 API 仍在门面上。协议 JSON / Schema / 官方课 JSON / 冻结占位数值一个不改。`--bot-run` 三张课步数与动作序列须仍为 5 / 5 / 12。**诚实边界**：E9 全仓仍欠控制面、探针、灰盒、`simulation_world.gd` / `simulation_bundle.gd` / `authoring_editor_shell.gd` 等；其余 C5 产出（文档去追加化、CD-62 状态、CD-61 重排、Web 矛盾、runbook 更名）未开工 |
+| C5 治理与里程碑重排 | 第 7 章（本刀）文档治理 | 第 1 章已合入（[#204](https://github.com/czmomocha/craftarena/pull/204)）：大厅壳拆成 chrome / net / sampler / stage / hud / director。第 2 章已合入（[#205](https://github.com/czmomocha/craftarena/pull/205)）：匹配会话拆成 codec / accept / 门面。第 3 章已合入（[#207](https://github.com/czmomocha/craftarena/pull/207)）：对局会话拆成 bootstrap / intents / scan / view。第 4 章已合入（[#208](https://github.com/czmomocha/craftarena/pull/208)）：Preview 会话拆成 bootstrap / intents / scan / view。第 5 章已合入（[#209](https://github.com/czmomocha/craftarena/pull/209)）：Preview 映射拆成 convert / occupancy / gizmos / overlay / player。第 6 章已合入（[#210](https://github.com/czmomocha/craftarena/pull/210)）：Preview 壳拆成 chrome / sampler / hud / play / view。第 7 章：所有者文档「当前生效值」、CD-62 纠偏、runbook 更名、CD-61 草案、D2/D11 Web 口径。**诚实边界**：E9 全仓仍欠；CD-61 新编号须人类批准后才回写；远端协议层 RTT 仍空 |
 | freeze-exception（单项，不属任何批次） | 已开工 | **MatchHost 引擎路径静默回退**（PR #186 遗留项，人类 2026-08-30 选 A「单独一刀修」）：`GODOT4` 缺失时不再退成 PATH 上的 `godot`，改为启动期拒绝；拉起失败的进程输出进 `match failed to start` 日志与 `POST /matches` 的 502 `message`。按 §1.3 走最小变更，不碰 `game/`、不改协议、不新增冻结常量引用。落点：`backend/match-host/src/{config,registry,main}.ts`、[CD-51 §4](../../Confirmed-docs/50-engineering/51-dev-environment.md)、README。**第二项：Godot AI 脏写入不再进提交**（C4 第 6、7 章连续记账，2026-08-31 开工）：插件在 `.gitignore` 里、每次运行都把 `autoload/_mcp_game_helper` 与 `res://addons/godot_ai/plugin.cfg` 写回 `game/project.godot`，**改不了它的写入行为**，所以改成「一条命令还原 + 提交前拦住」。新工具 `tools/godot-project-settings/`（纯文本、幂等、不起 Godot；`npm run godot-settings:check` / `:scrub`；只摘名字命中 `_mcp_game_helper` 或路径指向 `addons/godot_ai/` 的 autoload 与 `editor_plugins/enabled` 里该目录的元素，别的改动一个不碰），`tools/shell-guard/` 对 Agent 的 `git commit` / `git add` fail closed 拦截，`npm test` 新增一条读磁盘副本的守卫。**不做** git 原生 `pre-commit`（要改 `core.hooksPath`，属宪法第十八条人类门禁），因此人手敲的 git 仍不被拦；也**不承诺**工作树永远干净。不碰 `game/`、不改协议 |

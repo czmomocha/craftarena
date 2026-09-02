@@ -6,6 +6,12 @@
 > 索引：[Confirmed-docs README](../README.md)
 > 派生自：初稿 v0.2 附录 C
 
+## 当前生效值
+
+**术语以本表为准。** 本文件是专有名词定义的所有者；改定义只改本表，其它文档只链到这里。
+
+## 1. 术语
+
 | 术语 | 定义 | 详规 |
 |---|---|---|
 | AuthoringWorld | 可编辑的创作数据模型 | [CD-41](../40-technical/41-architecture.md) |

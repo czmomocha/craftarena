@@ -7,6 +7,19 @@
 > 相关：[CD-12 产品结构](12-product-structure.md)、[CD-61 里程碑路线](../60-plan/61-milestones.md)、[CD-63 开发期决策清单](../60-plan/63-open-decisions.md)
 > 派生自：初稿 v0.2 §0–§4
 
+## 当前生效值
+
+> 本节覆盖而非追加。覆盖链见 [CD-91 D.1](../90-reference/91-decision-log.md)。
+
+| 项 | 当前口径 |
+|---|---|
+| 名称 | Craft Arena／工坊竞技场 |
+| Web | **一期持续测试入口**。C1 已含 Web 导出预设 |
+| 域名 + 证书 | **公开运营前**补齐，不在 C1 |
+| 测试期传输 | 明文 `http`/`ws` 可打到自备远端（[CD-43 §2](../40-technical/43-networking-and-replay.md)） |
+| 字体 | 已拍板思源黑体 / Noto Sans SC，**尚未入包** |
+| 描边 | 不做（D8） |
+
 ## 1. 项目名称与愿景
 
 正式名称：**Craft Arena**（英文）／**工坊竞技场**（简体中文）。
@@ -179,4 +192,11 @@
 3. **字体尚未入包**。它是新增第三方资产与许可证（宪法第十八条人类门禁），且子集范围会直接影响 Web 包体：项目内中文串已收到本地化键表，但公开未过滤用户名（[CD-62](../60-plan/62-risk-register.md)）意味着玩家昵称是任意汉字，只按项目文本子集会让昵称变豆腐块。范围须由人类拍板。**本地化键已接线**（C4 第 12 章，`UiCopy` + `content/locale/craft_arena.csv`），不再跟字体绑成同一刀。
 
 来源见 [CD-91](../90-reference/91-decision-log.md)。
+
+## 9. 公开 Web 与传输安全（D2 / D11）
+
+- Web 是一期持续测试入口（§6）。C1 已含 Web 导出预设，见 [CD-51 §5](../50-engineering/51-dev-environment.md)。
+- 测试开发阶段允许明文 `http`（控制面）与 `ws`（网关）打到自备远端测试机，见 [CD-43 §2](../40-technical/43-networking-and-replay.md)。
+- **域名 + 受信证书在公开运营前补齐**，不是 C1 必须项。浏览器 HTTPS 页不能混用 `ws://`、也不接受自签，故公开 Web 联机仍须域名。
+- 不得对外表述为已具备 TLS。一期产品形态仍是宪法第二十二条的 TLS WebSocket 网关。
 

@@ -7,6 +7,17 @@
 > 相关：[CD-14 数据与遥测](14-data-and-telemetry.md)、[CD-21 TRAPRUSH](../20-gameplay/21-traprush.md)、[CD-22 BASTION](../20-gameplay/22-bastion.md)、[CD-44 部署与容量](../40-technical/44-deployment.md)
 > 派生自：初稿 v0.2 §6.1–§6.3
 
+## 当前生效值
+
+> 本节覆盖而非追加。覆盖链见 [CD-91 D.7](../90-reference/91-decision-log.md)。
+
+| 项 | 当前口径 |
+|---|---|
+| 账号接线 | 未做。入场票据不绑账号 |
+| 离线 | 永不回写；恢复在线也不补传 |
+| 单局排名 | 名次 + MVP；无 MMR / 段位 |
+| 补票 | 已消费票补发同一席位；Cancel 不补票 |
+
 ## 1. 在线模式
 
 - 服务端是唯一权威；

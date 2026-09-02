@@ -7,6 +7,22 @@
 > 相关：[CD-31 UGC 原则](../30-ugc/31-ugc-principles.md)、[CD-42 数据契约](../40-technical/42-contracts-and-rulevm.md)、[CD-43 网络与回放](../40-technical/43-networking-and-replay.md)、[CD-63 开发期决策清单](../60-plan/63-open-decisions.md)
 > 派生自：初稿 v0.2 §8–§16
 
+## 当前生效值
+
+> 本节覆盖而非追加。覆盖链见 [CD-91 D.3 / D.8](../90-reference/91-decision-log.md)。
+
+| 项 | 当前口径 |
+|---|---|
+| 一期最小道具 | **爆破球 + 冲刺**（纠偏 D5）。服务端裁决拾取 / 使用 / 命中；伪造命中被拒。其余候选未锁 |
+| 机关伤害 / 击退 | C3 已接：固体半周期占用重叠才命中；击退后仍重叠则环境失败复位。不读 Authoring `damage` / `knockback` |
+| 复活硬直 | **1.0 s**。不锁 Tick Hz。对局 / Solo 按占位 60 physics tick/s → 60 tick；Preview 仍 1 次 Advance |
+| 重力 | 权威定点积分。对局 / Solo 跟 physics tick；Preview 只在 Advance 下落 |
+| 出界 | 开发桩 ±8 格，不是产品场地 |
+| 输入 | 壳消费 `PlayInput`。当前键：WASD / Space / F 推击 / Q 使用 / Shift 冲刺 / R 复位（上升沿，不是产品长按）。触控 UI 未做（D7） |
+| Tick / 快照 / 插值 | **未锁**（[CD-43 §4](../40-technical/43-networking-and-replay.md)）。不得用 ICMP 锁定 |
+| 官方课 | 3 张。第 4 张及以后冻结 |
+| 描边 | 不做（D8） |
+
 ## 1. 玩法定位
 
 **1～8 人轻 3D 道具避障竞速 + 玩家推挤对抗 + 立体传送关卡工坊。**
@@ -37,20 +53,20 @@
 - 多层地图使用楼层颜色、方向箭头和轮廓高亮增强可读性；
 - 不依赖自由旋转镜头才能判断路线。
 
+镜头过渡**尚未接线**。当前口径见文首。
+
 ### 3.2 基础操作
 
 | 操作 | PC / Web 键鼠 | 移动端触屏 |
 |---|---|---|
 | 移动 | WASD | 虚拟摇杆 |
 | 短跳 / 自动跨小台阶 | Space | 主动作键 |
-| 基础推击 | 鼠标键 / 独立键 | 推击键 |
-| 使用道具 | E / 鼠标键 | 道具键 |
-| 交互 | F | 交互键 |
-| 重置到检查点 | 长按 R | 长按重置键 |
+| 基础推击 | 独立键（当前 F） | 推击键 |
+| 使用道具 | 独立键（当前 Q） | 道具键 |
+| 冲刺 | 独立键（当前 Shift） | 未做 |
+| 重置到检查点 | R（产品表是长按；当前是上升沿桩） | 长按重置键 |
 
-一期 PC/Web 不承诺手柄支持。
-
-实现落点（2026-09-02，纠偏 D7）：玩法壳消费 `PlayInput`（方向向量 + 上升沿动作事件），不再直接读四个 WASD 布尔或物理键码。键盘是适配器；`shove` / `sprint` / `reset_checkpoint` 已进 Input Map（当前绑定 F / Shift / R，与接线前一致）。模拟量按符号量化成整步 `play_move_step`，幅度不进 MoveIntent。触控 UI / 虚拟摇杆仍未做。复位仍是上升沿桩，不是产品长按时长。落点见 `game/src/shared/play_input.gd`。
+一期 PC/Web 不承诺手柄支持。玩法壳消费 `PlayInput`（方向向量 + 上升沿），键盘是适配器。触控 UI / 虚拟摇杆仍未做（D7）。落点 `game/src/shared/play_input.gd`。
 
 ### 3.3 权威运动模型
 
@@ -58,7 +74,7 @@
 
 移动、扫掠、推挤和击退由定点 `SimulationCore` 按稳定顺序解算。Godot 物理只允许承担受控静态查询和表现，不决定竞速结果。
 
-实现落点（2026-08-26）：权威下落。`TraprushMatchSession.fall_dy` 默认 0（2 人 Headless 冲线夹具不走路板，不能默认下落）。对局进程 / Solo 占位 `-Fixed.SCALE / 16`（与大厅 `play_move_step` 同量；引擎 ~60 tick/s 时一格每 tick 会在约 8 帧内触发出界复位）。Preview 壳占位 `-Fixed.SCALE`（手动 Advance tick）。经已有 `try_move_y_until_blocked` 直到固体，不是产品重力加速度。会话 `commit_tick` 先下落再 `world.tick`（与灰盒相同）。`MatchRealtime.commit_tick` 把下落与 `world.tick` 拆开，中间按到达顺序应用排队意图，避免同一拍 Jump 被立刻落下。Preview 只在 `try_advance_play` 下落，意图不推进 tick。纯下落不续租。不铺官方沿路地板。落点见 [CD-32 §3](../30-ugc/32-editor-and-preview.md#3-从编辑到预览) 与 [CD-42 §3.4](../40-technical/42-contracts-and-rulevm.md#34-实现落点)。
+权威下落已接线：对局 / Solo 跟 physics tick，Preview 只在 Advance。默认 `fall_dy = 0`（2 人 Headless 冲线夹具不走路板）。形状见 [CD-32 §3](../30-ugc/32-editor-and-preview.md) 与 [CD-42 §3.4](../40-technical/42-contracts-and-rulevm.md)。口径见文首。
 
 ### 3.4 表现动画状态
 
@@ -75,7 +91,7 @@
 | `break` | 本拍权威 UseItem 打碎箱子 | 破坏特效 |
 | `portal` | 传送门闩非空 | 镜头过渡 |
 
-`airborne` = 接触探针（半格，占用盒顶到出生格面的空隙；不是 Jump 的 1 格 `support_dy`）未踩到固体，**或** `vy != 0`。优先级（高→低）：`hit` > `portal` > `land` > `jump` > `shove` > `break` > `run` > `idle`。单一状态。实现：`game/src/shared/play_anim_state.gd`。大厅 Solo 与 Preview 把结果写到角色节点 metadata 与子 Label3D `anim`（契约读出，不是 HUD 字段）。**不播 clip**。v1 快照没有 vy / stun，在线远端不接线；改协议属宪法第十八条。时长仍属 [CD-63](../60-plan/63-open-decisions.md)。
+`airborne` = 接触探针（半格）未踩到固体，**或** `vy != 0`。优先级（高→低）：`hit` > `portal` > `land` > `jump` > `shove` > `break` > `run` > `idle`。单一状态。实现：`game/src/shared/play_anim_state.gd`。**不播 clip**。v1 快照没有 vy / stun，在线远端不接线。时长仍属 [CD-63](../60-plan/63-open-decisions.md)。
 
 ## 4. 地图传送与立体移动
 
@@ -125,17 +141,7 @@ UGC 权威碰撞形状约束见 [CD-42](../40-technical/42-contracts-and-rulevm.
 | 可破坏障碍 | 木箱、能量墙、碎石、障碍核心 | 普通攻击机制或道具削减耐久 |
 | 触发型障碍 | 门、移动平台、开关链 | 交互、踩区或规则图触发 |
 
-实现落点（2026-08-26）：周期机关编进 v1 拓扑。`SimulationBundle` 必含 `hazards` 数组（可空）。袋为 `entity_id` / `x` / `y` / `z` / `cooldown_ticks`（已有 `hazard` 组件字段，当半周期，不发明 `period`，不编 `damage` / `knockback`）。`TraprushTopologyCompiler` 把带 `hazard`+`transform` 的实体编进去；缺 transform、或与检查点/传送/终点/可破坏同实体则整份拒绝。加载为固体静态盒（tick 0 落在固体半周期）。`TraprushHazardCycle` 在对局 `commit_tick` 与 Preview `try_advance_play` 于 `world.tick()` 之后按 `((tick_index / cooldown_ticks) % 2) == 0` 切换固体（`cooldown_ticks < 1` 始终固体）。意图不推进 tick，故不切换。切回固体不挤出、不伤害。官方三张赛道各 1 个机关。Preview 壳 **Advance tick** 调用已有 `try_advance_play`。大厅与 Preview 表现映射见下一段。不锁产品秒数、预警动画、伤害/击退。落点见 [CD-32 §3](../30-ugc/32-editor-and-preview.md#3-从编辑到预览) 与 [CD-42 §3.4](../40-technical/42-contracts-and-rulevm.md#34-实现落点)。
-
-实现落点（2026-08-26）：周期机关表现映射。`MatchHazardMap` 把编译袋 `hazards` 画成 1 米占位盒（洋红 `HAZARD_ALBEDO`）；显隐跟同一 `is_solid(快照 tick, cooldown_ticks)`，不改协议。固体半周期计入本席 overlay 的 `live_solid_boxes`（半长 `cell/2`，与箱子相同）。`AuthoringPreviewMap` 对 `hazard` 实体用同一色；开玩后非固体隐藏。HUD 写 `hazards=n/m`（固体数 / 编译袋总数）。官方赛道各 1 个。不锁预警动画、产品秒数。落点见 [CD-12 §1](../10-product/12-product-structure.md#1-入口结构)、[CD-32 §3](../30-ugc/32-editor-and-preview.md#3-从编辑到预览) 与 [CD-43 §2](../40-technical/43-networking-and-replay.md#2-传输)。
-
-实现落点（2026-08-26）：固定固体占用。`SimulationBundle` 必含 `solids` 数组（可空）。袋为 `entity_id` / `x` / `y` / `z`。`TraprushTopologyCompiler` 把 `zone.tags` 含 `solid` 且有 `transform` 的实体编进去（`SOLID_ZONE_TAG`，与 `finish` 同一套 `zone.tags`，不新增 Component Schema 字段）；缺 transform、或与检查点/传送/终点/可破坏/机关同实体、或同一实体同时带 `finish`+`solid` 则整份拒绝。加载为始终固体静态盒，不随 tick 切换。大厅 `MatchSolidMap` 画石色 1 米占位（`SOLID_ALBEDO`），永远显示；计入本席 overlay 的 `live_solid_boxes`（半长 `cell/2`）。Preview 对 `zone.tags` 含 `solid` 的占位同一色。HUD 写 `solids=n/m`（编译袋数，永不切换故 n=m）。官方三张赛道各 1 个 solid（出生点 −X）。Jump 接地位移用合成固体袋单测，官方赛道起点格仍无立足固体、不改 Preview `play_support_dy` 默认 0。不锁编辑器 Place finish、重力/下落。落点见 [CD-32 §3](../30-ugc/32-editor-and-preview.md#3-从编辑到预览)、[CD-42 §3.4](../40-technical/42-contracts-and-rulevm.md#34-实现落点) 与 [CD-43 §2](../40-technical/43-networking-and-replay.md#2-传输)。
-
-实现落点（2026-08-26）：编辑器占用摆放。`TraprushEditorPanel` 用已有 EDIT `place` 摆固定固体（`zone.tags` 含 `solid`）、周期机关（已有 `hazard`，`cooldown_ticks=1` 开发桩）与可破坏箱（已有 `destructible`，耐久 1 开发桩）。不新增 `op`，不新增 Component Schema 字段。Editor / Preview 占位盒分石色 / 洋红 / 橙色。不锁产品秒数、预警动画、伤害/击退、重力/下落。落点见 [CD-32 §3](../30-ugc/32-editor-and-preview.md#3-从编辑到预览)。
-
-实现落点（2026-08-26）：官方赛道占用。三张官方 TRAPRUSH 赛道各含 1 个始终固体（entity 70，出生点 −X 一格，`zone.tags` 含 `solid`）与 1 个周期机关（entity 60，出生点 −Z 两格，已有 `hazard`，`cooldown_ticks=1` 开发桩；两格避开双人 Shove 邻域落点）。不挡 +X 必经检查点路，不改检查点/传送/终点/箱子布局。不锁产品秒数、预警动画、伤害/击退、重力/下落。落点见 [CD-32 §3](../30-ugc/32-editor-and-preview.md#3-从编辑到预览)。
-
-实现落点（2026-08-26）：官方赛道立足固体与 Jump。三张官方课各加 entity 80：出生点正下一格（`y = -cell`）的始终固体，不挡 +X 必经路，不改检查点/传送/终点/箱子/−X 固体/−Z 机关。对局 / Solo / Preview 壳 `support_dy = -Fixed.SCALE`（与灰盒相同，向下探测）；`jump_dy` 为 `Fixed.SCALE / 4` 占位桩（一格 hop 会与 `course_01` 出生点正上方 `two_way` 盒闭区间相交并落地）。出生点 Jump 接地 hop。在线 overlay `play_jump_dy` 仍为 0（不叠假跳跃）。不锁产品跳跃高度、预警动画。权威下落见 [§3.3](#33-权威运动模型)。落点见 [CD-32 §3](../30-ugc/32-editor-and-preview.md#3-从编辑到预览)。
+当前实现：`hazards` 袋按 `cooldown_ticks` 半周期切固体；`solids` 袋始终固体；官方三张课各 1 个机关、出生点 −X 一格固体、出生点正下一格立足固体。编辑器 Place solid / hazard / crate / finish 走已有 `place`。形状见 [CD-32 §3](../30-ugc/32-editor-and-preview.md) 与 [CD-42 §3.4](../40-technical/42-contracts-and-rulevm.md)。口径见文首。
 
 ### 5.2 障碍破坏
 
@@ -148,28 +154,23 @@ UGC 权威碰撞形状约束见 [CD-42](../40-technical/42-contracts-and-rulevm.
 - 重要竞速门只允许状态切换，不允许永久删除；
 - 可破坏障碍存在于共享权威世界：一名玩家摧毁后，所有玩家都能利用打开的路线。
 
-### 5.3 道具（首批原型候选）
+### 5.3 道具（一期最小集已锁）
 
-以下**不是**已锁定的正式道具表。正式清单与数值见 [CD-63](../60-plan/63-open-decisions.md)。
+纠偏 D5（2026-08-26）锁定一期最小集。**不是**完整道具表；其余候选与槽位规则仍见 [CD-63](../60-plan/63-open-decisions.md)。
 
-| 道具 | 作用 | 主要用途 |
+| 道具 | 一期地位 | 作用 |
 |---|---|---|
-| 护盾 | 抵消一次机关伤害或击退 | 稳定通过高危段 |
-| 冲刺 | 短距离加速，不穿墙 | 抢时间 |
-| 爆破球 | 对前方可破坏障碍造成高伤害 | 开路 |
-| 钻头 | 短时间持续破坏接触障碍 | 连续清障 |
-| 相位器 | 短时间穿过指定相位门 | 路线选择 |
-| 机关脉冲 | 暂停附近周期机关一个短周期 | 控制时机 |
+| 爆破球 | **已锁** | 对前方可破坏障碍造成伤害；服务端裁决拾取 / 使用 / 命中 |
+| 冲刺 | **已锁** | 短距离加速，不穿墙；`SprintIntent` |
+| 护盾 / 钻头 / 相位器 / 机关脉冲 | 仍是候选 | 未锁 |
 
 约束：
 
 - 道具可造成短眩晕、减速或有限击退，但不直接扣除玩家生命；
-- 连续受控后提供短暂无控保护；
+- 连续受控后提供短暂无控保护（**未接线**，仍属 CD-63）；
 - 道具拾取、使用、冷却和命中由服务端裁决；
-- 道具栏数量、替换与叠加规则**未锁定**，列入 [CD-63](../60-plan/63-open-decisions.md)；
+- 道具栏数量、替换与叠加规则**未锁定**；
 - 所有玩家的基础推击独立于拾取道具；
-- 生成点和刷新间隔受内容预算限制；
-- 刷新点固定可见，每局由服务端种子从该点白名单中确定道具轮换和时间；
 - 小游戏端可以减少道具视觉效果，但规则不能变化。
 
 ## 6. 单局流程
@@ -184,11 +185,7 @@ UGC 权威碰撞形状约束见 [CD-42](../40-technical/42-contracts-and-rulevm.
 
 玩法内容不限制局时；基础设施侧的可续租会话与无活动回收规则见 [CD-44](../40-technical/44-deployment.md)。
 
-环境失败后无限复活，返回最近检查点并承受固定复活硬直；不因生命次数淘汰。
-
-实现落点（2026-08-28）：复活硬直 **1.0 s**（纠偏 D5）。对局进程 / Solo / BotRunner 从 `TraprushPlayStubs` 注入：`RESPAWN_STUN_MS = 1000`，按 `PHYSICS_TICKS_PER_SECOND_PLACEHOLDER = 60`（当前引擎 physics，**不是** [CD-43 §4](../40-technical/43-networking-and-replay.md#4-未锁定项) 产品 Tick）换成 60 个会话 tick。出界与踩实心机关复位后写入 `stun_remaining`，每 `advance_sim_tick` 减 1；硬直中拒绝 Move / Jump / UseItem / Shove / Sprint，允许 ResetToCheckpoint。Preview 手动 Advance 不是墙钟，仍用 `PREVIEW_RESPAWN_STUN_TICKS = 1`。快照帧不含 stun 字段（不改协议）；线上靠权威拒意图 + 新快照硬贴。不锁 Tick Hz。
-
-实现落点（2026-08-26）：出界复位。`TraprushOutOfRangeReset` 在调用方 AABB（闭区间：边界上算出界为假）外把胶囊写回已有 `CheckpointSpawn.pose_for`（尚无进度则回起点）。对局 `TraprushMatchSession` 与 Preview `AuthoringPreview` 共用该模块；会话默认 `range_enabled=false`，对局进程 / Solo / Preview 壳打开开发桩半宽 `STUB_HALF = 8 * Fixed.SCALE`（±8 格），不是产品场地。先复位再占用扫描，避免踩到范围外的垫再弹回该垫。进度不回退。不计数掉出次数 N，不接重力/下落。该句中「不写复活硬直」被上文 2026-08-28 硬直落点覆盖。空区间（min > max）拒绝。灰盒磁带路径不改委托。
+环境失败后无限复活，返回最近检查点并承受固定复活硬直；不因生命次数淘汰。硬直秒数与出界桩见文首。
 
 ### 6.1 排序优先级
 
@@ -198,7 +195,7 @@ UGC 权威碰撞形状约束见 [CD-42](../40-technical/42-contracts-and-rulevm.
 4. 仍相同时按更早到达当前检查点者优先；
 5. 离线试玩只显示本地结算，不上传。
 
-实现落点（2026-08-25）：`TraprushStanding` 用最新快照的 `finish_tick` / `accepted_count` 做直播名次板（第 1、2 条 + 槽位次序作为稳定键）。第 3、4 条（合法路径距离、到达当前检查点时间）v1 快照没有字段，走路可达仍待，本刀不锁。第 5 条：大厅离线单人试玩只显示本地直播名次，HUD 持续「离线试玩，成绩不上传」，不上传、不结算写。全部配置玩家冲线后，`TraprushMatchSettlement` 用同一套第 1、2 条排序生成写库 payload；控制面 `POST /match-sessions/:matchId/settlement` 写一次（MatchHost 活场心跳即可写，停止前再 POST）。大厅只读 GET 面板。名次板仍是表现。落点见 [CD-13 §3](../10-product/13-account-and-session.md#3-离线单人模式)、[CD-13 §4](../10-product/13-account-and-session.md#4-单局排名)、[CD-42 §3.4](../40-technical/42-contracts-and-rulevm.md#34-实现落点) 与 [CD-43 §2](../40-technical/43-networking-and-replay.md#2-传输)。
+v1 直播名次只用第 1、2 条 + 槽位稳定键。第 3、4 条走路可达仍待。写库与大厅 GET 见 [CD-13 §4](../10-product/13-account-and-session.md)。
 
 默认结束规则是到达终点。创作者可以使用白名单事件、变量和有界计数组合自定义结束条件，但规则图必须至少存在一个可触发终止分支。机器人在验证预算内未触发结束时只标记"未验证可完成"，不阻止自动公开。
 
@@ -230,19 +227,7 @@ UGC 权威碰撞形状约束见 [CD-42](../40-technical/42-contracts-and-rulevm.
 道具：pickup_shield / pickup_dash / pickup_bomb / pickup_drill
 ```
 
-编辑器必须提供：
-
-- 网格吸附与楼层切换；
-- 传送连接可视化；
-- 检查点顺序可视化；
-- 可达性检测；
-- 障碍预算和动态实体预算；
-- Undo/Redo；
-- 一键本地预览；
-- 一键启动 1 个 Headless + 2～4 个客户端；
-- 从报错直接定位到对象或规则节点。
-
-吸附格、楼层查询、传送连线分类、发布前通路/循环、Preview Patch、共同 AuthoringDocument、Preview 窗口宿主、3D 占位映射、传送连线可视化、检查点顺序可视化、可达性叠加、内部开发编辑外壳、编辑窗口 3D 映射、TRAPRUSH 工具面板（检查点 / 传送门 / Place solid / Place hazard / Place crate / Place finish / 删除 / 楼层）、验证器详情（从报错定位）、三张官方赛道 JSON 与内部开发 EditorPlugin 与本地草稿恢复与 Preview 试玩与 Preview 试玩 MoveIntent 与 Preview 试玩检查点占用验收与 Preview 试玩传送占用落地与 Preview 试玩冲线占用与 Preview 试玩重置到检查点与 Preview 试玩 UseItemIntent 可破坏占用与 Preview 试玩 JumpIntent 接地跳跃与 Preview 试玩权威下落的数据落点见 [CD-32 §2](../30-ugc/32-editor-and-preview.md#2-草稿持久化与协同) 与 [CD-32 §3](../30-ugc/32-editor-and-preview.md#3-从编辑到预览)。对局进程多人仿真循环（无网络）落点见 [CD-42 §3.4](../40-technical/42-contracts-and-rulevm.md#34-实现落点)。走路可达仍待。通用编辑器框架与预览行为见 [CD-32](../30-ugc/32-editor-and-preview.md)。
+编辑器必须提供网格吸附、楼层切换、传送/检查点可视化、可达性、预算、Undo/Redo、本地预览、从报错定位。数据落点见 [CD-32](../30-ugc/32-editor-and-preview.md)。走路可达仍待。
 
 ## 8. 网络与仿真基线
 
@@ -256,7 +241,7 @@ UGC 权威碰撞形状约束见 [CD-42](../40-technical/42-contracts-and-rulevm.
 | 服务端校正 | 返回权威位置和冲量，客户端平滑对账 |
 | 不由客户端裁决 | 传送、破坏、道具效果、冲线、控制效果 |
 | Tick/快照频率 | 开发期根据实测决定，本文不锁定 |
-| 弱网门禁 | 香港真实样本形成前不设自动"可玩性"门禁 |
+| 弱网门禁 | 不得用 ICMP 设自动「可玩性」门禁 |
 
 客户端只能发送：
 
@@ -265,24 +250,11 @@ MoveIntent
 JumpIntent
 ShoveIntent
 UseItemIntent
+SprintIntent
 InteractIntent
 ResetToCheckpointIntent
 ```
 
-客户端不得发送最终位置、冲线结果、障碍死亡、道具命中和检查点完成断言。
+客户端不得发送最终位置、冲线结果、障碍死亡、道具命中和检查点完成断言。Move 超一格整条拒绝（防瞬移，不是产品速度）。Interact 仍未接线。
 
-实现落点（2026-08-26）：对局会话 `MOVE_STEP_MAX = Fixed.SCALE`。Move 任一轴绝对值超过该上限则整条拒绝，不裁剪成合法位移。这堵住「一条命令走出许多格」的位置伪造；不是产品速度，也不改大厅 `play_move_step`。Preview 试玩仍走 `IntentStepper`，不经此门。
-
-实现落点（2026-08-26）：对局基础推击。命令 `intent_id=5` 为 `ShoveIntent`，保留字段仍须为零，无线上目标 id。`TraprushMatchSession` 在 `SHOVE_REACH_MAX = Fixed.SCALE` 的 XZ/Y 邻域内选最近其它胶囊（切比雪夫，平手再曼哈顿，再低席位），沿 XZ 远离施术者用调用方 `shove_step` 经已有 `TraprushShoveApply` 推开；冷却为调用方 `shove_cooldown_ticks`。`shove_step` 超过 `SHOVE_STEP_MAX` 或为负则整条拒绝。对局进程占位桩 `shove_step = SCALE/4`、冷却 1 tick，不是产品力度。大厅 **F** 上升沿编码；Solo 只有一枚胶囊，无目标。推击不进本席 overlay。Interact 仍不接线。Preview 仍拒绝 Shove。
-
-实现落点（2026-08-26）：出界复位见 [§6](#6-胜负与排名)。对局 Move/Jump/Reset 步进后、传送早退、Shove 推中目标后、以及 `commit_tick` 在 `world.tick()` 之后、占用扫描之前，调用同一模块。Preview 试玩同样先复位再占用。
-
-实现落点（2026-08-26）：周期机关见 [§5.1](#51-障碍分类)。对局 `advance_sim_tick` 在 `world.tick()` 之后经 `TraprushHazardCycle` 切换固体，再做出界复位与占用扫描；lease 比较仍在 tick 前。意图不推进 tick。官方赛道各 1 个机关。
-
-实现落点（2026-08-26）：权威下落见 [§3.3](#33-权威运动模型)。`MatchRealtime.commit_tick` 先 `apply_player_falls`，再应用排队意图，再 `advance_sim_tick`。Solo `_process` 先 `try_advance` 再采样空格。Preview 意图不下落。
-
-实现落点（2026-08-25）：在线大厅本席 `MatchLocalPredict` 只叠加已有 Move/Jump 的 Q48.16 位移到最新权威位姿；本席不插值。更新的快照 tick 硬贴权威（不是平滑对账）。传送、重置、道具、冲线不预测。预测位姿若与最新活箱或最新远端胶囊或最新固体周期机关重叠，本帧不叠 overlay（权威胶囊/箱/机关几何，不是 1 米表现盒）；远端不外推。垫 / 门 / 终点不是固体。在线 `play_jump_dy` 仍为 0（不叠假跳跃 overlay）；对局进程 `jump_dy` 已是 Preview 占位桩，`support_dy = -Fixed.SCALE`。官方赛道出生点正下一格有立足固体，权威 Jump 接地 hop。在线 `play_jump_dy` 仍为 0（不叠假跳跃 overlay）。对局进程 UseItem 伤害/触达与 Preview 对齐，官方 `course_01` 出生点可打碎 +Z 箱。大厅 SnapshotCamera 跟随本席表现位姿（线上预测 overlay / Solo 本地权威），偏移与 Preview 相同；远端不拉镜头。大厅 WASD 把 8 向离散水平 `yaw_bam` 写入已有 Move 命令（W=0 为世界 -Z；省略哨兵仍是 -1，0 是合法朝前）；线上 overlay 立即改本席朝向，Solo 走本地权威；立方体玩家盒加 local -Z 面向标记。不发明 atan2，不锁产品转向速度，不改 Preview WASD。大厅 `follow_slot` 把本席玩家盒涂成 `OWN_ALBEDO`（青），远端仍 `REMOTE_ALBEDO`；名次标本席前缀 `*`。不是产品皮肤或槽位色盘。大厅用本席 `accepted_count` 给检查点垫分色（已验收 / 当前目标 / 未到）；未开玩保持原垫色。大厅用本席 `finish_tick` 给终点分色（未到金 / 垫齐后当前目标 / 已冲线暗金）；HUD 写 `pads=n/m`、`floor=n`（本席权威 `y / Fixed.SCALE` 向零）、`finish=n`、`crates=n/m`（活着的箱 / 编译袋总数）与 `hazards=n/m`（固体机关 / 编译袋总数），快照全员 `finish_tick>=0` 时加 `result=`。线上全员冲线后大厅 GET 控制面结算记录，200 后 HUD 加 `settled=`；Solo 不 GET。R 上升沿把已有 ResetToCheckpointIntent 接到可见复位（传送后回到最近已验收垫，进度不回退）。不是走路可达、合法路径距离或结算写库。客户端不 POST。落点见 [CD-43 §2](../40-technical/43-networking-and-replay.md#2-传输) 与 [CD-12 §1](../10-product/12-product-structure.md#1-入口结构)。
-
-实现落点（2026-08-26）：开发机运行窗与空格。大厅/Preview 动作按钮 `FOCUS_NONE`，空格走已有 `jump`，不点 Solo play / Play。项目运行窗默认 1600×900 最大化，Traprush/Preview 窗默认 1280×720 最大化。不是产品镜头/FOV。落点见 [CD-12 §1](../10-product/12-product-structure.md#1-入口结构) 与 [CD-32 §3](../30-ugc/32-editor-and-preview.md#3-从编辑到预览)。
-
-网络故障正确性与手感一期只进行临时人工测试，不设固定频率或自动门禁。该选择**不代表**协议已经具备弱网鲁棒性；真实香港样本形成后再定义目标。若可靠传输队头阻塞被实测证明影响 TRAPRUSH，再评估原生 ENet 或 WebRTC，不能提前维护两套传输。
+网络故障正确性与手感一期只进行临时人工测试，不设固定频率或自动门禁。该选择**不代表**协议已经具备弱网鲁棒性。

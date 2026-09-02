@@ -18,7 +18,7 @@ extends SceneTree
 ##    这里大，不会更小。
 ## 2. 这是 Windows 开发机 debug 解释器的数字，不是产品性能指标，也没在导出包或
 ##    Linux 上量过。
-## 3. 真机 FPS 由人类按 docs/runbooks/chapter-device-check.md 本刀走查确认。
+## 3. 真机 FPS 由人类按 docs/runbooks/dev-window-check.md 本刀走查确认。
 ##    本文件不能替代那一步（宪法第二十四条）。
 
 const MatchLobbyShell := preload("res://src/client/match_lobby_shell.gd")
