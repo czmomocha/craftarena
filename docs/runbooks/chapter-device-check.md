@@ -53,56 +53,60 @@ Worktree 端口偏移见 README「并行工作区」；本文件不复述端口�
 
 ---
 
-## 本刀：拆大厅壳（C5 产出 1，L4 协作者）
+## 本刀：拆匹配会话（C5 第 2 章，codec / accept / 门面）
 
-上一刀（[#203](https://github.com/czmomocha/craftarena/pull/203)）锁了本地化键。本刀把 `MatchLobbyShell` 按 CD-41 L4 拆成 chrome / net / sampler / stage / hud / director，门面压到 400 行以下。**窗口里看起来应与上一刀相同**：按钮、HUD、Solo、鼠标命中都不能因拆文件而变。
+上一刀（[#204](https://github.com/czmomocha/craftarena/pull/204)）拆了大厅壳。本刀把 `MatchJoinSession` 拆成 codec / accept / 门面，压到 400 行以下。**窗口里看起来应与上一刀相同**：快速游戏仍能入场，Solo / 取消 / 鼠标命中都不能因拆文件而变。
 
-本刀**不需要** `npm run dev`（Solo 就能看完前 4 步）。
+本刀**需要** `npm run dev`（第 2 步走注入 HTTP 的在线入场）。第 1、3 步 Solo 也能看。
 
-1. **大厅仍能打开，按钮还在原位**：按「共用启动」打开主场景。
-   - 预期：嵌入子窗口出现；从左到右仍是快速游戏 / 创建房间 / 加入房间 / 单人试玩 / 取消 / 查询队列（英文机对应 Quick play … Poll）；节点名仍是英文 `QuickPlay` 等。状态行仍有 `join=idle`、`play=idle`、`course=3/5/1`。第一行仍是 `FPS`。
-   - 失败：没有窗口、立刻退出、按钮缺了一个、或窗题变成键名。
+1. **大厅仍能打开**：按「共用启动」打开主场景（先起三后端）。
+   - 预期：嵌入子窗口出现；状态行 `join=idle`、`play=idle`、`course=3/5/1`。第一行仍是 `FPS`。
+   - 失败：没有窗口、立刻退出、或窗题变成键名。
 
-2. **点 Solo 就是 Solo，不是旁边的 Poll**：把鼠标对准从左到右第 4 个按钮点一下。
-   - 预期：进入离线试玩；状态行出现离线横幅（中文「离线试玩，成绩不上传」/ 英文 `Offline play, scores are not uploaded`）和 `offline=playing`。**不要**点到第 6 个按钮（查询队列 / Poll）。
-   - 失败：点第 4 个按钮却进了排队或没反应 ⇒ 嵌入子窗口又被设了 `content_scale_*`（C4 第 6 章回归：渲染不缩放、输入缩放，4K 上会偏 1.5 倍）。没有横幅 ⇒ Solo 动词没接到 `MatchLobbyDirector`。
+2. **快速游戏仍能从 idle 走到 ready**：点从左到右第 1 个按钮（快速游戏 / Quick play）。
+   - 预期：状态行变成 `join=ready`（本机空库、默认 2 人房，第一个席位会拿到票）。随后可能开始连网关（`play=` 离开 idle）。**不要**点到第 4 个按钮（单人试玩）。
+   - 失败：`join=failed` 且 `error=parse_error` ⇒ `MatchJoinAccept` 把合法 JSON 判坏了。一直 `join=idle` 且没有 pending ⇒ `try_quick` 没接到 director。点第 1 个却进了 Solo ⇒ 鼠标命中又偏了。
 
-3. **拆完之后 WASD / 空格仍是玩法**：Solo 里按 W 走一步，按空格跳。
-   - 预期：角色移动；空格起跳而不是点到「单人试玩」按钮（按钮 `FOCUS_NONE`）。状态行 `tick=` 会走。
-   - 失败：按键没反应、或空格又去点按钮 ⇒ 输入采样没接到 `MatchLobbySampler`，或焦点又被按钮抢走。
+3. **取消能停在线入场，Solo 仍可用**：点 **取消** / **Cancel**，再点第 4 个按钮（单人试玩 / Solo play）。
+   - 预期：先回到 `join=idle` / `play=idle`；再进入离线试玩，出现离线横幅和 `offline=playing`。WASD 仍能走，空格仍是跳。
+   - 失败：取消后 `join` 卡在 ready/failed ⇒ `try_abandon` 没清字段。Solo 没横幅 ⇒ 上一刀 director 接线回退。
 
-4. **取消能停 Solo**：点 **取消** / **Cancel**。
-   - 预期：离线横幅消失，回到 `join=idle` / `play=idle`。窗口还在，没有整窗关掉。
-   - 失败：窗口被关掉、或停不下来 ⇒ 离场动词没接到 director。
-
-5. **自动化全绿 + 裁决不变**：
+4. **自动化全绿 + 裁决不变**：
    ```bash
    npm run typecheck; npm test; npm run redline-scan
    npm run test:gut:full
    & $env:GODOT4_CONSOLE --headless --path game -- --package-check
    & $env:GODOT4_CONSOLE --headless --path game -- --bot-run
    ```
-   - 预期：`npm run typecheck` 无输出；`redline-scan` `no findings`；GUT 全绿（含 `test_match_lobby_shell.gd` 与 `test_match_lobby_split.gd`）；`--package-check` `ok=true`；`--bot-run` 三张课 `completable`，**动作序列与步数逐项不变**（5 / 5 / 12 步）。
-   - 失败：bot-run 步数变了 ⇒ 拆壳意外改了命令，停下来查，别先改断言。`test_lobby_l4_files_stay_under_e9_line_cap` 红 ⇒ 门面或某个协作者又涨过 400 行。
+   - 预期：`npm run typecheck` 无输出；`redline-scan` `no findings`；GUT 全绿（含 `test_match_join_session.gd` 与 `test_match_join_split.gd`）；`--package-check` `ok=true`；`--bot-run` 三张课 `completable`，**动作序列与步数逐项不变**（5 / 5 / 12 步）。
+   - 失败：`test_match_join_session.gd` 红 ⇒ 拆文件改了 JSON 语义，停下来查，别先改断言。`test_join_files_stay_under_e9_line_cap` 红 ⇒ 门面或某个匹配协作者又涨过 400 行。bot-run 步数变了 ⇒ 拆会话意外改了命令。
 
 ### 本刀不测
 
-- **在线匹配 / 真 WS**：拆的是编排，不改协议；在线回归仍以 GUT 注入 HTTP 为准；
-- **拆 `match_join_session.gd`**：本刀不做；
+- **双人真 WS 对局**：拆的是客户端匹配 JSON 状态机，不改协议；在线回归以 GUT 注入 HTTP 为准；
+- **拆 `match_session.gd` / Preview 壳**：本刀不做；
 - **字体 / locale 热切换 / 触控 UI**。
 
 ### 诚实边界
 
-- 壳变薄了，**不是** E9 全仓达标：`match_join_session.gd` 仍约 656 行；
+- `game/src/client/` 匹配会话三文件均 < 400 行，**不是** E9 全仓达标：`match_snapshot_map.gd` 仍约 404 行；对局会话 / Preview / 控制面等仍超 400；
 - HUD 仍是开发期 token（`join=` / `pads=`），不是产品文案；
 - 嵌入子窗口仍然不得自己设 `content_scale_*`。
 
 ### 仍然欠着（不因本章消失）
 
-- `match_join_session.gd` 超 E9；
+- E9 全仓（`match_snapshot_map.gd` 仍约 404 行；对局会话 / Preview / 控制面等仍超 400）；
 - 字体入包（思源黑体 / Noto Sans SC 子集范围待人类拍）；
 - 触控 UI；按 `asset_id` 解析视觉；传送门没有专用模型；
 - 扫掠步数无上限。
+
+---
+
+## 上一刀：拆大厅壳（C5 产出 1，L4 协作者）
+
+> **本节已随 [#204](https://github.com/czmomocha/craftarena/pull/204) 合入，保留只为追溯。验当前 PR 只看上面的「本刀」。**
+
+该刀把 `MatchLobbyShell` 按 CD-41 L4 拆成 chrome / net / sampler / stage / hud / director，门面压到 400 行以下。窗口外观不变。当时**不拆** `match_join_session.gd`。
 
 ---
 

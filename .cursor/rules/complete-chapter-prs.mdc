@@ -15,12 +15,12 @@ alwaysApply: true
 
 真机：PR Test plan 与 [章节真机清单](docs/runbooks/chapter-device-check.md) 本刀必须是编号步骤（怎么开、点什么、期望 / 失败）；禁止只写「真机再看一眼」。无 GUI 的章写「无」加原因。人工检查，不是 CI 门禁。口径见 [CD-52 §3.2](Confirmed-docs/50-engineering/52-ai-workflow.md)。
 
-- 做（本刀 = 纠偏 C5 产出 1：拆大厅壳）：按 CD-41 L4 把 `MatchLobbyShell` 拆成 chrome / net / sampler / stage / hud / director。门面与每个协作者 < 400 行。公开 API（含测试仍调的 `_apply_snapshot_map`）留在壳上。**数值一个不改**：GUT 全绿 + `--bot-run` 三张课步数与动作序列逐项不变（5 / 5 / 12）。
-- 不做：拆 `match_join_session.gd`；改协议 / Schema / 官方课 JSON；C5 其余产出（文档去追加化、CD-62、CD-61 重排、Web 矛盾、runbook 更名）；字体入包；触控 UI；按 `asset_id` 解析视觉。
-- 仍欠着（不因本章合入而消失）：`match_join_session.gd` 仍超 E9；触控 UI；按 `asset_id` 解析视觉；传送门模型；字体入包；远端协议层 RTT 回填；C3 网络参数锁定；E6 有美术之后的可玩性签署；扫掠取样代价无上限。
+- 做（本刀 = 纠偏 C5 第 2 章：拆匹配会话）：把 `MatchJoinSession` 拆成 codec / accept / 门面。门面与每个协作者 < 400 行。公开 API（含测试仍调的 `try_*` / `accept_http` / 静态 `http_url`）留在门面上。**数值一个不改**：GUT 全绿（含原 `test_match_join_session.gd`）+ `--bot-run` 三张课步数与动作序列逐项不变（5 / 5 / 12）。
+- 不做：拆 `match_snapshot_map.gd` / `match_session.gd` / Preview 壳；改协议 / Schema / 官方课 JSON；C5 其余产出（文档去追加化、CD-62、CD-61 重排、Web 矛盾、runbook 更名）；字体入包；触控 UI。
+- 仍欠着（不因本章合入而消失）：E9 全仓（`match_snapshot_map.gd` 仍约 404 行；`match_session.gd` / Preview / 控制面等仍超 400）；触控 UI；按 `asset_id` 解析视觉；传送门模型；字体入包；远端协议层 RTT 回填；C3 网络参数锁定；E6 有美术之后的可玩性签署；扫掠取样代价无上限。
 - 仍不做：给嵌入子窗口设 `content_scale_*`；把 locale 热切换做成产品设置页。
 
 纠偏归属：C5
-是否新增冻结常量引用：否（`STUB_HALF` 从壳挪到 `MatchOfflineSession.apply_play_stubs()`，引用点减少而非扩散）
-审查级别：常审（L4 编排；权威命令与快照字节不变）
-隔离方式：`feat/c5-split-lobby-shell`
+是否新增冻结常量引用：否
+审查级别：常审（L4 匹配入场状态机；权威命令与快照字节不变）
+隔离方式：`feat/c5-split-join-session`
