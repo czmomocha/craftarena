@@ -19,6 +19,7 @@ const MatchMoveFacingGd := preload("res://src/client/match_move_facing.gd")
 const MatchSnapshotFollowGd := preload("res://src/client/match_snapshot_follow.gd")
 const PlayerIntentNames := preload("res://src/shared/commands/player_intent_names.gd")
 const PlayStubsGd := preload("res://src/games/traprush/play_stubs.gd")
+const OutOfRangeResetGd := preload("res://src/games/traprush/out_of_range_reset.gd")
 const TraprushMatchSessionGd := preload("res://src/games/traprush/match_session.gd")
 
 const BANNER_KEY: String = UiCopy.OFFLINE_BANNER
@@ -187,6 +188,23 @@ func status_view() -> Dictionary:
 		"player_count": player_count,
 		"crate_count": follow_view.get("crate_count", 0),
 	}
+
+
+func apply_play_stubs() -> void:
+	play_jump_dy = PlayStubsGd.JUMP_DY
+	play_support_dy = PlayStubsGd.SUPPORT_DY
+	play_fall_dy = PlayStubsGd.FALL_DY
+	play_use_item_damage = PlayStubsGd.USE_ITEM_DAMAGE
+	play_use_item_reach_dx = PlayStubsGd.USE_ITEM_REACH_DX
+	play_use_item_reach_dy = PlayStubsGd.USE_ITEM_REACH_DY
+	play_use_item_reach_dz = PlayStubsGd.USE_ITEM_REACH_DZ
+	play_shove_step = PlayStubsGd.SHOVE_STEP
+	play_shove_cooldown_ticks = PlayStubsGd.SHOVE_COOLDOWN_TICKS
+	play_sprint_step = PlayStubsGd.SPRINT_STEP
+	play_item_cooldown_ticks = PlayStubsGd.ITEM_COOLDOWN_TICKS
+	play_hazard_knockback_step = PlayStubsGd.HAZARD_KNOCKBACK_STEP
+	play_respawn_stun_ticks = PlayStubsGd.RESPAWN_STUN_TICKS
+	play_range_half = OutOfRangeResetGd.STUB_HALF
 
 
 func allows_settlement() -> bool:

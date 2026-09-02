@@ -1,154 +1,61 @@
 class_name MatchLobbyShell
 extends Node
 
-## TRAPRUSH channel lobby (CD-12): quick play, room code, FIFO wait.
-## Code-created Window; close only hides. Injected HTTP/WS in tests;
-## live_io uses HTTPRequest + WebSocketPeer. Follows the latest snapshot
-## and maps player poses to 1 m boxes. Maps compiled course occupancy
-## (pads / portals / finish) to 1 m boxes. Maps compiled destructibles
-## to 1 m boxes and hides them when snapshot durability is <= 0 or omitted.
-## Maps compiled period hazards to 1 m boxes and hides them when
-## TraprushHazardCycle.is_solid(tick, cooldown_ticks) is false.
-## Maps compiled always-solid occupancy to 1 m stone boxes that never toggle.
-## Maps compiled portal source→dest as bar gizmos; one_way adds a
-## direction marker. Dangling bags are omitted by the compiler.
-## Maps compiled checkpoint order as labels plus unique-order bars;
-## duplicate orders are labeled only. Maps live standings from the latest
-## snapshot (finish_tick then accepted_count; slot is the stable key).
-## Path distance is not ranked. Solo play starts a local
-## TraprushMatchSession (CD-13 §3); the HUD keeps
-## `craft_arena.ui.offline_banner` while it runs. Web is refused.
-## Player boxes and standing labels sample MatchSnapshotInterp between
-## the last two snapshots. play_interp_step is a presentation stub, not
-## an interpolation window. The local seat overlays MatchLocalPredict on
-## the latest authority for Move/Jump; remotes still interpolate. Overlay
-## that overlaps a latest live crate, latest solid hazard, latest always-solid
-## occupancy, or latest remote capsule is dropped this frame (authority
-## capsule/crate/hazard/solid geometry, not 1 m placeholders).
-## Remotes are not extrapolated.
-## SnapshotCamera follows the own-seat presentation pose (predicted
-## online, local authority offline) with the Preview camera offset (D4:
-## 45° yaw / 45° pitch, PlaceholderSpec.CAMERA_OFFSET).
-## The own-seat box uses OWN_ALBEDO; remotes use REMOTE_ALBEDO. Standing
-## labels prefix the own seat with "*". Remotes do not pull the camera.
-## Own-seat accepted_count tints course pads: done / current / pending.
-## Own-seat finish_tick tints the finish zone: pending / current / done.
-## HUD shows pads=n/m, floor=n, finish=n, crates=n/m, hazards=n/m, and solids=n/m; result= appears
-## when every snapshot seat has finished. HUD 的第一行是 FrameRateMeter 的运行时
-## 帧率读数（`FPS 60`，首窗之前 `FPS --`）：它每帧累计 delta、每 0.5 s 才写一次
-## 文本，窗口隐藏时丢弃累计。它是观察工具，不进裁决、不进快照、不发网络，也
-## 不锁帧率目标。Online matches then GET the
-## control-plane board; 200 adds settled=. Online in-match also samples protocol
-## RTT (ping type=3 / pong type=4) and shows rtt= / rtt_n= after the first pong.
-## floor uses own-seat authority y
-## (y / Fixed.SCALE toward zero), not interpolated samples. crates n/m is
-## live boxes over compiled bag count. hazards n/m is solid boxes over
-## compiled bag count (tick 0 solid half). solids n/m is compiled always-solid
-## bags (never toggle). tls=on when the gateway URL is wss
-## (in-process TLS); default local npm run dev stays ws / tls=off. Reset rising-edge encodes the
-## existing ResetToCheckpointIntent. result= is local presentation; settled=
-## is a read-only GET. The client never POSTs settlement.
-## WASD / analog sticks both go through PlayInput (direction vector +
-## rising-edge actions) before MatchMoveFacing quantizes 8-way yaw_bam.
-## F rising-edge encodes ShoveIntent (no target id).
-## Shift rising-edge encodes SprintIntent (consumes a granted dash).
-## Solo copies the match-server jump/support/fall stubs; _process advances
-## interpolation only. Solo 角色挂 C4 表现动画状态读出（`anim`），不播 clip。
-## (falls) before sampling Space so a hop is not landed in the same frame.
-## Solo opens an 8-cell play-range stub (not a product bound).
-## play_move_step is a presentation stub, not a product speed.
-## HUD buttons use FOCUS_NONE so Space stays jump, not Solo play.
-## LineEdits are FOCUS_CLICK. Clicks outside them (3D view, buttons, HUD
-## padding) and Enter / play actions call gui_release_focus so WASD does
-## not type into seats / course / room. Play sampling pauses while a
-## LineEdit has focus.
-## The window defaults to 1280×720 maximized; that is a developer
-## run size, not a locked product FOV. UI scales from the D4 1920×1080
-## base (PlaceholderSpec.UI_BASE_SIZE, canvas_items), which sub-windows do
-## not inherit from project.godot.
-## Unexpected socket close while connecting or in-match reissues the
-## consumed ticket and follows the latest snapshot again.
-## Cancel stops solo play, cancels a waiting queue, and locally leaves
-## connecting / in-match / closed play without reissuing a ticket.
-## Quick play / create room send an official course id and seats;
-## join-by-code follows the room's course and remounts maps from that response.
-## Solo play reuses the course selector only (always one local player).
-## ServerEndpoint resolves the control-plane and gateway bases from the command
-## line and the environment; the server field retargets them at runtime while
-## idle. HUD shows server=host, gw=host when the two differ, and
-## server_error= for a rejected address, so a mistyped host reads as a bad
-## address instead of a dead server.
-## No BASTION, accounts, settlement writes, ghosts, or offline writes.
+## TRAPRUSH lobby facade (CD-12). L4: chrome / net / sampler / stage / hud / director.
 
-const MatchFrameCodec := preload("res://src/shared/protocol/match_frame_codec.gd")
 const MatchJoinSessionGd := preload("res://src/client/match_join_session.gd")
+const MatchLobbyChromeGd := preload("res://src/client/match_lobby_chrome.gd")
+const MatchLobbyHudGd := preload("res://src/client/match_lobby_hud.gd")
+const MatchLobbyNetGd := preload("res://src/client/match_lobby_net.gd")
+const MatchLobbySamplerGd := preload("res://src/client/match_lobby_sampler.gd")
+const MatchLobbyStageGd := preload("res://src/client/match_lobby_stage.gd")
 const MatchOfflineSessionGd := preload("res://src/client/match_offline_session.gd")
 const MatchPlaySessionGd := preload("res://src/client/match_play_session.gd")
-const FrameRateMeterGd := preload("res://src/client/frame_rate_meter.gd")
-const MatchCheckpointOrderMapGd := preload("res://src/client/match_checkpoint_order_map.gd")
-const MatchCourseMapGd := preload("res://src/client/match_course_map.gd")
-const MatchCrateMapGd := preload("res://src/client/match_crate_map.gd")
-const MatchHazardMapGd := preload("res://src/client/match_hazard_map.gd")
-const MatchSolidMapGd := preload("res://src/client/match_solid_map.gd")
-const MatchPortalLinkMapGd := preload("res://src/client/match_portal_link_map.gd")
 const MatchSnapshotFollowGd := preload("res://src/client/match_snapshot_follow.gd")
-const MatchSnapshotInterpGd := preload("res://src/client/match_snapshot_interp.gd")
-const MatchSnapshotMapGd := preload("res://src/client/match_snapshot_map.gd")
-const MatchStandingMapGd := preload("res://src/client/match_standing_map.gd")
 const OfficialTraprushCoursesGd := preload("res://src/shared/official_traprush_courses.gd")
-const OutOfRangeResetGd := preload("res://src/games/traprush/out_of_range_reset.gd")
-const PlayStubsGd := preload("res://src/games/traprush/play_stubs.gd")
-const PlayerIntentNames := preload("res://src/shared/commands/player_intent_names.gd")
 const ServerEndpointGd := preload("res://src/client/server_endpoint.gd")
 
-const TITLE: String = UiCopy.WINDOW_TRAPRUSH
-const WINDOW_SIZE: Vector2i = Vector2i(1280, 720)
-const WINDOW_MIN_SIZE: Vector2i = Vector2i(960, 540)
+const TITLE: String = MatchLobbyChromeGd.TITLE
+const WINDOW_SIZE: Vector2i = MatchLobbyChromeGd.WINDOW_SIZE
+const WINDOW_MIN_SIZE: Vector2i = MatchLobbyChromeGd.WINDOW_MIN_SIZE
 const DEFAULT_COURSE: String = "res://content/official/traprush/course_01.json"
 const DEFAULT_CONTROL_PLANE: String = ServerEndpointGd.DEFAULT_CONTROL_PLANE
 const DEFAULT_GATEWAY: String = ServerEndpointGd.DEFAULT_GATEWAY
 const DEFAULT_QUEUE_POLL_S: float = 1.0
-const QUICK_NAME: String = "QuickPlay"
-const CREATE_NAME: String = "CreateRoom"
-const JOIN_NAME: String = "JoinRoom"
-const CANCEL_NAME: String = "Cancel"
-const SOLO_NAME: String = "SoloPlay"
-const POLL_NAME: String = "Poll"
-const SPRINT_NAME: String = "Sprint"
-const ROOM_NAME: String = "RoomCode"
-const COURSE_ID_NAME: String = "CourseId"
-const SEATS_NAME: String = "Seats"
-const SERVER_NAME: String = "ServerHost"
-const APPLY_SERVER_NAME: String = "ApplyServer"
-## 帧率读数不是状态行的一部分：状态行只在事件发生时重画，帧率必须每帧累计。
-const FPS_NAME: String = "Fps"
-const _STATUS_NAME: String = "Status"
-const _MAP_NAME: String = "SnapshotMap"
-const _COURSE_NAME: String = "CourseMap"
-const _CRATE_NAME: String = "CrateMap"
-const _HAZARD_NAME: String = "HazardMap"
-const _SOLID_NAME: String = "SolidMap"
-const _LINK_NAME: String = "PortalLinkMap"
-const _ORDER_NAME: String = "CheckpointOrderMap"
-const _STANDING_NAME: String = "StandingMap"
-
+const QUICK_NAME: String = MatchLobbyChromeGd.QUICK_NAME
+const CREATE_NAME: String = MatchLobbyChromeGd.CREATE_NAME
+const JOIN_NAME: String = MatchLobbyChromeGd.JOIN_NAME
+const CANCEL_NAME: String = MatchLobbyChromeGd.CANCEL_NAME
+const SOLO_NAME: String = MatchLobbyChromeGd.SOLO_NAME
+const POLL_NAME: String = MatchLobbyChromeGd.POLL_NAME
+const SPRINT_NAME: String = MatchLobbyChromeGd.SPRINT_NAME
+const ROOM_NAME: String = MatchLobbyChromeGd.ROOM_NAME
+const COURSE_ID_NAME: String = MatchLobbyChromeGd.COURSE_ID_NAME
+const SEATS_NAME: String = MatchLobbyChromeGd.SEATS_NAME
+const SERVER_NAME: String = MatchLobbyChromeGd.SERVER_NAME
+const APPLY_SERVER_NAME: String = MatchLobbyChromeGd.APPLY_SERVER_NAME
+const FPS_NAME: String = MatchLobbyChromeGd.FPS_NAME
 
 static func floor_index_from_y(y: int) -> int:
-	return y / Fixed.SCALE
-
+	return MatchLobbyHudGd.floor_index_from_y(y)
 
 var join: MatchJoinSessionGd = null
 var play: MatchPlaySessionGd = null
 var offline: MatchOfflineSessionGd = null
-var map: MatchSnapshotMapGd = null
-var course: MatchCourseMapGd = null
-var crates: MatchCrateMapGd = null
-var hazards: MatchHazardMapGd = null
-var solids: MatchSolidMapGd = null
-var links: MatchPortalLinkMapGd = null
-var orders: MatchCheckpointOrderMapGd = null
-var standings: MatchStandingMapGd = null
-var frame_rate: FrameRateMeterGd = null
+var chrome: MatchLobbyChromeGd = MatchLobbyChromeGd.new()
+var stage: MatchLobbyStageGd = MatchLobbyStageGd.new()
+var sampler: MatchLobbySamplerGd = MatchLobbySamplerGd.new()
+var director: MatchLobbyDirector = MatchLobbyDirector.new()
+var net: MatchLobbyNetGd = null
+var map: MatchSnapshotMap = null
+var course: MatchCourseMap = null
+var crates: MatchCrateMap = null
+var hazards: MatchHazardMap = null
+var solids: MatchSolidMap = null
+var links: MatchPortalLinkMap = null
+var orders: MatchCheckpointOrderMap = null
+var standings: MatchStandingMap = null
+var frame_rate: FrameRateMeter = null
 var window: Window = null
 var live_io: bool = false
 var web_platform: bool = false
@@ -161,32 +68,10 @@ var play_move_step: int = PlaceholderSpec.MOVE_STEP
 var play_interp_step: int = PlaceholderSpec.INTERP_STEP
 var queue_poll_s: float = DEFAULT_QUEUE_POLL_S
 var last_sent_command: PackedByteArray = PackedByteArray()
-var _interp_t: int = 0
-var _interp_tick: int = -1
-## 表现映射真正跑了多少次。只给守卫测试读——「一帧只重映射一次」这条性质，
-## 除了数它没有别的可观测出口，而它恰好是 2026-09-01 之前退化过的那一条
-## （一帧三次 `_apply_snapshot_map` + 四次 `_refresh_status`）。
-var _snapshot_map_applies: int = 0
-
-var _status: Label = null
-var _room_edit: LineEdit
-var _course_edit: LineEdit = null
-var _seats_edit: LineEdit = null
-var _server_edit: LineEdit = null
-var _http: HTTPRequest = null
-var _http_busy: bool = false
-var _peer: WebSocketPeer = null
-var _poll_accum: float = 0.0
-var _settlement_poll_accum: float = 0.0
-var _reset_held: bool = false
-var _use_item_held: bool = false
-var _jump_held: bool = false
-var _shove_held: bool = false
-var _sprint_held: bool = false
-var _play_input: PlayInput = PlayInput.new()
-var _play_moving: bool = false
-var _play_anim: PlayAnimState = PlayAnimState.new()
-var _opened_socket: bool = false
+var play_anim: PlayAnimState = PlayAnimState.new()
+var play_input: PlayInput = PlayInput.new()
+func _init() -> void:
+	director.bind(self)
 
 
 static func create() -> MatchLobbyShell:
@@ -197,8 +82,6 @@ static func create() -> MatchLobbyShell:
 	shell.endpoint = ServerEndpointGd.new()
 	shell.web_platform = OS.has_feature("web")
 	return shell
-
-
 func open() -> bool:
 	if join == null:
 		return false
@@ -206,73 +89,39 @@ func open() -> bool:
 	if window == null:
 		return false
 	if live_io:
-		_ensure_http()
+		ensure_net()
+		net.ensure_http(_on_http_completed)
 	window.visible = true
 	_refresh_status()
 	return true
-
-
 func show_window() -> bool:
 	if window == null:
 		return false
-	window.visible = true
+	chrome.show_window()
 	_refresh_status()
 	return true
-
-
 func hide_window() -> void:
-	if window != null:
-		window.visible = false
-
-
+	chrome.hide_window()
 func is_window_visible() -> bool:
-	return window != null and window.visible
-
-
+	return chrome.is_visible()
 func room_code_text() -> String:
-	if _room_edit == null:
-		return ""
-	return _room_edit.text
-
-
+	return chrome.room_code_text()
 func set_room_code_text(text: String) -> void:
-	if _room_edit != null:
-		_room_edit.text = text
-
-
+	chrome.set_room_code_text(text)
 func course_id_text() -> String:
-	if _course_edit == null:
-		return course_id
-	return _course_edit.text
-
-
+	return chrome.course_id_text(course_id)
 func set_course_id_text(text: String) -> void:
 	course_id = text
-	if _course_edit != null:
-		_course_edit.text = text
-
-
+	chrome.set_course_id_text(text)
 func selected_course_id() -> String:
-	var raw: String = course_id
-	if _course_edit != null:
-		raw = _course_edit.text
-	var trimmed: String = raw.strip_edges()
+	var trimmed: String = course_id_text().strip_edges()
 	if trimmed == "":
 		return OfficialTraprushCoursesGd.DEFAULT_ID
 	return OfficialTraprushCoursesGd.normalize_id(trimmed)
-
-
 func seats_text() -> String:
-	if _seats_edit == null:
-		return str(OfficialTraprushCoursesGd.DEFAULT_SEATS)
-	return _seats_edit.text
-
-
+	return chrome.seats_text()
 func set_seats_text(text: String) -> void:
-	if _seats_edit != null:
-		_seats_edit.text = text
-
-
+	chrome.set_seats_text(text)
 func selected_seats() -> int:
 	var raw: String = seats_text().strip_edges()
 	if raw == "":
@@ -280,1328 +129,233 @@ func selected_seats() -> int:
 	if not raw.is_valid_int():
 		return 0
 	return OfficialTraprushCoursesGd.normalize_seats(raw.to_int())
-
-
-## Boot-time injection. `main.gd` resolves the endpoint from the command line
-## and the environment; tests build one directly.
 func apply_endpoint(next: ServerEndpointGd) -> bool:
 	if next == null:
 		return false
 	endpoint = next
 	control_plane_base = next.control_plane
 	gateway_base = next.gateway
-	_sync_server_edit()
+	chrome.sync_server_edit(control_plane_base)
 	_refresh_status()
 	return true
-
-
 func server_host_text() -> String:
-	if _server_edit == null:
-		return ServerEndpointGd.host_of(control_plane_base)
-	return _server_edit.text
-
-
+	return chrome.server_host_text(ServerEndpointGd.host_of(control_plane_base))
 func set_server_host_text(text: String) -> void:
-	if _server_edit != null:
-		_server_edit.text = text
-
-
-## Retargets both bases at another machine while idle. Refused mid-session on
-## purpose: swapping the control plane under a live ticket leaves the join and
-## play states describing two different servers, which reads as a bug rather
-## than as "you changed servers".
+	chrome.set_server_host_text(text)
 func try_apply_server_host(raw_host: String = "") -> bool:
-	_release_edit_focus()
-	if endpoint == null:
-		return false
-	if _online_busy() or _offline_playing():
-		return false
-	var host: String = raw_host
-	if host == "" and _server_edit != null:
-		host = _server_edit.text
-	endpoint.clear_errors()
-	endpoint.control_plane = control_plane_base
-	endpoint.gateway = gateway_base
-	if not endpoint.try_apply_host(host):
-		_refresh_status()
-		return false
-	control_plane_base = endpoint.control_plane
-	gateway_base = endpoint.gateway
-	_sync_server_edit()
-	_refresh_status()
-	return true
-
-
+	return director.try_apply_server_host(raw_host)
 func try_quick() -> bool:
-	_release_edit_focus()
-	if join == null or _offline_playing():
-		return false
-	var id: String = selected_course_id()
-	var seat_count: int = selected_seats()
-	if id == "" or seat_count == 0:
-		return false
-	if not join.try_quick(id, seat_count):
-		return false
-	_dispatch_pending()
-	_refresh_status()
-	return true
-
-
+	return director.try_quick()
 func try_create_room() -> bool:
-	_release_edit_focus()
-	if join == null or _offline_playing():
-		return false
-	var id: String = selected_course_id()
-	var seat_count: int = selected_seats()
-	if id == "" or seat_count == 0:
-		return false
-	if not join.try_create_room(id, seat_count):
-		return false
-	_dispatch_pending()
-	_refresh_status()
-	return true
-
-
+	return director.try_create_room()
 func try_join_room(raw_code: String = "") -> bool:
-	_release_edit_focus()
-	if join == null or _offline_playing():
-		return false
-	var code: String = raw_code
-	if code == "" and _room_edit != null:
-		code = _room_edit.text
-	if not join.try_join_room(code):
-		return false
-	_dispatch_pending()
-	_refresh_status()
-	return true
-
-
+	return director.try_join_room(raw_code)
 func try_poll() -> bool:
-	_release_edit_focus()
-	if join == null or _offline_playing():
-		return false
-	if not join.try_poll():
-		return false
-	_dispatch_pending()
-	_refresh_status()
-	return true
-
-
+	return director.try_poll()
 func try_solo() -> bool:
-	_release_edit_focus()
-	if offline == null:
-		return false
-	if _online_busy():
-		return false
-	var id: String = selected_course_id()
-	if id == "":
-		return false
-	_prepare_offline_stubs()
-	_reset_interp()
-	_play_moving = false
-	_play_anim.reset()
-	course_path = OfficialTraprushCoursesGd.document_path(id)
-	if not offline.try_begin(course_path, web_platform):
-		_refresh_status()
-		return false
-	_apply_course_document(course_path)
-	_apply_snapshot_map()
-	_refresh_status()
-	return true
-
-
+	return director.try_solo()
 func try_stop_offline() -> bool:
-	if offline == null or not _offline_playing():
-		return false
-	if not offline.try_stop():
-		return false
-	_reset_interp()
-	_play_moving = false
-	_play_anim.reset()
-	if map != null:
-		map.follow_slot = -1
-		map.apply_players([])
-	if standings != null:
-		standings.follow_slot = -1
-		standings.apply_players([])
-	if crates != null:
-		crates.apply_path(course_path)
-	if hazards != null:
-		hazards.apply_path(course_path)
-	if course != null:
-		course.apply_own_progress(-1)
-	_refresh_status()
-	return true
-
-
+	return director.try_stop_offline()
 func try_cancel() -> bool:
-	_release_edit_focus()
-	if _offline_playing():
-		return try_stop_offline()
-	if try_leave_play():
-		return true
-	if join == null:
-		return false
-	if not join.try_cancel():
-		return false
-	_dispatch_pending()
-	_refresh_status()
-	return true
-
-
+	return director.try_cancel()
 func try_leave_play() -> bool:
-	var left: bool = false
-	if play != null and play.try_leave():
-		left = true
-	if join != null and join.try_abandon():
-		left = true
-	if not left:
-		return false
-	_drop_gateway()
-	last_sent_command = PackedByteArray()
-	_reset_interp()
-	if map != null:
-		map.follow_slot = -1
-		map.apply_players([])
-	if standings != null:
-		standings.follow_slot = -1
-		standings.apply_players([])
-	if crates != null:
-		crates.apply_path(course_path)
-	if hazards != null:
-		hazards.apply_path(course_path)
-	if course != null:
-		course.apply_own_progress(-1)
-	_refresh_status()
-	return true
-
-
+	return director.try_leave_play()
 func accept_http(status_code: int, body: Dictionary) -> bool:
-	if join == null:
-		return false
-	var ok: bool = join.accept_http(status_code, body)
-	_after_join_http()
-	return ok
-
-
+	return director.accept_http(status_code, body)
 func apply_http_text(status_code: int, text: String) -> bool:
-	if join == null:
-		return false
-	var ok: bool = join.apply_http_text(status_code, text)
-	_after_join_http()
-	return ok
-
-
+	return director.apply_http_text(status_code, text)
 func try_begin_play() -> bool:
-	if join == null or play == null or _offline_playing():
-		return false
-	if not play.try_begin(join, gateway_base):
-		return false
-	if live_io:
-		play.rtt.log_path = "user://protocol_rtt.jsonl"
-	_reset_interp()
-	_opened_socket = false
-	if live_io:
-		_connect_gateway()
-	_refresh_status()
-	return true
-
-
+	return director.try_begin_play()
 func on_socket_open() -> bool:
-	if play == null:
-		return false
-	var ok: bool = play.on_open()
-	_refresh_status()
-	return ok
-
-
+	return director.on_socket_open()
 func on_socket_close() -> void:
-	var should_reconnect: bool = false
-	if play != null:
-		should_reconnect = (
-			play.state == MatchPlaySessionGd.STATE_CONNECTING
-			or play.state == MatchPlaySessionGd.STATE_IN_MATCH
-		)
-		play.on_close()
-	if should_reconnect:
-		try_reconnect()
-	_refresh_status()
-
-
+	director.on_socket_close()
 func try_reconnect() -> bool:
-	if join == null or _offline_playing():
-		return false
-	if not join.try_reconnect():
-		return false
-	_dispatch_pending()
-	_refresh_status()
-	return true
-
-
+	return director.try_reconnect()
 func on_binary(bytes: PackedByteArray, now_ms: int = -1) -> bool:
-	if play == null:
-		return false
-	var ok: bool = play.on_binary(bytes, now_ms)
-	if ok:
-		_apply_snapshot_map()
-	_refresh_status()
-	return ok
-
-
+	return director.on_binary(bytes, now_ms)
 func try_sample_play_vector(move_x: float, move_z: float) -> PackedByteArray:
-	_play_moving = absf(move_x) > PlayInput.IDLE or absf(move_z) > PlayInput.IDLE
-	if window == null or not window.visible:
-		return PackedByteArray()
-	if _offline_playing():
-		var offline_bytes: PackedByteArray = offline.try_encode_move_vector(
-			move_x, move_z, play_move_step
-		)
-		## 空字节 = 没按键 / 意图被拒，什么都没动。原来这里无条件重映射，而在线
-		## 分支一直有 `is_empty()` 保护——同一个函数两只手不一样。
-		if not offline_bytes.is_empty():
-			_apply_snapshot_map()
-		return offline_bytes
-	if play == null:
-		return PackedByteArray()
-	var bytes: PackedByteArray = play.try_encode_move_vector(move_x, move_z, play_move_step)
-	_note_command(bytes)
-	if not bytes.is_empty():
-		_apply_snapshot_map()
-	return bytes
-
-
+	return _take_sample(sampler.try_vector(
+		move_x, move_z, is_window_visible(), offline_playing(), offline, play, play_move_step
+	))
 func try_sample_play_move(forward: bool, back: bool, left: bool, right: bool) -> PackedByteArray:
-	var vector: Vector2 = PlayInput.vector_from_axes(forward, back, left, right)
-	return try_sample_play_vector(vector.x, vector.y)
-
-
+	return _take_sample(sampler.try_axes(
+		forward, back, left, right, is_window_visible(), offline_playing(), offline, play, play_move_step
+	))
 func try_sample_play_reset(pressed: bool) -> PackedByteArray:
-	var rising: bool = pressed and not _reset_held
-	_reset_held = pressed
-	if not rising or window == null or not window.visible:
-		return PackedByteArray()
-	if _offline_playing():
-		var offline_bytes: PackedByteArray = offline.try_encode_intent(
-			PlayerIntentNames.RESET_TO_CHECKPOINT, 0, 0, 0
-		)
-		if not offline_bytes.is_empty():
-			_apply_snapshot_map()
-		return offline_bytes
-	if play == null:
-		return PackedByteArray()
-	var bytes: PackedByteArray = play.try_encode_intent(PlayerIntentNames.RESET_TO_CHECKPOINT, 0, 0, 0)
-	_note_command(bytes)
-	return bytes
-
-
+	return _take_sample(sampler.try_reset(pressed, is_window_visible(), offline_playing(), offline, play))
 func try_sample_play_use_item(pressed: bool) -> PackedByteArray:
-	var rising: bool = pressed and not _use_item_held
-	_use_item_held = pressed
-	if not rising or window == null or not window.visible:
-		return PackedByteArray()
-	if _offline_playing():
-		var offline_bytes: PackedByteArray = offline.try_encode_intent(
-			PlayerIntentNames.USE_ITEM, 0, 0, 0
-		)
-		if not offline_bytes.is_empty():
-			_apply_snapshot_map()
-		return offline_bytes
-	if play == null:
-		return PackedByteArray()
-	var bytes: PackedByteArray = play.try_encode_intent(PlayerIntentNames.USE_ITEM, 0, 0, 0)
-	_note_command(bytes)
-	return bytes
-
-
+	return _take_sample(sampler.try_use_item(pressed, is_window_visible(), offline_playing(), offline, play))
 func try_sample_play_jump(pressed: bool) -> PackedByteArray:
-	var rising: bool = pressed and not _jump_held
-	_jump_held = pressed
-	if not rising or window == null or not window.visible:
-		return PackedByteArray()
-	if _offline_playing():
-		var offline_bytes: PackedByteArray = offline.try_encode_intent(
-			PlayerIntentNames.JUMP, 0, 0, 0
-		)
-		if not offline_bytes.is_empty():
-			_apply_snapshot_map()
-		return offline_bytes
-	if play == null:
-		return PackedByteArray()
-	var bytes: PackedByteArray = play.try_encode_intent(PlayerIntentNames.JUMP, 0, 0, 0)
-	_note_command(bytes)
-	if not bytes.is_empty():
-		_apply_snapshot_map()
-	return bytes
-
-
+	return _take_sample(sampler.try_jump(pressed, is_window_visible(), offline_playing(), offline, play))
 func try_sample_play_shove(pressed: bool) -> PackedByteArray:
-	var rising: bool = pressed and not _shove_held
-	_shove_held = pressed
-	if not rising or window == null or not window.visible:
-		return PackedByteArray()
-	if _offline_playing():
-		var offline_bytes: PackedByteArray = offline.try_encode_intent(
-			PlayerIntentNames.SHOVE, 0, 0, 0
-		)
-		if not offline_bytes.is_empty():
-			_apply_snapshot_map()
-		return offline_bytes
-	if play == null:
-		return PackedByteArray()
-	var bytes: PackedByteArray = play.try_encode_intent(PlayerIntentNames.SHOVE, 0, 0, 0)
-	_note_command(bytes)
-	return bytes
-
-
+	return _take_sample(sampler.try_shove(pressed, is_window_visible(), offline_playing(), offline, play))
 func try_sample_play_sprint(pressed: bool) -> PackedByteArray:
-	var rising: bool = pressed and not _sprint_held
-	_sprint_held = pressed
-	if not rising or window == null or not window.visible:
-		return PackedByteArray()
-	if _offline_playing():
-		var offline_bytes: PackedByteArray = offline.try_encode_intent(
-			PlayerIntentNames.SPRINT, 0, 0, 0
-		)
-		if not offline_bytes.is_empty():
-			_apply_snapshot_map()
-		return offline_bytes
-	if play == null:
-		return PackedByteArray()
-	var bytes: PackedByteArray = play.try_encode_intent(PlayerIntentNames.SPRINT, 0, 0, 0)
-	_note_command(bytes)
-	return bytes
-
-
+	return _take_sample(sampler.try_sprint(pressed, is_window_visible(), offline_playing(), offline, play))
 func status_view() -> Dictionary:
-	var join_view: Dictionary = {}
-	var play_view: Dictionary = {}
-	if join != null:
-		join_view = join.status_view()
-	if play != null:
-		play_view = play.status_view()
-	var offline_view: Dictionary = {}
-	if offline != null:
-		offline_view = offline.status_view()
-	var mapped_players: int = 0
-	var mapped_pads: int = 0
-	var mapped_portals: int = 0
-	var mapped_finish: int = 0
-	var mapped_crates: int = 0
-	var mapped_hazards: int = 0
-	var mapped_solids: int = 0
-	var mapped_links: int = 0
-	var mapped_orders: int = 0
-	var mapped_sequences: int = 0
-	var mapped_standings: int = 0
-	var mvp_slot: int = -1
-	var standing_line: String = ""
-	var own_accepted_count: int = -1
-	var own_finish_tick: int = -1
-	var own_floor_index: int = 0
-	var crate_total: int = 0
-	var hazard_total: int = 0
-	var solid_total: int = 0
-	var match_finished: bool = false
-	if map != null:
-		mapped_players = map.player_count()
-	if course != null:
-		mapped_pads = course.pad_count()
-		mapped_portals = course.portal_count()
-		mapped_finish = course.finish_count()
-	if crates != null:
-		mapped_crates = crates.crate_count()
-		crate_total = crates.crate_total()
-	if hazards != null:
-		mapped_hazards = hazards.hazard_count()
-		hazard_total = hazards.hazard_total()
-	if solids != null:
-		mapped_solids = solids.solid_count()
-		solid_total = solids.solid_total()
-	if links != null:
-		mapped_links = links.link_count()
-	if orders != null:
-		mapped_orders = orders.checkpoint_count()
-		mapped_sequences = orders.sequence_count()
-	if standings != null:
-		mapped_standings = standings.standing_count()
-		mvp_slot = standings.mvp_slot()
-		standing_line = standings.standing_line()
-	var source: Dictionary = play_view
-	if _offline_playing():
-		source = offline_view
-	var follow: MatchSnapshotFollowGd = _active_follow()
-	if follow != null and follow.has_snapshot:
-		own_accepted_count = _own_accepted_count(follow.players)
-		own_finish_tick = _own_finish_tick(follow.players)
-		own_floor_index = floor_index_from_y(_own_authority_y(follow.players))
-		match_finished = _all_players_finished(follow.players)
-	return {
-		"join_state": join_view.get("state", ""),
-		"error": join_view.get("error", ""),
-		"pending": join_view.get("pending", false),
-		"position": join_view.get("position", 0),
-		"estimated_wait_ms": join_view.get("estimated_wait_ms", 0),
-		"room_code": join_view.get("room_code", ""),
-		"ticket": join_view.get("ticket", ""),
-		"course": join_view.get("course", ""),
-		"course_id": selected_course_id(),
-		"seats": join_view.get("seats", 0),
-		"selected_seats": selected_seats(),
-		"seat": join_view.get("seat", -1),
-		"play_state": play_view.get("state", ""),
-		"tls": _tls_on(play_view),
-		"rtt_ms": play_view.get("rtt_ms", -1),
-		"rtt_n": play_view.get("rtt_n", 0),
-		"rtt_p50_ms": play_view.get("rtt_p50_ms", -1),
-		"rtt_p90_ms": play_view.get("rtt_p90_ms", -1),
-		"rtt_p95_ms": play_view.get("rtt_p95_ms", -1),
-		"rtt_lost": play_view.get("rtt_lost", 0),
-		"server_host": ServerEndpointGd.host_of(control_plane_base),
-		"gateway_host": ServerEndpointGd.host_of(gateway_base),
-		"server_error": "" if endpoint == null else endpoint.error_line(),
-		"offline_state": offline_view.get("state", ""),
-		"offline_banner": offline_view.get("banner", ""),
-		"offline_error": offline_view.get("error", ""),
-		"tick": source.get("tick", -1),
-		"player_count": source.get("player_count", 0),
-		"crate_count": source.get("crate_count", 0),
-		"mapped_players": mapped_players,
-		"mapped_pads": mapped_pads,
-		"mapped_portals": mapped_portals,
-		"mapped_finish": mapped_finish,
-		"mapped_crates": mapped_crates,
-		"crate_total": crate_total,
-		"mapped_hazards": mapped_hazards,
-		"hazard_total": hazard_total,
-		"mapped_solids": mapped_solids,
-		"solid_total": solid_total,
-		"mapped_links": mapped_links,
-		"mapped_orders": mapped_orders,
-		"mapped_sequences": mapped_sequences,
-		"mapped_standings": mapped_standings,
-		"mvp_slot": mvp_slot,
-		"standing_line": standing_line,
-		"own_accepted_count": own_accepted_count,
-		"own_finish_tick": own_finish_tick,
-		"own_floor_index": own_floor_index,
-		"match_finished": match_finished,
-		"settlement_line": str(join_view.get("settlement_line", "")),
-		"has_settlement": join_view.get("has_settlement", false),
-		"window_visible": is_window_visible(),
-	}
-
-
+	var join_view: Dictionary = {} if join == null else join.status_view()
+	var play_view: Dictionary = {} if play == null else play.status_view()
+	var offline_view: Dictionary = {} if offline == null else offline.status_view()
+	var server_error: String = "" if endpoint == null else endpoint.error_line()
+	return MatchLobbyHudGd.build_view(
+		join_view, play_view, offline_view, stage.mapped_counts(), active_follow(),
+		stage.camera_follow_slot(offline_playing(), play), selected_course_id(), selected_seats(),
+		control_plane_base, gateway_base, server_error, is_window_visible(), offline_playing()
+	)
 func status_label_text() -> String:
-	if _status == null:
-		return ""
-	return _status.text
-
-
-## 帧率读数当前显示的整行，例如 `FPS 60`；首窗之前是 `FPS --`。
+	return chrome.status_text()
 func fps_label_text() -> String:
-	if frame_rate == null:
-		return ""
-	return frame_rate.fps_text()
-
-
+	return chrome.fps_text()
 func try_advance_interp() -> bool:
-	if window == null or not window.visible:
+	if not stage.try_advance_interp(is_window_visible(), play_interp_step, active_follow()):
 		return false
-	if play_interp_step < 1:
-		return false
-	var follow: MatchSnapshotFollowGd = _active_follow()
-	if follow == null or not follow.has_previous:
-		return false
-	if _interp_t >= Fixed.SCALE:
-		return false
-	var next_t: int = _interp_t + play_interp_step
-	if next_t < _interp_t or next_t > Fixed.SCALE:
-		next_t = Fixed.SCALE
-	_interp_t = next_t
 	_apply_snapshot_map()
 	return true
-
-
 func interp_progress() -> int:
-	return _interp_t
-
-
+	return stage.interp_t
 func snapshot_map_apply_count() -> int:
-	return _snapshot_map_applies
-
-
+	return stage.apply_count
 func try_fetch_settlement() -> bool:
-	if _offline_playing():
-		return false
-	if join == null or play == null:
-		return false
-	if play.state != MatchPlaySessionGd.STATE_IN_MATCH:
-		return false
-	if join.has_settlement:
-		return false
-	var follow: MatchSnapshotFollowGd = _active_follow()
-	if follow == null or not follow.has_snapshot:
-		return false
-	if not _all_players_finished(follow.players):
-		return false
-	if not join.try_get_settlement():
-		return false
-	_dispatch_pending()
-	_refresh_status()
-	return true
-
-
+	return director.try_fetch_settlement()
 func allows_settlement() -> bool:
 	return false
-
-
 func allows_online_writes() -> bool:
 	return false
+func handle_window_input(event: InputEvent) -> void:
+	chrome.handle_window_input(event)
+func refresh_status() -> void:
+	_refresh_status()
 
 
-## 表现层：每渲染帧一次。离线的权威推进与输入采样在 `_physics_process`。
-##
-## 分开不是为了整洁，是**正确性**。离线 Solo 原本在这里 `offline.try_advance()`，
-## 于是仿真节拍就等于帧率：帧成本修好之前是 30 FPS 慢放，修好之后会变成
-## 120 tick/s 的两倍速——而服务端 `match_server.gd` 一直是 `_physics_process` 的
-## 60 Hz。按住 W 的位移同理：离线意图是**立即应用**、不按 tick 排队的，帧率翻倍
-## 就走两倍远。宪法第五条要的正是这条分界。
-##
-## 顺带把每帧的重复工作收掉。原来一帧里 `_apply_snapshot_map()` 会被调三次
-## （`try_sample_play_move` 的离线分支一次、`try_advance_interp` 一次、末尾显式
-## 一次），`_refresh_status()` 四次；现在渲染帧里只有一次。
+func _refresh_status() -> void:
+	chrome.set_status_text(MatchLobbyHudGd.format_line(status_view()))
+func dispatch_pending() -> void:
+	if not live_io or net == null or join == null:
+		return
+	net.dispatch(control_plane_base, join, _refresh_status)
+func apply_course_document(path: String) -> void:
+	course_path = path
+	stage.apply_course(path)
+func apply_snapshot_map() -> void:
+	_apply_snapshot_map()
+
+
+func _apply_snapshot_map() -> void:
+	var follow: MatchSnapshotFollowGd = active_follow()
+	stage.sync_interp(follow)
+	var session: TraprushMatchSession = null if offline == null else offline.session
+	if stage.apply_snapshot(follow, stage.interp_t, play, offline_playing(), sampler.play_moving, play_anim, session):
+		_refresh_status()
+func ensure_net() -> void:
+	if net != null:
+		return
+	net = MatchLobbyNetGd.new()
+	add_child(net)
+func active_follow() -> MatchSnapshotFollowGd:
+	if offline_playing():
+		return offline.follow
+	if play != null:
+		return play.follow
+	return null
+func offline_playing() -> bool:
+	return offline != null and offline.state == MatchOfflineSessionGd.STATE_PLAYING
+func online_busy() -> bool:
+	if join != null and (join.state == MatchJoinSessionGd.STATE_WAITING or join.state == MatchJoinSessionGd.STATE_READY):
+		return true
+	if play == null:
+		return false
+	return play.state == MatchPlaySessionGd.STATE_CONNECTING or play.state == MatchPlaySessionGd.STATE_IN_MATCH
 func _process(delta: float) -> void:
-	if live_io and not _offline_playing():
-		_poll_queue_clock(delta)
-		_poll_settlement_clock(delta)
-		_poll_gateway()
+	if live_io and not offline_playing() and net != null:
+		net.poll_queue_clock(delta, queue_poll_s, join, offline_playing(), try_poll)
+		var follow: MatchSnapshotFollowGd = active_follow()
+		var finished: bool = follow != null and follow.has_snapshot and MatchLobbyHudGd.all_players_finished(follow.players)
+		net.poll_settlement_clock(delta, queue_poll_s, join, play, finished, try_fetch_settlement)
+		last_sent_command = net.poll_gateway(
+			play, last_sent_command, on_socket_open, on_binary, on_socket_close, _send_protocol_probe
+		)
 	if window == null or not window.visible:
-		## 隐藏期间不计帧：前后两窗不可比，混在一起会读出一个假的「卡顿」。
 		if frame_rate != null:
 			frame_rate.reset()
 		return
 	if frame_rate != null:
 		frame_rate.sample(delta)
-	if _offline_playing():
-		## 插值先走，`_apply_snapshot_map` 末尾自带 `_refresh_status`。
+	if offline_playing():
 		try_advance_interp()
 		_apply_snapshot_map()
 		return
-	if _edit_has_focus():
+	if chrome.edit_has_focus():
 		try_advance_interp()
 		return
-	## 在线采样仍按渲染帧。发送频率属 CD-63 未锁参数，改它要 C1 的真网络样本，
-	## 不是本刀能拍的。
-	_sample_play_input()
+	sampler.drive_keyboard(self)
 	try_advance_interp()
-
-
-## 离线权威：固定 60 Hz，与 `match_server.gd` 的 `_physics_process` 同一节拍。
-## 在线不进这里，理由见 `_process` 里那句「发送频率属 CD-63」。
 func _physics_process(_delta: float) -> void:
-	if not _offline_playing():
-		return
-	if window == null or not window.visible:
+	if not offline_playing() or window == null or not window.visible:
 		return
 	offline.try_advance()
-	if _edit_has_focus():
+	if chrome.edit_has_focus():
 		return
-	_sample_play_input()
-
-
-func _sample_play_input() -> void:
-	var events: Dictionary = _play_input.sample_keyboard()
-	try_sample_play_vector(PlayInput.move_x_of(events), PlayInput.move_z_of(events))
-	try_sample_play_reset(PlayInput.flag_of(events, "reset"))
-	try_sample_play_use_item(PlayInput.flag_of(events, "use_item"))
-	try_sample_play_jump(PlayInput.flag_of(events, "jump"))
-	try_sample_play_shove(PlayInput.flag_of(events, "shove"))
-	try_sample_play_sprint(PlayInput.flag_of(events, "sprint"))
-
-
-## D4 的 UI 基准是 1920×1080。它由**主窗口**的 stretch 承担（project.godot 的
-## `display/window/stretch/*`），嵌入子窗口作为 canvas item 自动继承那一层缩放。
-##
-## 这里**故意不设** `content_scale_*`。设了会坏：`gui_embed_subwindows = true` 的
-## 子窗口，`content_scale` 在**渲染路径不生效、输入路径生效**，于是画出来的按钮和
-## 鼠标命中的按钮错开 `1/factor` 倍（实测 4K 屏上点 Solo play 命中的是 Poll），
-## 同时布局撑到 1920 宽却只有 1280 可视，右侧 1/3 被切出屏幕。
-## `test_match_lobby_shell.gd` 有一条回归守卫钉住这件事。
+	sampler.drive_keyboard(self)
+func _take_sample(sample: Dictionary) -> PackedByteArray:
+	var bytes_raw: Variant = sample.get("bytes", PackedByteArray())
+	var bytes: PackedByteArray = PackedByteArray()
+	if typeof(bytes_raw) == TYPE_PACKED_BYTE_ARRAY:
+		bytes = bytes_raw
+	var note_raw: Variant = sample.get("note", false)
+	if typeof(note_raw) == TYPE_BOOL:
+		var note: bool = note_raw
+		if note:
+			_note_command(bytes)
+	var remap_raw: Variant = sample.get("remap", false)
+	if typeof(remap_raw) == TYPE_BOOL:
+		var remap: bool = remap_raw
+		if remap:
+			_apply_snapshot_map()
+	return bytes
 func _ensure_window() -> void:
 	if window != null:
 		return
-	if not Engine.is_editor_hint():
-		var host_viewport: Viewport = get_viewport()
-		if host_viewport != null:
-			host_viewport.gui_embed_subwindows = true
-	window = Window.new()
-	window.title = UiCopy.text(TITLE)
-	window.size = WINDOW_SIZE
-	window.min_size = WINDOW_MIN_SIZE
-	window.mode = Window.MODE_MAXIMIZED
-	window.exclusive = false
-	window.transient = false
-	window.own_world_3d = true
-	window.close_requested.connect(_on_close_requested)
-	window.window_input.connect(handle_window_input)
-	var root: VBoxContainer = VBoxContainer.new()
-	root.name = "VBoxContainer"
-	root.set_anchors_preset(Control.PRESET_TOP_WIDE)
-	root.offset_left = 8
-	root.offset_top = 8
-	root.offset_right = -8
-	window.add_child(root)
-	frame_rate = FrameRateMeterGd.new()
-	frame_rate.name = FPS_NAME
-	root.add_child(frame_rate)
-	_status = Label.new()
-	_status.name = _STATUS_NAME
-	_status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	root.add_child(_status)
-	var row: HBoxContainer = HBoxContainer.new()
-	row.name = "MatchActions"
-	root.add_child(row)
-	_add_button(row, QUICK_NAME, UiCopy.QUICK_PLAY, try_quick)
-	_add_button(row, CREATE_NAME, UiCopy.CREATE_ROOM, try_create_room)
-	_add_button(row, JOIN_NAME, UiCopy.JOIN_ROOM, try_join_room)
-	_add_button(row, SOLO_NAME, UiCopy.SOLO_PLAY, try_solo)
-	_add_button(row, CANCEL_NAME, UiCopy.CANCEL, try_cancel)
-	_add_button(row, POLL_NAME, UiCopy.POLL, try_poll)
-	_add_button(row, SPRINT_NAME, UiCopy.SPRINT, _on_sprint)
-	var server_row: HBoxContainer = HBoxContainer.new()
-	server_row.name = "ServerActions"
-	root.add_child(server_row)
-	_server_edit = LineEdit.new()
-	_server_edit.name = SERVER_NAME
-	_server_edit.placeholder_text = UiCopy.text(UiCopy.SERVER_HOST)
-	_server_edit.max_length = 64
-	_server_edit.focus_mode = Control.FOCUS_CLICK
-	_server_edit.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_server_edit.text_submitted.connect(_on_edit_submitted)
-	server_row.add_child(_server_edit)
-	_add_button(server_row, APPLY_SERVER_NAME, UiCopy.APPLY_SERVER, try_apply_server_host)
-	_sync_server_edit()
-	_room_edit = LineEdit.new()
-	_room_edit.name = ROOM_NAME
-	_room_edit.placeholder_text = UiCopy.text(UiCopy.ROOM_CODE)
-	_room_edit.max_length = 6
-	_room_edit.focus_mode = Control.FOCUS_CLICK
-	_room_edit.text_submitted.connect(_on_edit_submitted)
-	root.add_child(_room_edit)
-	_course_edit = LineEdit.new()
-	_course_edit.name = COURSE_ID_NAME
-	_course_edit.placeholder_text = OfficialTraprushCoursesGd.DEFAULT_ID
-	_course_edit.text = OfficialTraprushCoursesGd.DEFAULT_ID
-	_course_edit.max_length = 32
-	_course_edit.focus_mode = Control.FOCUS_CLICK
-	_course_edit.text_submitted.connect(_on_edit_submitted)
-	root.add_child(_course_edit)
-	_seats_edit = LineEdit.new()
-	_seats_edit.name = SEATS_NAME
-	_seats_edit.placeholder_text = str(OfficialTraprushCoursesGd.DEFAULT_SEATS)
-	_seats_edit.text = str(OfficialTraprushCoursesGd.DEFAULT_SEATS)
-	_seats_edit.max_length = 1
-	_seats_edit.focus_mode = Control.FOCUS_CLICK
-	_seats_edit.text_submitted.connect(_on_edit_submitted)
-	root.add_child(_seats_edit)
-	map = MatchSnapshotMapGd.new()
-	map.name = _MAP_NAME
-	window.add_child(map)
-	course = MatchCourseMapGd.new()
-	course.name = _COURSE_NAME
-	map.add_child(course)
-	crates = MatchCrateMapGd.new()
-	crates.name = _CRATE_NAME
-	map.add_child(crates)
-	hazards = MatchHazardMapGd.new()
-	hazards.name = _HAZARD_NAME
-	map.add_child(hazards)
-	solids = MatchSolidMapGd.new()
-	solids.name = _SOLID_NAME
-	map.add_child(solids)
-	links = MatchPortalLinkMapGd.new()
-	links.name = _LINK_NAME
-	map.add_child(links)
-	orders = MatchCheckpointOrderMapGd.new()
-	orders.name = _ORDER_NAME
-	map.add_child(orders)
-	standings = MatchStandingMapGd.new()
-	standings.name = _STANDING_NAME
-	map.add_child(standings)
+	window = chrome.attach(self, {
+		"quick": try_quick,
+		"create": try_create_room,
+		"join": try_join_room,
+		"solo": try_solo,
+		"cancel": try_cancel,
+		"poll": try_poll,
+		"sprint": _on_sprint,
+		"apply_server": try_apply_server_host,
+		"edit_submitted": _on_edit_submitted,
+		"close": _on_close_requested,
+		"window_input": handle_window_input,
+	})
+	stage.mount(window)
+	stage.bind_facade(self)
 	add_child(window)
-	map.ensure_rig()
-	_apply_course_document(course_path)
+	stage.ensure_rig()
+	apply_course_document(course_path)
+	chrome.sync_server_edit(control_plane_base)
 	window.gui_release_focus()
-
-
-func _apply_join_course() -> void:
-	if join == null:
-		return
-	var path: String = OfficialTraprushCoursesGd.document_path(join.course)
-	if path == "":
-		return
-	_apply_course_document(path)
-
-
-func _apply_course_document(path: String) -> void:
-	course_path = path
-	if course != null:
-		course.apply_path(path)
-	if crates != null:
-		crates.apply_path(path)
-	if hazards != null:
-		hazards.apply_path(path)
-	if solids != null:
-		solids.apply_path(path)
-	if links != null:
-		links.apply_path(path)
-	if orders != null:
-		orders.apply_path(path)
-
-
-func _sync_server_edit() -> void:
-	if _server_edit == null:
-		return
-	_server_edit.text = ServerEndpointGd.host_of(control_plane_base)
-
-
-func _ensure_http() -> void:
-	if _http != null:
-		return
-	_http = HTTPRequest.new()
-	_http.timeout = 10.0
-	_http.request_completed.connect(_on_http_completed)
-	add_child(_http)
-
-
-func _add_button(row: BoxContainer, node_name: String, copy_key: String, handler: Callable) -> void:
-	var button: Button = Button.new()
-	button.name = node_name
-	button.text = UiCopy.text(copy_key)
-	button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	button.focus_mode = Control.FOCUS_NONE
-	button.pressed.connect(handler)
-	row.add_child(button)
-
-
-func handle_window_input(event: InputEvent) -> void:
-	if window == null:
-		return
-	var mouse: InputEventMouseButton = event as InputEventMouseButton
-	if mouse == null or not mouse.pressed:
-		return
-	if mouse.button_index != MOUSE_BUTTON_LEFT and mouse.button_index != MOUSE_BUTTON_RIGHT:
-		return
-	if _click_hits_line_edit(mouse.position):
-		return
-	_release_edit_focus()
-
-
-func _click_hits_line_edit(point: Vector2) -> bool:
-	for edit: LineEdit in [_server_edit, _room_edit, _course_edit, _seats_edit]:
-		if edit == null:
-			continue
-		if edit.get_global_rect().has_point(point):
-			return true
-	return false
-
-
-func _edit_has_focus() -> bool:
-	if window == null:
-		return false
-	return window.gui_get_focus_owner() is LineEdit
-
-
-func _release_edit_focus() -> void:
-	if window == null:
-		return
-	window.gui_release_focus()
-
-
-func _on_edit_submitted(_text: String) -> void:
-	_release_edit_focus()
-
-
-func _dispatch_pending() -> void:
-	if not live_io or _http == null or join == null or not join.has_pending() or _http_busy:
-		return
-	var url: String = MatchJoinSessionGd.http_url(control_plane_base, join.pending_path())
-	if url == "":
-		join.fail_transport()
-		_refresh_status()
-		return
-	var method: String = join.pending_method()
-	var err: int = ERR_BUG
-	if method == "POST":
-		var body: String = join.pending_body()
-		var headers: PackedStringArray = PackedStringArray()
-		if body != "":
-			headers.append("Content-Type: application/json")
-		err = _http.request(url, headers, HTTPClient.METHOD_POST, body)
-	elif method == "GET":
-		err = _http.request(url, PackedStringArray(), HTTPClient.METHOD_GET)
-	elif method == "DELETE":
-		err = _http.request(url, PackedStringArray(), HTTPClient.METHOD_DELETE)
-	if err != OK:
-		join.fail_transport()
-		_refresh_status()
-		return
-	_http_busy = true
-
-
 func _on_http_completed(result: int, response_code: int, _headers: PackedStringArray, body: PackedByteArray) -> void:
-	_http_busy = false
-	if join == null:
+	if net == null:
 		return
-	if result != HTTPRequest.RESULT_SUCCESS:
-		join.fail_transport()
-		_refresh_status()
-		return
-	apply_http_text(response_code, body.get_string_from_utf8())
-
-
-func _after_join_http() -> void:
-	if join != null and join.course != "":
-		_apply_join_course()
-	if join != null and join.state == MatchJoinSessionGd.STATE_READY and play != null:
-		if play.state == MatchPlaySessionGd.STATE_IDLE or play.state == MatchPlaySessionGd.STATE_CLOSED:
-			try_begin_play()
-	_refresh_status()
-
-
-func _connect_gateway() -> void:
-	if play == null or play.websocket_url == "":
-		return
-	_drop_gateway()
-	_peer = WebSocketPeer.new()
-	var tls: TLSOptions = MatchPlaySessionGd.tls_client_options(play.websocket_url)
-	var err: int = _peer.connect_to_url(play.websocket_url, tls)
-	if err != OK:
-		play.on_close()
-		_peer = null
-
-
-func _drop_gateway() -> void:
-	if _peer == null:
-		return
-	_peer.close(-1)
-	_peer = null
-	_opened_socket = false
-
-
-func _poll_queue_clock(delta: float) -> void:
-	if join == null or join.state != MatchJoinSessionGd.STATE_WAITING:
-		_poll_accum = 0.0
-		return
-	if join.has_pending() or _http_busy:
-		return
-	_poll_accum += delta
-	if _poll_accum < queue_poll_s:
-		return
-	_poll_accum = 0.0
-	try_poll()
-
-
-func _poll_settlement_clock(delta: float) -> void:
-	if join == null or join.state != MatchJoinSessionGd.STATE_READY:
-		_settlement_poll_accum = 0.0
-		return
-	if play == null or play.state != MatchPlaySessionGd.STATE_IN_MATCH:
-		_settlement_poll_accum = 0.0
-		return
-	if join.has_settlement:
-		_settlement_poll_accum = 0.0
-		return
-	if join.has_pending() or _http_busy:
-		return
-	var follow: MatchSnapshotFollowGd = _active_follow()
-	if follow == null or not follow.has_snapshot or not _all_players_finished(follow.players):
-		_settlement_poll_accum = 0.0
-		return
-	_settlement_poll_accum += delta
-	if _settlement_poll_accum < queue_poll_s:
-		return
-	_settlement_poll_accum = 0.0
-	try_fetch_settlement()
-
-
-func _poll_gateway() -> void:
-	if _peer == null:
-		return
-	_peer.poll()
-	var ready: int = _peer.get_ready_state()
-	if ready == WebSocketPeer.STATE_OPEN:
-		if not _opened_socket:
-			_opened_socket = true
-			on_socket_open()
-		while _peer.get_available_packet_count() > 0:
-			on_binary(_peer.get_packet())
-		if not last_sent_command.is_empty() and play != null and not play.last_command.is_empty():
-			if last_sent_command != play.last_command:
-				_peer.send(play.last_command, WebSocketPeer.WRITE_MODE_BINARY)
-				last_sent_command = play.last_command
-		_send_protocol_probe()
-	elif ready == WebSocketPeer.STATE_CLOSED:
-		_peer = null
-		_opened_socket = false
-		on_socket_close()
-
-
+	net.on_http_completed(result, response_code, body, join, apply_http_text, _refresh_status)
 func _note_command(bytes: PackedByteArray) -> void:
-	if bytes.is_empty() or _peer == null:
+	if net == null:
 		return
-	if _peer.get_ready_state() != WebSocketPeer.STATE_OPEN:
+	var sent: PackedByteArray = net.note_command(bytes)
+	if sent.is_empty():
 		return
-	_peer.send(bytes, WebSocketPeer.WRITE_MODE_BINARY)
-	last_sent_command = bytes
+	last_sent_command = sent
 	_refresh_status()
-
-
 func _send_protocol_probe() -> void:
-	if _peer == null or play == null:
+	if net == null or play == null:
 		return
-	if _peer.get_ready_state() != WebSocketPeer.STATE_OPEN:
-		return
-	var probe: PackedByteArray = play.try_encode_probe(Time.get_ticks_msec())
-	if probe.is_empty():
-		return
-	_peer.send(probe, WebSocketPeer.WRITE_MODE_BINARY)
-
-
-func _refresh_status() -> void:
-	if _status == null:
-		return
-	var view: Dictionary = status_view()
-	var join_state: String = view.get("join_state", "")
-	var play_state: String = view.get("play_state", "")
-	var parts: PackedStringArray = PackedStringArray()
-	parts.append("join=%s" % join_state)
-	if view.get("pending", false):
-		parts.append("pending=1")
-	if join_state == MatchJoinSessionGd.STATE_WAITING:
-		var position: int = view.get("position", 0)
-		var wait_ms: int = view.get("estimated_wait_ms", 0)
-		parts.append("pos=%d" % position)
-		parts.append("wait_ms=%d" % wait_ms)
-	var room_code: String = str(view.get("room_code", ""))
-	if room_code != "":
-		parts.append("room=%s" % room_code)
-	var shown_course: String = str(view.get("course", ""))
-	if shown_course == "":
-		shown_course = str(view.get("course_id", ""))
-	if shown_course != "":
-		parts.append("course_id=%s" % shown_course)
-	var shown_seats: int = view.get("seats", 0)
-	if shown_seats < 1:
-		shown_seats = view.get("selected_seats", 0)
-	if shown_seats >= 1:
-		parts.append("seats=%d" % shown_seats)
-	var own_seat: int = view.get("seat", -1)
-	if own_seat >= 0 and (
-		play_state == MatchPlaySessionGd.STATE_IN_MATCH
-		or play_state == MatchPlaySessionGd.STATE_CONNECTING
-	):
-		parts.append("seat=%d" % own_seat)
-	var error_text: String = str(view.get("error", ""))
-	if error_text != "":
-		parts.append("error=%s" % error_text)
-	parts.append("play=%s" % play_state)
-	var tls_on: bool = view.get("tls", false)
-	parts.append("tls=%s" % ("on" if tls_on else "off"))
-	var rtt_n: int = view.get("rtt_n", 0)
-	if rtt_n > 0:
-		var rtt_ms: int = view.get("rtt_ms", -1)
-		parts.append("rtt=%d" % rtt_ms)
-		parts.append("rtt_n=%d" % rtt_n)
-	var server_host: String = str(view.get("server_host", ""))
-	if server_host != "":
-		parts.append("server=%s" % server_host)
-	var gateway_host: String = str(view.get("gateway_host", ""))
-	if gateway_host != "" and gateway_host != server_host:
-		parts.append("gw=%s" % gateway_host)
-	var server_error: String = str(view.get("server_error", ""))
-	if server_error != "":
-		parts.append("server_error=%s" % server_error)
-	var offline_state: String = str(view.get("offline_state", ""))
-	if offline_state != "":
-		parts.append("offline=%s" % offline_state)
-	var offline_banner: String = str(view.get("offline_banner", ""))
-	if offline_banner != "":
-		parts.append(offline_banner)
-	var offline_error: String = str(view.get("offline_error", ""))
-	if offline_error != "":
-		parts.append("offline_error=%s" % offline_error)
-	var mapped_pads: int = view.get("mapped_pads", 0)
-	var mapped_portals: int = view.get("mapped_portals", 0)
-	var mapped_finish: int = view.get("mapped_finish", 0)
-	if play_state == MatchPlaySessionGd.STATE_IN_MATCH or offline_state == MatchOfflineSessionGd.STATE_PLAYING:
-		var tick: int = view.get("tick", -1)
-		var player_count: int = view.get("player_count", 0)
-		parts.append("tick=%d" % tick)
-		parts.append("players=%d" % player_count)
-		var mapped_players: int = view.get("mapped_players", 0)
-		parts.append("mapped=%d" % mapped_players)
-		var own_accepted_count: int = view.get("own_accepted_count", -1)
-		var own_finish_tick: int = view.get("own_finish_tick", -1)
-		var own_floor_index: int = view.get("own_floor_index", 0)
-		var crate_alive: int = view.get("mapped_crates", 0)
-		var crate_total: int = view.get("crate_total", 0)
-		parts.append("pads=%d/%d" % [own_accepted_count, mapped_pads])
-		parts.append("floor=%d" % own_floor_index)
-		parts.append("finish=%d" % own_finish_tick)
-		parts.append("crates=%d/%d" % [crate_alive, crate_total])
-		var hazard_alive: int = view.get("mapped_hazards", 0)
-		var hazard_total: int = view.get("hazard_total", 0)
-		parts.append("hazards=%d/%d" % [hazard_alive, hazard_total])
-		var solid_alive: int = view.get("mapped_solids", 0)
-		var solid_total: int = view.get("solid_total", 0)
-		parts.append("solids=%d/%d" % [solid_alive, solid_total])
-		if view.get("match_finished", false):
-			var result_line: String = str(view.get("standing_line", ""))
-			if result_line != "":
-				parts.append("result=%s" % result_line)
-			var settled_line: String = str(view.get("settlement_line", ""))
-			if settled_line != "":
-				parts.append("settled=%s" % settled_line)
-	parts.append("course=%d/%d/%d" % [mapped_pads, mapped_portals, mapped_finish])
-	var mapped_crates: int = view.get("mapped_crates", 0)
-	parts.append("crates_mapped=%d" % mapped_crates)
-	var mapped_hazards: int = view.get("mapped_hazards", 0)
-	parts.append("hazards_mapped=%d" % mapped_hazards)
-	var mapped_solids: int = view.get("mapped_solids", 0)
-	parts.append("solids_mapped=%d" % mapped_solids)
-	var mapped_links: int = view.get("mapped_links", 0)
-	parts.append("links_mapped=%d" % mapped_links)
-	var mapped_orders: int = view.get("mapped_orders", 0)
-	var mapped_sequences: int = view.get("mapped_sequences", 0)
-	parts.append("orders_mapped=%d/%d" % [mapped_orders, mapped_sequences])
-	var standing_line: String = str(view.get("standing_line", ""))
-	if standing_line != "":
-		parts.append(standing_line)
-	_status.text = " ".join(parts)
-
-
-func _apply_snapshot_map() -> void:
-	var follow: MatchSnapshotFollowGd = _active_follow()
-	if follow == null or not follow.has_snapshot:
-		return
-	_sync_interp_t(follow)
-	var previous_players: Array = []
-	if follow.has_previous:
-		previous_players = follow.previous_players
-	var sampled: Dictionary = MatchSnapshotInterpGd.try_sample(
-		previous_players,
-		follow.players,
-		_interp_t
-	)
-	if not sampled.get("ok", false):
-		return
-	var players_raw: Variant = sampled.get("players", [])
-	if typeof(players_raw) != TYPE_ARRAY:
-		return
-	var players: Array = players_raw
-	_snapshot_map_applies += 1
-	if crates != null:
-		crates.apply_follow(follow)
-	if hazards != null:
-		hazards.apply_follow(follow)
-	if play != null and play.state == MatchPlaySessionGd.STATE_IN_MATCH:
-		var solid_boxes: Array = _predict_solid_boxes()
-		var predicted: Dictionary = play.predict.try_apply(
-			players,
-			follow.players,
-			solid_boxes
-		)
-		if predicted.get("ok", false):
-			var predicted_raw: Variant = predicted.get("players", [])
-			if typeof(predicted_raw) == TYPE_ARRAY:
-				players = predicted_raw
-	if map != null:
-		map.follow_slot = _camera_follow_slot()
-		map.apply_players(players, follow.crates)
-	if course != null:
-		course.apply_own_progress(
-			_own_accepted_count(follow.players),
-			_own_finish_tick(follow.players)
-		)
-	if standings != null:
-		var pad_total: int = 0
-		if course != null:
-			pad_total = course.pad_count()
-		standings.follow_slot = _camera_follow_slot()
-		standings.apply_players(players, pad_total)
-	_apply_solo_anim()
-	_refresh_status()
-
-
-func _apply_solo_anim() -> void:
-	if not _offline_playing() or map == null or offline == null or offline.session == null:
-		return
-	var session: TraprushMatchSession = offline.session
-	var facts: Dictionary = PlayAnimState.facts(
-		session.player_airborne(0),
-		_play_moving,
-		session.player_stun_remaining(0) > 0,
-		session.player_portal_latched(0),
-		session.player_shoved_this_tick(0),
-		session.player_broke_this_tick(0)
-	)
-	map.set_anim_state(0, _play_anim.resolve(facts))
-
-
-func _active_follow() -> MatchSnapshotFollowGd:
-	if _offline_playing():
-		return offline.follow
-	if play != null:
-		return play.follow
-	return null
-
-
-func _predict_solid_boxes() -> Array:
-	var boxes: Array = []
-	if crates != null:
-		for item: Variant in crates.live_solid_boxes():
-			boxes.append(item)
-	if hazards != null:
-		for item: Variant in hazards.live_solid_boxes():
-			boxes.append(item)
-	if solids != null:
-		for item: Variant in solids.live_solid_boxes():
-			boxes.append(item)
-	return boxes
-
-
-func _camera_follow_slot() -> int:
-	if _offline_playing():
-		return 0
-	if play != null and play.state == MatchPlaySessionGd.STATE_IN_MATCH:
-		return play.predict.own_slot
-	return -1
-
-
-func _own_accepted_count(players: Array) -> int:
-	return _own_player_int(players, "accepted_count", true)
-
-
-func _own_finish_tick(players: Array) -> int:
-	return _own_player_int(players, "finish_tick", false)
-
-
-func _own_authority_y(players: Array) -> int:
-	var slot: int = _camera_follow_slot()
-	if slot < 0 or slot >= players.size():
-		return 0
-	var raw: Variant = players[slot]
-	if typeof(raw) != TYPE_DICTIONARY:
-		return 0
-	var body: Dictionary = raw
-	var y_raw: Variant = body.get("y", 0)
-	if typeof(y_raw) != TYPE_INT:
-		return 0
-	return y_raw
-
-
-func _own_player_int(players: Array, key: String, reject_negative: bool) -> int:
-	var slot: int = _camera_follow_slot()
-	if slot < 0 or slot >= players.size():
-		return -1
-	var raw: Variant = players[slot]
-	if typeof(raw) != TYPE_DICTIONARY:
-		return -1
-	var body: Dictionary = raw
-	var value_raw: Variant = body.get(key, -1)
-	if typeof(value_raw) != TYPE_INT:
-		return -1
-	var value: int = value_raw
-	if reject_negative and value < 0:
-		return -1
-	return value
-
-
-func _all_players_finished(players: Array) -> bool:
-	if players.is_empty():
-		return false
-	for raw: Variant in players:
-		if typeof(raw) != TYPE_DICTIONARY:
-			return false
-		var body: Dictionary = raw
-		var tick_raw: Variant = body.get("finish_tick", -1)
-		if typeof(tick_raw) != TYPE_INT:
-			return false
-		var finish_tick: int = tick_raw
-		if finish_tick < 0:
-			return false
-	return true
-
-
-func _sync_interp_t(follow: MatchSnapshotFollowGd) -> void:
-	if follow == null or not follow.has_snapshot:
-		return
-	if follow.tick == _interp_tick:
-		return
-	_interp_tick = follow.tick
-	if follow.has_previous:
-		_interp_t = 0
-	else:
-		_interp_t = Fixed.SCALE
-
-
-func _reset_interp() -> void:
-	_interp_t = 0
-	_interp_tick = -1
-
-
-func _tls_on(play_view: Dictionary) -> bool:
-	var play_url: String = str(play_view.get("websocket_url", ""))
-	if play_url != "":
-		return MatchPlaySessionGd.uses_tls(play_url)
-	return MatchPlaySessionGd.uses_tls(gateway_base)
-
-
-func _offline_playing() -> bool:
-	return offline != null and offline.state == MatchOfflineSessionGd.STATE_PLAYING
-
-
-func _online_busy() -> bool:
-	if join != null:
-		if join.state == MatchJoinSessionGd.STATE_WAITING:
-			return true
-		if join.state == MatchJoinSessionGd.STATE_READY:
-			return true
-	if play == null:
-		return false
-	if play.state == MatchPlaySessionGd.STATE_CONNECTING:
-		return true
-	return play.state == MatchPlaySessionGd.STATE_IN_MATCH
-
-
-func _prepare_offline_stubs() -> void:
-	if offline == null:
-		return
-	## Values come from TraprushPlayStubs so Solo, the match process and the
-	## bot runner cannot drift apart. The shell only owns `play_*` fields, so
-	## it reads the constants instead of handing the session over.
-	offline.play_jump_dy = PlayStubsGd.JUMP_DY
-	offline.play_support_dy = PlayStubsGd.SUPPORT_DY
-	offline.play_fall_dy = PlayStubsGd.FALL_DY
-	offline.play_use_item_damage = PlayStubsGd.USE_ITEM_DAMAGE
-	offline.play_use_item_reach_dx = PlayStubsGd.USE_ITEM_REACH_DX
-	offline.play_use_item_reach_dy = PlayStubsGd.USE_ITEM_REACH_DY
-	offline.play_use_item_reach_dz = PlayStubsGd.USE_ITEM_REACH_DZ
-	offline.play_shove_step = PlayStubsGd.SHOVE_STEP
-	offline.play_shove_cooldown_ticks = PlayStubsGd.SHOVE_COOLDOWN_TICKS
-	offline.play_sprint_step = PlayStubsGd.SPRINT_STEP
-	offline.play_item_cooldown_ticks = PlayStubsGd.ITEM_COOLDOWN_TICKS
-	offline.play_hazard_knockback_step = PlayStubsGd.HAZARD_KNOCKBACK_STEP
-	offline.play_respawn_stun_ticks = PlayStubsGd.RESPAWN_STUN_TICKS
-	offline.play_range_half = OutOfRangeResetGd.STUB_HALF
-
-
+	net.send_probe(play.try_encode_probe(Time.get_ticks_msec()))
 func _on_close_requested() -> void:
 	hide_window()
-
-
+func _on_edit_submitted(_text: String) -> void:
+	chrome.release_focus()
 func _on_sprint() -> void:
-	_release_edit_focus()
+	chrome.release_focus()
 	try_sample_play_sprint(true)
 	try_sample_play_sprint(false)

@@ -102,7 +102,7 @@ repo/
 │  │  ├─ simulation/             # fixed-point world/systems/rng/spatial/replay
 │  │  ├─ ugc/                    # compiler/validator/bytecode_vm/migration
 │  │  ├─ server/                 # Godot Headless match/replication/result
-│  │  ├─ client/                 # platform/input/prediction/presentation
+│  │  ├─ client/                 # platform/input/prediction/presentation；大厅门面 `match_lobby_shell.gd` + chrome/net/sampler/stage/hud/director
 │  │  ├─ creator/                # shared shell/edit_commands/preview
 │  │  └─ games/
 │  │     ├─ traprush/
