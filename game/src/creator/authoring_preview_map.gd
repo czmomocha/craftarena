@@ -18,8 +18,8 @@ extends Node3D
 ##
 ## rebuild() 是幂等的脏检查，不是无条件重建。Preview play 每帧都调它，而
 ## AuthoringWorld 在一局试玩里根本不变，所以之前每帧都在 free + new 整棵节点树
-## （49 实体约 6.7 ms）。现在只有「世界身份 / revision / 实体数 / 格宽 / 两条视觉
-## 资产路径」任一变化才真重建，否则整段跳过。世界没变但节点树被别人改过时
+## （49 实体约 6.7 ms）。现在只有「世界身份 / revision / 实体数 / 格宽 /
+## 角色与地块路径 / 占用视觉路径」任一变化才真重建，否则整段跳过。世界没变但节点树被别人改过时
 ## （典型是 apply_hazard_visibility 改显隐）调用方必须先 invalidate()。
 ## 另外两个每帧入口也改成幂等：show_player_pose 复用已有标记，
 ## mark_accepted_checkpoints 按传入集合**重写**文本而不是只追加 *，
@@ -27,8 +27,9 @@ extends Node3D
 ##
 ## Preview play 的玩家标记与对局映射读同一份视觉资产
 ## （SharedVisualAssetCatalog，ADR-0006 Q4），所以 Preview 里看到的角色和真对局
-## 里是同一个；解析失败时两边同样回退到占位盒。实体占位盒不接视觉，理由见
-## SharedVisualAssetCatalog 文件头（一期唯一内置资产被 7 类袋共用）。
+## 里是同一个；解析失败时两边同样回退到占位盒。占用视觉按组件 / zone 标签接
+## （垫+门、终点门、箱、滚柱、始终固体地块），与对局袋类型对齐；传送门实体
+## 仍是占位盒。箱与滚柱保留 D4 危险色 overlay。
 
 const CAMERA_NAME: String = "PreviewCamera"
 const LIGHT_NAME: String = "PreviewLight"
@@ -68,6 +69,11 @@ var _reach_issue_count: int = 0
 ## 空字符串或解析失败 ⇒ 回退占位盒。是变量而不是常量，好让测试两条分支都能跑。
 var character_scene_path: String = SharedVisualAssetCatalog.CHARACTER_SCENE_PATH
 var tile_scene_path: String = SharedVisualAssetCatalog.TERRAIN_TILE_SCENE_PATH
+var pad_scene_path: String = SharedVisualAssetCatalog.CHECKPOINT_PAD_SCENE_PATH
+var gate_scene_path: String = SharedVisualAssetCatalog.CHECKPOINT_GATE_SCENE_PATH
+var finish_scene_path: String = SharedVisualAssetCatalog.FINISH_GATE_SCENE_PATH
+var crate_scene_path: String = SharedVisualAssetCatalog.CRATE_SCENE_PATH
+var hazard_scene_path: String = SharedVisualAssetCatalog.HAZARD_ROLLER_SCENE_PATH
 ## 上次真重建时的世界指纹。`_built_revision < 0` 表示还没建过任何一次。
 ## 记 instance_id 是因为 duplicate() / 回滚快照会换成同 revision 的另一个实例；
 ## 记 entity_count 与 cell 是因为 try_restore 能把 revision 设回一个旧值。
@@ -77,6 +83,7 @@ var _built_entity_count: int = 0
 var _built_cell: int = 0
 var _built_character_path: String = ""
 var _built_tile_path: String = ""
+var _built_occupancy_key: String = ""
 var _rebuild_count: int = 0
 var _skipped_count: int = 0
 
@@ -238,6 +245,8 @@ func _built_fingerprint_matches(world: AuthoringWorld) -> bool:
 		return false
 	if _built_tile_path != tile_scene_path:
 		return false
+	if _built_occupancy_key != _occupancy_key():
+		return false
 	if world == null:
 		return _built_world_id == 0
 	if _built_world_id != world.get_instance_id():
@@ -252,6 +261,7 @@ func _built_fingerprint_matches(world: AuthoringWorld) -> bool:
 func _remember_built(world: AuthoringWorld) -> void:
 	_built_character_path = character_scene_path
 	_built_tile_path = tile_scene_path
+	_built_occupancy_key = _occupancy_key()
 	if world == null:
 		_built_world_id = 0
 		_built_revision = 0
@@ -262,6 +272,16 @@ func _remember_built(world: AuthoringWorld) -> void:
 	_built_revision = world.revision
 	_built_entity_count = world.entity_count()
 	_built_cell = _cell_of(world)
+
+
+func _occupancy_key() -> String:
+	return "%s\n%s\n%s\n%s\n%s" % [
+		pad_scene_path,
+		gate_scene_path,
+		finish_scene_path,
+		crate_scene_path,
+		hazard_scene_path,
+	]
 
 
 func _cell_of(world: AuthoringWorld) -> int:
@@ -569,16 +589,22 @@ func _record_has_zone_tag(record: SharedComponentRecord, tag_name: String) -> bo
 
 func _spawn_placeholder(entity_id: int, pose: Dictionary, record: SharedComponentRecord) -> void:
 	var albedo: Color = PlaceholderSpec.ENTITY_STUB_ALBEDO
-	var is_solid: bool = false
+	var kind: String = ""
 	if record != null and record.components.has(SharedComponentNames.HAZARD):
 		albedo = HAZARD_ALBEDO
+		kind = "hazard"
 	elif record != null and _record_has_solid_tag(record):
 		albedo = SOLID_ALBEDO
-		is_solid = true
+		kind = "tile"
 	elif record != null and record.components.has(SharedComponentNames.DESTRUCTIBLE):
 		albedo = CRATE_ALBEDO
+		kind = "crate"
 	elif record != null and _record_has_finish_tag(record):
 		albedo = FINISH_ALBEDO
+		kind = "finish"
+	elif record != null and record.components.has(SharedComponentNames.CHECKPOINT):
+		albedo = PlaceholderSpec.PAD_PENDING_ALBEDO
+		kind = "checkpoint"
 	var mesh: BoxMesh = BoxMesh.new()
 	mesh.size = PLACEHOLDER_SIZE
 	mesh.material = _unshaded(albedo)
@@ -589,23 +615,32 @@ func _spawn_placeholder(entity_id: int, pose: Dictionary, record: SharedComponen
 	var yaw_bam: int = pose["yaw_bam"]
 	node.rotation.y = yaw_radians_from_bam(yaw_bam)
 	add_child(node)
-	if is_solid:
-		_attach_tile_visual(node)
+	_attach_kind_visual(node, kind, albedo)
 
 
-## 只有 `zone.tags` 含 `solid` 的实体铺地块，与对局 MatchSolidMap 同一条规则。
-## 机关（洋红）与可破坏箱（橙）不铺：D4 已把危险色定成可读性的一部分。
-func _attach_tile_visual(placeholder: MeshInstance3D) -> bool:
-	if tile_scene_path.is_empty():
-		return false
-	var visual: Node3D = SharedVisualAssetCatalog.try_instantiate(tile_scene_path)
+## 按组件 / zone 标签接占用视觉，与对局袋类型对齐。机关与箱子走 overlay，
+## 不铺成地块：D4 已把危险色定成可读性的一部分。
+func _attach_kind_visual(placeholder: MeshInstance3D, kind: String, albedo: Color) -> bool:
+	var visual: Node3D = null
+	if kind == "tile":
+		visual = SharedVisualAssetCatalog.try_instantiate_fitted_tile_from(tile_scene_path)
+	elif kind == "checkpoint":
+		visual = SharedVisualAssetCatalog.try_instantiate_checkpoint(
+			pad_scene_path,
+			gate_scene_path
+		)
+	elif kind == "finish":
+		visual = SharedVisualAssetCatalog.try_instantiate_fitted_prop(finish_scene_path)
+	elif kind == "crate":
+		visual = SharedVisualAssetCatalog.try_instantiate_fitted_prop(crate_scene_path)
+	elif kind == "hazard":
+		visual = SharedVisualAssetCatalog.try_instantiate_fitted_prop(hazard_scene_path)
 	if visual == null:
-		return false
-	if not SharedVisualAssetCatalog.fit_tile_on_cell(visual):
-		visual.free()
 		return false
 	visual.name = VISUAL_NAME
 	placeholder.add_child(visual)
+	if kind != "tile":
+		SharedVisualAssetCatalog.tint(visual, albedo)
 	placeholder.layers = 0
 	return true
 

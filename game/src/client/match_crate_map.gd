@@ -14,14 +14,20 @@ extends Node3D
 ## stay undrawn here; MatchHazardMap draws them. Standing labels
 ## stay undrawn here; MatchStandingMap draws them. No interpolation,
 ## prediction, or course-selection API.
+##
+## 能解析出箱子视觉时挂 `visual` 子节点，占位盒 `layers = 0` 但网格与橙色
+## 材质保留。D4 危险色走 overlay。解析失败就是今天的 1 米橙盒。
 
 const AuthoringDocumentGd := preload("res://src/creator/authoring_document.gd")
 const TraprushTopologyCompilerGd := preload("res://src/ugc/traprush_topology_compiler.gd")
 const MatchSnapshotFollowGd := preload("res://src/client/match_snapshot_follow.gd")
 
 const CRATE_PREFIX: String = "crate_"
+const VISUAL_NAME: String = "visual"
 const PLACEHOLDER_SIZE: Vector3 = PlaceholderSpec.BOX_SIZE
 
+## 空字符串或解析失败 ⇒ 回退占位盒。
+var crate_scene_path: String = SharedVisualAssetCatalog.CRATE_SCENE_PATH
 var _has_course: bool = false
 var _cell: int = 0
 var _poses: Array[Dictionary] = []
@@ -91,6 +97,13 @@ func crate_total() -> int:
 
 func crate_node(entity_id: int) -> MeshInstance3D:
 	return get_node_or_null(crate_name(entity_id)) as MeshInstance3D
+
+
+func visual_node(entity_id: int) -> Node3D:
+	var crate: MeshInstance3D = crate_node(entity_id)
+	if crate == null:
+		return null
+	return crate.get_node_or_null(VISUAL_NAME) as Node3D
 
 
 func live_solid_boxes() -> Array:
@@ -285,6 +298,18 @@ func _spawn_box(node_name: String, pose: Dictionary) -> void:
 	node.mesh = mesh
 	node.position = Vector3(meters_from_fixed(x), meters_from_fixed(y), meters_from_fixed(z))
 	add_child(node)
+	_attach_visual(node)
+
+
+func _attach_visual(crate: MeshInstance3D) -> bool:
+	var visual: Node3D = SharedVisualAssetCatalog.try_instantiate_fitted_prop(crate_scene_path)
+	if visual == null:
+		return false
+	visual.name = VISUAL_NAME
+	crate.add_child(visual)
+	SharedVisualAssetCatalog.tint(visual, PlaceholderSpec.CRATE_ALBEDO)
+	crate.layers = 0
+	return true
 
 
 func _clear_crates() -> void:

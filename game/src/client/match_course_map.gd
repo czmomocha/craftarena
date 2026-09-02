@@ -17,6 +17,11 @@ extends Node3D
 ## and FINISH_PENDING_ALBEDO. Not walk-reachability or product cosmetics.
 ## Box size and every colour come from PlaceholderSpec; this file keeps the
 ## names but no longer owns the values (D4 changes one place).
+##
+## 垫 / 终点在能解析出占用视觉时挂 `visual` 子节点，占位盒 `layers = 0` 退出
+## 渲染但保留网格与进度色——`apply_own_progress` 仍写盒子材质，并在颜色真的
+## 变了时才重套 overlay（对局壳每帧都调它）。传送门没有专用模型，仍是色块。
+## 解析失败就是今天的行为：一个 1 米色块。
 ## No interpolation, prediction, or course-selection API.
 
 const AuthoringDocumentGd := preload("res://src/creator/authoring_document.gd")
@@ -25,6 +30,7 @@ const TraprushTopologyCompilerGd := preload("res://src/ugc/traprush_topology_com
 const PAD_PREFIX: String = "pad_"
 const PORTAL_PREFIX: String = "portal_"
 const FINISH_PREFIX: String = "finish_"
+const VISUAL_NAME: String = "visual"
 const PLACEHOLDER_SIZE: Vector3 = PlaceholderSpec.BOX_SIZE
 const PENDING_ALBEDO: Color = PlaceholderSpec.PAD_PENDING_ALBEDO
 const ACCEPTED_ALBEDO: Color = PlaceholderSpec.PAD_ACCEPTED_ALBEDO
@@ -33,9 +39,14 @@ const FINISH_PENDING_ALBEDO: Color = PlaceholderSpec.FINISH_PENDING_ALBEDO
 const FINISH_CURRENT_ALBEDO: Color = PlaceholderSpec.FINISH_CURRENT_ALBEDO
 const FINISH_ACCEPTED_ALBEDO: Color = PlaceholderSpec.FINISH_ACCEPTED_ALBEDO
 
+## 空字符串或解析失败 ⇒ 回退占位盒。变量而不是常量，好让测试两条分支都能跑。
+var pad_scene_path: String = SharedVisualAssetCatalog.CHECKPOINT_PAD_SCENE_PATH
+var gate_scene_path: String = SharedVisualAssetCatalog.CHECKPOINT_GATE_SCENE_PATH
+var finish_scene_path: String = SharedVisualAssetCatalog.FINISH_GATE_SCENE_PATH
 var _pad_count: int = 0
 var _portal_count: int = 0
 var _finish_count: int = 0
+var _visual_count: int = 0
 var _accepted_count: int = -1
 var _finish_tick: int = -1
 var _pad_orders: Dictionary = {}
@@ -107,18 +118,20 @@ func apply_bundle(bundle: SimulationBundle) -> bool:
 		_spawn_box(
 			pad_name(pad_id),
 			pad,
-			pad_albedo(_order_of(pad_id), _accepted_count)
+			pad_albedo(_order_of(pad_id), _accepted_count),
+			"checkpoint"
 		)
 	for portal: Dictionary in bundle.portals:
 		var portal_id: int = portal["entity_id"]
-		_spawn_box(portal_name(portal_id), portal, _portal_color(portal))
+		_spawn_box(portal_name(portal_id), portal, _portal_color(portal), "")
 	for finish: Dictionary in bundle.finish:
 		var finish_id: int = finish["entity_id"]
 		_remember_finish_id(finish_id)
 		_spawn_box(
 			finish_name(finish_id),
 			finish,
-			finish_albedo(_accepted_count, bundle.pads.size(), _finish_tick)
+			finish_albedo(_accepted_count, bundle.pads.size(), _finish_tick),
+			"finish"
 		)
 	_pad_count = bundle.pads.size()
 	_portal_count = bundle.portals.size()
@@ -185,6 +198,21 @@ func finish_node(entity_id: int) -> MeshInstance3D:
 	return get_node_or_null(finish_name(entity_id)) as MeshInstance3D
 
 
+func visual_node(entity_id: int) -> Node3D:
+	var node: MeshInstance3D = pad_node(entity_id)
+	if node == null:
+		node = finish_node(entity_id)
+	if node == null:
+		node = portal_node(entity_id)
+	if node == null:
+		return null
+	return node.get_node_or_null(VISUAL_NAME) as Node3D
+
+
+func visual_count() -> int:
+	return _visual_count
+
+
 func allows_settlement() -> bool:
 	return false
 
@@ -242,7 +270,7 @@ func _portal_color(bag: Dictionary) -> Color:
 	return PlaceholderSpec.PORTAL_TWO_WAY_ALBEDO
 
 
-func _spawn_box(node_name: String, bag: Dictionary, color: Color) -> void:
+func _spawn_box(node_name: String, bag: Dictionary, color: Color, kind: String) -> void:
 	var pose: Dictionary = _xyz_from_bag(bag)
 	var x: int = pose["x"]
 	var y: int = pose["y"]
@@ -255,6 +283,7 @@ func _spawn_box(node_name: String, bag: Dictionary, color: Color) -> void:
 	node.mesh = mesh
 	node.position = Vector3(meters_from_fixed(x), meters_from_fixed(y), meters_from_fixed(z))
 	add_child(node)
+	_attach_visual(node, kind, color)
 
 
 func _clear_course() -> void:
@@ -273,6 +302,7 @@ func _clear_course() -> void:
 	_pad_count = 0
 	_portal_count = 0
 	_finish_count = 0
+	_visual_count = 0
 	_pad_orders.clear()
 	_finish_ids.clear()
 
@@ -321,6 +351,27 @@ func _retint_finish() -> void:
 		_tint_node(finish_node(entity_id), color)
 
 
+func _attach_visual(node: MeshInstance3D, kind: String, color: Color) -> bool:
+	var visual: Node3D = null
+	if kind == "checkpoint":
+		visual = SharedVisualAssetCatalog.try_instantiate_checkpoint(
+			pad_scene_path,
+			gate_scene_path
+		)
+	elif kind == "finish":
+		visual = SharedVisualAssetCatalog.try_instantiate_fitted_prop(finish_scene_path)
+	if visual == null:
+		return false
+	visual.name = VISUAL_NAME
+	node.add_child(visual)
+	SharedVisualAssetCatalog.tint(visual, color)
+	node.layers = 0
+	_visual_count += 1
+	return true
+
+
+## 进度色每帧都会被对局壳写一次。盒子材质没变就不重套 overlay，避免每帧
+## `StandardMaterial3D.new()`。
 func _tint_node(node: MeshInstance3D, color: Color) -> void:
 	if node == null:
 		return
@@ -330,7 +381,12 @@ func _tint_node(node: MeshInstance3D, color: Color) -> void:
 	var material: StandardMaterial3D = box.material as StandardMaterial3D
 	if material == null:
 		return
+	if material.albedo_color == color:
+		return
 	material.albedo_color = color
+	var visual: Node3D = node.get_node_or_null(VISUAL_NAME) as Node3D
+	if visual != null:
+		SharedVisualAssetCatalog.tint(visual, color)
 
 
 func _unshaded(color: Color) -> StandardMaterial3D:

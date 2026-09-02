@@ -1,6 +1,6 @@
 # TRAPRUSH 3D 生成优先级清单
 
-> 初版：2026-08-31。最后更新：**2026-09-01**（本文件是每次生成/入库后要回头改的活清单，不是快照）。
+> 初版：2026-08-31。最后更新：**2026-09-02**（本文件是每次生成/入库后要回头改的活清单，不是快照）。
 > 来源：`F:/AI/AIGC/genGameImage`（多视角参考图：three_quarter / front / side / top）
 > 用途：img-to-3D 生成排队依据。产物 GLB 落点约定为 `game/content/assets/<类别>/<名称>.glb`。
 > 本目录含 `.gdignore`（**递归**，Godot 4.7.2 实测）与本目录自己的 `.gitignore`。前者让本机编辑器不导入这些 PNG，后者让它们不进 git / LFS。两层都在，缺一层就漏。
@@ -50,11 +50,11 @@ npx --yes @gltf-transform/cli@4.5.0 resize in.glb out.glb --width 512 --height 5
 |---|---|---|---|---|---|
 | char_runner_base | 有（4） | 有 | ✅ `characters/char_runner_base.glb` | ✅ 角色 | — |
 | traprush_block_static | 有（4） | 有 | ✅ `terrain/block_static.glb` | ✅ 地块（solids 袋） | — |
-| traprush_checkpoint_gate | 有（4） | 有 | ❌ | ❌ | 待「按 asset_id 解析」 |
-| traprush_checkpoint_pad | 有（4） | 有 | ❌ | ❌ | 同上 |
-| traprush_finish_gate | 有（4） | 有 | ❌ | ❌ | 同上 |
-| traprush_crate | 有（3） | 有 | ❌ | ❌ | 同上（且 D4 危险色取舍未定） |
-| traprush_hazard_roller | 有（4） | 有 | ❌ | ❌ | 同上（且 D4 危险色取舍未定） |
+| traprush_checkpoint_gate | 有（4） | 有 | ✅ `checkpoints/checkpoint_gate.glb` | ✅ 检查点占用（脚底对齐） | — |
+| traprush_checkpoint_pad | 有（4） | 有 | ✅ `checkpoints/checkpoint_pad.glb` | ✅ 检查点占用（顶面对齐） | — |
+| traprush_finish_gate | 有（4） | 有 | ✅ `finish/finish_gate.glb` | ✅ 终点占用（脚底对齐） | — |
+| traprush_crate | 有（3） | 有 | ✅ `crates/crate.glb` | ✅ 可破坏箱（脚底对齐 + 橙 overlay） | overlay 已拍板保留 |
+| traprush_hazard_roller | 有（4） | 有 | ✅ `hazards/hazard_roller.glb` | ✅ 周期机关（脚底对齐 + 洋红 overlay） | overlay 已拍板保留 |
 | traprush_spawn_grid | 有（4） | 有 | ❌ | ❌ | **连数据源都没有**，见 §2.2 |
 | traprush_block_slope | 有（4） | 无 | — | — | **先别生成**，见 §2.1 |
 | traprush_portal_two_way | 有（4） | 无 | — | — | 待接线入口 |
@@ -66,9 +66,11 @@ npx --yes @gltf-transform/cli@4.5.0 resize in.glb out.glb --width 512 --height 5
 | traprush_pickup_dash | 有（3） | 无 | — | — | 待接线入口 |
 | traprush_bridge | **无** | 无 | — | — | 无参考图，需先补图 |
 
-### 已生成但没能入库的 5 个（`traprush3D/` 下）
+### 已入库并按袋类型接线的 5 个（2026-09-02）
 
-`checkpoint_gate` / `checkpoint_pad` / `finish_gate` / `crate` / `hazard_roller` 都已烘焙并通过预算门禁（7/7 ok），**卡在接线而不是资产**。`SharedVisualAssetCatalog` 只有角色与地块两个常量、按**袋类型**解析，按 `asset_id` 解析那张表是 ADR-0006 §7 的遗留项，未实装。其中 `crate`（橙）与 `hazard_roller`（洋红）还多一个待拍板项：换真模型后是否保留 D4 的危险色染色。
+`checkpoint_gate` / `checkpoint_pad` / `finish_gate` / `crate` / `hazard_roller` 已烘焙、过预算、入库（每个目录只有 `.glb` + `.glb.import`，`gltf/embedded_image_handling=3`），并接到大厅与 Preview。接线按**袋类型**，不是按 `asset_id`——按资产身份解析仍是 ADR-0006 §7 遗留项。箱与滚柱的 D4 危险色薄膜**保留**（人类 2026-09-02 拍板）：换真模型不能把「会打你的」画成和地板一个色。
+
+门比人矮、滚柱可能略超一格，是资产自己的比例；贴合不按高度拉伸，缺陷留在真机清单里。
 
 ---
 
@@ -107,8 +109,8 @@ CD-21 §7 白名单里有它，但（a）本目录没有它的参考图；（b�
 | 1 | char_runner_base | 当前用 robot_placeholder.glb | ✅ 已换（2026-09-01） |
 | 2 | traprush_block_static | 当前用 floor_tile.glb | ✅ 已换（2026-09-01，修薄板悬空） |
 | 3 | traprush_block_slope | 坡道，路线核心地形变体 | ⛔ blocked，见 §2.1 |
-| 4–9 | finish_gate / checkpoint_pad / checkpoint_gate / portal_two_way / portal_one_way / crate | 验收核心物件 | 3 个已生成未入库；portal 未生成。全卡接线入口 |
-| 10–16 | hazard_* / pickup_* / spawn_grid | 当前为洋红占位盒 | 1 个已生成未入库；spawn_grid 见 §2.2 |
+| 4–9 | finish_gate / checkpoint_pad / checkpoint_gate / portal_two_way / portal_one_way / crate | 验收核心物件 | 5 个占用里除 portal 外已入库并接线；portal 未生成 |
+| 10–16 | hazard_* / pickup_* / spawn_grid | 当前为洋红占位盒 | `hazard_roller` 已入库并接线（保留洋红 overlay）；其余未生成；spawn_grid 见 §2.2 |
 
 ### 未入选（机制尚未实现）
 
