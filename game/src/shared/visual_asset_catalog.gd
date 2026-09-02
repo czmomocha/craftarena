@@ -103,24 +103,18 @@ const HAZARD_ROLLER_SCENE_PATH: String = "res://content/assets/hazards/hazard_ro
 ## 会陷入实心方块（C3 重力 + C4 实心块之后才看得见）。
 const CHARACTER_FOOT_LIFT: Vector3 = Vector3(0.0, -PlaceholderSpec.CHARACTER_CAPSULE_BOTTOM_M, 0.0)
 
+const InstantiateGd := preload("res://src/shared/visual_asset_catalog_instantiate.gd")
+const FitGd := preload("res://src/shared/visual_asset_catalog_fit.gd")
+
 ## 座位色薄膜的不透明度。模型自带灰白外壳，本席 / 远端如果只靠模型就分不出来，
 ## 而分色是 M3 已交付的可读性，不能因为换了视觉就退回去。半透明而不是纯色，
-## 是为了让机器人自己的细节还看得见。
-const SEAT_TINT_ALPHA: float = 0.42
-
-## 贴合计算的下限。零尺寸或退化 AABB 算不出缩放，直接放弃贴合而不是除以 0。
-const _MIN_EXTENT: float = 0.0001
-
-## 扁平化模板缓存：资产路径 → `{ "mesh": Mesh, "transform": Transform3D }`，
-## 或空字典表示"这个资产不能扁平化，走 instantiate"。见 `_template_for`。
-static var _templates: Dictionary = {}
+## 是为了让机器人自己的细节还看得见。数值与 Fit 协作者同源。
+const SEAT_TINT_ALPHA: float = FitGd.SEAT_TINT_ALPHA
 
 
-## 清空模板缓存。给测试用，也给"在编辑器里重新导入了 `.glb`"这种开发期情况：
-## 缓存握着的是旧 `Mesh` 资源引用，重新导入产生的是新资源，缓存不会自己失效。
-## 运行时资产不变，所以生产路径不需要调它。
+## 清空模板缓存。给测试用，也给"在编辑器里重新导入了 `.glb`"这种开发期情况。
 static func clear_template_cache() -> void:
-	_templates = {}
+	InstantiateGd.clear_template_cache()
 
 
 static func has_character() -> bool:
@@ -192,238 +186,26 @@ static func try_instantiate_checkpoint(pad_path: String, gate_path: String) -> N
 ## Preview 每帧 `AuthoringPreviewMap.rebuild` 74.3 ms（同一份世界不带 `.glb`
 ## 只要 7.6 ms）。
 ##
-## 多网格或带 skin 的资产**回退到 instantiate**，因为共享一份 `Mesh` 表达不了
-## 多个 surface 各自的层级与蒙皮。今天入库的占用资产仍是单网格无 skin，但下一个未必。
+## 多网格或带 skin 的资产**回退到 instantiate**。实现在 Instantiate / Fit 协作者上。
 static func try_instantiate(path: String) -> Node3D:
-	if path.is_empty():
-		return null
-	var template: Dictionary = _template_for(path)
-	if not template.is_empty():
-		return _spawn_from_template(template)
-	return _instantiate_scene(path)
+	return InstantiateGd.try_instantiate(path)
 
 
-## 原始路径：整棵子树照搬。多网格 / 带 skin 的资产只能走这条。
-static func _instantiate_scene(path: String) -> Node3D:
-	if path.is_empty():
-		return null
-	if not ResourceLoader.exists(path):
-		return null
-	var resource: Resource = load(path)
-	if resource == null:
-		return null
-	var packed: PackedScene = resource as PackedScene
-	if packed == null:
-		return null
-	var instance: Node = packed.instantiate()
-	if instance == null:
-		return null
-	var node: Node3D = instance as Node3D
-	if node == null:
-		instance.free()
-		return null
-	return node
-
-
-## 按模板造一个"根 Node3D + 一个子 MeshInstance3D"的两层结构。
-##
-## **故意复刻原有层级，而不是直接返回那个 MeshInstance3D。** 调用方与
-## `local_bounds` / `tint` 都假设"根是容器、网格在子节点"：`_bounds` 对根节点
-## 跳过自身 transform（`is_root`），若把带非 identity transform 的网格当根返回，
-## AABB 就会算漏那一层，`fit_tile_on_cell` 随之贴错。多一个 Node3D 是纳秒级
-## 代价，换掉一整类"今天恰好对"的隐患。
-static func _spawn_from_template(template: Dictionary) -> Node3D:
-	var mesh: Mesh = template["mesh"]
-	var local: Transform3D = template["transform"]
-	var root: Node3D = Node3D.new()
-	var instance: MeshInstance3D = MeshInstance3D.new()
-	instance.mesh = mesh
-	instance.transform = local
-	root.add_child(instance)
-	return root
-
-
-## 惰性求值一次，之后常驻。空字典 = 已经判过、不能扁平化，不会每次重试。
-static func _template_for(path: String) -> Dictionary:
-	if _templates.has(path):
-		return _templates[path]
-	var built: Dictionary = _build_template(path)
-	_templates[path] = built
-	return built
-
-
-## 只有"恰好一个 MeshInstance3D、有网格、无 skin、无 skeleton 绑定"的资产能扁平化。
-##
-## 共享的是 `Mesh` 资源本身，所以**谁都不能改它的 surface material**——那会串到
-## 所有实例上。座位色走 `material_overlay`（`MeshInstance3D` 自己的属性，不碰
-## `Mesh`），固体不染色，所以今天成立；以后要给单个实例改材质，用
-## `material_override` / `material_overlay`，不要动 `mesh`。
-static func _build_template(path: String) -> Dictionary:
-	var probe: Node3D = _instantiate_scene(path)
-	if probe == null:
-		return {}
-	var found: Array[Dictionary] = []
-	_collect_meshes(probe, Transform3D.IDENTITY, true, found)
-	var template: Dictionary = {}
-	if found.size() == 1:
-		var only: Dictionary = found[0]
-		template = {
-			"mesh": only["mesh"],
-			"transform": only["transform"],
-		}
-	probe.free()
-	return template
-
-
-## 收集子树里每个带网格的 MeshInstance3D 及其相对根的累积 transform。
-## 带 skin 或 skeleton 的直接让整个资产判为不可扁平化（返回一个哨兵项，
-## 使 size() != 1），因为蒙皮网格离开原层级就不再是同一个东西。
-static func _collect_meshes(
-	node: Node,
-	accumulated: Transform3D,
-	is_root: bool,
-	into: Array[Dictionary]
-) -> void:
-	var here: Transform3D = accumulated
-	var spatial: Node3D = node as Node3D
-	if spatial != null and not is_root:
-		here = accumulated * spatial.transform
-	var instance: MeshInstance3D = node as MeshInstance3D
-	if instance != null and instance.mesh != null:
-		if instance.skin != null or instance.skeleton != NodePath(""):
-			# 两个哨兵项，保证 size() != 1 ⇒ 回退 instantiate
-			into.append({})
-			into.append({})
-			return
-		into.append({
-			"mesh": instance.mesh,
-			"transform": here,
-		})
-	for child: Node in node.get_children():
-		_collect_meshes(child, here, false, into)
-
-
-## 给整棵子树套一层座位色薄膜，返回套上的实例数。`material_overlay` 不改模型
-## 自己的材质，所以同一份导入资源可以同时给多个席位用不同颜色。
 static func tint(root: Node, color: Color) -> int:
-	if root == null:
-		return 0
-	var overlay: StandardMaterial3D = seat_tint(color)
-	return _apply_overlay(root, overlay)
+	return FitGd.tint(root, color)
 
 
 static func seat_tint(color: Color) -> StandardMaterial3D:
-	var material: StandardMaterial3D = StandardMaterial3D.new()
-	material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	material.albedo_color = Color(color.r, color.g, color.b, SEAT_TINT_ALPHA)
-	return material
+	return FitGd.seat_tint(color)
 
 
-## 把地块视觉贴到一个格子上：**等比**缩到水平最长边恰好一格，水平居中，
-## 并让缩放后的**顶面**落在占位盒顶面（也就是玩家踩得到的那个平面）。
-##
-## 缩放系数从模型自己的 AABB 算，**不写死**。理由是变更成本：这块地砖实测
-## 1.84 m 见方，约两格；下一块可能是 1.0 或 3.7。写死一个 0.5427 只会让换资产
-## 时出现"看起来对了一半"的重叠，而重叠在铺成一条路之后才看得出来。
-##
-## 为什么等比而不是只压水平：只缩 x/z 会把 0.34 m 的板厚留在原尺寸，砖面比例
-## 被压扁；等比保住模型自己的厚薄关系。
-##
-## 为什么对齐**占位盒**而不是权威 AABB：视觉不该读裁决数据（ADR-0006 Q4 = A，
-## 视觉不进 bundle）。权威半长的真正来源是已发布 bundle 的 `assets` 袋，那是
-## 加载期的事；表现层只需要"看起来站在格子上"。今天两者数值相同（唯一内置资产
-## 就是占满一格），但耦合方向必须保持单向。
-##
-## 与角色的差别是有意的：角色**不缩放**（1.03 m 已经接近一格，放大到一格宽会
-## 变成 1.39 m 高的巨人），只把脚底沉到胶囊底面，见 `CHARACTER_FOOT_LIFT`。所以
-## 这里没有做成一个"通用贴合"函数——两条规则的锚点和缩放语义都不同，硬合成
-## 一个抽象只会让下一个人猜错默认行为。
 static func fit_tile_on_cell(visual: Node3D) -> bool:
-	if visual == null:
-		return false
-	var bounds: AABB = local_bounds(visual)
-	var widest: float = maxf(bounds.size.x, bounds.size.z)
-	if widest < _MIN_EXTENT:
-		return false
-	var factor: float = PlaceholderSpec.METERS_PER_CELL / widest
-	visual.scale = Vector3(factor, factor, factor)
-	var scaled: AABB = AABB(bounds.position * factor, bounds.size * factor)
-	var top: float = scaled.position.y + scaled.size.y
-	var centre_x: float = scaled.position.x + scaled.size.x / 2.0
-	var centre_z: float = scaled.position.z + scaled.size.z / 2.0
-	visual.position = Vector3(
-		-centre_x,
-		PlaceholderSpec.METERS_PER_CELL / 2.0 - top,
-		-centre_z
-	)
-	return true
+	return FitGd.fit_tile_on_cell(visual)
 
 
-## 把站立物贴到一个格子上：**等比**缩到水平最长边恰好一格，水平居中，
-## 并让缩放后的**底面**落在占位盒底面（角色脚底那条平面）。
-##
-## 与 `fit_tile_on_cell` 的差别是锚点：地块 / 垫对齐顶面（踩得到的平面），
-## 门 / 箱 / 滚柱对齐底面（站在格子里）。缩放仍只看水平最长边，**不**按高度
-## 压扁——门比人矮、滚柱略超一格，都是资产自己的比例，本函数不假装修掉。
 static func fit_prop_on_cell(visual: Node3D) -> bool:
-	if visual == null:
-		return false
-	var bounds: AABB = local_bounds(visual)
-	var widest: float = maxf(bounds.size.x, bounds.size.z)
-	if widest < _MIN_EXTENT:
-		return false
-	var factor: float = PlaceholderSpec.METERS_PER_CELL / widest
-	visual.scale = Vector3(factor, factor, factor)
-	var scaled: AABB = AABB(bounds.position * factor, bounds.size * factor)
-	var centre_x: float = scaled.position.x + scaled.size.x / 2.0
-	var centre_z: float = scaled.position.z + scaled.size.z / 2.0
-	visual.position = Vector3(
-		-centre_x,
-		-PlaceholderSpec.METERS_PER_CELL / 2.0 - scaled.position.y,
-		-centre_z
-	)
-	return true
+	return FitGd.fit_prop_on_cell(visual)
 
 
-## 整棵子树在 `root` 局部空间里的 AABB。逐级累乘子节点 transform，因为导入的
-## GLB 未必是"根下一个单位变换的 Mesh"——今天这两个资产是，下一个未必是。
-## 没有任何网格时返回零 AABB，调用方据 `_MIN_EXTENT` 判为贴合失败。
 static func local_bounds(root: Node3D) -> AABB:
-	if root == null:
-		return AABB()
-	return _bounds(root, Transform3D.IDENTITY, true)
-
-
-static func _bounds(node: Node, accumulated: Transform3D, is_root: bool) -> AABB:
-	var here: Transform3D = accumulated
-	var spatial: Node3D = node as Node3D
-	if spatial != null and not is_root:
-		here = accumulated * spatial.transform
-	var result: AABB = AABB()
-	var seen: bool = false
-	var instance: MeshInstance3D = node as MeshInstance3D
-	if instance != null and instance.mesh != null:
-		result = here * instance.get_aabb()
-		seen = true
-	for child: Node in node.get_children():
-		var child_bounds: AABB = _bounds(child, here, false)
-		if child_bounds.size == Vector3.ZERO:
-			continue
-		if not seen:
-			result = child_bounds
-			seen = true
-			continue
-		result = result.merge(child_bounds)
-	return result
-
-
-static func _apply_overlay(node: Node, overlay: StandardMaterial3D) -> int:
-	var count: int = 0
-	var geometry: GeometryInstance3D = node as GeometryInstance3D
-	if geometry != null:
-		geometry.material_overlay = overlay
-		count += 1
-	for child: Node in node.get_children():
-		count += _apply_overlay(child, overlay)
-	return count
+	return FitGd.local_bounds(root)
