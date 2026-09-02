@@ -15,12 +15,12 @@ alwaysApply: true
 
 真机：PR Test plan 与 [章节真机清单](docs/runbooks/chapter-device-check.md) 本刀必须是编号步骤（怎么开、点什么、期望 / 失败）；禁止只写「真机再看一眼」。无 GUI 的章写「无」加原因。人工检查，不是 CI 门禁。口径见 [CD-52 §3.2](Confirmed-docs/50-engineering/52-ai-workflow.md)。
 
-- 做（本刀 = C5 第 5 章：拆 Preview 映射）：把 `AuthoringPreviewMap` 拆成 `authoring_preview_map_convert` / `authoring_preview_map_occupancy` / `authoring_preview_map_gizmos` / `authoring_preview_map_overlay` / `authoring_preview_map_player` / 门面。六文件均 < 400 行。公开 API 仍在门面上。GUT 钉拆分性质与 E9 行数；现有 `test_authoring_preview*.gd` 仍覆盖公开 API。`--bot-run` 三张课步数与动作序列逐项不变（5 / 5 / 12）。
-- 不做：改裁决顺序或哈希合同；改协议 / Schema / 官方课 JSON；拆 Preview 壳、控制面、探针、灰盒、`simulation_world.gd`；C5 其余产出；字体入包；触控 UI。
-- 仍欠着（不因本章合入而消失）：E9 全仓（`authoring_preview_shell.gd` / 控制面 / `course_completion_probe.gd` / `graybox_course.gd` / `simulation_world.gd` / `simulation_bundle.gd` / `authoring_editor_shell.gd` 等仍超 400）；触控 UI；按 `asset_id` 解析视觉；传送门模型；字体入包；远端协议层 RTT 回填；C3 网络参数锁定；E6 有美术之后的可玩性签署；扫掠取样代价无上限。
+- 做（本刀 = C5 第 6 章：拆 Preview 壳）：把 `AuthoringPreviewShell` 拆成 `authoring_preview_shell_chrome` / `authoring_preview_shell_sampler` / `authoring_preview_shell_hud` / `authoring_preview_shell_play` / `authoring_preview_shell_view` / 门面。六文件均 < 400 行。公开 API 仍在门面上。GUT 钉拆分性质与 E9 行数；现有 `test_authoring_preview*.gd` 仍覆盖公开 API。`--bot-run` 三张课步数与动作序列逐项不变（5 / 5 / 12）。
+- 不做：改裁决顺序或哈希合同；改协议 / Schema / 官方课 JSON；拆控制面、探针、灰盒、`simulation_world.gd`、`authoring_editor_shell.gd`；C5 其余产出；字体入包；触控 UI。
+- 仍欠着（不因本章合入而消失）：E9 全仓（控制面 / `course_completion_probe.gd` / `graybox_course.gd` / `simulation_world.gd` / `simulation_bundle.gd` / `authoring_editor_shell.gd` 等仍超 400）；触控 UI；按 `asset_id` 解析视觉；传送门模型；字体入包；远端协议层 RTT 回填；C3 网络参数锁定；E6 有美术之后的可玩性签署；扫掠取样代价无上限。
 - 仍不做：给嵌入子窗口设 `content_scale_*`；把 locale 热切换做成产品设置页。
 
 纠偏归属：C5
 是否新增冻结常量引用：否
-审查级别：轻审（`creator/` Preview 表现映射拆分；占位盒 / gizmos / 脏检查合同不变，由既有 Preview GUT 钉死；CD-53 §1.1 不新增强断言）
-隔离方式：`feat/c5-split-authoring-preview-map`
+审查级别：轻审（`creator/` Preview 窗口宿主拆分；窗体 / 按键 / 状态行 / 试玩合同不变，由既有 Preview GUT 钉死；CD-53 §1.1 不新增强断言）
+隔离方式：`feat/c5-split-authoring-preview-shell`

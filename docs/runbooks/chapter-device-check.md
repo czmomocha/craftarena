@@ -53,23 +53,23 @@ Worktree 端口偏移见 README「并行工作区」；本文件不复述端口�
 
 ---
 
-## 本刀：拆 Preview 映射（C5 第 5 章，convert / occupancy / gizmos / overlay / player）
+## 本刀：拆 Preview 壳（C5 第 6 章，chrome / sampler / hud / play / view）
 
-上一刀（[#208](https://github.com/czmomocha/craftarena/pull/208)）把 Preview 会话拆成 bootstrap / intents / scan / view。本刀只拆 `AuthoringPreviewMap`：公开 API 仍在门面上，脏检查与占位 / gizmos 不变。**窗口里其它东西应与上一刀相同**。协议、Schema、官方课都不动。
+上一刀（[#209](https://github.com/czmomocha/craftarena/pull/209)）把 Preview 映射拆成 convert / occupancy / gizmos / overlay / player。本刀只拆 `AuthoringPreviewShell`：公开 API 仍在门面上，窗体 / 按键 / 状态行 / 试玩合同不变。**窗口里其它东西应与上一刀相同**。协议、Schema、官方课都不动。
 
 本刀**不需要** `npm run dev`（F6 Preview 沙箱就能看完前 3 步）。
 
-1. **Preview 开玩仍能看见占用视觉**：编辑器打开 `res://src/creator/course_sandbox.tscn`，**F6**（不要 F5），点 **Play**。
-   - 预期：出生垫、立足固体、箱子、终点门仍在；角色出现在出生垫上。
-   - 失败：立刻崩、点 Play 没胶囊、或世界是空的 ⇒ `rebuild` / occupancy 拆坏了。
+1. **Preview 窗口仍能开、关只隐藏**：编辑器打开 `res://src/creator/course_sandbox.tscn`，**F6**（不要 F5）。
+   - 预期：出现 Preview 窗（窗题 **Preview** 或 **预览**，随 locale）；Play / Stop / Reset / Use item / Sprint / Jump / Advance tick 一排按钮；空格不会点到 Play。
+   - 失败：立刻崩、没有窗口、或按钮抢走空格 ⇒ chrome 没接到门面。点窗关闭后会话丢了 ⇒ 关窗不再是只隐藏。
 
-2. **传送连线与检查点顺序仍在**：看出生点附近的传送条和检查点数字标。
-   - 预期：`two_way` / `one_way` 条还在；检查点有 order 标。
-   - 失败：只有占位盒没有 gizmos ⇒ gizmos 没接到 `rebuild`。
+2. **开玩、走路、跳、打箱、Advance 仍是原来的键**：点 **Play**。WASD 走几格，空格跳一下，Q 打碎出生点前方的箱；再点 **Advance tick** 两三次。
+   - 预期：角色出现在出生垫上；走得到、跳得起来、箱子碎掉；Advance 后落下并站在出生方块顶面。状态行仍是 `connected=` / `playing=` / `pads=` 那一套。
+   - 失败：按键没反应或 Advance 不落下 ⇒ sampler / play 拆坏了。走两步突然传送或复位 ⇒ 占用扫描顺序被改了。
 
-3. **走路、跳、打箱、Advance 仍是原来的键**：WASD 走几格，空格跳一下，Q 打碎出生点前方的箱；再点 **Advance tick** 两三次。
-   - 预期：走得到、跳得起来、箱子碎掉；Advance 后落下并站在出生方块顶面。
-   - 失败：按键没反应或 Advance 不落下 ⇒ 拆映射误伤了会话。走两步突然传送或复位 ⇒ 占用扫描顺序被改了。
+3. **关窗只隐藏、空格仍是跳**：点 Preview 窗的关闭。再点 **Play**（若窗口已藏，先 F6 重开沙箱再点 Play），空格跳一下。
+   - 预期：点关闭后窗口消失，Godot 没崩；再开玩时空格仍是跳，不会点到 Play。
+   - 失败：关窗把 Preview 会话拆掉导致再开崩 ⇒ chrome 把「只隐藏」改成了释放。空格点到 Play ⇒ 按钮 `FOCUS_NONE` 丢了。
 
 4. **自动化全绿 + 试玩合同不变**：
    ```bash
@@ -78,27 +78,35 @@ Worktree 端口偏移见 README「并行工作区」；本文件不复述端口�
    & $env:GODOT4_CONSOLE --headless --path game -- --package-check
    & $env:GODOT4_CONSOLE --headless --path game -- --bot-run
    ```
-   - 预期：`npm test` 无回归；`redline-scan` `no findings`；GUT 全绿（含既有 `test_authoring_preview*.gd` 与新增 `test_authoring_preview_map_split.gd`）；`--package-check` `ok=true`；`--bot-run` 三张课 `completable`，**动作序列与步数逐项不变**（5 / 5 / 12 步）。
-   - 失败：Preview GUT 红 ⇒ 拆分改了映射或试玩合同，停下来查，别先改断言。bot-run 步数变了 ⇒ 不该动的对局路径被连带改了。
+   - 预期：`npm test` 无回归；`redline-scan` `no findings`；GUT 全绿（含既有 `test_authoring_preview*.gd` 与新增 `test_authoring_preview_shell_split.gd`）；`--package-check` `ok=true`；`--bot-run` 三张课 `completable`，**动作序列与步数逐项不变**（5 / 5 / 12 步）。
+   - 失败：Preview GUT 红 ⇒ 拆分改了窗体或试玩合同，停下来查，别先改断言。bot-run 步数变了 ⇒ 不该动的对局路径被连带改了。
 
 ### 本刀不测
 
-- **大厅 Solo / 在线对局**：本刀只拆 Preview 映射；
-- **拆 Preview 壳 / 控制面**：`authoring_preview_shell.gd` 仍超 400；
+- **大厅 Solo / 在线对局**：本刀只拆 Preview 壳；
+- **拆控制面 / 探针 / 灰盒 / 仿真世界 / 编辑外壳**：那些文件仍超 400；
 - **字体 / locale 热切换 / 触控 UI**。
 
 ### 诚实边界
 
-- 门面仍持有世界指纹与公开查询；协作者只往这棵 Node3D 上挂子节点，不是新的权威源；
-- 脏检查、玩家标记复用、检查点 `*` 重写与拆前相同；
-- 嵌入子窗口仍然不得自己设 `content_scale_*`。
+- 门面仍持有 `preview` / `window` / `map` 与公开 `try_*`；协作者不是新的权威源；
+- 嵌入子窗口仍然不得自己设 `content_scale_*`；
+- 开玩 / 停玩仍会强制 map 重建（脏检查跳过的那两个时刻不变）。
 
 ### 仍然欠着（不因本章消失）
 
-- E9 全仓（`authoring_preview_shell.gd` / 控制面 / `course_completion_probe.gd` / `graybox_course.gd` / `simulation_world.gd` / `simulation_bundle.gd` / `authoring_editor_shell.gd` 等仍超 400）；
+- E9 全仓（控制面 / `course_completion_probe.gd` / `graybox_course.gd` / `simulation_world.gd` / `simulation_bundle.gd` / `authoring_editor_shell.gd` 等仍超 400）；
 - 字体入包（思源黑体 / Noto Sans SC 子集范围待人类拍）；
 - 触控 UI；按 `asset_id` 解析视觉；传送门没有专用模型；
 - 扫掠步数无上限。
+
+---
+
+## 上一刀：拆 Preview 映射（C5 第 5 章，convert / occupancy / gizmos / overlay / player）
+
+> **本节已随 [#209](https://github.com/czmomocha/craftarena/pull/209) 合入，保留只为追溯。验当前 PR 只看上面的「本刀」。**
+
+该刀把 `AuthoringPreviewMap` 拆成 convert / occupancy / gizmos / overlay / player，压到 400 行以下。公开 API 与 `--bot-run` 步数不变。
 
 ---
 
