@@ -97,9 +97,11 @@ const CRATE_SCENE_PATH: String = "res://content/assets/crates/crate.glb"
 ## 周期滚柱。洋红 overlay 同上。生成网格可能略超一格，不压扁。
 const HAZARD_ROLLER_SCENE_PATH: String = "res://content/assets/hazards/hazard_roller.glb"
 
-## 模型自己的脚底在原点，而占位盒是以权威位置为**中心**的 1 米立方体。下沉半个
-## 盒高，模型才和它替换掉的那个盒子站在同一个平面上，不会浮空半米。
-const CHARACTER_FOOT_LIFT: Vector3 = Vector3(0.0, -PlaceholderSpec.METERS_PER_CELL / 2.0, 0.0)
+## 模型自己的脚底在原点，权威胶囊原点在中心。下沉「柱高一半 + 半径」，脚底才
+## 落在胶囊底面（重力落地后就是固体顶面）。数值从 PlaceholderSpec 注入，不另写。
+## 不要沉到 1 米占位盒底：盒比胶囊高，重力把节点跟着胶囊沉下去之后，盒底
+## 会陷入实心方块（C3 重力 + C4 实心块之后才看得见）。
+const CHARACTER_FOOT_LIFT: Vector3 = Vector3(0.0, -PlaceholderSpec.CHARACTER_CAPSULE_BOTTOM_M, 0.0)
 
 ## 座位色薄膜的不透明度。模型自带灰白外壳，本席 / 远端如果只靠模型就分不出来，
 ## 而分色是 M3 已交付的可读性，不能因为换了视觉就退回去。半透明而不是纯色，
@@ -334,9 +336,9 @@ static func seat_tint(color: Color) -> StandardMaterial3D:
 ## 就是占满一格），但耦合方向必须保持单向。
 ##
 ## 与角色的差别是有意的：角色**不缩放**（1.03 m 已经接近一格，放大到一格宽会
-## 变成 1.39 m 高的巨人），只把脚底沉到盒底，见 `CHARACTER_FOOT_LIFT`。所以这里
-## 没有做成一个"通用贴合"函数——两条规则的锚点和缩放语义都不同，硬合成一个
-## 抽象只会让下一个人猜错默认行为。
+## 变成 1.39 m 高的巨人），只把脚底沉到胶囊底面，见 `CHARACTER_FOOT_LIFT`。所以
+## 这里没有做成一个"通用贴合"函数——两条规则的锚点和缩放语义都不同，硬合成
+## 一个抽象只会让下一个人猜错默认行为。
 static func fit_tile_on_cell(visual: Node3D) -> bool:
 	if visual == null:
 		return false

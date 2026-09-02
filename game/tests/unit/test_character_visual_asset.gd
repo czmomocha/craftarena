@@ -116,6 +116,71 @@ func test_visual_asset_does_not_enter_the_gameplay_asset_catalog() -> void:
 	)
 
 
+# --- 脚底对齐胶囊底面，不是 1 米占位盒底 --------------------------------------
+
+
+func test_character_foot_lift_is_the_capsule_bottom_not_the_box_bottom() -> void:
+	assert_almost_eq(
+		SharedVisualAssetCatalog.CHARACTER_FOOT_LIFT.y,
+		-PlaceholderSpec.CHARACTER_CAPSULE_BOTTOM_M,
+		EPS,
+		"脚底应对齐胶囊底面"
+	)
+	assert_ne(
+		SharedVisualAssetCatalog.CHARACTER_FOOT_LIFT.y,
+		-PlaceholderSpec.METERS_PER_CELL / 2.0,
+		"还在沉到 1 米盒底，重力落地后会陷入固体"
+	)
+
+
+func test_match_and_preview_plant_the_visual_on_the_capsule_bottom() -> void:
+	assert_true(_map.apply_players([_player_body()]))
+	var match_visual: Node3D = _map.visual_node(0)
+	assert_not_null(match_visual)
+	if match_visual != null:
+		assert_almost_eq(
+			match_visual.position.y,
+			SharedVisualAssetCatalog.CHARACTER_FOOT_LIFT.y,
+			EPS
+		)
+	_preview.show_player_pose({"x": 0, "y": 0, "z": 0})
+	var preview_visual: Node3D = _preview.player_visual_node()
+	assert_not_null(preview_visual)
+	if preview_visual != null:
+		assert_almost_eq(
+			preview_visual.position.y,
+			SharedVisualAssetCatalog.CHARACTER_FOOT_LIFT.y,
+			EPS
+		)
+
+
+func test_settled_pose_puts_visual_feet_on_the_solid_top() -> void:
+	# 官方课立足固体在出生点正下一格：中心 -1 格、半长半格 ⇒ 顶面 -0.5 m。
+	# 落地后胶囊中心 = 顶面 + 底面偏移。脚底世界 Y 必须等于顶面。
+	var solid_center: int = -PlaceholderSpec.CELL
+	var solid_half: int = PlaceholderSpec.CELL / 2
+	var solid_top: int = solid_center + solid_half
+	var bottom: int = PlaceholderSpec.CHARACTER_HEIGHT / 2 + PlaceholderSpec.CHARACTER_RADIUS
+	var pose_y: int = solid_top + bottom
+	var body: Dictionary = _player_body()
+	body["y"] = pose_y
+	assert_true(_map.apply_players([body]))
+	var player: MeshInstance3D = _map.player_node(0)
+	var visual: Node3D = _map.visual_node(0)
+	assert_not_null(player)
+	assert_not_null(visual)
+	if player == null or visual == null:
+		return
+	var foot_world_y: float = player.position.y + visual.position.y
+	var solid_top_m: float = float(solid_top) / float(PlaceholderSpec.CELL)
+	assert_almost_eq(
+		foot_world_y,
+		solid_top_m,
+		EPS,
+		"落地后脚底应与固体顶面齐平"
+	)
+
+
 # --- 对局映射：接上视觉，但既有可读性一条不丢 --------------------------------
 
 

@@ -84,6 +84,32 @@ func test_authoritative_geometry_reads_the_spec() -> void:
 	assert_eq(MatchServerGd.SPAWN_STRIDE, PlaceholderSpec.SPAWN_STRIDE)
 
 
+## 脚底偏移从胶囊柱高/半径推导，不是 1 米盒底。改高度只改 PlaceholderSpec
+## 这一处，视觉 catalog 读注入后的米数。
+func test_capsule_bottom_metres_are_derived_from_height_and_radius() -> void:
+	var expected: float = (
+		float(PlaceholderSpec.CHARACTER_HEIGHT / 2 + PlaceholderSpec.CHARACTER_RADIUS)
+		/ float(PlaceholderSpec.CELL)
+		* PlaceholderSpec.METERS_PER_CELL
+	)
+	assert_almost_eq(
+		PlaceholderSpec.CHARACTER_CAPSULE_BOTTOM_M,
+		expected,
+		ANGLE_EPSILON
+	)
+	assert_ne(
+		PlaceholderSpec.CHARACTER_CAPSULE_BOTTOM_M,
+		PlaceholderSpec.METERS_PER_CELL / 2.0,
+		"胶囊底面不应等于 1 米盒半高，否则重力落地后脚会陷入固体"
+	)
+	assert_almost_eq(
+		SharedVisualAssetCatalog.CHARACTER_FOOT_LIFT.y,
+		-PlaceholderSpec.CHARACTER_CAPSULE_BOTTOM_M,
+		ANGLE_EPSILON,
+		"角色视觉必须读 spec 注入的胶囊底面，不要另写一份半格"
+	)
+
+
 func test_one_cell_is_one_presentation_metre() -> void:
 	assert_eq(PlaceholderSpec.CELL, AuthoringGrid.with_default_cell().cell)
 	assert_eq(PlaceholderSpec.CELL, Fixed.SCALE)

@@ -49,6 +49,13 @@ const BOX_SIZE: Vector3 = Vector3(METERS_PER_CELL, METERS_PER_CELL, METERS_PER_C
 ## UseItem reach、出界半宽与全部占用相交断言，所以只留这一份。
 const CHARACTER_RADIUS: int = Fixed.SCALE / 8
 const CHARACTER_HEIGHT: int = Fixed.SCALE / 8
+## 胶囊底面相对中心的表现米数：柱高一半 + 半径。公式与
+## `StaticAabb._segment_to_range_gap`（`y ± cylinder_height/2`）再加 `radius`
+## 半球一致。角色视觉脚底对齐这个偏移，不要对齐 1 米占位盒底——盒比胶囊高，
+## 重力把节点中心拉到固体顶面上方这么多之后，盒底会陷入顶面。
+const CHARACTER_CAPSULE_BOTTOM_M: float = (
+	float(CHARACTER_HEIGHT / 2 + CHARACTER_RADIUS) / float(CELL) * METERS_PER_CELL
+)
 ## 出生偏移环的步长：slot i 向 -Z 退 i 格的一半。不是产品出生布局。
 const SPAWN_STRIDE: int = Fixed.SCALE / 2
 

@@ -228,4 +228,4 @@ Q5 自填尺寸  A（不能，只能选 id）   Q6 迁移   A（保留 v1 解码
 
 有 GUT 用例（`game/tests/unit/test_character_visual_asset.gd`）断言这些不等关系，断言视觉**没有**进 `assets` 袋（键数仍为 4），并断言固体的 `live_solid_boxes()` 半长在铺上地块后**逐项不变**——视觉换了不改裁决。
 
-**耦合方向是单向的**：地块视觉对齐的是它替换掉的占位盒，不是权威 AABB。视觉不读裁决数据（Q4 = A），哪怕两者今天数值相同。
+**耦合方向是单向的**：地块视觉对齐的是它替换掉的占位盒，不是权威 AABB。视觉不读裁决数据（Q4 = A），哪怕两者今天数值相同。角色视觉是例外中的例外：脚底对齐 `PlaceholderSpec.CHARACTER_CAPSULE_BOTTOM_M`（柱高一半 + 半径，与胶囊几何同一份），**不再**对齐 1 米占位盒底——C3 重力把节点中心拉到固体顶面上方之后，盒底会陷入顶面。这仍不读 `SimulationWorld` AABB，也不进 bundle。

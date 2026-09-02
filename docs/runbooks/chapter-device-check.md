@@ -53,23 +53,23 @@ Worktree 端口偏移见 README「并行工作区」；本文件不复述端口�
 
 ---
 
-## 本刀：拆匹配会话（C5 第 2 章，codec / accept / 门面）
+## 本刀：角色脚底对齐胶囊底面（freeze-exception）
 
-上一刀（[#204](https://github.com/czmomocha/craftarena/pull/204)）拆了大厅壳。本刀把 `MatchJoinSession` 拆成 codec / accept / 门面，压到 400 行以下。**窗口里看起来应与上一刀相同**：快速游戏仍能入场，Solo / 取消 / 鼠标命中都不能因拆文件而变。
+上一刀（[#205](https://github.com/czmomocha/craftarena/pull/205)）拆了匹配会话。本刀只改角色视觉的竖直偏移：从「沉到 1 米占位盒底」改成「沉到权威胶囊底面」。**窗口里其它东西应与上一刀相同**。权威仿真、固体贴合、协议都不动。
 
-本刀**需要** `npm run dev`（第 2 步走注入 HTTP 的在线入场）。第 1、3 步 Solo 也能看。
+本刀**不需要** `npm run dev`（Solo 就能看完前 3 步）。
 
-1. **大厅仍能打开**：按「共用启动」打开主场景（先起三后端）。
-   - 预期：嵌入子窗口出现；状态行 `join=idle`、`play=idle`、`course=3/5/1`。第一行仍是 `FPS`。
-   - 失败：没有窗口、立刻退出、或窗题变成键名。
+1. **Solo 站在出生方块顶面上**：按「共用启动」打开主场景（不必起三后端），点 **单人试玩** / **Solo play**。等角色落下（大约不到一秒），从默认 45° 镜头看本席角色的脚。
+   - 预期：脚底与灰色实心方块**顶面齐平**，脚踝不埋进方块。头顶 `anim` 为 `idle`（或带 `*` 的本席前缀）。
+   - 失败：小腿/脚还在方块里面 ⇒ `CHARACTER_FOOT_LIFT` 仍是半格盒底，或大厅没读 `SharedVisualAssetCatalog` 那一份。浮在顶面上方大约半米 ⇒ 偏移写反了或没下沉。
 
-2. **快速游戏仍能从 idle 走到 ready**：点从左到右第 1 个按钮（快速游戏 / Quick play）。
-   - 预期：状态行变成 `join=ready`（本机空库、默认 2 人房，第一个席位会拿到票）。随后可能开始连网关（`play=` 离开 idle）。**不要**点到第 4 个按钮（单人试玩）。
-   - 失败：`join=failed` 且 `error=parse_error` ⇒ `MatchJoinAccept` 把合法 JSON 判坏了。一直 `join=idle` 且没有 pending ⇒ `try_quick` 没接到 director。点第 1 个却进了 Solo ⇒ 鼠标命中又偏了。
+2. **走一段路、跳一次，落地仍齐**：WASD 沿出生点前方的石色方块走几格，空格跳一下，落地后再看脚。
+   - 预期：走路时脚底一直贴着方块顶面；落地后再次齐平，不会越走越沉。
+   - 失败：只在出生点齐、走过之后陷入 ⇒ 复用席位节点时视觉子节点的 `position` 被改掉了。跳起来脚钉在地面 ⇒ 错误地把脚底绑到了地块而不是胶囊。
 
-3. **取消能停在线入场，Solo 仍可用**：点 **取消** / **Cancel**，再点第 4 个按钮（单人试玩 / Solo play）。
-   - 预期：先回到 `join=idle` / `play=idle`；再进入离线试玩，出现离线横幅和 `offline=playing`。WASD 仍能走，空格仍是跳。
-   - 失败：取消后 `join` 卡在 ready/failed ⇒ `try_abandon` 没清字段。Solo 没横幅 ⇒ 上一刀 director 接线回退。
+3. **Preview 同一份偏移**（可选，若本机开编辑器）：F6 打开 Preview 沙箱，Play 后看玩家标记的脚。
+   - 预期：脚底同样贴在立足固体顶面，和大厅 Solo 是同一高度关系。
+   - 失败：Preview 仍陷入、大厅已经齐 ⇒ `AuthoringPreviewMap` 没走 `CHARACTER_FOOT_LIFT`。
 
 4. **自动化全绿 + 裁决不变**：
    ```bash
@@ -78,19 +78,19 @@ Worktree 端口偏移见 README「并行工作区」；本文件不复述端口�
    & $env:GODOT4_CONSOLE --headless --path game -- --package-check
    & $env:GODOT4_CONSOLE --headless --path game -- --bot-run
    ```
-   - 预期：`npm run typecheck` 无输出；`redline-scan` `no findings`；GUT 全绿（含 `test_match_join_session.gd` 与 `test_match_join_split.gd`）；`--package-check` `ok=true`；`--bot-run` 三张课 `completable`，**动作序列与步数逐项不变**（5 / 5 / 12 步）。
-   - 失败：`test_match_join_session.gd` 红 ⇒ 拆文件改了 JSON 语义，停下来查，别先改断言。`test_join_files_stay_under_e9_line_cap` 红 ⇒ 门面或某个匹配协作者又涨过 400 行。bot-run 步数变了 ⇒ 拆会话意外改了命令。
+   - 预期：`npm test` 无回归；`redline-scan` `no findings`；GUT 全绿（含 `test_character_visual_asset.gd` 与 `test_placeholder_spec.gd` 新增的脚底对齐用例）；`--package-check` `ok=true`；`--bot-run` 三张课 `completable`，**动作序列与步数逐项不变**（5 / 5 / 12 步）。
+   - 失败：bot-run 步数变了 ⇒ 表现偏移意外进了裁决，停下来查，别先改断言。`test_settled_pose_puts_visual_feet_on_the_solid_top` 红 ⇒ 落地公式或 `meters_from_fixed` 换算被改了。
 
 ### 本刀不测
 
-- **双人真 WS 对局**：拆的是客户端匹配 JSON 状态机，不改协议；在线回归以 GUT 注入 HTTP 为准；
-- **拆 `match_session.gd` / Preview 壳**：本刀不做；
+- **在线双人 WS 对局**：偏移是客户端表现映射，Solo / Preview 与线上共用同一常量；
+- **改胶囊半径或高度**：本刀只改脚底读哪一个面，数值仍是 D4 的 0.125 格；
 - **字体 / locale 热切换 / 触控 UI**。
 
 ### 诚实边界
 
-- `game/src/client/` 匹配会话三文件均 < 400 行，**不是** E9 全仓达标：`match_snapshot_map.gd` 仍约 404 行；对局会话 / Preview / 控制面等仍超 400；
-- HUD 仍是开发期 token（`join=` / `pads=`），不是产品文案；
+- 扫掠是闭区间接触即重叠，真实落地可能比「几何贴顶」高出一个子步；肉眼应仍是齐平，不会再陷入 0.31 m；
+- 角色网格脚底在原点是这条规则的前提；换一个原点在骨盆的模型要另开一章，不能靠再减半格「修」；
 - 嵌入子窗口仍然不得自己设 `content_scale_*`。
 
 ### 仍然欠着（不因本章消失）
@@ -99,6 +99,14 @@ Worktree 端口偏移见 README「并行工作区」；本文件不复述端口�
 - 字体入包（思源黑体 / Noto Sans SC 子集范围待人类拍）；
 - 触控 UI；按 `asset_id` 解析视觉；传送门没有专用模型；
 - 扫掠步数无上限。
+
+---
+
+## 上一刀：拆匹配会话（C5 第 2 章，codec / accept / 门面）
+
+> **本节已随 [#205](https://github.com/czmomocha/craftarena/pull/205) 合入，保留只为追溯。验当前 PR 只看上面的「本刀」。**
+
+该刀把 `MatchJoinSession` 拆成 codec / accept / 门面，压到 400 行以下。窗口外观不变。
 
 ---
 
