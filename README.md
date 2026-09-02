@@ -1,4 +1,4 @@
-﻿# Craft Arena 工坊竞技场
+# Craft Arena 工坊竞技场
 
 Godot 4 + UGC 双玩法（TRAPRUSH / BASTION）项目 Monorepo。代码与仓库标识的命名写法见 [CD-11 §1](Confirmed-docs/10-product/11-scope-and-platforms.md)。
 
@@ -197,7 +197,7 @@ CI 当前实际启用了哪些门禁、哪些还没实现，以 [CD-53 §4.1](Co
 
 提交、推送与合入 `main` 的边界见 [CD-52 §1.1](Confirmed-docs/50-engineering/52-ai-workflow.md)。宪法第十八条的人类门禁落在合入 `main`、部署与发布。项目级 `.cursor/hooks.json` 会拦向 `main` 的 git 提交/推送，以及 `git worktree remove --force`。
 
-任务完成判定见 [CD-53 §5 Definition of Done](Confirmed-docs/50-engineering/53-testing-and-ci.md)。完整章节 PR 的人类真机步骤义务见 [CD-52 §3.2](Confirmed-docs/50-engineering/52-ai-workflow.md)，可执行清单是 [章节真机清单](docs/runbooks/chapter-device-check.md)（人工检查，不是 CI 门禁）。
+任务完成判定见 [CD-53 §5 Definition of Done](Confirmed-docs/50-engineering/53-testing-and-ci.md)。完整章节 PR 的人类真机步骤义务见 [CD-52 §3.2](Confirmed-docs/50-engineering/52-ai-workflow.md)，可执行清单是 [开发机窗口验收](docs/runbooks/dev-window-check.md)（人工检查，不是 CI 门禁）。
 
 ## 并行工作区
 

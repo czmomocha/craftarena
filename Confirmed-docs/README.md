@@ -47,7 +47,7 @@
 | 想知道"某个设计为什么是这样" | — | [CD-91 决策记录](90-reference/91-decision-log.md) |
 | 发现某件事没定过 | CD-00 | [CD-63 开发期决策清单](60-plan/63-open-decisions.md)、[CD-62 风险登记册](60-plan/62-risk-register.md) |
 | 作为 AI Agent 接手任务 | CD-00 | [CD-52 AI 协作规范](50-engineering/52-ai-workflow.md) |
-| 写本章真机步骤或按清单验收 | CD-00 | [CD-52 §3.2](50-engineering/52-ai-workflow.md)、[章节真机清单](../docs/runbooks/chapter-device-check.md) |
+| 写本章开发机窗口步骤或按清单验收 | CD-00 | [CD-52 §3.2](50-engineering/52-ai-workflow.md)、[开发机窗口验收](../docs/runbooks/dev-window-check.md) |
 | 启用或调整多 Agent 并行 | CD-00 | [CD-52 §5](50-engineering/52-ai-workflow.md)、[ADR-0004](../docs/adr/0004-multi-agent-adoption-timing-and-architecture.md) |
 
 ## 4. 完整文档地图
@@ -136,7 +136,7 @@
 | 协议编码、传输、回放内容 | CD-43 |
 | 容量、租约、部署形态、数据库所有权 | CD-44 |
 | 工具版本、安装步骤、项目设置、Godot 主 MCP 与其遥测开关 | CD-51 |
-| AI 权限边界、工作流、完整章节 PR 的人类真机步骤义务与 Godot AI 使用边界 | CD-52 |
+| AI 权限边界、工作流、完整章节 PR 的人类开发机窗口验收步骤义务与 Godot AI 使用边界 | CD-52 |
 | 测试层级、CI 门禁、DoD、性能观察值 | CD-53 |
 | 里程碑与验收 | CD-61 |
 | 风险状态 | CD-62 |
@@ -153,3 +153,4 @@
 5. **冲突裁决顺序**：CD-00 宪法 > 所有者文档 > 其他文档中的引用性描述 > 已退役的初稿文档。
 6. **未决事项不许默认**。CD-63 中的条目没有默认答案，AI 不得把示例或推荐项当成已确认结论。
 7. **新增文档必须登记**。加文档就要更新第 4、5 节，否则视为未生效。
+8. **当前生效值覆盖而非追加**。除本索引外，每份所有者文档文首「当前生效值」是现行口径；新事实改那一节，不要在文末再挂一段。覆盖链写入 [CD-91](90-reference/91-decision-log.md)。

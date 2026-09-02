@@ -23,7 +23,7 @@
 & $env:GODOT4_CONSOLE --headless --path game -s res://tests/support/frame_cost_bench.gd
 ```
 
-开发机 Windows + Godot 4.7.2 debug 解释器，300 帧均值，预热 10 帧。**诚实边界**：headless 不付 GPU 上传、着色器与 draw call 提交，所以它**低估**「每帧 free 再 new 一个 Label3D / MeshInstance3D」的真实代价；真机收益只会比这里大。真机 FPS 由人类按[章节真机清单](../runbooks/chapter-device-check.md)走查确认，本文件不能替代那一步（宪法第二十四条）。
+开发机 Windows + Godot 4.7.2 debug 解释器，300 帧均值，预热 10 帧。**诚实边界**：headless 不付 GPU 上传、着色器与 draw call 提交，所以它**低估**「每帧 free 再 new 一个 Label3D / MeshInstance3D」的真实代价；真机收益只会比这里大。真机 FPS 由人类按[开发机窗口验收](../runbooks/dev-window-check.md)走查确认，本文件不能替代那一步（宪法第二十四条）。
 
 ## 4. 分摊表
 
@@ -95,5 +95,5 @@
 
 - **扫掠取样代价无上限**（宪法第十七条缺口）：步数正比于 `|dy| / radius`，玩家长时间自由下落时仍会线性增长。本刀只把每步的常数压下去了，没有给步数封顶，也没有引入空间划分。
 - **无空间划分**：`is_pose_blocked` 仍是 O(静态盒数) 全量扫描。49 个盒子现在只要 0.97 ms，但 UGC 赛道的盒数没有上限。
-- **真机 FPS 未由本文件证明**：headless 只量 CPU。人类走查见[章节真机清单](../runbooks/chapter-device-check.md)。
+- **真机 FPS 未由本文件证明**：headless 只量 CPU。人类走查见[开发机窗口验收](../runbooks/dev-window-check.md)。
 - **未在导出包或 Linux 上量过**：以上全部是 Windows 开发机 debug 解释器的数字。

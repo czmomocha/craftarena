@@ -1,10 +1,11 @@
-﻿# 章节真机清单
+# 开发机窗口验收
 
 本文件是 [CD-52 §3.2](../../Confirmed-docs/50-engineering/52-ai-workflow.md) 的可执行版本：人类验收**当前完整章节 PR** 时照「本刀」逐步做。
 
-它存在的理由是：自动化测试证明算法，不代替你在开发机窗口里看见的表现。任何人检出该 PR 分支，按本刀从头做一遍，就能自己判断这章在真机上是否成立。
+它存在的理由是：自动化测试证明算法，不代替你在开发机窗口里看见的表现。任何人检出该 PR 分支，按本刀从头做一遍，就能自己判断这章在开发机窗口上是否成立。
 
-- 适用范围：Windows 与 macOS 开发机；窗口化运行主场景。Headless `--quit` **不是**真机。
+- 适用范围：Windows 与 macOS 开发机；窗口化运行主场景。Headless `--quit` **不是**开发机窗口验收。
+- **「真机」留给导出安装包**（见 [导出包核查清单](desktop-export-check.md)）。本文件验的是编辑器 / `--path game` 开出来的窗口，不是包。
 - 这是人工检查，**不是** CI 门禁（宪法第二十四条）。
 - 命令以 [README.md](../../README.md) 为准，不要另猜参数。
 - Agent 开下一章 PR 时必须**整节替换「本刀」**，不要把旧章步骤留在下面让人验错对象。无开发机可见行为的章：本刀只写「无」和一句原因。
@@ -15,7 +16,7 @@
 
 1. 检出待审 PR 的分支（不要用过期的 `main` 冒充本章）。
 2. 先做下面「共用启动」（本刀写了「不需要三后端」则可跳过 `npm run dev`）。
-3. 只做 **本刀** 的编号步骤。每步有「预期」和「失败」。全部预期满足才勾 PR 里的真机项。
+3. 只做 **本刀** 的编号步骤。每步有「预期」和「失败」。全部预期满足才勾 PR 里的开发机窗口项。
 4. 合入后本刀会被下一章替换；历史步骤以该章 PR 正文为准。
 
 ---
@@ -53,52 +54,46 @@ Worktree 端口偏移见 README「并行工作区」；本文件不复述端口�
 
 ---
 
-## 本刀：拆 Preview 壳（C5 第 6 章，chrome / sampler / hud / play / view）
+## 本刀：文档治理（C5 第 7 章）
 
-上一刀（[#209](https://github.com/czmomocha/craftarena/pull/209)）把 Preview 映射拆成 convert / occupancy / gizmos / overlay / player。本刀只拆 `AuthoringPreviewShell`：公开 API 仍在门面上，窗体 / 按键 / 状态行 / 试玩合同不变。**窗口里其它东西应与上一刀相同**。协议、Schema、官方课都不动。
+本章只改所有者文档、runbook 文件名和 CD-61 草案，**没有开发机可见行为**。
 
-本刀**不需要** `npm run dev`（F6 Preview 沙箱就能看完前 3 步）。
+1. 打开 [开发机窗口验收](dev-window-check.md) 本文档标题。
+   - 预期：标题是 **开发机窗口验收**，不是「章节真机清单」。引言把「真机」留给导出包。
+   - 失败：标题仍是旧名 ⇒ 更名没落地。
 
-1. **Preview 窗口仍能开、关只隐藏**：编辑器打开 `res://src/creator/course_sandbox.tscn`，**F6**（不要 F5）。
-   - 预期：出现 Preview 窗（窗题 **Preview** 或 **预览**，随 locale）；Play / Stop / Reset / Use item / Sprint / Jump / Advance tick 一排按钮；空格不会点到 Play。
-   - 失败：立刻崩、没有窗口、或按钮抢走空格 ⇒ chrome 没接到门面。点窗关闭后会话丢了 ⇒ 关窗不再是只隐藏。
+2. 打开 [CD-21 文首当前生效值](../../Confirmed-docs/20-gameplay/21-traprush.md) 与 [CD-62](../../Confirmed-docs/60-plan/62-risk-register.md)。
+   - 预期：CD-21 一期最小道具是爆破球 + 冲刺；CD-62「网页/微信包体超限」是未开始，「传送迷路」是已缓解，「单人审查带宽超载」与「零延迟锁定网络参数」两行存在。
+   - 失败：仍写「已治理」的包体/传送，或道具表仍自称未锁 ⇒ 文档与事实又不一致。
 
-2. **开玩、走路、跳、打箱、Advance 仍是原来的键**：点 **Play**。WASD 走几格，空格跳一下，Q 打碎出生点前方的箱；再点 **Advance tick** 两三次。
-   - 预期：角色出现在出生垫上；走得到、跳得起来、箱子碎掉；Advance 后落下并站在出生方块顶面。状态行仍是 `connected=` / `playing=` / `pads=` 那一套。
-   - 失败：按键没反应或 Advance 不落下 ⇒ sampler / play 拆坏了。走两步突然传送或复位 ⇒ 占用扫描顺序被改了。
+3. 打开 [CD-61 重排草案](../plans/cd-61-rearrangement-draft.md)。
+   - 预期：标明待人类逐条批准；[CD-61](../../Confirmed-docs/60-plan/61-milestones.md) 仍写「本文件仍是现行口径」。
+   - 失败：CD-61 已被悄悄改成新里程碑 ⇒ 违反 D6（草案先批）。
 
-3. **关窗只隐藏、空格仍是跳**：点 Preview 窗的关闭。再点 **Play**（若窗口已藏，先 F6 重开沙箱再点 Play），空格跳一下。
-   - 预期：点关闭后窗口消失，Godot 没崩；再开玩时空格仍是跳，不会点到 Play。
-   - 失败：关窗把 Preview 会话拆掉导致再开崩 ⇒ chrome 把「只隐藏」改成了释放。空格点到 Play ⇒ 按钮 `FOCUS_NONE` 丢了。
-
-4. **自动化全绿 + 试玩合同不变**：
+4. 自动化：
    ```bash
-   npm run typecheck; npm test; npm run redline-scan
-   npm run test:gut:full
-   & $env:GODOT4_CONSOLE --headless --path game -- --package-check
-   & $env:GODOT4_CONSOLE --headless --path game -- --bot-run
+   npm test
    ```
-   - 预期：`npm test` 无回归；`redline-scan` `no findings`；GUT 全绿（含既有 `test_authoring_preview*.gd` 与新增 `test_authoring_preview_shell_split.gd`）；`--package-check` `ok=true`；`--bot-run` 三张课 `completable`，**动作序列与步数逐项不变**（5 / 5 / 12 步）。
-   - 失败：Preview GUT 红 ⇒ 拆分改了窗体或试玩合同，停下来查，别先改断言。bot-run 步数变了 ⇒ 不该动的对局路径被连带改了。
+   - 预期：`tools/dev-launcher/tests/doc_governance.test.ts` 全绿。不必开 Godot 窗口。
+   - 失败：缺「当前生效值」、旧 runbook 路径还在、或 CD-62 字符串对不上。
 
 ### 本刀不测
 
-- **大厅 Solo / 在线对局**：本刀只拆 Preview 壳；
-- **拆控制面 / 探针 / 灰盒 / 仿真世界 / 编辑外壳**：那些文件仍超 400；
-- **字体 / locale 热切换 / 触控 UI**。
+- 大厅 / Preview / 导出包窗口；
+- 解冻令、协议、官方课、`--bot-run` 步数。
 
 ### 诚实边界
 
-- 门面仍持有 `preview` / `window` / `map` 与公开 `try_*`；协作者不是新的权威源；
-- 嵌入子窗口仍然不得自己设 `content_scale_*`；
-- 开玩 / 停玩仍会强制 map 重建（脏检查跳过的那两个时刻不变）。
+- CD-61 **没有**在本章改成新路线；草案合入不等于重排已拍板；
+- 其它所有者文档里未收敛的「实现落点」长段仍可能在，本章只保证文首「当前生效值」可 30 秒读完，并拆掉 CD-41 §5 与 CD-21 那两处点名的追加链。
 
-### 仍然欠着（不因本章消失）
+---
 
-- E9 全仓（控制面 / `course_completion_probe.gd` / `graybox_course.gd` / `simulation_world.gd` / `simulation_bundle.gd` / `authoring_editor_shell.gd` 等仍超 400）；
-- 字体入包（思源黑体 / Noto Sans SC 子集范围待人类拍）；
-- 触控 UI；按 `asset_id` 解析视觉；传送门没有专用模型；
-- 扫掠步数无上限。
+## 上一刀：拆 Preview 壳（C5 第 6 章，chrome / sampler / hud / play / view）
+
+> **本节已随 [#210](https://github.com/czmomocha/craftarena/pull/210) 合入，保留只为追溯。验当前 PR 只看上面的「本刀」。**
+
+该刀把 `AuthoringPreviewShell` 拆成 chrome / sampler / hud / play / view，压到 400 行以下。公开 API 与 `--bot-run` 步数不变。
 
 ---
 

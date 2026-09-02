@@ -443,7 +443,7 @@ C3 第 6 章把探针做成了对局二进制帧：客户端发 ping（type=3）
 
 ### 13.1 开发机（证明闭环）
 
-照 [章节真机清单](chapter-device-check.md) 本刀：本地 `npm run dev` + 大厅建 1 人房。状态行出现 `rtt=` / `rtt_n=` 即闭环成立。本机回环的毫秒数**不能**拿去改 `SNAPSHOT_EVERY_TICKS`。
+照 [开发机窗口验收](dev-window-check.md) 本刀：本地 `npm run dev` + 大厅建 1 人房。状态行出现 `rtt=` / `rtt_n=` 即闭环成立。本机回环的毫秒数**不能**拿去改 `SNAPSHOT_EVERY_TICKS`。
 
 ### 13.2 远端双机（给锁定用的样本）
 

@@ -7,6 +7,17 @@
 > 相关：[CD-41 架构](41-architecture.md)、[CD-43 网络与回放](43-networking-and-replay.md)、[CD-31 UGC 原则](../30-ugc/31-ugc-principles.md)
 > 派生自：初稿 v0.2 §34–§36
 
+## 当前生效值
+
+> 本节覆盖而非追加。覆盖链见 [CD-91 D.8](../90-reference/91-decision-log.md)。
+
+| 项 | 当前口径 |
+|---|---|
+| 定点 | Q48.16，向零截断；数字只在 §1.1 |
+| Schema | Component v1 + Bundle v2（`gameplay_asset`） |
+| PLAYER 意图 | Move / Jump / Reset / UseItem / Shove / **SprintIntent（id=6）** |
+| Rule VM | **未建**。无字节码、无 gas |
+
 ## 1. Component Schema v1
 
 首版共享组件：

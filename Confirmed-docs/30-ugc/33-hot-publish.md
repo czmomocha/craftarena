@@ -7,6 +7,16 @@
 > 相关：[CD-31 UGC 原则](31-ugc-principles.md)、[CD-32 编辑器与预览](32-editor-and-preview.md)、[CD-43 网络与回放](../40-technical/43-networking-and-replay.md)、[CD-14 数据与遥测](../10-product/14-data-and-telemetry.md)
 > 派生自：初稿 v0.2 §27、§29
 
+## 当前生效值
+
+> 本节覆盖而非追加。覆盖链见 [CD-91 D.5](../90-reference/91-decision-log.md)。
+
+| 项 | 当前口径 |
+|---|---|
+| 等级定义 | P0–P4 见 §1。Bundle v2 因 `GameplayAsset` 已发生一次 P4 |
+| 运行时管线 | **未建**。无签名发布、无 `latest` 指针、无进程内回滚 |
+| 代码热更新 | 禁止 |
+
 ## 1. 热修改等级
 
 | 等级 | 内容 | Preview | 已开始的公开对局 |

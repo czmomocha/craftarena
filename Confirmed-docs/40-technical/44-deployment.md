@@ -7,6 +7,17 @@
 > 相关：[CD-41 架构](41-architecture.md)、[CD-14 数据与遥测](../10-product/14-data-and-telemetry.md)、[CD-62 风险登记册](../60-plan/62-risk-register.md)
 > 派生自：初稿 v0.2 §38
 
+## 当前生效值
+
+> 本节覆盖而非追加。覆盖链见 [CD-91 D.8](../90-reference/91-decision-log.md)。
+
+| 项 | 当前口径 |
+|---|---|
+| 容量模型 | 50 CCU 仍是设计容量，不是某台 VPS 规格 |
+| 资源基线 | 见 [server-deploy.md §12](../../docs/runbooks/server-deploy.md)；**CPU 先于内存**。本文件不复述数字 |
+| 传输 | 测试机明文；正式公开运营前 TLS |
+| SQLite | 仅控制面直连 |
+
 ## 1. 部署形态
 
 一期采用最简单可控的部署，只有"本地 + 长期测试"两个长期环境，不存在正式 Production。
@@ -28,7 +39,7 @@
 
 - 不跨区；
 - 不做自动扩缩容；
-- 按 **50 CCU** 固定容量设计；
+- 按 **50 CCU** 固定容量设计。资源观察见 [server-deploy.md §12](../../docs/runbooks/server-deploy.md#12-本批必须回填的结论)（CPU 先于内存）；本文件不复述数字；
 - 容量满时进入 FIFO 队列并显示预计等待时间；
 - 编辑但未进入对局的用户不占 MatchServer 名额；
 - 支持快速游戏与房间码；
