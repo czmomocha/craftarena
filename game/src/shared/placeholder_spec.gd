@@ -30,9 +30,9 @@ extends RefCounted
 ## 权威碰撞与视觉网格的**分离**不在本文件：那要等 `GameplayAsset` 契约
 ## （纠偏方案 C4 第 2–4 章）。今天二者仍靠 1 格 = 1 米隐式对齐。
 ##
-## `MOVE_STEP` / `INTERP_STEP` 是表现占位桩，不是产品速度或插值窗口。锁定要等
-## 24 小时 ICMP 或远端协议层样本，见 [CD-43 §4](Confirmed-docs/40-technical/43-networking-and-replay.md)
-## 与 `docs/runbooks/server-deploy.md` §12 / §13。
+## `MOVE_STEP` 仍是表现占位步长，不是产品速度。`INTERP_STEP` 已由人类
+## 2026-09-02 升为锁定值（E3：近端样本未证伪现桩，不改数字），见
+## [CD-43 §4](Confirmed-docs/40-technical/43-networking-and-replay.md)。
 
 # 格与米（D4：1 格 = 1 表现米，维持）
 

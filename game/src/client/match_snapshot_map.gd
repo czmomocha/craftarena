@@ -38,6 +38,7 @@ extends Node3D
 ## 大厅只在 Solo 接线。
 
 const MatchSnapshotFollowGd := preload("res://src/client/match_snapshot_follow.gd")
+const PlayersGd := preload("res://src/client/match_snapshot_map_players.gd")
 
 const CAMERA_NAME: String = "SnapshotCamera"
 const LIGHT_NAME: String = "SnapshotLight"
@@ -314,90 +315,30 @@ func _pose_from_player(body: Dictionary) -> Dictionary:
 
 
 func _spawn_player(slot: int, body: Dictionary) -> void:
-	var pose: Dictionary = _pose_from_player(body)
-	var x: int = pose["x"]
-	var y: int = pose["y"]
-	var z: int = pose["z"]
-	var yaw_bam: int = pose["yaw_bam"]
-	var seat: Color = player_albedo(slot, follow_slot)
-	var mesh: BoxMesh = BoxMesh.new()
-	mesh.size = PLACEHOLDER_SIZE
-	mesh.material = _unshaded(seat)
-	var node: MeshInstance3D = MeshInstance3D.new()
-	node.name = player_name(slot)
-	node.mesh = mesh
-	node.position = Vector3(meters_from_fixed(x), meters_from_fixed(y), meters_from_fixed(z))
-	node.rotation.y = yaw_radians_from_bam(yaw_bam)
-	add_child(node)
-	_spawn_facing(node)
-	_attach_visual(node, seat)
+	PlayersGd.spawn_player(self, slot, body)
 
 
 ## 视觉资产在时：挂 `visual` 子节点并让占位盒本体退出渲染层。用 `layers = 0`
-## 而不是 `visible = false`，因为后者会连带隐藏 `face` 与 `visual` 两个子节点，
-## 那样朝向就看不见了。返回是否真的挂上了视觉。
+## 而不是 `visible = false`，因为后者会连带隐藏 `face` 与 `visual` 两个子节点。
 func _attach_visual(player: MeshInstance3D, seat: Color) -> bool:
-	var visual: Node3D = SharedVisualAssetCatalog.try_instantiate(character_scene_path)
-	if visual == null:
-		return false
-	visual.name = VISUAL_NAME
-	visual.position = SharedVisualAssetCatalog.CHARACTER_FOOT_LIFT
-	player.add_child(visual)
-	SharedVisualAssetCatalog.tint(visual, seat)
-	player.layers = 0
-	_visual_count += 1
-	return true
+	return PlayersGd.attach_visual(self, player, seat)
 
 
 func _spawn_facing(player: MeshInstance3D) -> void:
-	var mesh: BoxMesh = BoxMesh.new()
-	mesh.size = FACE_SIZE
-	mesh.material = _unshaded(PlaceholderSpec.FACE_ALBEDO)
-	var node: MeshInstance3D = MeshInstance3D.new()
-	node.name = FACE_NAME
-	node.mesh = mesh
-	node.position = FACE_OFFSET
-	player.add_child(node)
+	PlayersGd.spawn_facing(player)
 
 
 func _clear_players() -> void:
-	var stale: Array[Node] = []
-	for child: Node in get_children():
-		if str(child.name).begins_with(PLAYER_PREFIX):
-			stale.append(child)
-	for node: Node in stale:
-		remove_child(node)
-		node.free()
-	_player_count = 0
-	_visual_count = 0
+	PlayersGd.clear_players(self)
 
 
 func _aim_camera() -> void:
-	var target: Vector3 = Vector3.ZERO
-	var followed: MeshInstance3D = player_node(follow_slot)
-	if followed != null:
-		target = followed.position
-	var camera: Camera3D = camera_node()
-	if camera == null:
-		return
-	camera.position = target + CAMERA_OFFSET
-	_look_at_target(camera, target)
+	PlayersGd.aim_camera(self)
 
 
 func _look_at_target(camera: Camera3D, target: Vector3) -> void:
-	if camera == null or not camera.is_inside_tree():
-		return
-	var look: Vector3 = target - camera.position
-	if look.length_squared() < 0.0000001:
-		return
-	var up: Vector3 = Vector3.UP
-	if absf(look.normalized().dot(Vector3.UP)) > 0.999:
-		up = Vector3.FORWARD
-	camera.look_at(target, up)
+	PlayersGd.look_at_target(camera, target)
 
 
 func _unshaded(color: Color) -> StandardMaterial3D:
-	var material: StandardMaterial3D = StandardMaterial3D.new()
-	material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	material.albedo_color = color
-	return material
+	return PlayersGd.unshaded(color)
