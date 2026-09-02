@@ -22,10 +22,20 @@ extends RefCounted
 ## 引用它。按 `asset_id` 取视觉等于让终点、检查点垫和箱子共用同一个模型——那不是
 ## "资产有了视觉"，是"内容还没有区分资产"。
 ##
-## 能接的是**袋类型**，因为那是玩法语义而不是资产身份：`solids` 袋就是"踩得到的
-## 固体"，所以它铺地块；`hazards`（洋红）与 `destructibles`（橙）**不铺**，D4 已把
-## 危险色定成可读性的一部分，把会打你的东西画成地板是反向的。等内容能区分资产后
-## 再按 `asset_id` 解析，届时本文件加的是一张表，不需要改调用方。
+## 能接的是**袋类型**，因为那是玩法语义而不是资产身份。一期接线：
+##
+## | 袋 / 组件 | 视觉 | 贴合 |
+## |---|---|---|
+## | `solids` | 地块 | `fit_tile_on_cell`（顶面对齐占位盒顶面） |
+## | `pads` | 检查点垫 + 检查点门 | 垫走地块贴合；门走 `fit_prop_on_cell`（脚底对齐盒底） |
+## | `finish` | 终点门 | 脚底对齐 |
+## | `destructibles` | 箱子 | 脚底对齐 + 橙色 overlay |
+## | `hazards` | 滚柱 | 脚底对齐 + 洋红 overlay |
+## | `portals` | 仍是占位盒 | 传送门专用模型还没生成 |
+##
+## 箱与滚柱**保留 D4 危险色薄膜**（人类 2026-09-02 拍板）：换真模型不能把
+## "会打你的"画成和地板一个色。薄膜走 `material_overlay`，不改共享 Mesh。
+## 等内容能区分资产后再按 `asset_id` 解析，届时本文件加的是一张表，不改调用方。
 ##
 ## 放 `shared/` 的理由与 `PlaceholderSpec` 相同：`client` 的对局映射与 `creator`
 ## 的 Preview 映射必须读同一份，否则两边慢慢变成两套角色。`simulation/` 不引用
@@ -71,6 +81,22 @@ const CHARACTER_SCENE_PATH: String = "res://content/assets/characters/char_runne
 ## 且没有被任何测试写死尺寸。真机上如果正方块不如扁板好看，回退就是改回这一行。
 const TERRAIN_TILE_SCENE_PATH: String = "res://content/assets/terrain/block_static.glb"
 
+## 检查点垫：薄台面，走地块贴合（顶面对齐），避免再出现扁板悬空。
+const CHECKPOINT_PAD_SCENE_PATH: String = "res://content/assets/checkpoints/checkpoint_pad.glb"
+
+## 检查点门：站立拱门，挂在同一块垫占用上，走脚底对齐。设计稿 1.6×2.0×0.4 m，
+## 生成网格更矮——本刀不靠拉伸"修"，缺陷留在真机清单里。
+const CHECKPOINT_GATE_SCENE_PATH: String = "res://content/assets/checkpoints/checkpoint_gate.glb"
+
+## 终点门：站立拱门。设计稿 3 m 宽，水平缩进一格后仍可能比角色高，同样不拉伸。
+const FINISH_GATE_SCENE_PATH: String = "res://content/assets/finish/finish_gate.glb"
+
+## 可破坏箱。橙色 overlay 是 D4 可读性，不是模型自带色。
+const CRATE_SCENE_PATH: String = "res://content/assets/crates/crate.glb"
+
+## 周期滚柱。洋红 overlay 同上。生成网格可能略超一格，不压扁。
+const HAZARD_ROLLER_SCENE_PATH: String = "res://content/assets/hazards/hazard_roller.glb"
+
 ## 模型自己的脚底在原点，而占位盒是以权威位置为**中心**的 1 米立方体。下沉半个
 ## 盒高，模型才和它替换掉的那个盒子站在同一个平面上，不会浮空半米。
 const CHARACTER_FOOT_LIFT: Vector3 = Vector3(0.0, -PlaceholderSpec.METERS_PER_CELL / 2.0, 0.0)
@@ -113,13 +139,44 @@ static func try_instantiate_terrain_tile() -> Node3D:
 
 ## 实例化并按 `fit_tile_on_cell` 贴合，失败返回 `null`，让调用方回退占位盒。
 static func try_instantiate_fitted_tile() -> Node3D:
-	var visual: Node3D = try_instantiate_terrain_tile()
+	return try_instantiate_fitted_tile_from(TERRAIN_TILE_SCENE_PATH)
+
+
+static func try_instantiate_fitted_tile_from(path: String) -> Node3D:
+	var visual: Node3D = try_instantiate(path)
 	if visual == null:
 		return null
 	if not fit_tile_on_cell(visual):
 		visual.free()
 		return null
 	return visual
+
+
+## 站立物：水平缩进一格，脚底落到占位盒底面。失败返回 `null`。
+static func try_instantiate_fitted_prop(path: String) -> Node3D:
+	var visual: Node3D = try_instantiate(path)
+	if visual == null:
+		return null
+	if not fit_prop_on_cell(visual):
+		visual.free()
+		return null
+	return visual
+
+
+## 一块检查点占用上的垫 + 门。两者都失败才返回 `null`；只做成一个也算接上。
+static func try_instantiate_checkpoint(pad_path: String, gate_path: String) -> Node3D:
+	var pad: Node3D = try_instantiate_fitted_tile_from(pad_path)
+	var gate: Node3D = try_instantiate_fitted_prop(gate_path)
+	if pad == null and gate == null:
+		return null
+	var root: Node3D = Node3D.new()
+	if pad != null:
+		pad.name = "pad"
+		root.add_child(pad)
+	if gate != null:
+		gate.name = "gate"
+		root.add_child(gate)
+	return root
 
 
 ## 解析失败一律返回 `null`，让调用方回退到占位盒。缺资产、导入产物没生成、
@@ -134,7 +191,7 @@ static func try_instantiate_fitted_tile() -> Node3D:
 ## 只要 7.6 ms）。
 ##
 ## 多网格或带 skin 的资产**回退到 instantiate**，因为共享一份 `Mesh` 表达不了
-## 多个 surface 各自的层级与蒙皮。今天两个资产都是单网格无 skin，但下一个未必。
+## 多个 surface 各自的层级与蒙皮。今天入库的占用资产仍是单网格无 skin，但下一个未必。
 static func try_instantiate(path: String) -> Node3D:
 	if path.is_empty():
 		return null
@@ -296,6 +353,32 @@ static func fit_tile_on_cell(visual: Node3D) -> bool:
 	visual.position = Vector3(
 		-centre_x,
 		PlaceholderSpec.METERS_PER_CELL / 2.0 - top,
+		-centre_z
+	)
+	return true
+
+
+## 把站立物贴到一个格子上：**等比**缩到水平最长边恰好一格，水平居中，
+## 并让缩放后的**底面**落在占位盒底面（角色脚底那条平面）。
+##
+## 与 `fit_tile_on_cell` 的差别是锚点：地块 / 垫对齐顶面（踩得到的平面），
+## 门 / 箱 / 滚柱对齐底面（站在格子里）。缩放仍只看水平最长边，**不**按高度
+## 压扁——门比人矮、滚柱略超一格，都是资产自己的比例，本函数不假装修掉。
+static func fit_prop_on_cell(visual: Node3D) -> bool:
+	if visual == null:
+		return false
+	var bounds: AABB = local_bounds(visual)
+	var widest: float = maxf(bounds.size.x, bounds.size.z)
+	if widest < _MIN_EXTENT:
+		return false
+	var factor: float = PlaceholderSpec.METERS_PER_CELL / widest
+	visual.scale = Vector3(factor, factor, factor)
+	var scaled: AABB = AABB(bounds.position * factor, bounds.size * factor)
+	var centre_x: float = scaled.position.x + scaled.size.x / 2.0
+	var centre_z: float = scaled.position.z + scaled.size.z / 2.0
+	visual.position = Vector3(
+		-centre_x,
+		-PlaceholderSpec.METERS_PER_CELL / 2.0 - scaled.position.y,
 		-centre_z
 	)
 	return true

@@ -66,6 +66,11 @@ macOS 把 `& $env:GODOT4_CONSOLE` 换成 `"$GODOT4"`。
 | `courses_readable` | 三张官方赛道 JSON 能**解码成 AuthoringWorld**（不只是文件存在） | 始终 |
 | `character_visual_loadable` | 角色视觉资产能**实例化成 Node3D**。`.glb` 进包后是导入产物 `.scn`，导出过滤配错或漏了 reimport 只在这里暴露；表现层遇到失败会静默回退占位盒，那在成品包里和"美术从来没加进去"长得一模一样 | 始终（2026-08-30 加入；**尚未在真导出包上跑过**，见下） |
 | `terrain_tile_visual_loadable` | 地块视觉资产能实例化**并贴合到一格**。比角色多判贴合，因为地块的缩放是从自身 AABB 算的：退化或无网格的导入会先通过 load，再让整条路静默退回石色盒 | 始终（2026-08-30 加入；**尚未在真导出包上跑过**，见下） |
+| `checkpoint_pad_visual_loadable` | 检查点垫能实例化并按地块规则贴合（顶面对齐） | 始终（2026-09-02 加入；尚未在真导出包上跑过） |
+| `checkpoint_gate_visual_loadable` | 检查点门能实例化并按站立物规则贴合（脚底对齐） | 始终（同上） |
+| `finish_gate_visual_loadable` | 终点门同上 | 始终（同上） |
+| `crate_visual_loadable` | 箱子同上 | 始终（同上） |
+| `hazard_roller_visual_loadable` | 滚柱同上 | 始终（同上） |
 | `user_draft_roundtrip` | `user://` 可写可读可删，草稿恢复的落点成立 | 始终 |
 | `no_mcp_autoload` | 没有 `_mcp_game_helper` autoload | 始终 |
 | `runtime_material` | 运行时 `StandardMaterial3D` 能建、能设 albedo、能读回 | 始终 |
@@ -76,9 +81,9 @@ macOS 把 `& $env:GODOT4_CONSOLE` 换成 `"$GODOT4"`。
 
 后三条在源码运行时必然为假（tests 与 addons 就在磁盘上），所以只在 `template_build=true` 时计入失败。
 
-同时报告但不判定的字段：`web`（`OS.has_feature("web")`）、`packed_addons`、`user_data_dir`、`draft_path`、`engine`、`autoloads`、`character_visual_path`、`terrain_tile_visual_path`。
+同时报告但不判定的字段：`web`（`OS.has_feature("web")`）、`packed_addons`、`user_data_dir`、`draft_path`、`engine`、`autoloads`、`character_visual_path`、`terrain_tile_visual_path`、`checkpoint_pad_visual_path`、`checkpoint_gate_visual_path`、`finish_gate_visual_path`、`crate_visual_path`、`hazard_roller_visual_path`。
 
-**关于 `.glb` 为什么不在 `include_filter` 里**：三个预设都是 `export_filter="all_resources"`，`.glb` 是 Godot **导入资源**，由它覆盖；`include_filter` 里那条 `content/official/*.json` 之所以必须显式写，是因为 JSON 不是资源类型。这条推断**还没有被真导出包验证过**（2026-08-30 写入时开发机没装 4.7.2 导出模板），所以下一次谁跑导出，请把 `character_visual_loadable` 与 `terrain_tile_visual_loadable` 的结果补回本节。
+**关于 `.glb` 为什么不在 `include_filter` 里**：三个预设都是 `export_filter="all_resources"`，`.glb` 是 Godot **导入资源**，由它覆盖；`include_filter` 里那条 `content/official/*.json` 之所以必须显式写，是因为 JSON 不是资源类型。这条推断**还没有被真导出包验证过**（2026-08-30 写入时开发机没装 4.7.2 导出模板），所以下一次谁跑导出，请把 `character_visual_loadable`、`terrain_tile_visual_loadable` 与五个占用 `*_visual_loadable` 的结果补回本节。
 
 Linux 包在 VPS 上用同一条：
 

@@ -22,7 +22,7 @@
 
 ## 共用启动（大厅窗口）
 
-机关狂奔匹配大厅是代码创建的 `Window`，标题 **Traprush**。第一行是帧率读数（本刀加的 `FPS 60`，首窗之前 `FPS --`），第二行是状态 Label。按钮（从左到右）：**Quick play**、**Create room**、**Join room**、**Solo play**、**Cancel**、**Poll**。其下一行是服务器地址：输入框（placeholder `Server host`，默认填当前控制面主机）加 **Apply server** 按钮。再往下三个输入框：房间码（placeholder `Room code`）、课程 id（默认 `course_01`）、人数（默认 `2`）。窗口里的 3D：玩家是**角色视觉资产**（一个约 1.13 m 高的角色，脚底在原点），本席覆青色薄膜（`OWN_ALBEDO`），远端覆海军蓝薄膜（`REMOTE_ALBEDO`）。橙色盒是可破坏箱；洋红盒是周期机关（固体半周期才出现；官方赛道出生点 −Z 1 个）；**始终固体铺地块视觉**（实心方块，一格一块、整格填满；官方赛道沿必经路铺立足面，`course_01` 另有出生点 −X 1 个，上层楼板在 −Z 三格）；视觉资产解析不出来时，角色与地块各自回退成原来的占位盒（青色 / 石色）。垫 / 门 / 终点仍是赛道占位盒（未开玩时垫是原绿、终点是原金；开玩后本席已验收垫是暗绿，当前目标垫是亮薄荷；全部垫完成后终点变亮金，冲线后变暗金）；条是传送连线与检查点顺序 gizmos。玩家盒上方有名次 Label；本席名次标以 `*` 开头。开玩时状态行含 `pads=n/m`、`floor=n`、`finish=n`、`crates=n/m`、`hazards=n/m` 与 `solids=n/m`。
+机关狂奔匹配大厅是代码创建的 `Window`，标题 **Traprush**。第一行是帧率读数（本刀加的 `FPS 60`，首窗之前 `FPS --`），第二行是状态 Label。按钮（从左到右）：**Quick play**、**Create room**、**Join room**、**Solo play**、**Cancel**、**Poll**。其下一行是服务器地址：输入框（placeholder `Server host`，默认填当前控制面主机）加 **Apply server** 按钮。再往下三个输入框：房间码（placeholder `Room code`）、课程 id（默认 `course_01`）、人数（默认 `2`）。窗口里的 3D：玩家是**角色视觉资产**（一个约 1.13 m 高的角色，脚底在原点），本席覆青色薄膜（`OWN_ALBEDO`），远端覆海军蓝薄膜（`REMOTE_ALBEDO`）。可破坏箱是箱子模型，覆橙色薄膜（`CRATE_ALBEDO`）；周期机关是滚柱模型，覆洋红薄膜（`HAZARD_ALBEDO`；固体半周期才出现；官方赛道出生点 −Z 1 个）；**始终固体铺地块视觉**（实心方块，一格一块、整格填满；官方赛道沿必经路铺立足面，`course_01` 另有出生点 −X 1 个，上层楼板在 −Z 三格）；检查点占用是垫（顶面对齐）+ 门（脚底对齐），覆进度色薄膜（未开玩原绿；开玩后已验收暗绿、当前目标亮薄荷）；终点是金色拱门，覆进度薄膜（未完成原金，全部垫完成后亮金，冲线后暗金）；传送门仍是色块（专用模型未生成）。视觉资产解析不出来时，对应占用回退成原来的占位盒。条是传送连线与检查点顺序 gizmos。玩家盒上方有名次 Label；本席名次标以 `*` 开头。开玩时状态行含 `pads=n/m`、`floor=n`、`finish=n`、`crates=n/m`、`hazards=n/m` 与 `solids=n/m`。
 
 ### 0.1 后端（本刀需要在线入场时）
 
@@ -49,11 +49,76 @@ Worktree 端口偏移见 README「并行工作区」；本文件不复述端口�
 
 预期：出现标题为 **Traprush** 的窗口；状态行含 `join=idle`、`play=idle`、`tls=off`、`server=127.0.0.1`、`course=3/5/1`（默认 `course_01` 的垫/门/终点占位；门含捷径上楼 `two_way`、安全路侧向 `two_way` 与上楼 `one_way`）。失败：没有窗口、立刻退出、或只有 Headless 日志。
 
-操作：WASD 移动，空格跳跃（大厅按钮不抢空格），Q 或鼠标左键使用道具（打碎眼前箱；官方课出生点已拾爆破球），F 基础推击（推开邻座胶囊，无线上目标 id），Left Shift 或 **Sprint** 沿当前朝向冲刺一格（官方课出生点已拾冲刺），R 重置到最近已验收检查点。点过人数/课程/房间码/服务器框之后，再点 3D 区域或 Create room / Solo play，光标应离开输入框，WASD 才是移动。`course_01` 出生点 −Z 两格有洋红周期机关，有石色踏板可以走到它；踩上时若处于固体半周期会被击退并闪回出生点。
+操作：WASD 移动，空格跳跃（大厅按钮不抢空格），Q 或鼠标左键使用道具（打碎眼前箱；官方课出生点已拾爆破球），F 基础推击（推开邻座胶囊，无线上目标 id），Left Shift 或 **Sprint** 沿当前朝向冲刺一格（官方课出生点已拾冲刺），R 重置到最近已验收检查点。点过人数/课程/房间码/服务器框之后，再点 3D 区域或 Create room / Solo play，光标应离开输入框，WASD 才是移动。`course_01` 出生点 −Z 两格有覆洋红薄膜的滚柱周期机关，有石色踏板可以走到它；踩上时若处于固体半周期会被击退并闪回出生点。
 
 ---
 
-## 本刀：找出并修掉 Solo 掉帧的真因，顺带把 GUT 从 355 秒压到 24 秒
+## 本刀：按袋类型把 5 个占用视觉接到大厅与 Preview（箱 / 滚柱保留 overlay）
+
+上一刀（[#199](https://github.com/czmomocha/craftarena/pull/199)）修掉 Solo 掉帧。本刀把已经烘焙过预算的 5 个占用 `.glb` 接到表现层：检查点垫 + 检查点门、终点门、箱子、滚柱。接线按**袋类型**，不按 `asset_id`。箱与滚柱保留 D4 危险色薄膜（人类 2026-09-02 拍板）。传送门仍是色块。
+
+本刀**不需要** `npm run dev`（Solo 就能看完前 4 步；Preview 用 F6 沙箱）。
+
+1. **Solo 默认课能看见垫 / 门 / 终点 / 箱 / 滚柱**：按「共用启动」打开大厅，点 **Solo play**。
+   - 预期：检查点是薄垫 + 拱门（不是绿盒子）；终点是金色拱门；箱子是木箱覆橙色薄膜；出生点 −Z 方向周期出现的是覆洋红薄膜的滚柱，不是洋红盒子。地块仍是实心方块。传送门仍是彩色盒。
+   - 失败：仍是纯色 1 米盒 ⇒ 路径常量没接到对应 Map，或 `.glb` 没导入（跑一次 `--headless --path game --import`）。整个人看不见 ⇒ 占位盒 `layers = 0` 之后视觉没挂上。
+
+2. **垫的进度色还在**：走上去验收第一个垫（或开玩后看当前目标垫）。
+   - 预期：当前目标垫是亮薄荷薄膜，走过的是暗绿，未到的是原绿。盒子本体看不见，颜色在模型薄膜上。
+   - 失败：模型不变色、或整个人变成纯色块 ⇒ overlay 没套上。
+
+3. **箱仍是橙、滚柱仍是洋红**（这是拍板项，不是审美）：盯着箱子和滚柱看。
+   - 预期：能看出是模型，同时能一眼认出「会打你的」——橙 / 洋红薄膜还在。
+   - 失败：箱子和地板一个色 ⇒ overlay 被拿掉了。
+
+4. **换课之后箱子在新位置**：把课程 id 改成 `course_03`，点 **Apply**（或重开大厅），再点 **Solo play**。
+   - 预期：箱子在 `course_03` 的位置，不是 `course_01` 的位置；仍是覆橙薄膜的箱子模型。
+   - 失败：箱子留在上一张课的坐标 ⇒ 复用节点时没有重写位姿。
+
+5. **Preview 同一套**：编辑器打开 `res://src/creator/course_sandbox.tscn`，**F6**（不要 F5）。
+   - 预期：Editor 3D 里垫 / 门 / 终点 / 箱 / 滚柱与大厅同一套模型；点 **Preview**，独立窗口一致。固体地块没有危险色 overlay。
+   - 失败：Preview 仍是色块、大厅是模型 ⇒ 有一处没走 `SharedVisualAssetCatalog`。
+
+6. **门比人矮、滚柱可能超格——这不是本刀要修的**：把角色走到门旁边，再看滚柱。
+   - 预期：门明显矮于角色（约 0.76 m vs 约 1.13 m）；滚柱可能略高出一格。本刀**不**靠拉伸修。
+   - 失败：门被拉成跟人格一样高、滚柱被压扁进格子 ⇒ 贴合规则被改成按高度缩放了，应打回。
+
+7. **自动化全绿 + 裁决不变**：
+   ```bash
+   npm run typecheck; npm test; npm run redline-scan; npm run asset-budget
+   & $env:GODOT4_CONSOLE --headless --path game -- --package-check
+   npm run test:gut:full
+   & $env:GODOT4_CONSOLE --headless --path game -- --bot-run
+   ```
+   - 预期：`npm run typecheck` 无输出；`redline-scan` `no findings`；`npm test` **401/401**；`--package-check` `ok=true` 且五个占用 `*_visual_loadable` 均为 `true`；GUT **1194/1194**（121 个脚本）；`--bot-run` 三张课 `completable`，**动作序列与步数逐项不变**（5 / 5 / 12 步）。
+   - 失败：bot-run 步数变了 ⇒ 视觉意外影响了仿真，停下来查，别先改断言。
+
+### 本刀不测
+
+- **新模型好不好看**：占位美术，配色与比例未经美术定稿；
+- **按 `asset_id` 换模型**：本刀按袋类型接线，7 类袋仍共用同一个内置玩法资产；
+- **传送门 / spawn_grid / slope / bridge**：没生成或没数据源，见 `_source_refs/traprush/MANIFEST.md`；
+- **导出包内表现**：本机无 4.7.2 导出模板。
+
+### 诚实边界
+
+- 贴合系数从模型自己的 AABB 算，测试不写死尺寸。门矮、滚柱超格是资产比例，不是贴合公式算错；
+- 箱 / 滚柱的橙 / 洋红是 `material_overlay`，不改共享 Mesh。拿掉 overlay 会让「会打你的」和地板看起来一样；
+- `apply_own_progress` 每帧都会被对局壳调用；盒子 albedo 没变就不重套 overlay，避免每帧 `StandardMaterial3D.new()`；
+- 官方课 JSON 一个字节没动。占用半长仍来自 bundle 的 `assets` 袋。
+
+### 仍然欠着（不因本章消失）
+
+- **按 `asset_id` 解析视觉**仍未做：一期唯一内置玩法资产被 7 类袋共用；
+- **传送门没有专用模型**；`spawn_grid` 没有数据源；`block_slope` 在 Schema 层无法表达；
+- 扫掠步数无上限（宪法第十七条缺口）；`is_pose_blocked` 仍是全量扫描；
+- 字体与本地化键、D7 输入抽象、C5 拆 `match_lobby_shell.gd`。
+
+---
+
+## 上一刀：找出并修掉 Solo 掉帧的真因，顺带把 GUT 从 355 秒压到 24 秒
+
+> **本节已随 [#199](https://github.com/czmomocha/craftarena/pull/199) 合入，保留只为追溯。验当前 PR 只看上面的「本刀」。**
 
 上一刀（[#198](https://github.com/czmomocha/craftarena/pull/198)）把帧率读数放上了 HUD，本刀用它量出了掉帧的真因并修掉。
 
@@ -123,7 +188,7 @@ Worktree 端口偏移见 README「并行工作区」；本文件不复述端口�
 
 ---
 
-## 上一刀：大厅 HUD 顶行显示运行时帧率（FPS）
+## 更早：大厅 HUD 顶行显示运行时帧率（FPS）
 
 > **本节已随 [#198](https://github.com/czmomocha/craftarena/pull/198) 合入，保留只为追溯。验当前 PR 只看上面的「本刀」。**
 

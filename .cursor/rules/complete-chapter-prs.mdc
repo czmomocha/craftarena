@@ -15,12 +15,12 @@ alwaysApply: true
 
 真机：PR Test plan 与 [章节真机清单](docs/runbooks/chapter-device-check.md) 本刀必须是编号步骤（怎么开、点什么、期望 / 失败）；禁止只写「真机再看一眼」。无 GUI 的章写「无」加原因。人工检查，不是 CI 门禁。口径见 [CD-52 §3.2](Confirmed-docs/50-engineering/52-ai-workflow.md)。
 
-- 做（本刀 = 纠偏 C4 第 3 章：GameplayAsset 契约落地）：按已拍板的 [ADR-0006](docs/adr/0006-gameplay-asset-contract.md) 实现。新增平台内置资产目录 `gameplay_asset_catalog.gd` 与第 19 个组件 `gameplay_asset`（只有 `asset_id` + `gameplay_version`）；SimulationBundle 升 v2，加 `assets` 袋并给 7 个占用袋各加资产引用；编译期做准入（只认目录里登记的 id 与当前版本），加载期按 `assets` 取半长，`half = bundle.cell / 2` 退场；v1 仍解码并迁移到内置"占满一格"，占用逐字节不变。两份 JSON Schema 同步（碰撞形状跨文件 `$ref`，不抄第二份），`SIMULATION_BUNDLE_SCHEMA_VERSION = 2`，TS 验证器补 JSON Schema 表达不了的闭合规则。**数值一个不改**：1100 个 GUT 用例全绿 + `--bot-run` 三张课步数与动作序列逐项不变，就是本章的验收信号。
-- 不做：任何 `.glb`；导入规范与性能预算表；动画状态契约；本地化键；把角色胶囊接进资产表（玩家不进 bundle）；给非 box 碰撞做权威实现（明确拒绝，不做近似）；改官方赛道 JSON（靠默认迁移，一个字节没动）。
-- 仍欠着（不因本章合入而消失）：远端协议层 RTT 回填；C3 网络参数锁定；E6 有美术之后的可玩性签署；扫掠取样代价无上限（宪法第十七条缺口——本章只用"创作者不能自填尺寸"避免内容放大它）；bundle 未签名，所以"不可变版本"还不是密码学不可变。
-- 仍不做：把 `assets` 袋当成视觉清单。视觉永远不进 bundle，客户端按 `asset_id` 取 `latest`，这是"改视觉不产生新内容版本"的唯一根据。
+- 做（本刀 = 纠偏 C4：按袋类型把 5 个已烘焙占用视觉接到大厅与 Preview）：检查点垫 + 检查点门、终点门、箱子、滚柱入库并接线。垫走 `fit_tile_on_cell`（顶面对齐），门 / 终点 / 箱 / 滚柱走 `fit_prop_on_cell`（脚底对齐占位盒底）。占位盒 `layers = 0` 退出渲染，进度色与 D4 危险色走 `material_overlay`。箱与滚柱**保留**橙色 / 洋红 overlay（人类 2026-09-02 拍板）。传送门仍是色块。`--package-check` 对 5 个资产做实例化 + 贴合判定。**数值一个不改**：GUT 全绿 + `--bot-run` 三张课步数与动作序列逐项不变（5 / 5 / 12）。
+- 不做：按 `asset_id` 解析；改 Schema / 官方课 JSON；`spawn_grid` / `block_slope` / `bridge`；传送门 GLB；靠拉伸修「门比人矮 / 滚柱超格」；字体与本地化键；D7 输入抽象；C5 拆壳；角色胶囊进资产表。
+- 仍欠着（不因本章合入而消失）：按 `asset_id` 解析视觉；传送门模型；远端协议层 RTT 回填；C3 网络参数锁定；E6 有美术之后的可玩性签署；扫掠取样代价无上限（宪法第十七条缺口）；`match_lobby_shell.gd` 超 E9 行数上限。
+- 仍不做：把 `assets` 袋当成视觉清单。视觉永远不进 bundle，客户端按袋类型（将来按 `asset_id`）取 `latest`。
 
 纠偏归属：C4
-是否新增冻结常量引用：否（净减少：冻结清单里 `cell / 2` 那一行从 loader 的 7 处调用收敛为资产目录里的一处定义）
-审查级别：深审（`game/src/shared/` 契约 + `backend/contracts/` Schema 破坏性变更，P4，已过宪法第十八条门禁）
-隔离方式：`feat/c4-gameplay-asset-v2`
+是否新增冻结常量引用：否
+审查级别：轻审（表现层接线；权威占用半长与官方课 JSON 一个字节没动）
+隔离方式：`feat/c4-occupancy-visuals`

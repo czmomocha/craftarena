@@ -9,7 +9,10 @@ extends Node3D
 ## live_solid_boxes() returns compiled Q48.16 centers plus cell/2 half-extents
 ## for currently solid hazards (authoring lattice, not the 1 m placeholder).
 ## Snapshots never move a hazard; v1 frames have no hazard bag, only tick.
-## Official courses compile zero hazards. No interpolation or prediction API.
+## Official courses compile period hazards. No interpolation or prediction API.
+##
+## 能解析出滚柱视觉时挂 `visual` 子节点，占位盒 `layers = 0` 但网格与洋红色
+## 材质保留。D4 危险色走 overlay。解析失败就是今天的 1 米洋红盒。
 
 const AuthoringDocumentGd := preload("res://src/creator/authoring_document.gd")
 const HazardCycleGd := preload("res://src/games/traprush/hazard_cycle.gd")
@@ -17,9 +20,12 @@ const MatchSnapshotFollowGd := preload("res://src/client/match_snapshot_follow.g
 const TraprushTopologyCompilerGd := preload("res://src/ugc/traprush_topology_compiler.gd")
 
 const HAZARD_PREFIX: String = "hazard_"
+const VISUAL_NAME: String = "visual"
 const PLACEHOLDER_SIZE: Vector3 = PlaceholderSpec.BOX_SIZE
 const HAZARD_ALBEDO: Color = PlaceholderSpec.HAZARD_ALBEDO
 
+## 空字符串或解析失败 ⇒ 回退占位盒。
+var hazard_scene_path: String = SharedVisualAssetCatalog.HAZARD_ROLLER_SCENE_PATH
 var _has_course: bool = false
 var _cell: int = 0
 var _tick: int = 0
@@ -88,6 +94,13 @@ func hazard_total() -> int:
 
 func hazard_node(entity_id: int) -> MeshInstance3D:
 	return get_node_or_null(hazard_name(entity_id)) as MeshInstance3D
+
+
+func visual_node(entity_id: int) -> Node3D:
+	var hazard: MeshInstance3D = hazard_node(entity_id)
+	if hazard == null:
+		return null
+	return hazard.get_node_or_null(VISUAL_NAME) as Node3D
 
 
 func live_solid_boxes() -> Array:
@@ -251,6 +264,18 @@ func _spawn_box(node_name: String, pose: Dictionary) -> void:
 	node.mesh = mesh
 	node.position = Vector3(meters_from_fixed(x), meters_from_fixed(y), meters_from_fixed(z))
 	add_child(node)
+	_attach_visual(node)
+
+
+func _attach_visual(hazard: MeshInstance3D) -> bool:
+	var visual: Node3D = SharedVisualAssetCatalog.try_instantiate_fitted_prop(hazard_scene_path)
+	if visual == null:
+		return false
+	visual.name = VISUAL_NAME
+	hazard.add_child(visual)
+	SharedVisualAssetCatalog.tint(visual, HAZARD_ALBEDO)
+	hazard.layers = 0
+	return true
 
 
 func _clear_hazards() -> void:

@@ -276,9 +276,9 @@ func test_preview_player_marker_falls_back_to_the_placeholder_box() -> void:
 	assert_eq(marker.layers, 1)
 
 
-func test_preview_solid_tag_gets_a_tile_and_other_entities_stay_boxes() -> void:
-	# 按**袋类型**接线，不是按 asset_id：solid 铺地块，机关（洋红）与可破坏箱
-	# （橙）不铺——D4 已把危险色定成可读性的一部分。理由见 catalog 文件头。
+func test_preview_wires_known_kinds_and_plain_stays_a_box() -> void:
+	# 按**袋类型**接线：solid 铺地块（不 overlay），机关与箱子挂占用视觉并
+	# 保留 D4 危险色 overlay，没有组件的实体仍是占位盒。
 	var world: AuthoringWorld = AuthoringWorld.new()
 	assert_true(world.put(_record_solid(11)))
 	assert_true(world.put(_record_hazard(12)))
@@ -293,16 +293,22 @@ func test_preview_solid_tag_gets_a_tile_and_other_entities_stay_boxes() -> void:
 		assert_eq(solid.layers, 0, "铺了地块的固体，占位盒本体应退出渲染层")
 		assert_eq((solid.mesh as BoxMesh).size, AuthoringPreviewMap.PLACEHOLDER_SIZE)
 
-	for entity_id: int in [12, 13, 14]:
-		var node: MeshInstance3D = _preview.placeholder_node(entity_id)
-		assert_not_null(node, "entity %d 没画出来" % entity_id)
-		if node == null:
+	for entity_id: int in [12, 13]:
+		var occupied: MeshInstance3D = _preview.placeholder_node(entity_id)
+		assert_not_null(occupied, "entity %d 没画出来" % entity_id)
+		if occupied == null:
 			continue
-		assert_null(
+		assert_not_null(
 			_preview.placeholder_visual_node(entity_id),
-			"entity %d 不该铺地块" % entity_id
+			"entity %d 应挂占用视觉" % entity_id
 		)
-		assert_eq(node.layers, 1, "entity %d 的占位盒必须自己可见" % entity_id)
+		assert_eq(occupied.layers, 0, "entity %d 的占位盒应退出渲染层" % entity_id)
+
+	var plain: MeshInstance3D = _preview.placeholder_node(14)
+	assert_not_null(plain)
+	if plain != null:
+		assert_null(_preview.placeholder_visual_node(14), "无组件实体不该挂占用视觉")
+		assert_eq(plain.layers, 1, "无组件实体的占位盒必须自己可见")
 
 
 func test_preview_solid_falls_back_to_the_placeholder_box() -> void:

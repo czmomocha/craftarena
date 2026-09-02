@@ -55,6 +55,11 @@ static func _run_checks(failures: Array[String]) -> Dictionary:
 	_record(checks, failures, "courses_readable", _courses_readable(), true)
 	_record(checks, failures, "character_visual_loadable", _character_visual_loadable(), true)
 	_record(checks, failures, "terrain_tile_visual_loadable", _terrain_tile_visual_loadable(), true)
+	_record(checks, failures, "checkpoint_pad_visual_loadable", _fitted_tile_loadable(SharedVisualAssetCatalog.CHECKPOINT_PAD_SCENE_PATH), true)
+	_record(checks, failures, "checkpoint_gate_visual_loadable", _fitted_prop_loadable(SharedVisualAssetCatalog.CHECKPOINT_GATE_SCENE_PATH), true)
+	_record(checks, failures, "finish_gate_visual_loadable", _fitted_prop_loadable(SharedVisualAssetCatalog.FINISH_GATE_SCENE_PATH), true)
+	_record(checks, failures, "crate_visual_loadable", _fitted_prop_loadable(SharedVisualAssetCatalog.CRATE_SCENE_PATH), true)
+	_record(checks, failures, "hazard_roller_visual_loadable", _fitted_prop_loadable(SharedVisualAssetCatalog.HAZARD_ROLLER_SCENE_PATH), true)
 	_record(checks, failures, "user_draft_roundtrip", _user_draft_roundtrip(), true)
 	_record(checks, failures, "no_mcp_autoload", not _autoload_names().has(MCP_AUTOLOAD), true)
 	_record(checks, failures, "runtime_material", _runtime_material_ok(), true)
@@ -94,6 +99,11 @@ static func _body(checks: Dictionary, failures: Array[String]) -> Dictionary:
 		"course_paths": _course_paths(),
 		"character_visual_path": SharedVisualAssetCatalog.CHARACTER_SCENE_PATH,
 		"terrain_tile_visual_path": SharedVisualAssetCatalog.TERRAIN_TILE_SCENE_PATH,
+		"checkpoint_pad_visual_path": SharedVisualAssetCatalog.CHECKPOINT_PAD_SCENE_PATH,
+		"checkpoint_gate_visual_path": SharedVisualAssetCatalog.CHECKPOINT_GATE_SCENE_PATH,
+		"finish_gate_visual_path": SharedVisualAssetCatalog.FINISH_GATE_SCENE_PATH,
+		"crate_visual_path": SharedVisualAssetCatalog.CRATE_SCENE_PATH,
+		"hazard_roller_visual_path": SharedVisualAssetCatalog.HAZARD_ROLLER_SCENE_PATH,
 		"user_data_dir": OS.get_user_data_dir(),
 		"draft_path": ProjectSettings.globalize_path(AuthoringDraftStoreGd.DEFAULT_PATH),
 	}
@@ -137,7 +147,19 @@ static func _character_visual_loadable() -> bool:
 ## mesh-less or degenerate import would pass a load test and then silently fall
 ## back to a placeholder box on every floor in the course.
 static func _terrain_tile_visual_loadable() -> bool:
-	var visual: Node3D = SharedVisualAssetCatalog.try_instantiate_fitted_tile()
+	return _fitted_tile_loadable(SharedVisualAssetCatalog.TERRAIN_TILE_SCENE_PATH)
+
+
+static func _fitted_tile_loadable(path: String) -> bool:
+	var visual: Node3D = SharedVisualAssetCatalog.try_instantiate_fitted_tile_from(path)
+	if visual == null:
+		return false
+	visual.free()
+	return true
+
+
+static func _fitted_prop_loadable(path: String) -> bool:
+	var visual: Node3D = SharedVisualAssetCatalog.try_instantiate_fitted_prop(path)
 	if visual == null:
 		return false
 	visual.free()
