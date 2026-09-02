@@ -12,6 +12,8 @@ extends Node
 ## drops the follow link instead of rolling back the authoring write.
 ## Optional AuthoringDraftStore restores after crash. Never settlement.
 ## In the Godot editor, FileAccess runs in the @tool plugin, not here.
+## Collaborators are chrome / place / follow so this file stays under E9 400
+## lines. Public API stays on this type.
 
 signal world_committed
 
@@ -19,13 +21,9 @@ const TITLE: String = UiCopy.WINDOW_EDITOR
 const ACTOR_ID: int = 2
 const CONTENT_VERSION: String = "content-v1"
 const TRACE_ID: String = "trace-authoring-editor"
-const _STATUS_NAME: String = "Status"
-const _MAP_NAME: String = "EditorMap"
-const _TOOLS_NAME: String = "TraprushTools"
-const _VALIDATOR_NAME: String = "ValidatorDetails"
-const _UNDO_NAME: String = "Undo"
-const _REDO_NAME: String = "Redo"
-const _PREVIEW_NAME: String = "Preview"
+const ChromeGd := preload("res://src/creator/authoring_editor_shell_chrome.gd")
+const FollowGd := preload("res://src/creator/authoring_editor_shell_follow.gd")
+const PlaceGd := preload("res://src/creator/authoring_editor_shell_place.gd")
 const TraprushEditorPanelGd := preload("res://src/creator/traprush_editor_panel.gd")
 const AuthoringValidatorPanelGd := preload("res://src/creator/authoring_validator_panel.gd")
 
@@ -39,7 +37,7 @@ var validator: AuthoringValidatorPanelGd = null
 var draft_store: AuthoringDraftStore = null
 var last_draft_ok: bool = false
 var preview_follows: bool = false
-var _status: Label = null
+var chrome: ChromeGd = ChromeGd.new()
 var _next_command_id: int = 1
 
 
@@ -80,12 +78,11 @@ func show_window() -> bool:
 
 
 func hide_window() -> void:
-	if window != null:
-		window.visible = false
+	chrome.hide_window()
 
 
 func is_window_visible() -> bool:
-	return window != null and window.visible
+	return chrome.is_visible()
 
 
 func try_edit(payload: Dictionary) -> bool:
@@ -110,66 +107,34 @@ func try_edit(payload: Dictionary) -> bool:
 	var ok: bool = session.try_apply(command)
 	if ok:
 		_persist_draft()
-		_forward_command(command)
+		FollowGd.forward_command(self, command)
 	_rebuild_map()
 	_refresh_status()
 	return ok
 
 
 func try_place_checkpoint(entity_id: int, order: int, cell_x: int, cell_y: int, cell_z: int) -> bool:
-	if session == null or session.world == null or session.world.grid == null:
-		return false
-	var cell: int = session.world.grid.cell
-	return try_edit(_checkpoint_payload(entity_id, order, cell_x * cell, cell_y * cell, cell_z * cell))
+	return PlaceGd.try_place_checkpoint(self, entity_id, order, cell_x, cell_y, cell_z)
 
 
 func try_place_portal(entity_id: int, target_id: int, cell_x: int, cell_y: int, cell_z: int) -> bool:
-	if session == null or session.world == null or session.world.grid == null:
-		return false
-	var cell: int = session.world.grid.cell
-	return try_edit(_portal_payload(entity_id, target_id, cell_x * cell, cell_y * cell, cell_z * cell))
+	return PlaceGd.try_place_portal(self, entity_id, target_id, cell_x, cell_y, cell_z)
 
 
 func try_place_solid(entity_id: int, cell_x: int, cell_y: int, cell_z: int) -> bool:
-	if session == null or session.world == null or session.world.grid == null:
-		return false
-	var cell: int = session.world.grid.cell
-	return try_edit(_zone_payload(
-		entity_id,
-		cell_x * cell,
-		cell_y * cell,
-		cell_z * cell,
-		cell / 2,
-		TraprushTopologyCompiler.SOLID_ZONE_TAG
-	))
+	return PlaceGd.try_place_solid(self, entity_id, cell_x, cell_y, cell_z)
 
 
 func try_place_finish(entity_id: int, cell_x: int, cell_y: int, cell_z: int) -> bool:
-	if session == null or session.world == null or session.world.grid == null:
-		return false
-	var cell: int = session.world.grid.cell
-	return try_edit(_zone_payload(
-		entity_id,
-		cell_x * cell,
-		cell_y * cell,
-		cell_z * cell,
-		cell / 2,
-		TraprushTopologyCompiler.FINISH_ZONE_TAG
-	))
+	return PlaceGd.try_place_finish(self, entity_id, cell_x, cell_y, cell_z)
 
 
 func try_place_hazard(entity_id: int, cell_x: int, cell_y: int, cell_z: int) -> bool:
-	if session == null or session.world == null or session.world.grid == null:
-		return false
-	var cell: int = session.world.grid.cell
-	return try_edit(_hazard_payload(entity_id, cell_x * cell, cell_y * cell, cell_z * cell))
+	return PlaceGd.try_place_hazard(self, entity_id, cell_x, cell_y, cell_z)
 
 
 func try_place_crate(entity_id: int, cell_x: int, cell_y: int, cell_z: int) -> bool:
-	if session == null or session.world == null or session.world.grid == null:
-		return false
-	var cell: int = session.world.grid.cell
-	return try_edit(_crate_payload(entity_id, cell_x * cell, cell_y * cell, cell_z * cell))
+	return PlaceGd.try_place_crate(self, entity_id, cell_x, cell_y, cell_z)
 
 
 func try_remove(entity_id: int) -> bool:
@@ -184,7 +149,7 @@ func undo() -> bool:
 	var ok: bool = session.undo()
 	if ok:
 		_persist_draft()
-		_forward_payload(payload, revision_before)
+		FollowGd.forward_payload(self, payload, revision_before)
 	_rebuild_map()
 	_refresh_status()
 	return ok
@@ -198,27 +163,14 @@ func redo() -> bool:
 	var ok: bool = session.redo()
 	if ok:
 		_persist_draft()
-		_forward_payload(payload, revision_before)
+		FollowGd.forward_payload(self, payload, revision_before)
 	_rebuild_map()
 	_refresh_status()
 	return ok
 
 
 func open_preview() -> bool:
-	if session == null:
-		return false
-	if preview == null:
-		preview = AuthoringPreviewShell.create(AuthoringPreviewHostKinds.WINDOW)
-		if preview == null:
-			return false
-		add_child(preview)
-	if preview_follows and preview.preview != null and preview.preview.connected:
-		if preview.show_window():
-			_refresh_status()
-			return true
-	preview_follows = preview.open_from(session)
-	_refresh_status()
-	return preview_follows
+	return FollowGd.open_preview(self)
 
 
 func export_document() -> Dictionary:
@@ -269,9 +221,7 @@ func status_view() -> Dictionary:
 
 
 func status_label_text() -> String:
-	if _status == null:
-		return ""
-	return _status.text
+	return chrome.status_text()
 
 
 func refresh_status() -> void:
@@ -293,44 +243,6 @@ func restore_document(data: Dictionary) -> bool:
 func note_draft_write(ok: bool) -> void:
 	last_draft_ok = ok
 	_refresh_status()
-
-
-func _forward_payload(payload: Dictionary, expected_revision: int) -> void:
-	if not preview_follows:
-		return
-	if payload.is_empty():
-		preview_follows = false
-		return
-	var command: SharedCommand = SharedCommand.create(
-		_next_command_id,
-		ACTOR_ID,
-		_next_command_id,
-		0,
-		expected_revision,
-		CONTENT_VERSION,
-		payload,
-		TRACE_ID,
-		SharedCommand.Kind.EDIT
-	)
-	_next_command_id += 1
-	if command == null:
-		preview_follows = false
-		return
-	_forward_command(command)
-
-
-func _forward_command(command: SharedCommand) -> void:
-	if not preview_follows:
-		return
-	if preview == null or preview.preview == null or preview.preview.world == null:
-		preview_follows = false
-		return
-	var level: String = PreviewPatchLevels.classify(command, preview.preview.world)
-	if level.is_empty():
-		preview_follows = false
-		return
-	if not preview.try_apply_patch(level, command):
-		preview_follows = false
 
 
 func _restore_draft_if_empty() -> void:
@@ -366,69 +278,16 @@ func _sync_tools_from_world() -> void:
 
 
 func _ensure_window() -> void:
-	if window != null:
-		return
-	if not Engine.is_editor_hint():
-		var host_viewport: Viewport = get_viewport()
-		if host_viewport != null:
-			host_viewport.gui_embed_subwindows = true
-	window = Window.new()
-	window.title = UiCopy.text(TITLE)
-	window.size = Vector2i(640, 560)
-	window.exclusive = false
-	window.transient = false
-	window.own_world_3d = true
-	window.close_requested.connect(_on_close_requested)
-	var root: VBoxContainer = VBoxContainer.new()
-	root.set_anchors_preset(Control.PRESET_TOP_WIDE)
-	root.offset_left = 8
-	root.offset_top = 8
-	root.offset_right = -8
-	window.add_child(root)
-	_status = Label.new()
-	_status.name = _STATUS_NAME
-	root.add_child(_status)
-	tools = TraprushEditorPanelGd.new()
-	tools.name = _TOOLS_NAME
-	root.add_child(tools)
-	tools.mount(self)
-	validator = AuthoringValidatorPanelGd.new()
-	validator.name = _VALIDATOR_NAME
-	root.add_child(validator)
-	var action_row: HBoxContainer = HBoxContainer.new()
-	action_row.name = "SharedActions"
-	root.add_child(action_row)
-	_add_button(action_row, _UNDO_NAME, UiCopy.UNDO, _on_undo)
-	_add_button(action_row, _REDO_NAME, UiCopy.REDO, _on_redo)
-	_add_button(action_row, _PREVIEW_NAME, UiCopy.PREVIEW, _on_preview)
-	map = AuthoringPreviewMap.new()
-	map.name = _MAP_NAME
-	window.add_child(map)
-	add_child(window)
-	map.ensure_rig()
-	if validator != null:
-		validator.mount(map)
-
-
-## force=true 给「revision 可能被整体换掉而不是 +1」的入口用：try_restore 会把
-## revision 设成文档里的值，理论上能和当前值撞上，脏检查就会误判「没变」。
-func _rebuild_map(force: bool = false) -> void:
-	if map == null or session == null:
-		return
-	if force:
-		map.invalidate()
-	map.rebuild(session.world)
-	if validator != null:
-		validator.refresh(session.world)
-
-
-func _add_button(row: BoxContainer, node_name: String, copy_key: String, handler: Callable) -> void:
-	var button: Button = Button.new()
-	button.name = node_name
-	button.text = UiCopy.text(copy_key)
-	button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	button.pressed.connect(handler)
-	row.add_child(button)
+	chrome.ensure(self, {
+		"undo": _on_undo,
+		"redo": _on_redo,
+		"preview": _on_preview,
+		"close": _on_close_requested,
+	})
+	window = chrome.window
+	map = chrome.map
+	tools = chrome.tools
+	validator = chrome.validator
 
 
 func _on_close_requested() -> void:
@@ -447,112 +306,20 @@ func _on_preview() -> void:
 	open_preview()
 
 
-func _refresh_status() -> void:
-	if _status == null or session == null or session.world == null:
+## force=true 给「revision 可能被整体换掉而不是 +1」的入口用：try_restore 会把
+## revision 设成文档里的值，理论上能和当前值撞上，脏检查就会误判「没变」。
+func _rebuild_map(force: bool = false) -> void:
+	if map == null or session == null:
 		return
-	var floor_index: int = 0
-	if tools != null:
-		floor_index = tools.floor_index
-	var reach_ok_flag: bool = true
-	var issue_n: int = 0
+	if force:
+		map.invalidate()
+	map.rebuild(session.world)
 	if validator != null:
-		reach_ok_flag = validator.reach_ok()
-		issue_n = validator.issue_count()
-	_status.text = "%s revision=%d entities=%d floor=%d undo=%s redo=%s reach_ok=%s issues=%d draft=%s disk=%s follow=%s" % [
-		surface,
-		session.world.revision,
-		session.world.entity_count(),
-		floor_index,
-		str(session.can_undo()),
-		str(session.can_redo()),
-		str(reach_ok_flag),
-		issue_n,
-		str(draft_store != null),
-		str(last_draft_ok),
-		str(preview_follows),
-	]
+		validator.refresh(session.world)
 
 
-func _checkpoint_payload(entity_id: int, order: int, x: int, y: int, z: int) -> Dictionary:
-	return {
-		"op": "place",
-		"record": {
-			"schema_version": 1,
-			"entity_id": entity_id,
-			"components": {
-				"transform": {"x": x, "y": y, "z": z, "yaw_bam": 0},
-				"checkpoint": {"order": order, "respawn_dx": 0, "respawn_dy": 0, "respawn_dz": 0},
-			},
-		},
-	}
-
-
-func _portal_payload(entity_id: int, target_id: int, x: int, y: int, z: int) -> Dictionary:
-	return {
-		"op": "place",
-		"record": {
-			"schema_version": 1,
-			"entity_id": entity_id,
-			"components": {
-				"transform": {"x": x, "y": y, "z": z, "yaw_bam": 0},
-				"portal": {"target_id": target_id, "yaw_bam": 0, "cooldown_ticks": 0},
-			},
-		},
-	}
-
-
-func _zone_payload(entity_id: int, x: int, y: int, z: int, half: int, tag: String) -> Dictionary:
-	return {
-		"op": "place",
-		"record": {
-			"schema_version": 1,
-			"entity_id": entity_id,
-			"components": {
-				"transform": {"x": x, "y": y, "z": z, "yaw_bam": 0},
-				"zone": {
-					"shape": {
-						"kind": SharedCollisionShapeKinds.BOX,
-						"hx": half,
-						"hy": half,
-						"hz": half,
-					},
-					"tags": [tag],
-				},
-			},
-		},
-	}
-
-
-func _hazard_payload(entity_id: int, x: int, y: int, z: int) -> Dictionary:
-	return {
-		"op": "place",
-		"record": {
-			"schema_version": 1,
-			"entity_id": entity_id,
-			"components": {
-				"transform": {"x": x, "y": y, "z": z, "yaw_bam": 0},
-				"hazard": {
-					"damage": 0,
-					"knockback": 0,
-					"cooldown_ticks": TraprushEditorPanelGd.HAZARD_COOLDOWN_STUB,
-				},
-			},
-		},
-	}
-
-
-func _crate_payload(entity_id: int, x: int, y: int, z: int) -> Dictionary:
-	return {
-		"op": "place",
-		"record": {
-			"schema_version": 1,
-			"entity_id": entity_id,
-			"components": {
-				"transform": {"x": x, "y": y, "z": z, "yaw_bam": 0},
-				"destructible": {
-					"durability": TraprushEditorPanelGd.CRATE_DURABILITY_STUB,
-					"regen_policy_id": TraprushEditorPanelGd.CRATE_REGEN_POLICY_STUB,
-				},
-			},
-		},
-	}
+func _refresh_status() -> void:
+	var line: String = chrome.format_line(self)
+	if line.is_empty():
+		return
+	chrome.set_status_text(line)

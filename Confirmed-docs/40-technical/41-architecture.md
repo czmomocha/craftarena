@@ -13,10 +13,10 @@
 
 | 项 | 当前口径 |
 |---|---|
-| 分层 | L0–L9 见 §4。L1 World 门面 + query/move；L2 Bundle 门面 + decode/bags；L3 灰盒门面 + layout/assemble/play、探针门面 + heuristic/search；L4 大厅门面 + chrome/net/sampler/stage/hud/director；L5 Preview 会话/映射/壳均已拆门面 |
+| 分层 | L0–L9 见 §4。L1 World 门面 + query/move；L2 Bundle 门面 + decode/bags、拓扑编译门面 + bags/fields；L3 灰盒门面 + layout/assemble/play、探针门面 + heuristic/search；L4 大厅门面 + chrome/net/sampler/stage/hud/director；L5 Preview 会话/映射/壳均已拆门面；编辑门面 + chrome/place/follow |
 | D4 数值落点 | `game/src/shared/placeholder_spec.gd`（唯一配置源） |
 | 资产目录 | `game/content/assets/`、`game/content/locale/` |
-| E9 | 已拆的壳/会话/映射/仿真世界/bundle/灰盒/探针均 < 400 行。仍超：控制面、MatchHost registry、`authoring_editor_shell.gd`、`traprush_topology_compiler.gd` |
+| E9 | 已拆的壳/会话/映射/仿真世界/bundle/灰盒/探针/编辑壳/拓扑编译均 < 400 行。仍超：控制面、MatchHost registry、`visual_asset_catalog.gd`、`match_snapshot_map.gd` |
 | 仍待 | OpenAPI、Rule VM 图、BASTION 面板、签名发布、账号页 |
 
 ## 1. 共享底座构成
@@ -112,10 +112,10 @@ repo/
 │  ├─ src/
 │  │  ├─ shared/                 # ids/schema/commands/events/protocol；D4 数值唯一落点 `placeholder_spec.gd`
 │  │  ├─ simulation/             # fixed-point world/systems/rng/spatial/replay；World 门面 `simulation_world.gd` + query/move
-│  │  ├─ ugc/                    # compiler/validator/bytecode_vm/migration；Bundle 门面 `simulation_bundle.gd` + decode/bags
+│  │  ├─ ugc/                    # compiler/validator/bytecode_vm/migration；Bundle 门面 `simulation_bundle.gd` + decode/bags；拓扑编译门面 `traprush_topology_compiler.gd` + bags/fields
 │  │  ├─ server/                 # Godot Headless match/replication/result
 │  │  ├─ client/                 # platform/input/prediction/presentation；大厅门面 `match_lobby_shell.gd` + chrome/net/sampler/stage/hud/director；匹配门面 `match_join_session.gd` + codec/accept
-│  │  ├─ creator/                # shared shell/edit_commands/preview；Preview 门面 `authoring_preview.gd` + bootstrap/intents/scan/view；Preview 映射门面 `authoring_preview_map.gd` + convert/occupancy/gizmos/overlay/player；Preview 窗口门面 `authoring_preview_shell.gd` + chrome/sampler/hud/play/view
+│  │  ├─ creator/                # shared shell/edit_commands/preview；Preview 门面 `authoring_preview.gd` + bootstrap/intents/scan/view；Preview 映射门面 `authoring_preview_map.gd` + convert/occupancy/gizmos/overlay/player；Preview 窗口门面 `authoring_preview_shell.gd` + chrome/sampler/hud/play/view；编辑门面 `authoring_editor_shell.gd` + chrome/place/follow
 │  │  └─ games/
 │  │     ├─ traprush/            # 对局门面 `match_session.gd` + bootstrap/intents/scan/view；灰盒门面 `graybox_course.gd` + layout/assemble/play；探针门面 `course_completion_probe.gd` + heuristic/search
 │  │     └─ bastion/
