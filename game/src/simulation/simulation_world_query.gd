@@ -37,13 +37,7 @@ func overlapping_static_boxes(world: SimulationWorld, entity_id: int) -> PackedI
 func overlapping_static_boxes_at(
 	world: SimulationWorld, entity_id: int, x: int, y: int, z: int
 ) -> PackedInt32Array:
-	var ids: PackedInt32Array = PackedInt32Array()
-	if not world._has_entity(entity_id):
-		return ids
-	for box_id: int in range(1, world._boxes.size() + 1):
-		if overlaps_static_box_at(world, entity_id, box_id, x, y, z):
-			ids.append(box_id)
-	return ids
+	return _filter_box_ids(world, entity_id, x, y, z, false)
 
 
 func overlaps_solid_static_box(world: SimulationWorld, entity_id: int, box_id: int) -> bool:
@@ -75,13 +69,7 @@ func overlapping_solid_static_boxes(world: SimulationWorld, entity_id: int) -> P
 func overlapping_solid_static_boxes_at(
 	world: SimulationWorld, entity_id: int, x: int, y: int, z: int
 ) -> PackedInt32Array:
-	var ids: PackedInt32Array = PackedInt32Array()
-	if not world._has_entity(entity_id):
-		return ids
-	for box_id: int in range(1, world._boxes.size() + 1):
-		if overlaps_solid_static_box_at(world, entity_id, box_id, x, y, z):
-			ids.append(box_id)
-	return ids
+	return _filter_box_ids(world, entity_id, x, y, z, true)
 
 
 func supporting_solid_static_boxes(
@@ -256,10 +244,11 @@ func is_volume_blocked(
 	probe.z = z
 	probe.radius = radius
 	probe.cylinder_height = cylinder_height
-	for box_index: int in range(world._boxes.size()):
-		if not world._box_solid[box_index]:
+	var candidates: PackedInt32Array = world.index.candidates_for_capsule(probe)
+	for box_id: int in candidates:
+		if not world.is_static_box_solid(box_id):
 			continue
-		var box: StaticAabb = world._boxes[box_index]
+		var box: StaticAabb = world._boxes[box_id - 1]
 		if box.overlaps_capsule(probe) or not box.overlap_math_ok:
 			return true
 	for pose_index: int in range(world._x.size()):
@@ -269,3 +258,21 @@ func is_volume_blocked(
 		if probe.overlaps(other) or not probe.overlap_math_ok:
 			return true
 	return false
+
+
+func _filter_box_ids(
+	world: SimulationWorld, entity_id: int, x: int, y: int, z: int, solid_only: bool
+) -> PackedInt32Array:
+	var ids: PackedInt32Array = PackedInt32Array()
+	if not world._has_entity(entity_id):
+		return ids
+	var pose_index: int = entity_id - 1
+	var capsule: KinematicCapsule = world._capsule_at(pose_index, x, y, z)
+	var candidates: PackedInt32Array = world.index.candidates_for_capsule(capsule)
+	for box_id: int in candidates:
+		if solid_only:
+			if overlaps_solid_static_box_at(world, entity_id, box_id, x, y, z):
+				ids.append(box_id)
+		elif overlaps_static_box_at(world, entity_id, box_id, x, y, z):
+			ids.append(box_id)
+	return ids
