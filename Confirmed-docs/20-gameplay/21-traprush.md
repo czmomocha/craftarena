@@ -60,6 +60,23 @@
 
 实现落点（2026-08-26）：权威下落。`TraprushMatchSession.fall_dy` 默认 0（2 人 Headless 冲线夹具不走路板，不能默认下落）。对局进程 / Solo 占位 `-Fixed.SCALE / 16`（与大厅 `play_move_step` 同量；引擎 ~60 tick/s 时一格每 tick 会在约 8 帧内触发出界复位）。Preview 壳占位 `-Fixed.SCALE`（手动 Advance tick）。经已有 `try_move_y_until_blocked` 直到固体，不是产品重力加速度。会话 `commit_tick` 先下落再 `world.tick`（与灰盒相同）。`MatchRealtime.commit_tick` 把下落与 `world.tick` 拆开，中间按到达顺序应用排队意图，避免同一拍 Jump 被立刻落下。Preview 只在 `try_advance_play` 下落，意图不推进 tick。纯下落不续租。不铺官方沿路地板。落点见 [CD-32 §3](../30-ugc/32-editor-and-preview.md#3-从编辑到预览) 与 [CD-42 §3.4](../40-technical/42-contracts-and-rulevm.md#34-实现落点)。
 
+### 3.4 表现动画状态
+
+一期角色网格没有 `skin`、没有 clip。纠偏 C4 产出 4 只锁**状态名与优先级**，让以后的绑定动画有固定入口，而不是各壳自己猜「什么叫落地」。
+
+| 状态 | 何时 | 不是 |
+|---|---|---|
+| `idle` | 接地、没水平输入 | 待机循环时长 |
+| `run` | 接地且有水平输入；冲刺并进这里 | 产品跑速 |
+| `jump` | `airborne` | 跳跃高度 / 重力秒数 |
+| `land` | 上一拍 airborne、本拍不是 | 落地硬直 |
+| `shove` | 本拍权威 shove 成功 | 产品力度 |
+| `hit` | `stun_remaining > 0`（环境失败硬直） | 受击闪白 |
+| `break` | 本拍权威 UseItem 打碎箱子 | 破坏特效 |
+| `portal` | 传送门闩非空 | 镜头过渡 |
+
+`airborne` = 接触探针（半格，占用盒顶到出生格面的空隙；不是 Jump 的 1 格 `support_dy`）未踩到固体，**或** `vy != 0`。优先级（高→低）：`hit` > `portal` > `land` > `jump` > `shove` > `break` > `run` > `idle`。单一状态。实现：`game/src/shared/play_anim_state.gd`。大厅 Solo 与 Preview 把结果写到角色节点 metadata 与子 Label3D `anim`（契约读出，不是 HUD 字段）。**不播 clip**。v1 快照没有 vy / stun，在线远端不接线；改协议属宪法第十八条。时长仍属 [CD-63](../60-plan/63-open-decisions.md)。
+
 ## 4. 地图传送与立体移动
 
 ### 4.1 地图结构

@@ -15,12 +15,12 @@ alwaysApply: true
 
 真机：PR Test plan 与 [章节真机清单](docs/runbooks/chapter-device-check.md) 本刀必须是编号步骤（怎么开、点什么、期望 / 失败）；禁止只写「真机再看一眼」。无 GUI 的章写「无」加原因。人工检查，不是 CI 门禁。口径见 [CD-52 §3.2](Confirmed-docs/50-engineering/52-ai-workflow.md)。
 
-- 做（本刀 = 纠偏 C4：D7 输入抽象）：大厅与 Preview 的玩法采样改为方向向量 + 上升沿动作事件。键盘是适配器；`shove` / `sprint` / `reset_checkpoint` 进 Input Map（F / Shift / R）。量化成 8 向 `dx/dz` 仍走 `MatchMoveFacing`，模拟量按符号变成整步，不把未锁定的模拟速度写进 MoveIntent。**数值一个不改**：GUT 全绿 + `--bot-run` 三张课步数与动作序列逐项不变（5 / 5 / 12）。
-- 不做：触控 UI / 虚拟摇杆；按键重映射界面；手柄承诺；改协议 / Schema / 官方课 JSON；改 `play_move_step`；Preview Move 加 `yaw_bam`；动画状态契约；字体与本地化键；C5 拆壳。
-- 仍欠着（不因本章合入而消失）：触控 UI；动画状态契约；按 `asset_id` 解析视觉；传送门模型；字体与本地化键；远端协议层 RTT 回填；C3 网络参数锁定；E6 有美术之后的可玩性签署；扫掠取样代价无上限；`match_lobby_shell.gd` 超 E9 行数上限。
-- 仍不做：把模拟摇杆的幅度当成产品速度；把 Input Map 死区写成产品常量。
+- 做（本刀 = 纠偏 C4 产出 4：表现动画状态契约）：锁 `idle` / `run` / `jump` / `land` / `shove` / `hit` / `break` / `portal`。Solo 与 Preview 从局部权威派生，写到角色 metadata 与 Label3D `anim`。不播 clip。`airborne` 用半格接触探针，不复用 Jump 的 1 格 `support_dy`。**数值一个不改**：GUT 全绿 + `--bot-run` 三张课步数与动作序列逐项不变（5 / 5 / 12）。
+- 不做：播 clip / AnimationPlayer；改协议 / Schema / 官方课 JSON；改 `play_move_step`；在线远端接线；字体与本地化键；触控 UI；按 `asset_id` 解析视觉；C5 拆壳。
+- 仍欠着（不因本章合入而消失）：触控 UI；按 `asset_id` 解析视觉；传送门模型；字体与本地化键；远端协议层 RTT 回填；C3 网络参数锁定；E6 有美术之后的可玩性签署；扫掠取样代价无上限；`match_lobby_shell.gd` 超 E9 行数上限。
+- 仍不做：把动画时长写成产品秒数；把 Label3D `anim` 当成 HUD 字段。
 
 纠偏归属：C4
 是否新增冻结常量引用：否
-审查级别：常审（输入层接线；权威命令仍是同一套 8 向整步）
-隔离方式：`feat/c4-play-input`
+审查级别：常审（表现派生；权威命令与快照字节不变）
+隔离方式：`feat/c4-play-anim-state`

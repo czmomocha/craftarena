@@ -214,6 +214,7 @@
 - `match_action_stubs = preview_aligned_process_placeholders`（2026-08-25）：对局进程 boot 把跳跃/支撑/道具伤害与触达套成与 Preview 相同的占位值（`jump_dy` / `support_dy` / `use_item_reach_dz` = `Fixed.SCALE`，伤害 1，reach dx/dy = 0），不是产品数值。官方 `course_01` 出生点 UseItem 打碎 +Z 箱；官方赛道无固体立足点，Jump 仍为空操作。大厅 Solo 占位桩与进程对齐。不锁爆破表、远端外推碰撞、平滑对账。口径见 [CD-44 §3](../40-technical/44-deployment.md#3-进程隔离与租约)。
 - `match_own_slot_camera = preview_offset_follow`（2026-08-25）：大厅 SnapshotCamera 跟随本席表现位姿（线上预测 overlay / Solo 本地权威），偏移与 `AuthoringPreviewMap` 相同；`follow_slot < 0` 或缺席位看原点；远端不拉镜头。不是产品镜头或 FOV。不锁远端外推碰撞、平滑对账、离开对局 HTTP。口径见 [CD-12 §1](../10-product/12-product-structure.md#1-入口结构)。
 - `match_move_facing = wasd_discrete_8way_yaw_bam`（2026-08-25）：大厅 WASD 把水平朝向写入已有 Move 命令 `yaw_bam`（8 向离散 BAM，W=0 为世界 -Z）；省略哨兵仍是 `-1`，`0` 是合法朝前。立方体玩家盒加 local -Z 面向标记。线上 overlay 立即改本席朝向，Solo 走本地权威。不发明 atan2，不锁产品转向速度，不改 Preview WASD。口径见 [CD-21 §3](../20-gameplay/21-traprush.md#33-权威运动模型) 与 [CD-12 §1](../10-product/12-product-structure.md#1-入口结构)。该句中「大厅 WASD」与「不改 Preview WASD」被 `play_input = vector_plus_rising_edge_events`（2026-09-02，纠偏 D7）补充：玩法壳消费 `PlayInput` 快照（`move_x`/`move_z` + 上升沿动作），键盘是适配器；`shove` / `sprint` / `reset_checkpoint` 进 Input Map。8 向量化仍是 `MatchMoveFacing`；模拟量按符号变成整步，不把未锁定的模拟速度写进 MoveIntent。Preview Move 仍不写 `yaw_bam`。触控 UI / 虚拟摇杆 / 按键重映射界面仍未做。口径见 [CD-21 §3.2](../20-gameplay/21-traprush.md#32-基础操作)。
+- `play_anim_state = presentation_priority_table`（2026-09-02，纠偏 C4 产出 4）：`idle` / `run` / `jump` / `land` / `shove` / `hit` / `break` / `portal` 单一优先级表，`PlayAnimState` 派生。`airborne` 用半格接触探针（`PlaceholderSpec.CELL / 2`），不复用 Jump 的 1 格 `support_dy`。Solo 与 Preview 写角色 metadata 与 Label3D `anim`。不播 clip。v1 快照无 vy/stun，在线远端不接线。时长仍属 CD-63。口径见 [CD-21 §3.4](../20-gameplay/21-traprush.md#34-表现动画状态)。
 - `match_own_slot_tint = follow_slot_albedo`（2026-08-25）：大厅 `follow_slot` 把本席玩家盒涂成 `OWN_ALBEDO`（青），远端仍 `REMOTE_ALBEDO`（海军蓝）；名次标本席前缀 `*`。`follow_slot < 0` 时全员远端色。不是产品皮肤或槽位色盘。不锁账号绑定、远端外推碰撞、平滑对账、离开对局 HTTP。口径见 [CD-12 §1](../10-product/12-product-structure.md#1-入口结构)。
 - `match_pad_progress = own_accepted_count_tint`（2026-08-25）：大厅本席 `accepted_count` 把编译拓扑检查点垫涂成已验收 / 当前目标 / 未到；`accepted_count < 0` 保持原垫色。不是走路可达或合法路径距离。不锁账号绑定、远端外推碰撞、平滑对账、离开对局 HTTP。口径见 [CD-12 §1](../10-product/12-product-structure.md#1-入口结构)。
 - `match_finish_loop = own_finish_hud_result`（2026-08-25）：大厅本席 `finish_tick` 把终点涂成未到 / 当前目标 / 已冲线；HUD 写 `pads=n/m` 与 `finish=n`；快照全员 `finish_tick>=0` 时加 `result=`。本地表现，不是结算写库或 GET 结算面板。不锁账号绑定、远端外推碰撞、平滑对账、离开对局 HTTP。口径见 [CD-12 §1](../10-product/12-product-structure.md#1-入口结构)。
@@ -232,7 +233,7 @@
 ## D.9 明确延期或跳过
 
 - `bug_reporting` 及 Bug 提交、客服、通知、告警展示等同类问题：跳过，后续开发再决定。
-- 道具栏、具体数值、时长、动画、精确频率等实现级玩法细节：统一延期。定点数尺度已迁出，见 D.8 `fixed_point_contract`。该句中「复活硬直」秒数被 D.3 `traprush_respawn_stun = 1_second`（2026-08-28）覆盖；其余具体数值仍延期。
+- 道具栏、具体数值、时长、动画、精确频率等实现级玩法细节：统一延期。定点数尺度已迁出，见 D.8 `fixed_point_contract`。该句中「复活硬直」秒数被 D.3 `traprush_respawn_stun = 1_second`（2026-08-28）覆盖；该句中「动画」的**状态名与优先级**被 D.8 `play_anim_state = presentation_priority_table`（2026-09-02）覆盖；clip、时长与绑定仍延期。其余具体数值仍延期。
 - `hidden_state_sync`：延期，不默认采用任何推荐协议。
 
 ## D.10 文档体系

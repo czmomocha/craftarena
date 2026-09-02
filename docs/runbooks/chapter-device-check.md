@@ -53,7 +53,66 @@ Worktree 端口偏移见 README「并行工作区」；本文件不复述端口�
 
 ---
 
-## 本刀：D7 输入抽象（方向向量 + 动作事件）
+## 本刀：表现动画状态契约（idle / run / jump / land / shove / hit / break / portal）
+
+上一刀（[#201](https://github.com/czmomocha/craftarena/pull/201)）把玩法采样改成 `PlayInput`。本刀锁表现动画状态名与优先级，Solo 与 Preview 从局部权威派生，写到角色头顶 Label3D `anim`。不播 clip。在线远端不接线。
+
+本刀**不需要** `npm run dev`（Solo 就能看完前 4 步；Preview 用 F6 沙箱；第 5 步才需要后端）。
+
+1. **Solo 出生是 `idle`**：按「共用启动」打开大厅，点 **Solo play**。看本席角色上方的 `anim` 字（在名次标附近，不是状态行 HUD）。
+   - 预期：字是 `idle`。
+   - 失败：没有 `anim` 字 ⇒ Solo 没把状态写到 Label3D。一出生就是 `land` ⇒ 开局被误判成落地，应打回。
+
+2. **走路是 `run`，松手回 `idle`**：按住 W，再松开。
+   - 预期：按住时 `run`；松开后回到 `idle`。冲刺（Left Shift）也是 `run`，没有 `sprint` 字。
+   - 失败：走路仍是 `idle` ⇒ `_play_moving` 没接到。出现 `sprint` ⇒ 状态集被加戏了。
+
+3. **空格是 `jump`，落地闪一下 `land`**：站在出生点按空格。
+   - 预期：跳起后立刻是 `jump`（整段空中都是，包括弧顶）；落地那一拍变成 `land`，下一拍回到 `idle`。
+   - 失败：跳起来仍是 `idle`/`run` ⇒ 又用了 Jump 的 1 格 `support_dy` 当接地，官方 hop 只有 1/4 格。空中闪过 `land` 再回到 `jump` ⇒ 弧顶 `vy==0` 被当成落地。一出生就是 `jump` ⇒ 接触探针短于半格、探不到占用盒顶。
+
+4. **Preview 同一套字**：编辑器打开 `res://src/creator/course_sandbox.tscn`，**F6**（不要 F5），点 **Play**。走一步、跳一下。
+   - 预期：出生 `idle`；WASD → `run`；空格 → `jump`，Advance / 落地后闪 `land`。Preview 仍不写 `yaw_bam`。
+   - 失败：大厅有字、Preview 没有 ⇒ Preview 没调 `_apply_play_anim`。
+
+5. **在线没有 `anim` 字**：`npm run dev` 就绪后点 **Quick play**（一人房即可）。
+   - 预期：本席角色上方**没有** `anim` 字。名次标还在。
+   - 失败：在线也出现 `idle`/`run` ⇒ 用快照里没有的字段猜远端状态了，应打回（改协议属宪法第十八条）。
+
+6. **自动化全绿 + 裁决不变**：
+   ```bash
+   npm run typecheck; npm test; npm run redline-scan
+   npm run test:gut:full
+   & $env:GODOT4_CONSOLE --headless --path game -- --bot-run
+   ```
+   - 预期：`npm run typecheck` 无输出；`redline-scan` `no findings`；GUT 全绿；`--bot-run` 三张课 `completable`，**动作序列与步数逐项不变**（5 / 5 / 12 步）。
+   - 失败：bot-run 步数变了 ⇒ 表现状态意外改了命令，停下来查，别先改断言。
+
+### 本刀不测
+
+- **clip / 绑定动画**：角色网格没有 `skin`，本章不播；
+- **在线远端动画**：v1 快照没有 vy / stun；
+- **动画秒数**：CD-63 仍延期；
+- **Solo 1 人推击字**：没有邻座胶囊，`shove` 不会出现；
+- **字体与本地化键**。
+
+### 诚实边界
+
+- `anim` 是契约读出，不是 HUD 字段，也不进快照；
+- `hit` 跟环境失败硬直（出界 / 踩实心机关），不是受击闪白；
+- Preview 没有基础推击，所以 Preview 不会出现 `shove`。
+
+### 仍然欠着（不因本章消失）
+
+- 触控 UI；字体与本地化键；
+- 按 `asset_id` 解析视觉；传送门没有专用模型；
+- 扫掠步数无上限；`match_lobby_shell.gd` 仍超 E9 行数上限。
+
+---
+
+## 上一刀：D7 输入抽象（方向向量 + 动作事件）
+
+> **本节已随 [#201](https://github.com/czmomocha/craftarena/pull/201) 合入，保留只为追溯。验当前 PR 只看上面的「本刀」。**
 
 上一刀（[#200](https://github.com/czmomocha/craftarena/pull/200)）按袋类型接上 5 个占用视觉。本刀把玩法采样从四个 WASD 布尔 / 物理键改成 `PlayInput`：方向向量 + 上升沿动作。键盘仍是现在这套键，只是走 Input Map。触控 UI 不做。
 
@@ -101,7 +160,7 @@ Worktree 端口偏移见 README「并行工作区」；本文件不复述端口�
 
 ---
 
-## 上一刀：按袋类型把 5 个占用视觉接到大厅与 Preview（箱 / 滚柱保留 overlay）
+## 再上一刀：按袋类型把 5 个占用视觉接到大厅与 Preview（箱 / 滚柱保留 overlay）
 
 > **本节已随 [#200](https://github.com/czmomocha/craftarena/pull/200) 合入，保留只为追溯。验当前 PR 只看上面的「本刀」。**
 

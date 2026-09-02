@@ -71,6 +71,8 @@ var _use_item_held: bool = false
 var _sprint_held: bool = false
 var _jump_held: bool = false
 var _play_input: PlayInput = PlayInput.new()
+var _play_moving: bool = false
+var _play_anim: PlayAnimState = PlayAnimState.new()
 var _play_view_busy: bool = false # rebuilds must not re-enter _process sampling
 var _map_playing: bool = false # 上次建图时是不是在试玩，用来判「该强制重建」
 
@@ -153,6 +155,8 @@ func try_start_play(seed: int = 1, radius: int = 0, cylinder_height: int = 0) ->
 	_use_item_held = false
 	_sprint_held = false
 	_jump_held = false
+	_play_moving = false
+	_play_anim.reset()
 	_copy_use_item_stubs()
 	_copy_sprint_stubs()
 	_copy_jump_stubs()
@@ -175,6 +179,8 @@ func try_stop_play() -> bool:
 	_sprint_held = false
 	_jump_held = false
 	_play_input.reset_held()
+	_play_moving = false
+	_play_anim.reset()
 	_play_view_busy = true
 	var ok: bool = preview.try_stop_play()
 	_rebuild_map()
@@ -228,6 +234,7 @@ func try_apply_play_intent(payload: Dictionary) -> bool:
 
 
 func try_sample_play_vector(move_x: float, move_z: float) -> bool:
+	_play_moving = absf(move_x) > PlayInput.IDLE or absf(move_z) > PlayInput.IDLE
 	if preview == null or not preview.is_playing():
 		return false
 	if not _window_alive() or not window.visible:
@@ -526,6 +533,7 @@ func _process(_delta: float) -> void:
 	try_sample_play_use_item(PlayInput.flag_of(events, "use_item"))
 	try_sample_play_sprint(PlayInput.flag_of(events, "sprint"))
 	try_sample_play_jump(PlayInput.flag_of(events, "jump"))
+	_apply_play_anim()
 
 
 func _add_button(row: BoxContainer, node_name: String, text: String, handler: Callable) -> void:
@@ -553,8 +561,23 @@ func _rebuild_map() -> void:
 		map.show_player_pose(preview.play_world.get_pose(preview.player_id))
 		map.mark_accepted_checkpoints(preview.play_accepted_ids())
 		_apply_play_hazard_visibility()
+		_apply_play_anim()
 	else:
 		map.clear_player_pose()
+
+
+func _apply_play_anim() -> void:
+	if map == null or preview == null or not preview.is_playing():
+		return
+	var facts: Dictionary = PlayAnimState.facts(
+		preview.play_airborne(),
+		_play_moving,
+		preview.play_stun_remaining() > 0,
+		preview.play_portal_latched(),
+		false,
+		preview.play_broke_this_tick()
+	)
+	map.set_anim_state(_play_anim.resolve(facts))
 
 
 func _apply_play_hazard_visibility() -> void:

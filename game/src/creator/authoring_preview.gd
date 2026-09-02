@@ -710,6 +710,40 @@ func play_stun_remaining() -> int:
 	return _play_stun_remaining
 
 
+func play_supported_by_solid() -> bool:
+	if not is_playing() or play_world == null:
+		return false
+	return play_world.is_supported_by_solid(player_id, play_support_dy)
+
+
+func play_portal_latched() -> bool:
+	if not is_playing():
+		return false
+	return not _portal_latch.is_empty()
+
+
+func play_broke_this_tick() -> bool:
+	if not is_playing() or play_world == null:
+		return false
+	return play_last_use_item_tick == play_world.tick_index
+
+
+func play_vy() -> int:
+	if not is_playing() or play_world == null:
+		return 0
+	return play_world.get_vy(player_id)
+
+
+## 表现层用的空中判定。接触探针半格，不用 Jump 的 play_support_dy。
+func play_airborne() -> bool:
+	if not is_playing() or play_world == null:
+		return false
+	return PlayAnimState.is_airborne(
+		play_vy(),
+		play_world.is_supported_by_solid(player_id, PlayAnimState.CONTACT_DY)
+	)
+
+
 func _try_use_item_play(payload: Dictionary) -> bool:
 	if not is_playing():
 		return false
