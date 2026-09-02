@@ -37,7 +37,7 @@ function ownerDocs(): string[] {
 function currentValuesSection(source: string, label: string): string {
 	const match = source.match(/^## 当前生效值\n([\s\S]*?)(?=^## |\z)/m);
 	assert.ok(match !== null, `${label}: missing "## 当前生效值"`);
-	return match[1].trim();
+	return (match[1] ?? "").trim();
 }
 
 describe("C5 document governance", () => {
