@@ -16,7 +16,7 @@
 | 分层 | L0–L9 见 §4。L1 World 门面 + query/move；L2 Bundle 门面 + decode/bags、拓扑编译门面 + bags/fields；L3 灰盒门面 + layout/assemble/play、探针门面 + heuristic/search；L4 大厅门面 + chrome/net/sampler/stage/hud/director；L5 Preview 会话/映射/壳均已拆门面；编辑门面 + chrome/place/follow |
 | D4 数值落点 | `game/src/shared/placeholder_spec.gd`（唯一配置源） |
 | 资产目录 | `game/content/assets/`、`game/content/locale/` |
-| E9 | 已拆的壳/会话/映射/仿真世界/bundle/灰盒/探针/编辑壳/拓扑编译均 < 400 行。仍超：控制面、MatchHost registry、`visual_asset_catalog.gd`、`match_snapshot_map.gd` |
+| E9 | 已拆的壳/会话/映射/仿真/bundle/灰盒/探针/编辑/编译/视觉目录/快照映射/控制面/MatchHost registry 生产文件均 < 400 行。测试 / addons / GUT 不在本口径 |
 | 仍待 | OpenAPI、Rule VM 图、BASTION 面板、签名发布、账号页 |
 
 ## 1. 共享底座构成

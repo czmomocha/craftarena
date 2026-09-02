@@ -54,7 +54,45 @@ Worktree 端口偏移见 README「并行工作区」；本文件不复述端口�
 
 ---
 
-## 本刀：编辑壳 + 拓扑编译器（C5 第 11–12 章）
+## 本刀：E9 剩余 + E3/E6 回写（C5 第 13 章）
+
+把控制面 `server.ts` / `database.ts`、MatchHost `registry.ts`、`visual_asset_catalog.gd`、`match_snapshot_map.gd` 拆到 400 行以下。公开 API 与 `--bot-run` 步数不变。人类把现有网络桩升为 E3 锁定值（**不改数字**），并签署 E6 = 好玩。**没有新的窗口外观，控制面无新 GUI**。不需要 `npm run dev`。
+
+1. 仓库根目录跑 GUT fast 层（或至少 `test_c5_e9_remaining_split.gd`、`test_visual_asset_sharing.gd`）：
+   ```bash
+   npm run test:gut:fast
+   ```
+   - 预期：全绿；新拆分用例断言视觉目录 / 快照映射各文件均 < 400 行。
+   - 失败：`try_instantiate` / `apply_players` 红 ⇒ 门面把公开方法转丢了。
+
+2. 官方课步数：
+   ```powershell
+   & $env:GODOT4_CONSOLE --headless --path game -- --bot-run
+   ```
+   - 预期：三张课仍是 `completable`，步数 **5 / 5 / 12**。
+   - 失败：步数变了或 `not_completable` ⇒ 拆分误改了权威仿真。
+
+3. 大厅 **F5**（不要 F6）。点 **单人试玩**，WASD 走两步，空格跳一下。
+   - 预期：角色视觉还在（不是突然只剩 1 米盒）；能走、能跳。
+   - 失败：人消失、不能动、或跳不起来 ⇒ 快照映射 / 视觉目录委托坏了。
+
+### 本刀不测
+
+- 解冻令、协议帧、Schema、官方课 JSON；
+- 改 `SNAPSHOT_EVERY_TICKS` / `HEARTBEAT_EVERY_TICKS` / `INTERP_STEP` 数字；
+- 在线匹配、控制面 GUI（本刀无新窗口）。
+
+### 诚实边界
+
+- 冻结令仍在；E3 锁定的是现桩，不是新测出来的 Hz；
+- 测试 / addons / GUT 不在 E9 本口径；
+- 扫掠步数仍无上限（宪法第十七条缺口）。
+
+---
+
+## 上一刀：编辑壳 + 拓扑编译器（C5 第 11–12 章）
+
+> **本节随上一章 PR 提交；验当前 PR 只看上面的「本刀」。**
 
 第 11 章把 `AuthoringEditorShell` 拆成 chrome / place / follow。第 12 章把 `TraprushTopologyCompiler` 拆成 bags / fields。全部压到 400 行以下。公开 API 与 `--bot-run` 步数不变。**没有新的窗口外观**。不需要 `npm run dev`。
 
