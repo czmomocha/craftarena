@@ -16,7 +16,7 @@
 | 产品形态 | TLS WebSocket 网关（宪法第二十二条） |
 | 测试期 | 明文 `http`/`ws` 可打到自备远端；**公开运营前**回到 TLS |
 | 命令 id | 1–5 同前；**6 = SprintIntent**。探针 type 3/4 = ping/pong |
-| Tick / 快照 / 插值 | **未锁**。远端协议层 RTT 仍空，不得用 ICMP 锁定 |
+| Tick / 快照 / 插值 | **未锁**。远端协议层 RTT 已有一场样本（数字在 [server-deploy.md §13](../../docs/runbooks/server-deploy.md#13-协议层-rttc3)），不得用 ICMP 或该场近端探针锁定 |
 
 ## 1. 序列化分工
 
@@ -26,7 +26,7 @@
 - 实时命令与快照使用**纯 GDScript 可实现的版本化二进制 Schema**，不绑定 ScenePath。
 - 对局实时面 v1 帧布局（实现：`game/src/shared/protocol/match_frame_codec.gd`；字节序为 PackedByteArray 原生小端）：
   - 命令帧（定长 35 字节）：`[version:u8=1][type:u8=1][tick:s64][intent_id:u8][dx:s64][dz:s64][yaw_bam:s64]`。intent_id：1=Move / 2=Jump / 3=ResetToCheckpoint / 4=UseItem / 5=Shove / 6=SprintIntent；非 Move 的 dx/dz/yaw 为保留字段，编解码均要求为零；`yaw_bam = -1` 表示省略。命令帧不带 slot，连接身份由服务端持有；Shove 无线上目标 id；Interact 仍无 id、未接线；
-  - 探针帧（定长 18 字节）：`[version:u8=1][type:u8=3 ping / 4 pong][seq:s64][client_send_ms:s64]`。服务端原样回显，不解析时钟；远端样本仍空，见 [server-deploy.md §13](../../docs/runbooks/server-deploy.md)；
+  - 探针帧（定长 18 字节）：`[version:u8=1][type:u8=3 ping / 4 pong][seq:s64][client_send_ms:s64]`。服务端原样回显，不解析时钟；远端样本见 [server-deploy.md §13](../../docs/runbooks/server-deploy.md)，数字不在本文件复述；
   - 快照帧（变长）：`[version:u8=1][type:u8=2][tick:s64][player_count:u8]`，随后每玩家 41 字节（`x/y/z/yaw_bam` s64×4 + `accepted_count:u8` + `finish_tick:s64`），再 `[crate_count:u8]` 与每箱 16 字节（`entity_id:s64` + `durability:s64`，0 为已毁）；
   - 解码拒绝：版本不符、未知类型、截断、尾随字节、保留字段非零；编码规范（同一逻辑帧恒得同一字节）；新增 intent id 属协议变更，旧解码器拒绝。
 
@@ -56,6 +56,6 @@
 
 ## 4. 未锁定项
 
-Tick 频率、输入发送频率、快照频率、插值窗口和对账阈值**仍未锁**。C1 ICMP 与 C3 ping/pong 只列出了样本入口；远端协议层 RTT 仍空，不得用 ICMP 把本节改成已锁定实测值。见 [CD-63](../60-plan/63-open-decisions.md) 与 [server-deploy.md §13](../../docs/runbooks/server-deploy.md)。
+Tick 频率、输入发送频率、快照频率、插值窗口和对账阈值**仍未锁**。C1 ICMP 与 C3 ping/pong 已列出样本；远端协议层 RTT 已有一场近端探针（P50=16ms，数字只在 [server-deploy.md §13](../../docs/runbooks/server-deploy.md)），不得用 ICMP 或该场把本节改成已锁定实测值。见 [CD-63](../60-plan/63-open-decisions.md)。
 
 网络故障测试的执行方式与门禁状态见 [CD-53 §2.5](../50-engineering/53-testing-and-ci.md)。
