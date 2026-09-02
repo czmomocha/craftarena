@@ -145,4 +145,21 @@ describe("C5 document governance", () => {
 		assert.match(workflow, /深审/);
 		assert.match(workflow, /章粒度/);
 	});
+
+	it("closes C5 against E3/E6 facts without unlocking the freeze", () => {
+		const risks = read("Confirmed-docs/60-plan/62-risk-register.md");
+		assert.match(risks, /零延迟锁定网络参数[\s\S]{0,80}已治理/);
+		assert.doesNotMatch(risks, /锁定仍待人类拍板/);
+
+		const testing = read("Confirmed-docs/50-engineering/53-testing-and-ci.md");
+		assert.match(testing, /E6 已签：好玩/);
+		assert.doesNotMatch(testing, /可玩性签署尚未发生/);
+
+		const plan = read("docs/plans/course-correction-2026-08.md");
+		assert.match(plan, /C5 治理与里程碑重排[\s\S]{0,80}已结束/);
+		assert.match(plan, /不得\*\*把 C5 结束读成已解冻/);
+
+		const decisions = read("Confirmed-docs/90-reference/91-decision-log.md");
+		assert.match(decisions, /c5_batch = complete_e9_lock_e11_facts/);
+	});
 });
