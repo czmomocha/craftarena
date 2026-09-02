@@ -12,6 +12,7 @@ const WORLD_PATHS: PackedStringArray = [
 	"res://src/simulation/simulation_world.gd",
 	"res://src/simulation/simulation_world_query.gd",
 	"res://src/simulation/simulation_world_move.gd",
+	"res://src/simulation/simulation_world_index.gd",
 ]
 const BUNDLE_PATHS: PackedStringArray = [
 	"res://src/ugc/simulation_bundle.gd",
@@ -44,6 +45,7 @@ func test_new_world_owns_collaborators() -> void:
 	var world: SimulationWorldGd = SimulationWorldGd.new(1)
 	assert_not_null(world.query)
 	assert_not_null(world.move)
+	assert_not_null(world.index)
 	assert_eq(world.tick_index, 0)
 	assert_eq(world.spawn_capsule(0, 0, 0, 0), 1)
 

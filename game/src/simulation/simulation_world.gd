@@ -5,8 +5,9 @@ extends RefCounted
 ## Pose fields are Q48.16; yaw is BAM; vy is Q48.16 vertical speed in units per tick.
 ## Hash order: tick_index, then id,x,y,z,yaw,vy by id.
 ## Radius, cylinder_height, and static AABBs are Q48.16 geometry and are not part of hash_state.
-## Collaborators are SimulationWorldQuery / SimulationWorldMove so this file stays
-## under E9 400 lines. Public API stays on this type.
+## Collaborators are SimulationWorldQuery / SimulationWorldMove /
+## SimulationWorldIndex so this file stays under E9 400 lines. Public API
+## stays on this type.
 ## set_pose / try_set_pose keep vy so a yaw rewrite is not a landing. Teleports that
 ## should kill a jump (reset, portal, out-of-range) call set_vy(0) themselves.
 ## set_static_box_solid toggles whether a static AABB blocks occupancy; ids stay
@@ -23,10 +24,12 @@ extends RefCounted
 
 const QueryGd := preload("res://src/simulation/simulation_world_query.gd")
 const MoveGd := preload("res://src/simulation/simulation_world_move.gd")
+const IndexGd := preload("res://src/simulation/simulation_world_index.gd")
 
 var tick_index: int = 0
 var query: QueryGd = QueryGd.new()
 var move: MoveGd = MoveGd.new()
+var index: IndexGd = IndexGd.new()
 
 var _rng: SimRng = SimRng.new()
 var _x: Array[int] = []
@@ -71,7 +74,9 @@ func spawn_static_box(x: int, y: int, z: int, half_x: int, half_y: int, half_z: 
 	box.half_z = half_z
 	_boxes.append(box)
 	_box_solid.append(true)
-	return _boxes.size()
+	var box_id: int = _boxes.size()
+	index.insert(box_id, box)
+	return box_id
 
 
 func set_static_box_solid(box_id: int, solid: bool) -> bool:
