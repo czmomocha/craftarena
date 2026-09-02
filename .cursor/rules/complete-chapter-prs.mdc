@@ -15,12 +15,12 @@ alwaysApply: true
 
 真机：PR Test plan 与 [开发机窗口验收](docs/runbooks/dev-window-check.md) 本刀必须是编号步骤（怎么开、点什么、期望 / 失败）；禁止只写「真机再看一眼」。无 GUI 的章写「无」加原因。人工检查，不是 CI 门禁。口径见 [CD-52 §3.2](Confirmed-docs/50-engineering/52-ai-workflow.md)。
 
-- 做（本刀 = C5 第 14 章：E1 真导出 + 包内核查全绿）：按 [导出包核查清单](docs/runbooks/desktop-export-check.md) 导出 Windows / Linux Headless / Web；`CraftArena.exe --headless -- --package-check` `ok=true`（含第一批 `.glb` 与 locale）。手写 CSV 拆行在导出 `.gdc` 里拆出 0 行，生产路径改走 `FileAccess.get_csv_line`。回写清单 JSON、包体观察值、纠偏 E1。`--bot-run` 步数仍为 5 / 5 / 12。
-- 不做：解除纠偏冻结令；开工 M4a / M4b / M6 / M7 / 表现增强；改协议 / Schema / 官方课 JSON；发明新 Hz 或改冻结常量数字；字体入包；触控 UI；扫掠步数上限。
-- 仍欠着（不因本章合入而消失）：触控 UI；按 `asset_id` 解析视觉；传送门模型；字体入包；扫掠取样代价无上限；解冻后的 M 线。
+- 做（本刀 = C5 第 15 章：扫掠取样预算）：`SimulationWorldMove.MAX_SWEEP_STEPS = 256`。`ceil(|d|/radius)` 超限拒绝整段位移，不粗化取样。正反例钉 2026-08-28 的 `radius=1` 一整格下落、生产半径 32 格边界、零半径不花预算。`--bot-run` 步数仍为 5 / 5 / 12。
+- 不做：解除纠偏冻结令；开工 M4a / M4b / M6 / M7 / 表现增强；改协议 / Schema / 官方课 JSON；发明新 Hz 或改冻结常量数字；字体入包；触控 UI；空间划分；把预算改成粗化取样。
+- 仍欠着（不因本章合入而消失）：触控 UI；按 `asset_id` 解析视觉；传送门模型；字体入包；`is_pose_blocked` 全量扫描；解冻后的 M 线。
 - 仍不做：给嵌入子窗口设 `content_scale_*`；把 locale 热切换做成产品设置页。
 
-纠偏归属：C5（收口 C1 产出 2 / E1）
+纠偏归属：C5（收口 2026-08-28 记下的宪法第十七条缺口）
 是否新增冻结常量引用：否
-审查级别：常审（导出 / 打包 + locale 读取修正；无协议 / Schema 变更；CD-53 §1.1 不新增强断言）
-隔离方式：`feat/c5-e1-package-check` based on `origin/main`
+审查级别：深审（权威扫掠预算；不改协议 / Schema；在预算内不改回放落点）
+隔离方式：`feat/c5-sweep-step-cap` based on `origin/main`

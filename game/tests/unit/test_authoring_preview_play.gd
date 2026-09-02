@@ -23,11 +23,11 @@ const COURSE_01_PATH: String = "res://content/official/traprush/course_01.json"
 const COURSE_02_PATH: String = "res://content/official/traprush/course_02.json"
 const CELL: int = 65536
 const EPS: float = 0.0001
-## 这两个必须是真实角色尺寸，不能随手写 1。1 是 Q48.16 原始单位，即 1/65536 格；
-## SimulationWorld 的竖直扫掠按 ceil(|dy| / radius) 取样，Preview 一次 Advance
-## 下落一整格，于是 radius=1 会让一次 advance 取样 65536 次而不是 8 次。它不会
-## 失败，只会把这一个用例跑成十几分钟——CI 的 Godot job 因此从 PR #176 起被
-## 15 分钟 timeout 连续切断，见 docs/audits/2026-08-28-ci-gate-timeout.md。
+## 这两个必须是真实角色尺寸，不能随手写 1。1 是 Q48.16 原始单位，即 1/65536 格。
+## 扫掠按 ceil(|dy| / radius) 取样。C5 第 15 章起超 MAX_SWEEP_STEPS=256 会拒绝
+## 整段位移：radius=1 下落一整格会立刻失败，不再取样 65536 次。2026-08-28 那次
+## 还没有预算，同一写法把 CI Godot job 连续切断，见
+## docs/audits/2026-08-28-ci-gate-timeout.md。
 const RADIUS: int = TraprushPlayStubs.CAPSULE_RADIUS
 const HEIGHT: int = TraprushPlayStubs.CAPSULE_HEIGHT
 

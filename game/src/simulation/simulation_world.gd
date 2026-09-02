@@ -15,8 +15,9 @@ extends RefCounted
 ## Overflowing overlap math counts as intersecting. Queries are not hashed.
 ## try_set_pose occupancy-checks then teleports; it is not a sweep.
 ## try_move_* sample the displacement segment with discrete substeps (not TOI).
-## A blocked sample or overflow rejects the whole move; there is no slide.
-## until_blocked commits the last unblocked sample. radius is the only step scale.
+## A blocked sample, overflow, or sweep-step budget miss rejects the whole move.
+## until_blocked commits the last unblocked sample. radius is the step scale;
+## step count is capped at SimulationWorldMove.MAX_SWEEP_STEPS.
 ## spawn_capsule still skips occupancy checks. set_pose still writes without checks
 ## so respawn can teleport into a blocked pose.
 

@@ -65,8 +65,8 @@ func test_preview_compiles_advances_and_refuses_patches_until_stop() -> void:
 	var preview: AuthoringPreview = AuthoringPreview.new()
 	assert_true(preview.connect_from(session))
 	assert_true(preview.is_safe_point())
-	# 真实角色尺寸。半径决定竖直扫掠的取样密度，写 1 会把这条跑成十几分钟，
-	# 见 docs/audits/2026-08-28-ci-gate-timeout.md。
+	# 真实角色尺寸。写 1 在 C5 第 15 章之后会因扫掠预算立刻拒绝下落，
+	# 在那之前会把这条跑成十几分钟（2026-08-28 CI 门禁事故）。
 	assert_true(preview.try_start_play(
 		1, TraprushPlayStubs.CAPSULE_RADIUS, TraprushPlayStubs.CAPSULE_HEIGHT
 	))
