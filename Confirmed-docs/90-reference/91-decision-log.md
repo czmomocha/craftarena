@@ -246,6 +246,6 @@
 
 - `docs_structure = index_first_single_source`（2026-08-20）：将 2129 行一体化初稿拆分为 `Confirmed-docs/` 文档群；宪法常驻，其余按主题分章按需读取。原初稿退役为归档，不再作为依据。
 - `current_values_section = overwrite_not_append`（2026-09-02，纠偏 C5）：除索引外每份所有者文档文首有「当前生效值」节，覆盖而非追加；30 秒可读完。历史覆盖链留在本文件或 ADR。CD-41 §5 巨段与 CD-21 连续 dated 实现落点在本次收敛。口径见各所有者文首与 [纠偏方案 C5](../../docs/plans/course-correction-2026-08.md)。
-- `cd61_rearrangement = draft_pending_human`（2026-09-02，纠偏 D6 选项 A）：重排草案为 [cd-61-rearrangement-draft.md](../../docs/plans/cd-61-rearrangement-draft.md)。**CD-61 在人类逐条批准并回写之前仍是现行口径**。不得把 M-Export / M-Art / M4a / M4b 写成已拍板里程碑。
+- `cd61_rearrangement = draft_pending_human`（2026-09-02，纠偏 D6 选项 A）：重排草案为 [cd-61-rearrangement-draft.md](../../docs/plans/cd-61-rearrangement-draft.md)。该句被 `cd61_rearrangement = approved_writeback`（2026-09-02）覆盖：人类接受草案 §8 全部条目，回写 [CD-61](../60-plan/61-milestones.md)。M-Export / M-Art / M4a / M4b 自此是拍板里程碑。纠偏冻结令仍优先于本文件进度压力。账号挂 M4b，不发明 M8。口径见 CD-61 文首与 §5。
 - `web_tls_gate = public_ops_domain_not_c1`（2026-09-02，回写 D2/D11）：Web 仍是一期持续入口；域名 + 受信证书在公开运营前补齐，不在 C1。测试期明文见 D.8 `c1_test_remote`。口径见 [CD-11 §9](../10-product/11-scope-and-platforms.md#9-公开-web-与传输安全d2--d11) 与 [CD-51 §5](../50-engineering/51-dev-environment.md)。
 - `cd62_c5_status_correction = pack_portal_review_netlock`（2026-09-02）：「网页/微信包体超限」改回未开始；「传送迷路或跳关」改为已缓解（镜头过渡零实现）；新增「单人审查带宽超载」与「在零延迟条件下锁定网络参数」。`_mcp_game_helper` 以第一次真导出为准。口径见 [CD-62](../60-plan/62-risk-register.md)。

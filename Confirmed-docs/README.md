@@ -103,7 +103,7 @@
 
 | ID | 文档 | 内容 |
 |---|---|---|
-| CD-61 | [61-milestones.md](60-plan/61-milestones.md) | M0–M7 里程碑、阶段退出条件、首个可运行验收场景 |
+| CD-61 | [61-milestones.md](60-plan/61-milestones.md) | M0–M3 / M-Export / M-Art / M4a / M4b / M5–M7、CD-11 §4 所有者、阶段退出条件、首个可运行验收场景 |
 | CD-62 | [62-risk-register.md](60-plan/62-risk-register.md) | 已接受与已治理风险登记册 |
 | CD-63 | [63-open-decisions.md](60-plan/63-open-decisions.md) | 明确延期的决策、跳过项、正式运营前阻断清单 |
 
