@@ -43,14 +43,15 @@ extends RefCounted
 ## 相位都翻，来回两格会被当成新状态。不含 Jump 时也不写入 y：落地归零之后 y 仍
 ## 可能略低于 0，换桶后同一格会被反复展开。这两种剪枝只作用于 `--route=safe`
 ## 这类地面搜索，完整动作集仍要靠 wait 等机关、靠 y 区分跳跃弧。
+## Collaborators are TraprushCourseProbeHeuristic / Search so this file stays under E9.
+## Public API stays on this type.
 
 const AuthoringDocument := preload("res://src/creator/authoring_document.gd")
 const AuthoringWorld := preload("res://src/creator/authoring_world.gd")
-const PlayStubs := preload("res://src/games/traprush/play_stubs.gd")
-const PlayerIntentNames := preload("res://src/shared/commands/player_intent_names.gd")
 const SimulationBundle := preload("res://src/ugc/simulation_bundle.gd")
-const TraprushMatchSession := preload("res://src/games/traprush/match_session.gd")
 const TraprushTopologyCompiler := preload("res://src/ugc/traprush_topology_compiler.gd")
+const HeuristicGd := preload("res://src/games/traprush/course_completion_probe_heuristic.gd")
+const SearchGd := preload("res://src/games/traprush/course_completion_probe_search.gd")
 
 const OUTCOME_COMPLETABLE: String = "completable"
 const OUTCOME_NOT_COMPLETABLE: String = "not_completable"
@@ -173,24 +174,24 @@ static func run_bundle(
 	if search.finish.is_empty():
 		# 没有终点的课永远走不完，不必搜。
 		return _not_completable(REASON_NO_FINISH, 0, {}, {}, 0, 0, forbid_portal_ids)
-	var root: TraprushMatchSession = _fresh_session(search)
+	var root: TraprushMatchSession = SearchGd._fresh_session(search)
 	if root == null:
 		return _invalid(REASON_SESSION_FAILED, forbid_portal_ids)
 
-	var pads: Array[Dictionary] = _ordered_pads(search)
+	var pads: Array[Dictionary] = HeuristicGd._ordered_pads(search)
 	var finish: Dictionary = search.finish[0]
 	var checkpoints: int = root.checkpoint_count()
 
-	var after: PackedInt32Array = _remaining_chain(pads, finish, search)
+	var after: PackedInt32Array = HeuristicGd._remaining_chain(pads, finish, search)
 	if not hint_actions.is_empty():
-		var scripted: Dictionary = _play_scripted(
+		var scripted: Dictionary = SearchGd._play_scripted(
 			search, hint_actions, checkpoints, max_ticks, forbid_portal_ids, action_count
 		)
 		var scripted_outcome: String = scripted.get("outcome", "")
 		if scripted_outcome == OUTCOME_COMPLETABLE:
 			return scripted
 	if action_count <= ACTION_SET_CARDINAL:
-		return _greedy_ground(
+		return SearchGd._greedy_ground(
 			search,
 			pads,
 			finish,
@@ -201,17 +202,17 @@ static func run_bundle(
 			forbid_portal_ids,
 			action_count
 		)
-	var nodes: Array[Dictionary] = [_node_from(root, PackedByteArray())]
+	var nodes: Array[Dictionary] = [SearchGd._node_from(root, PackedByteArray())]
 	var buckets: Array[PackedInt32Array] = []
-	_push(buckets, 0, _priority(nodes[0], pads, finish, after, search))
-	var visited: Dictionary = {_state_key(root, search, action_count): true}
+	SearchGd._push(buckets, 0, HeuristicGd._priority(nodes[0], pads, finish, after, search))
+	var visited: Dictionary = {SearchGd._state_key(root, search, action_count): true}
 	var best: Dictionary = nodes[0]
 	var expansions: int = 0
 	var ticks_used: int = 0
 	var reason: String = REASON_SEARCH_EXHAUSTED
 
 	while true:
-		var node_id: int = _pop_min(buckets)
+		var node_id: int = SearchGd._pop_min(buckets)
 		if node_id < 0:
 			break
 		var node: Dictionary = nodes[node_id]
@@ -225,245 +226,46 @@ static func run_bundle(
 			if ticks_used + actions.size() + 1 > max_ticks:
 				reason = REASON_BUDGET_EXHAUSTED
 				break
-			var session: TraprushMatchSession = _replay(search, actions)
+			var session: TraprushMatchSession = SearchGd._replay(search, actions)
 			ticks_used += actions.size()
 			if session == null:
 				continue
-			if not _apply_action(session, action):
+			if not SearchGd._apply_action(session, action):
 				continue
 			ticks_used += 1
-			var key: String = _state_key(session, search, action_count)
+			var key: String = SearchGd._state_key(session, search, action_count)
 			if visited.has(key):
 				continue
 			visited[key] = true
 			var next_actions: PackedByteArray = actions.duplicate()
 			next_actions.append(action)
-			var next: Dictionary = _node_from(session, next_actions)
+			var next: Dictionary = SearchGd._node_from(session, next_actions)
 			if session.player_finish_tick(0) >= 0:
 				return _completable(
 					next, checkpoints, expansions, ticks_used, forbid_portal_ids
 				)
-			if _skip_unsupported(session, action_count):
+			if SearchGd._skip_unsupported(session, action_count):
 				continue
-			if _is_better(next, best):
+			if SearchGd._is_better(next, best):
 				best = next
 			nodes.append(next)
-			_push(buckets, nodes.size() - 1, _priority(next, pads, finish, after, search))
+			SearchGd._push(buckets, nodes.size() - 1, HeuristicGd._priority(next, pads, finish, after, search))
 
 		if reason == REASON_BUDGET_EXHAUSTED:
 			break
 
 	var best_accepted: int = best["accepted"]
-	var target: Dictionary = _target_for(best_accepted, pads, finish, checkpoints)
+	var target: Dictionary = HeuristicGd._target_for(best_accepted, pads, finish, checkpoints)
 	return _not_completable(
 		reason, checkpoints, best, target, expansions, ticks_used, forbid_portal_ids
 	)
-
-
-## 地面贪心：同一会话往前走，按启发式给四向排序。踩空或走回头则重放前缀撤销。
-## 官方安全路是一条窄石路，启发式指向下一扇门时，死路（捷径固体格）排在后面，
-## 不会先踩进去。没有快照，这比三十步 A* 从头重放便宜一个数量级。
-static func _greedy_ground(
-	bundle: SimulationBundle,
-	pads: Array[Dictionary],
-	finish: Dictionary,
-	after: PackedInt32Array,
-	checkpoints: int,
-	max_ticks: int,
-	max_depth: int,
-	forbid_portal_ids: PackedInt32Array,
-	action_count: int,
-) -> Dictionary:
-	var session: TraprushMatchSession = _fresh_session(bundle)
-	if session == null:
-		return _invalid(REASON_SESSION_FAILED, forbid_portal_ids)
-	var ticks_used: int = 0
-	ticks_used += _settle_to_floor(session)
-	var path: PackedByteArray = PackedByteArray()
-	var start: Dictionary = _node_from(session, path)
-	if session.player_finish_tick(0) >= 0:
-		return _completable(start, checkpoints, 0, ticks_used, forbid_portal_ids)
-	var visited: Dictionary = {_state_key(session, bundle, action_count): true}
-	var best: Dictionary = start
-	var expansions: int = 0
-	while path.size() < max_depth:
-		if ticks_used + 1 > max_ticks:
-			var budget_accepted: int = best["accepted"]
-			var target: Dictionary = _target_for(
-				budget_accepted, pads, finish, checkpoints
-			)
-			return _not_completable(
-				REASON_BUDGET_EXHAUSTED,
-				checkpoints,
-				best,
-				target,
-				expansions,
-				ticks_used,
-				forbid_portal_ids
-			)
-		expansions += 1
-		var ranked: PackedInt32Array = _rank_ground_actions(
-			session, pads, finish, after, bundle, action_count
-		)
-		var stepped: bool = false
-		for action: int in ranked:
-			if ticks_used + path.size() + 1 > max_ticks:
-				break
-			var prefix: PackedByteArray = path.duplicate()
-			if not _apply_action(session, action):
-				continue
-			ticks_used += 1
-			var next_path: PackedByteArray = prefix.duplicate()
-			next_path.append(action)
-			var next: Dictionary = _node_from(session, next_path)
-			if session.player_finish_tick(0) >= 0:
-				return _completable(
-					next, checkpoints, expansions, ticks_used, forbid_portal_ids
-				)
-			var key: String = _state_key(session, bundle, action_count)
-			if visited.has(key) or _skip_unsupported(session, action_count):
-				session = _replay(bundle, prefix)
-				ticks_used += prefix.size()
-				if session == null:
-					return _invalid(REASON_SESSION_FAILED, forbid_portal_ids)
-				continue
-			visited[key] = true
-			path = next_path
-			if _is_better(next, best):
-				best = next
-			stepped = true
-			break
-		if not stepped:
-			var stuck_accepted: int = best["accepted"]
-			var stuck_target: Dictionary = _target_for(
-				stuck_accepted, pads, finish, checkpoints
-			)
-			var reason: String = REASON_SEARCH_EXHAUSTED
-			if ticks_used + 1 > max_ticks:
-				reason = REASON_BUDGET_EXHAUSTED
-			return _not_completable(
-				reason,
-				checkpoints,
-				best,
-				stuck_target,
-				expansions,
-				ticks_used,
-				forbid_portal_ids
-			)
-	var depth_accepted: int = best["accepted"]
-	var depth_target: Dictionary = _target_for(
-		depth_accepted, pads, finish, checkpoints
-	)
-	return _not_completable(
-		REASON_SEARCH_EXHAUSTED,
-		checkpoints,
-		best,
-		depth_target,
-		expansions,
-		ticks_used,
-		forbid_portal_ids
-	)
-
-
-## 出生点在 y=0，立足固体在下方。胶囊要先落下才站稳；半空时水平扫掠会卡住，
-## 贪心四个方向都走不动。落地后本拍 y 不再变化就停。
-static func _settle_to_floor(session: TraprushMatchSession) -> int:
-	var used: int = 0
-	while used < _SETTLE_MAX_TICKS:
-		var before: Dictionary = session.player_pose(0)
-		var before_y: int = before.get("y", 0)
-		session.commit_tick()
-		used += 1
-		var after: Dictionary = session.player_pose(0)
-		var after_y: int = after.get("y", 0)
-		if after_y == before_y:
-			break
-	return used
-
-
-## 照着已走通的四向序列在同一会话上重放。course_01 安全路用这条，避免无快照
-## A* 在三十步上把预算烧光。动作越界或中途被拒就停，让调用方再走贪心。
-static func _play_scripted(
-	bundle: SimulationBundle,
-	hint_actions: PackedByteArray,
-	checkpoints: int,
-	max_ticks: int,
-	forbid_portal_ids: PackedInt32Array,
-	action_count: int,
-) -> Dictionary:
-	var session: TraprushMatchSession = _fresh_session(bundle)
-	if session == null:
-		return _invalid(REASON_SESSION_FAILED, forbid_portal_ids)
-	var path: PackedByteArray = PackedByteArray()
-	var ticks_used: int = 0
-	for action: int in hint_actions:
-		if action < 0 or action >= action_count:
-			break
-		if ticks_used + 1 > max_ticks:
-			break
-		if not _apply_action(session, action):
-			break
-		path.append(action)
-		ticks_used += 1
-		if session.player_finish_tick(0) >= 0:
-			return _completable(
-				_node_from(session, path), checkpoints, path.size(), ticks_used, forbid_portal_ids
-			)
-	return _not_completable(
-		REASON_SEARCH_EXHAUSTED,
-		checkpoints,
-		_node_from(session, path),
-		{},
-		path.size(),
-		ticks_used,
-		forbid_portal_ids
-	)
-
-
-static func _rank_ground_actions(
-	session: TraprushMatchSession,
-	pads: Array[Dictionary],
-	finish: Dictionary,
-	after: PackedInt32Array,
-	bundle: SimulationBundle,
-	action_count: int,
-) -> PackedInt32Array:
-	var pose: Dictionary = session.player_pose(0)
-	var x: int = pose.get("x", 0)
-	var y: int = pose.get("y", 0)
-	var z: int = pose.get("z", 0)
-	var accepted: int = session.player_accepted_count(0)
-	var scored: Array[Dictionary] = []
-	for action: int in range(action_count):
-		var node: Dictionary = {
-			"depth": 0,
-			"x": x + _DIR_X[action] * Fixed.SCALE,
-			"y": y,
-			"z": z + _DIR_Z[action] * Fixed.SCALE,
-			"accepted": accepted,
-		}
-		scored.append({
-			"action": action,
-			"pri": _priority(node, pads, finish, after, bundle),
-		})
-	scored.sort_custom(func(left: Dictionary, right: Dictionary) -> bool:
-		var left_pri: int = left["pri"]
-		var right_pri: int = right["pri"]
-		return left_pri < right_pri
-	)
-	var ranked: PackedInt32Array = PackedInt32Array()
-	for item: Dictionary in scored:
-		var action_id: int = item["action"]
-		ranked.append(action_id)
-	return ranked
-
 
 ## 照着 completable 给出的动作序列重走一遍。
 ##
 ## 探针的结论之所以算数，是因为它可以被独立复验：同一个 bundle、同一串动作，
 ## 谁跑都该冲线。工具侧用它复核自己的输出，测试用它证明路线不是编出来的。
 static func try_replay(bundle: SimulationBundle, action_names: Array) -> Dictionary:
-	var session: TraprushMatchSession = _fresh_session(bundle)
+	var session: TraprushMatchSession = SearchGd._fresh_session(bundle)
 	if session == null:
 		return {"ok": false, "reason": REASON_SESSION_FAILED}
 	for raw: Variant in action_names:
@@ -471,7 +273,7 @@ static func try_replay(bundle: SimulationBundle, action_names: Array) -> Diction
 		var index: int = _ACTION_NAMES.find(action_name)
 		if index < 0:
 			return {"ok": false, "reason": "unknown_action:%s" % action_name}
-		if not _apply_action(session, index):
+		if not SearchGd._apply_action(session, index):
 			return {"ok": false, "reason": "rejected:%s" % action_name}
 	return {
 		"ok": true,
@@ -482,329 +284,6 @@ static func try_replay(bundle: SimulationBundle, action_names: Array) -> Diction
 		"ticks": session.tick_index(),
 	}
 
-
-## 已验收 accepted 个检查点时，下一个要够到的东西在哪。
-static func _target_for(
-	accepted: int,
-	pads: Array[Dictionary],
-	finish: Dictionary,
-	checkpoints: int,
-) -> Dictionary:
-	if accepted < checkpoints and accepted >= 0 and accepted < pads.size():
-		var pad: Dictionary = pads[accepted]
-		return {
-			"kind": TARGET_CHECKPOINT,
-			"x": pad.get("x", 0),
-			"y": pad.get("y", 0),
-			"z": pad.get("z", 0),
-		}
-	return {
-		"kind": TARGET_FINISH,
-		"x": finish.get("x", 0),
-		"y": finish.get("y", 0),
-		"z": finish.get("z", 0),
-	}
-
-
-static func _priority(
-	node: Dictionary,
-	pads: Array[Dictionary],
-	finish: Dictionary,
-	after: PackedInt32Array,
-	bundle: SimulationBundle,
-) -> int:
-	var g: int = node["depth"]
-	return g + _HEURISTIC_WEIGHT * _heuristic(node, pads, finish, after, bundle)
-
-
-## 估计还要走多少步：先到下一个检查点，再顺着剩下的检查点链走到终点。
-##
-## 「剩下的链」这一项不能省。只估到下一个检查点的话，每验收一个检查点 h 都会
-## 突然变大（目标换成了更远的下一个），f 随之跳升，A* 就掉头回去啃旧分支——
-## 实测正是这样卡在 course_01 的第二个检查点上的。带上链长以后，进度前进会让
-## h 减少一整段，f 单调下降，搜索才会一路往前。
-static func _heuristic(
-	node: Dictionary,
-	pads: Array[Dictionary],
-	finish: Dictionary,
-	after: PackedInt32Array,
-	bundle: SimulationBundle,
-) -> int:
-	var x: int = node["x"]
-	var y: int = node["y"]
-	var z: int = node["z"]
-	var accepted: int = node["accepted"]
-	if accepted >= 0 and accepted < pads.size():
-		var pad: Dictionary = pads[accepted]
-		var pad_x: int = pad.get("x", 0)
-		var pad_y: int = pad.get("y", 0)
-		var pad_z: int = pad.get("z", 0)
-		return _hop_distance(x, y, z, pad_x, pad_y, pad_z, bundle) + after[accepted]
-	var finish_x: int = finish.get("x", 0)
-	var finish_y: int = finish.get("y", 0)
-	var finish_z: int = finish.get("z", 0)
-	return _hop_distance(x, y, z, finish_x, finish_y, finish_z, bundle)
-
-
-## 沿检查点链走到终点还剩多少步。after[i] 是「刚够到 pads[i] 之后」的剩余量，
-## after[n] = 0 表示检查点都齐了，只差终点。
-static func _remaining_chain(
-	pads: Array[Dictionary],
-	finish: Dictionary,
-	bundle: SimulationBundle,
-) -> PackedInt32Array:
-	var count: int = pads.size()
-	var after: PackedInt32Array = PackedInt32Array()
-	after.resize(count + 1)
-	after[count] = 0
-	var finish_x: int = finish.get("x", 0)
-	var finish_y: int = finish.get("y", 0)
-	var finish_z: int = finish.get("z", 0)
-	var index: int = count - 1
-	while index >= 0:
-		var pad: Dictionary = pads[index]
-		var pad_x: int = pad.get("x", 0)
-		var pad_y: int = pad.get("y", 0)
-		var pad_z: int = pad.get("z", 0)
-		if index == count - 1:
-			after[index] = _hop_distance(
-				pad_x, pad_y, pad_z, finish_x, finish_y, finish_z, bundle
-			)
-		else:
-			var next_pad: Dictionary = pads[index + 1]
-			var next_x: int = next_pad.get("x", 0)
-			var next_y: int = next_pad.get("y", 0)
-			var next_z: int = next_pad.get("z", 0)
-			var leg: int = _hop_distance(pad_x, pad_y, pad_z, next_x, next_y, next_z, bundle)
-			after[index] = leg + after[index + 1]
-		index -= 1
-	return after
-
-
-## 两点间格距，允许经最多两次传送门中转。跨一整格楼层的直线距离不算能走。
-static func _hop_distance(
-	x: int, y: int, z: int, tx: int, ty: int, tz: int, bundle: SimulationBundle
-) -> int:
-	var best: int = _cells_between(x, y, z, tx, ty, tz)
-	for portal: Dictionary in bundle.portals:
-		var via: int = _via_portal(x, y, z, tx, ty, tz, portal)
-		if via < best:
-			best = via
-		var portal_id: int = portal.get("entity_id", 0)
-		var entry_x: int = portal.get("x", 0)
-		var entry_y: int = portal.get("y", 0)
-		var entry_z: int = portal.get("z", 0)
-		var dest_x: int = portal.get("dest_x", 0)
-		var dest_y: int = portal.get("dest_y", 0)
-		var dest_z: int = portal.get("dest_z", 0)
-		for next_portal: Dictionary in bundle.portals:
-			if next_portal.get("entity_id", 0) == portal_id:
-				continue
-			var next_entry_x: int = next_portal.get("x", 0)
-			var next_entry_y: int = next_portal.get("y", 0)
-			var next_entry_z: int = next_portal.get("z", 0)
-			var next_dest_x: int = next_portal.get("dest_x", 0)
-			var next_dest_y: int = next_portal.get("dest_y", 0)
-			var next_dest_z: int = next_portal.get("dest_z", 0)
-			var via_two: int = (
-				_cells_between(x, y, z, entry_x, entry_y, entry_z)
-				+ _cells_between(dest_x, dest_y, dest_z, next_entry_x, next_entry_y, next_entry_z)
-				+ _cells_between(next_dest_x, next_dest_y, next_dest_z, tx, ty, tz)
-			)
-			if via_two < best:
-				best = via_two
-	return best
-
-
-static func _via_portal(
-	x: int, y: int, z: int, tx: int, ty: int, tz: int, portal: Dictionary
-) -> int:
-	var entry_x: int = portal.get("x", 0)
-	var entry_y: int = portal.get("y", 0)
-	var entry_z: int = portal.get("z", 0)
-	var dest_x: int = portal.get("dest_x", 0)
-	var dest_y: int = portal.get("dest_y", 0)
-	var dest_z: int = portal.get("dest_z", 0)
-	return (
-		_cells_between(x, y, z, entry_x, entry_y, entry_z)
-		+ _cells_between(dest_x, dest_y, dest_z, tx, ty, tz)
-	)
-
-
-## XZ 用 Chebyshev（对角一步同时走 x 与 z）。跨一整格楼层不能走：占位跳跃
-## 冲量只有四分之一格，上楼必须经传送。
-static func _cells_between(x: int, y: int, z: int, tx: int, ty: int, tz: int) -> int:
-	var dx: int = absi(tx - x) / Fixed.SCALE
-	var dy: int = absi(ty - y) / Fixed.SCALE
-	var dz: int = absi(tz - z) / Fixed.SCALE
-	var xz: int = maxi(dx, dz)
-	if dy >= 1:
-		return _FLOOR_HOPS + xz
-	return xz
-
-
-static func _apply_action(session: TraprushMatchSession, action: int) -> bool:
-	if action == _ACTION_WAIT:
-		session.commit_tick()
-		return true
-	var payload: Dictionary = {}
-	if action == _ACTION_JUMP:
-		payload = {"intent": PlayerIntentNames.JUMP}
-	elif action == _ACTION_USE_ITEM:
-		payload = {"intent": PlayerIntentNames.USE_ITEM}
-	else:
-		payload = {
-			"intent": PlayerIntentNames.MOVE,
-			"dx": _DIR_X[action] * Fixed.SCALE,
-			"dz": _DIR_Z[action] * Fixed.SCALE,
-		}
-	if not session.apply_player_intent(0, payload):
-		return false
-	session.commit_tick()
-	return true
-
-
-static func _replay(bundle: SimulationBundle, actions: PackedByteArray) -> TraprushMatchSession:
-	var session: TraprushMatchSession = _fresh_session(bundle)
-	if session == null:
-		return null
-	for action: int in actions:
-		if not _apply_action(session, action):
-			return null
-	return session
-
-
-static func _fresh_session(bundle: SimulationBundle) -> TraprushMatchSession:
-	var offsets: Array[Dictionary] = [{"dx": 0, "dy": 0, "dz": 0}]
-	var session: TraprushMatchSession = TraprushMatchSession.create(
-		bundle,
-		_MATCH_SEED,
-		1,
-		offsets,
-		PlayStubs.CAPSULE_RADIUS,
-		PlayStubs.CAPSULE_HEIGHT,
-	)
-	if session == null:
-		return null
-	PlayStubs.apply_match(session)
-	return session
-
-
-## 不含 Jump 时丢掉无立足面的状态。走下石路后第一拍 y 常常还没掉到坑里，
-## 但权威支撑查询已经是 false。完整动作集不能走这条：跳跃弧必须展开空中态。
-static func _skip_unsupported(session: TraprushMatchSession, action_count: int) -> bool:
-	if action_count > _ACTION_JUMP:
-		return false
-	return not session.player_supported_by_solid(0)
-
-
-static func _node_from(session: TraprushMatchSession, actions: PackedByteArray) -> Dictionary:
-	var pose: Dictionary = session.player_pose(0)
-	return {
-		"actions": actions,
-		"depth": actions.size(),
-		"x": pose.get("x", 0),
-		"y": pose.get("y", 0),
-		"z": pose.get("z", 0),
-		"accepted": session.player_accepted_count(0),
-		"tick": session.tick_index(),
-	}
-
-
-## 进度优先，其次少走几步。用来在没走通时报告「最远到过哪里」。
-static func _is_better(candidate: Dictionary, best: Dictionary) -> bool:
-	var candidate_accepted: int = candidate["accepted"]
-	var best_accepted: int = best["accepted"]
-	if candidate_accepted != best_accepted:
-		return candidate_accepted > best_accepted
-	var candidate_depth: int = candidate["depth"]
-	var best_depth: int = best["depth"]
-	return candidate_depth < best_depth
-
-
-static func _state_key(
-	session: TraprushMatchSession, bundle: SimulationBundle, action_count: int
-) -> String:
-	var pose: Dictionary = session.player_pose(0)
-	var crates: int = 0
-	var bit: int = 1
-	for state: Dictionary in session.destructible_states():
-		var durability: int = state.get("durability", 0)
-		if durability > 0:
-			crates |= bit
-		bit <<= 1
-	var hazards: int = 0
-	if action_count > _ACTION_WAIT:
-		bit = 1
-		for hazard: Dictionary in bundle.hazards:
-			var entity_id: int = hazard.get("entity_id", 0)
-			if session.is_hazard_solid(entity_id):
-				hazards |= bit
-			bit <<= 1
-	var x: int = pose.get("x", 0)
-	var y: int = pose.get("y", 0)
-	var z: int = pose.get("z", 0)
-	var y_bucket: int = 0
-	if action_count > _ACTION_JUMP:
-		y_bucket = _bucket(y)
-	return "%d,%d,%d,%d,%d,%d,%d,%d,%d" % [
-		_bucket(x),
-		y_bucket,
-		_bucket(z),
-		session.player_accepted_count(0),
-		crates,
-		hazards,
-		session.player_bomb_count(0),
-		session.player_dash_count(0),
-		session.player_stun_remaining(0),
-	]
-
-
-## 向下取整的整数分桶。GDScript 的整数除法对负数向零截断，直接用会让
-## -1 与 0 落进同一个桶，量化在原点两侧不对称。
-static func _bucket(value: int) -> int:
-	if value >= 0:
-		return value / _BUCKET
-	return -(((-value) + _BUCKET - 1) / _BUCKET)
-
-
-static func _ordered_pads(bundle: SimulationBundle) -> Array[Dictionary]:
-	var pads: Array[Dictionary] = bundle.pads.duplicate()
-	pads.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
-		var a_order: int = a.get("order", 0)
-		var b_order: int = b.get("order", 0)
-		if a_order != b_order:
-			return a_order < b_order
-		var a_id: int = a.get("entity_id", 0)
-		var b_id: int = b.get("entity_id", 0)
-		return a_id < b_id
-	)
-	return pads
-
-
-static func _push(buckets: Array[PackedInt32Array], node_id: int, priority: int) -> void:
-	var slot: int = maxi(priority, 0)
-	while buckets.size() <= slot:
-		buckets.append(PackedInt32Array())
-	var bucket: PackedInt32Array = buckets[slot]
-	bucket.append(node_id)
-	buckets[slot] = bucket
-
-
-## 桶队列：优先级是小整数（动作数 + 格距），扫一遍桶比维护堆便宜也好读。
-static func _pop_min(buckets: Array[PackedInt32Array]) -> int:
-	for slot: int in range(buckets.size()):
-		var bucket: PackedInt32Array = buckets[slot]
-		if bucket.is_empty():
-			continue
-		var node_id: int = bucket[bucket.size() - 1]
-		bucket.remove_at(bucket.size() - 1)
-		buckets[slot] = bucket
-		return node_id
-	return -1
-
-
-## 搜索约束：复制一份 bundle 并拿掉列出的传送源。原 bundle 不动。
 ## 不是改课。启发式与落地都只看见剩下的门。
 static func without_portals(
 	bundle: SimulationBundle,
