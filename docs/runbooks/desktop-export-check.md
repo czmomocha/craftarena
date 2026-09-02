@@ -71,6 +71,7 @@ macOS 把 `& $env:GODOT4_CONSOLE` 换成 `"$GODOT4"`。
 | `finish_gate_visual_loadable` | 终点门同上 | 始终（同上） |
 | `crate_visual_loadable` | 箱子同上 | 始终（同上） |
 | `hazard_roller_visual_loadable` | 滚柱同上 | 始终（同上） |
+| `locale_table_loadable` | 本地化 CSV 能被 `UiCopy` 解析，且 `zh_CN` 离线横幅不是键名本身（CSV 与官方课 JSON 一样不是引擎资源，必须写进 `include_filter`） | 始终（2026-09-02 加入；尚未在真导出包上跑过） |
 | `user_draft_roundtrip` | `user://` 可写可读可删，草稿恢复的落点成立 | 始终 |
 | `no_mcp_autoload` | 没有 `_mcp_game_helper` autoload | 始终 |
 | `runtime_material` | 运行时 `StandardMaterial3D` 能建、能设 albedo、能读回 | 始终 |
@@ -81,9 +82,9 @@ macOS 把 `& $env:GODOT4_CONSOLE` 换成 `"$GODOT4"`。
 
 后三条在源码运行时必然为假（tests 与 addons 就在磁盘上），所以只在 `template_build=true` 时计入失败。
 
-同时报告但不判定的字段：`web`（`OS.has_feature("web")`）、`packed_addons`、`user_data_dir`、`draft_path`、`engine`、`autoloads`、`character_visual_path`、`terrain_tile_visual_path`、`checkpoint_pad_visual_path`、`checkpoint_gate_visual_path`、`finish_gate_visual_path`、`crate_visual_path`、`hazard_roller_visual_path`。
+同时报告但不判定的字段：`web`（`OS.has_feature("web")`）、`packed_addons`、`user_data_dir`、`draft_path`、`engine`、`autoloads`、`character_visual_path`、`terrain_tile_visual_path`、`checkpoint_pad_visual_path`、`checkpoint_gate_visual_path`、`finish_gate_visual_path`、`crate_visual_path`、`hazard_roller_visual_path`、`locale_table_path`。
 
-**关于 `.glb` 为什么不在 `include_filter` 里**：三个预设都是 `export_filter="all_resources"`，`.glb` 是 Godot **导入资源**，由它覆盖；`include_filter` 里那条 `content/official/*.json` 之所以必须显式写，是因为 JSON 不是资源类型。这条推断**还没有被真导出包验证过**（2026-08-30 写入时开发机没装 4.7.2 导出模板），所以下一次谁跑导出，请把 `character_visual_loadable`、`terrain_tile_visual_loadable` 与五个占用 `*_visual_loadable` 的结果补回本节。
+**关于 `.glb` 为什么不在 `include_filter` 里**：三个预设都是 `export_filter="all_resources"`，`.glb` 是 Godot **导入资源**，由它覆盖；`include_filter` 里那条 `content/official/*.json,content/locale/*.csv` 之所以必须显式写，是因为 JSON 与 CSV 都不是资源类型（CSV 还用 `importer="keep"`，避免默认翻译导入生成 `.translation`）。这条推断**还没有被真导出包验证过**（2026-08-30 写入时开发机没装 4.7.2 导出模板），所以下一次谁跑导出，请把 `character_visual_loadable`、`terrain_tile_visual_loadable`、五个占用 `*_visual_loadable` 与 `locale_table_loadable` 的结果补回本节。
 
 Linux 包在 VPS 上用同一条：
 
@@ -145,7 +146,7 @@ python -m http.server 8060 --directory export\web
 
 2. **Web 预设会因为 VRAM 压缩项而拒绝导出。** 报错只有一句 `Cannot export project with preset "Web" due to configuration errors:`，**后面不列具体项**。原因是 `vram_texture_compression/for_desktop` / `for_mobile` 要求工程先开对应的导入设置。当前工程零纹理，两项都设为 false。C4 引入 `.glb` 与纹理时必须与 `rendering/textures/vram_compression/import_*` 一起打开。
 
-3. **官方赛道 JSON 不是引擎资源，默认不进包。** 三个预设都要 `include_filter="content/official/*.json"`。自检里的 `courses_readable` 做的是解码而不是 `file_exists`，因为存在「文件在包里但引擎读不出来」的情况。
+3. **官方赛道 JSON 与本地化 CSV 都不是引擎资源，默认不进包。** 三个预设都要 `include_filter="content/official/*.json,content/locale/*.csv"`。自检里的 `courses_readable` / `locale_table_loadable` 做的是解码而不是 `file_exists`，因为存在「文件在包里但引擎读不出来」的情况。CSV 不得走 Godot 默认翻译导入：那会生成 `.translation`，Headless 与导出包对不上同一套 remap。
 
 4. **GUT 会静默跳过解析失败的测试脚本。** 本章两个新测试文件因类型警告解析失败时，GUT 打一行 `[GUT WARNING] Ignoring script ...` 然后照常输出 `All tests passed!`，脚本数从 95 没变。**只看 GUT 绿不足以证明测试跑了**；拦住它的是 CI 里对 `game/tests` 的逐文件 `--check-only`。本地跑 GUT 时请顺带核对 Scripts 数。
 

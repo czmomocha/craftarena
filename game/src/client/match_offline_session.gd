@@ -6,7 +6,7 @@ extends RefCounted
 ## process. Commands use MatchFrameCodec; the command tick is 0 because
 ## the local session tick is authoritative. Snapshots feed
 ## MatchSnapshotFollow so the lobby can interpolate presentation poses.
-## The banner is always "离线试玩，成绩不上传". Web is refused.
+## The banner is `craft_arena.ui.offline_banner` (CD-13 §3). Web is refused.
 ## play_jump_dy / play_support_dy / play_fall_dy are caller stubs copied
 ## into the session; play_fall_dy is gravity accel. 0 keeps the session
 ## default (no accel; leftover vy still coasts). play_range_half is a
@@ -21,7 +21,7 @@ const PlayerIntentNames := preload("res://src/shared/commands/player_intent_name
 const PlayStubsGd := preload("res://src/games/traprush/play_stubs.gd")
 const TraprushMatchSessionGd := preload("res://src/games/traprush/match_session.gd")
 
-const BANNER: String = "离线试玩，成绩不上传"
+const BANNER_KEY: String = UiCopy.OFFLINE_BANNER
 const DEFAULT_COURSE: String = "res://content/official/traprush/course_01.json"
 const STATE_IDLE: String = "idle"
 const STATE_PLAYING: String = "playing"
@@ -179,7 +179,7 @@ func status_view() -> Dictionary:
 		player_count = session.player_count()
 	return {
 		"state": state,
-		"banner": BANNER if state == STATE_PLAYING else "",
+		"banner": UiCopy.text(BANNER_KEY) if state == STATE_PLAYING else "",
 		"course_path": course_path,
 		"error": last_error,
 		"has_snapshot": follow_view.get("has_snapshot", false),

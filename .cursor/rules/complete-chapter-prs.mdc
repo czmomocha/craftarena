@@ -15,12 +15,12 @@ alwaysApply: true
 
 真机：PR Test plan 与 [章节真机清单](docs/runbooks/chapter-device-check.md) 本刀必须是编号步骤（怎么开、点什么、期望 / 失败）；禁止只写「真机再看一眼」。无 GUI 的章写「无」加原因。人工检查，不是 CI 门禁。口径见 [CD-52 §3.2](Confirmed-docs/50-engineering/52-ai-workflow.md)。
 
-- 做（本刀 = 纠偏 C4 产出 4：表现动画状态契约）：锁 `idle` / `run` / `jump` / `land` / `shove` / `hit` / `break` / `portal`。Solo 与 Preview 从局部权威派生，写到角色 metadata 与 Label3D `anim`。不播 clip。`airborne` 用半格接触探针，不复用 Jump 的 1 格 `support_dy`。**数值一个不改**：GUT 全绿 + `--bot-run` 三张课步数与动作序列逐项不变（5 / 5 / 12）。
-- 不做：播 clip / AnimationPlayer；改协议 / Schema / 官方课 JSON；改 `play_move_step`；在线远端接线；字体与本地化键；触控 UI；按 `asset_id` 解析视觉；C5 拆壳。
-- 仍欠着（不因本章合入而消失）：触控 UI；按 `asset_id` 解析视觉；传送门模型；字体与本地化键；远端协议层 RTT 回填；C3 网络参数锁定；E6 有美术之后的可玩性签署；扫掠取样代价无上限；`match_lobby_shell.gd` 超 E9 行数上限。
-- 仍不做：把动画时长写成产品秒数；把 Label3D `anim` 当成 HUD 字段。
+- 做（本刀 = 纠偏 C4 产出 6：本地化键）：锁 `craft_arena.ui.*` 键表（`en` + `zh_CN`）。`UiCopy` 自解析 `content/locale/craft_arena.csv`（不走 Godot CSV 翻译导入）。大厅 / Editor / Preview 的窗题、按钮、占位符与 CD-13 离线横幅走键。缺键返回键名。`zh*` 归一到 `zh_CN`，其余落到 `en`。**不入字体**。**数值一个不改**：GUT 全绿 + `--bot-run` 三张课步数与动作序列逐项不变（5 / 5 / 12）。
+- 不做：字体入包 / 子集化；Godot Translation CSV 导入；改协议 / Schema / 官方课 JSON；播 clip；触控 UI；按 `asset_id` 解析视觉；C5 拆壳。
+- 仍欠着（不因本章合入而消失）：触控 UI；按 `asset_id` 解析视觉；传送门模型；字体入包；远端协议层 RTT 回填；C3 网络参数锁定；E6 有美术之后的可玩性签署；扫掠取样代价无上限；`match_lobby_shell.gd` 超 E9 行数上限。
+- 仍不做：把 `join=` / `pads=` / `FPS` / 动画状态名当可翻译句；把 locale 热切换做成产品设置页。
 
 纠偏归属：C4
 是否新增冻结常量引用：否
-审查级别：常审（表现派生；权威命令与快照字节不变）
-隔离方式：`feat/c4-play-anim-state`
+审查级别：常审偏轻审（表现/UI 文案；权威命令与快照字节不变）
+隔离方式：`feat/c4-localization-keys`

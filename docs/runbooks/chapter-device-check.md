@@ -22,7 +22,7 @@
 
 ## 共用启动（大厅窗口）
 
-机关狂奔匹配大厅是代码创建的 `Window`，标题 **Traprush**。第一行是帧率读数（本刀加的 `FPS 60`，首窗之前 `FPS --`），第二行是状态 Label。按钮（从左到右）：**Quick play**、**Create room**、**Join room**、**Solo play**、**Cancel**、**Poll**。其下一行是服务器地址：输入框（placeholder `Server host`，默认填当前控制面主机）加 **Apply server** 按钮。再往下三个输入框：房间码（placeholder `Room code`）、课程 id（默认 `course_01`）、人数（默认 `2`）。窗口里的 3D：玩家是**角色视觉资产**（一个约 1.13 m 高的角色，脚底在原点），本席覆青色薄膜（`OWN_ALBEDO`），远端覆海军蓝薄膜（`REMOTE_ALBEDO`）。可破坏箱是箱子模型，覆橙色薄膜（`CRATE_ALBEDO`）；周期机关是滚柱模型，覆洋红薄膜（`HAZARD_ALBEDO`；固体半周期才出现；官方赛道出生点 −Z 1 个）；**始终固体铺地块视觉**（实心方块，一格一块、整格填满；官方赛道沿必经路铺立足面，`course_01` 另有出生点 −X 1 个，上层楼板在 −Z 三格）；检查点占用是垫（顶面对齐）+ 门（脚底对齐），覆进度色薄膜（未开玩原绿；开玩后已验收暗绿、当前目标亮薄荷）；终点是金色拱门，覆进度薄膜（未完成原金，全部垫完成后亮金，冲线后暗金）；传送门仍是色块（专用模型未生成）。视觉资产解析不出来时，对应占用回退成原来的占位盒。条是传送连线与检查点顺序 gizmos。玩家盒上方有名次 Label；本席名次标以 `*` 开头。开玩时状态行含 `pads=n/m`、`floor=n`、`finish=n`、`crates=n/m`、`hazards=n/m` 与 `solids=n/m`。
+机关狂奔匹配大厅是代码创建的 `Window`。窗题与按钮走本地化键（`UiCopy`）：本机 Godot locale 为 `zh*` 时窗题是 **机关狂奔**，按钮从左到右是 **快速游戏**、**创建房间**、**加入房间**、**单人试玩**、**取消**、**查询队列**；其余 locale 仍是 **Traprush** / **Quick play** / **Create room** / **Join room** / **Solo play** / **Cancel** / **Poll**。节点名仍是英文。第一行是帧率读数（`FPS 60`，首窗之前 `FPS --`），第二行是状态 Label（`join=` / `pads=` / `FPS` **不翻译**）。其下一行是服务器地址：输入框（placeholder 随 locale：`Server host` / `服务器地址`，默认填当前控制面主机）加 **Apply server** / **应用服务器**。再往下三个输入框：房间码（placeholder `Room code` / `房间码`）、课程 id（默认 `course_01`）、人数（默认 `2`）。窗口里的 3D：玩家是**角色视觉资产**（一个约 1.13 m 高的角色，脚底在原点），本席覆青色薄膜（`OWN_ALBEDO`），远端覆海军蓝薄膜（`REMOTE_ALBEDO`）。可破坏箱是箱子模型，覆橙色薄膜（`CRATE_ALBEDO`）；周期机关是滚柱模型，覆洋红薄膜（`HAZARD_ALBEDO`；固体半周期才出现；官方赛道出生点 −Z 1 个）；**始终固体铺地块视觉**（实心方块，一格一块、整格填满；官方赛道沿必经路铺立足面，`course_01` 另有出生点 −X 1 个，上层楼板在 −Z 三格）；检查点占用是垫（顶面对齐）+ 门（脚底对齐），覆进度色薄膜（未开玩原绿；开玩后已验收暗绿、当前目标亮薄荷）；终点是金色拱门，覆进度薄膜（未完成原金，全部垫完成后亮金，冲线后暗金）；传送门仍是色块（专用模型未生成）。视觉资产解析不出来时，对应占用回退成原来的占位盒。条是传送连线与检查点顺序 gizmos。玩家盒上方有名次 Label；本席名次标以 `*` 开头。开玩时状态行含 `pads=n/m`、`floor=n`、`finish=n`、`crates=n/m`、`hazards=n/m` 与 `solids=n/m`。
 
 ### 0.1 后端（本刀需要在线入场时）
 
@@ -47,17 +47,75 @@ Worktree 端口偏移见 README「并行工作区」；本文件不复述端口�
 
 也可以先 `& $env:GODOT4 --editor --path game` / `"$GODOT4" --editor --path game`，再在编辑器里运行主场景。
 
-预期：出现标题为 **Traprush** 的窗口；状态行含 `join=idle`、`play=idle`、`tls=off`、`server=127.0.0.1`、`course=3/5/1`（默认 `course_01` 的垫/门/终点占位；门含捷径上楼 `two_way`、安全路侧向 `two_way` 与上楼 `one_way`）。失败：没有窗口、立刻退出、或只有 Headless 日志。
+预期：出现大厅窗口（窗题 **Traprush** 或 **机关狂奔**，随本机 locale）；状态行含 `join=idle`、`play=idle`、`tls=off`、`server=127.0.0.1`、`course=3/5/1`（默认 `course_01` 的垫/门/终点占位；门含捷径上楼 `two_way`、安全路侧向 `two_way` 与上楼 `one_way`）。失败：没有窗口、立刻退出、或只有 Headless 日志。窗题变成键名 `craft_arena.ui.window_traprush` ⇒ CSV 没进 `res://` 或没解析到。
 
-操作：WASD 移动，空格跳跃（大厅按钮不抢空格），Q 或鼠标左键使用道具（打碎眼前箱；官方课出生点已拾爆破球），F 基础推击（推开邻座胶囊，无线上目标 id），Left Shift 或 **Sprint** 沿当前朝向冲刺一格（官方课出生点已拾冲刺），R 重置到最近已验收检查点。点过人数/课程/房间码/服务器框之后，再点 3D 区域或 Create room / Solo play，光标应离开输入框，WASD 才是移动。`course_01` 出生点 −Z 两格有覆洋红薄膜的滚柱周期机关，有石色踏板可以走到它；踩上时若处于固体半周期会被击退并闪回出生点。
+操作：WASD 移动，空格跳跃（大厅按钮不抢空格），Q 或鼠标左键使用道具（打碎眼前箱；官方课出生点已拾爆破球），F 基础推击（推开邻座胶囊，无线上目标 id），Left Shift 或冲刺按钮沿当前朝向冲刺一格（官方课出生点已拾冲刺），R 重置到最近已验收检查点。点过人数/课程/房间码/服务器框之后，再点 3D 区域或创建房间 / 单人试玩，光标应离开输入框，WASD 才是移动。`course_01` 出生点 −Z 两格有覆洋红薄膜的滚柱周期机关，有石色踏板可以走到它；踩上时若处于固体半周期会被击退并闪回出生点。
 
 ---
 
-## 本刀：表现动画状态契约（idle / run / jump / land / shove / hit / break / portal）
+## 本刀：本地化键（`craft_arena.ui.*`，en + zh_CN，不入字体）
 
-上一刀（[#201](https://github.com/czmomocha/craftarena/pull/201)）把玩法采样改成 `PlayInput`。本刀锁表现动画状态名与优先级，Solo 与 Preview 从局部权威派生，写到角色头顶 Label3D `anim`。不播 clip。在线远端不接线。
+上一刀（[#202](https://github.com/czmomocha/craftarena/pull/202)）锁了表现动画状态。本刀把大厅 / Editor / Preview 的窗题、按钮、占位符和 CD-13 离线横幅改成走键。表在 `game/content/locale/craft_arena.csv`，`UiCopy` 自己解析。**不入字体**。locale 在建窗时采样，改系统语言要重启窗口才换字。
 
-本刀**不需要** `npm run dev`（Solo 就能看完前 4 步；Preview 用 F6 沙箱；第 5 步才需要后端）。
+本刀**不需要** `npm run dev`（Solo 就能看完前 3 步；Preview / Editor 用 F6；第 4 步用 `--language` 换语言重启）。
+
+1. **Solo 横幅是解析后的句子，不是键名**：按「共用启动」打开大厅，点从左到右第 4 个按钮（英文 **Solo play** / 中文 **单人试玩**）。看状态行第二行。
+   - 预期：locale 为 `zh*` 时出现 **「离线试玩，成绩不上传」**（CD-13 §3 原文，一个字不改）；其余 locale 出现 **`Offline play, scores are not uploaded`**（含逗号）。窗题与第 4 个按钮同时是中文或同时是英文。
+   - 失败：出现键名 `craft_arena.ui.offline_banner` ⇒ CSV 没进包或没解析到。中文横幅被改写成别的句子 ⇒ 打回（那句是产品原文）。横幅是中文、按钮还是 `Solo play` ⇒ 建窗时 locale 采样不一致。
+
+2. **按钮不再是散落的硬编码中英混排**：看从左到右前 6 个按钮，以及服务器行 placeholder。
+   - 预期：整行同一语言。中文机应是「快速游戏 / 创建房间 / 加入房间 / 单人试玩 / 取消 / 查询队列」，placeholder「服务器地址」「房间码」。英文机应是 Quick play / Create room / Join room / Solo play / Cancel / Poll，placeholder Server host / Room code。状态行仍是 `join=` / `FPS` 这种标识，没有被翻译。
+   - 失败：同一行中英混排 ⇒ 有的按钮没走键。节点名变成中文 ⇒ 测例会找不到节点，打回。
+
+3. **Preview / Editor 同一张表**：编辑器打开 `res://src/creator/course_sandbox.tscn`，**F6**（不要 F5）。
+   - 预期：Preview 窗题是 **Preview** 或 **预览**；Play / Stop 等按钮与大厅同一语言。Tools → Authoring Editor 打开的 Editor 窗题是 **Editor** 或 **编辑器**，「放置检查点」等与表一致。
+   - 失败：大厅已换字、Preview 仍是硬编码英文 ⇒ Preview 没走 `UiCopy`。
+
+4. **换语言要重启窗口**：停掉游戏，用另一语言再开一次。
+   - Windows 中文机看英文：`& $env:GODOT4 --path game --language en`
+   - 看中文：`& $env:GODOT4 --path game --language zh_CN`
+   - 预期：窗题、按钮、Solo 横幅整套跟着 `--language` 变。**不要**指望在已打开的窗口里热切换。
+   - 失败：`--language zh_CN` 仍全是英文 ⇒ `effective_locale` 没把 `zh*` 归一到 `zh_CN`，或 CSV 缺 `zh_CN` 列。
+
+5. **自动化全绿 + 裁决不变**：
+   ```bash
+   npm run typecheck; npm test; npm run redline-scan
+   npm run test:gut:full
+   & $env:GODOT4_CONSOLE --headless --path game -- --package-check
+   & $env:GODOT4_CONSOLE --headless --path game -- --bot-run
+   ```
+   - 预期：`npm run typecheck` 无输出；`redline-scan` `no findings`；GUT 全绿；`--package-check` `ok=true` 且 `locale_table_loadable=true`；`--bot-run` 三张课 `completable`，**动作序列与步数逐项不变**（5 / 5 / 12 步）。
+   - 失败：bot-run 步数变了 ⇒ 文案层意外改了命令，停下来查，别先改断言。`locale_table_loadable=false` ⇒ CSV 路径或 `keep` 导入坏了。
+
+### 本刀不测
+
+- **字体 / 缺字形 / 豆腐块**：字体未入包，中文机用系统字体；
+- **locale 热切换设置页**：建窗时采样，不做产品设置；
+- **公开未过滤昵称的子集范围**：跟字体绑定，须人类拍板；
+- **把 `join=` / `pads=` / `anim` 译成中文**；
+- **导出包内文案**：本机无 4.7.2 导出模板。`include_filter` 有守卫，真包未跑过。
+
+### 诚实边界
+
+- 中文按钮是直译（快速游戏 / 单人试玩），不是营销文案；
+- `Poll` →「查询队列」是开发期动作，不是玩家向文案；
+- 改系统语言或 `--language` 之后必须重启窗口，已打开的按钮字不会变。
+
+### 仍然欠着（不因本章消失）
+
+- 字体入包（思源黑体 / Noto Sans SC 子集范围待人类拍）；
+- 触控 UI；按 `asset_id` 解析视觉；传送门没有专用模型；
+- 扫掠步数无上限；`match_lobby_shell.gd` 仍超 E9 行数上限。
+
+---
+
+## 上一刀：表现动画状态契约（idle / run / jump / land / shove / hit / break / portal）
+
+> **本节已随 [#202](https://github.com/czmomocha/craftarena/pull/202) 合入，保留只为追溯。验当前 PR 只看上面的「本刀」。**
+
+上一刀（[#201](https://github.com/czmomocha/craftarena/pull/201)）把玩法采样改成 `PlayInput`。该刀锁表现动画状态名与优先级，Solo 与 Preview 从局部权威派生，写到角色头顶 Label3D `anim`。不播 clip。在线远端不接线。
+
+该刀**不需要** `npm run dev`（Solo 就能看完前 4 步；Preview 用 F6 沙箱；第 5 步才需要后端）。
 
 1. **Solo 出生是 `idle`**：按「共用启动」打开大厅，点 **Solo play**。看本席角色上方的 `anim` 字（在名次标附近，不是状态行 HUD）。
    - 预期：字是 `idle`。
@@ -88,13 +146,12 @@ Worktree 端口偏移见 README「并行工作区」；本文件不复述端口�
    - 预期：`npm run typecheck` 无输出；`redline-scan` `no findings`；GUT 全绿；`--bot-run` 三张课 `completable`，**动作序列与步数逐项不变**（5 / 5 / 12 步）。
    - 失败：bot-run 步数变了 ⇒ 表现状态意外改了命令，停下来查，别先改断言。
 
-### 本刀不测
+### 该刀不测
 
-- **clip / 绑定动画**：角色网格没有 `skin`，本章不播；
+- **clip / 绑定动画**：角色网格没有 `skin`，该章不播；
 - **在线远端动画**：v1 快照没有 vy / stun；
 - **动画秒数**：CD-63 仍延期；
-- **Solo 1 人推击字**：没有邻座胶囊，`shove` 不会出现；
-- **字体与本地化键**。
+- **Solo 1 人推击字**：没有邻座胶囊，`shove` 不会出现。
 
 ### 诚实边界
 
@@ -102,15 +159,9 @@ Worktree 端口偏移见 README「并行工作区」；本文件不复述端口�
 - `hit` 跟环境失败硬直（出界 / 踩实心机关），不是受击闪白；
 - Preview 没有基础推击，所以 Preview 不会出现 `shove`。
 
-### 仍然欠着（不因本章消失）
-
-- 触控 UI；字体与本地化键；
-- 按 `asset_id` 解析视觉；传送门没有专用模型；
-- 扫掠步数无上限；`match_lobby_shell.gd` 仍超 E9 行数上限。
-
 ---
 
-## 上一刀：D7 输入抽象（方向向量 + 动作事件）
+## 再上一刀：D7 输入抽象（方向向量 + 动作事件）
 
 > **本节已随 [#201](https://github.com/czmomocha/craftarena/pull/201) 合入，保留只为追溯。验当前 PR 只看上面的「本刀」。**
 

@@ -109,6 +109,7 @@ repo/
 │  │     └─ bastion/
 │  ├─ content/
 │  │  ├─ official/
+│  │  ├─ locale/                 # 本地化 CSV（`craft_arena.*` 键）；解析见 `shared/ui_copy.gd`
 │  │  ├─ assets/                 # 平台运行时资产（GLB）；准入见 CD-51 §5.1
 │  │  ├─ schemas/
 │  │  └─ test_fixtures/

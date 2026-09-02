@@ -17,7 +17,7 @@ extends Node
 ## snapshot (finish_tick then accepted_count; slot is the stable key).
 ## Path distance is not ranked. Solo play starts a local
 ## TraprushMatchSession (CD-13 §3); the HUD keeps
-## "离线试玩，成绩不上传" while it runs. Web is refused.
+## `craft_arena.ui.offline_banner` while it runs. Web is refused.
 ## Player boxes and standing labels sample MatchSnapshotInterp between
 ## the last two snapshots. play_interp_step is a presentation stub, not
 ## an interpolation window. The local seat overlays MatchLocalPredict on
@@ -101,7 +101,7 @@ const PlayStubsGd := preload("res://src/games/traprush/play_stubs.gd")
 const PlayerIntentNames := preload("res://src/shared/commands/player_intent_names.gd")
 const ServerEndpointGd := preload("res://src/client/server_endpoint.gd")
 
-const TITLE: String = "Traprush"
+const TITLE: String = UiCopy.WINDOW_TRAPRUSH
 const WINDOW_SIZE: Vector2i = Vector2i(1280, 720)
 const WINDOW_MIN_SIZE: Vector2i = Vector2i(960, 540)
 const DEFAULT_COURSE: String = "res://content/official/traprush/course_01.json"
@@ -935,7 +935,7 @@ func _ensure_window() -> void:
 		if host_viewport != null:
 			host_viewport.gui_embed_subwindows = true
 	window = Window.new()
-	window.title = TITLE
+	window.title = UiCopy.text(TITLE)
 	window.size = WINDOW_SIZE
 	window.min_size = WINDOW_MIN_SIZE
 	window.mode = Window.MODE_MAXIMIZED
@@ -961,29 +961,29 @@ func _ensure_window() -> void:
 	var row: HBoxContainer = HBoxContainer.new()
 	row.name = "MatchActions"
 	root.add_child(row)
-	_add_button(row, QUICK_NAME, "Quick play", try_quick)
-	_add_button(row, CREATE_NAME, "Create room", try_create_room)
-	_add_button(row, JOIN_NAME, "Join room", try_join_room)
-	_add_button(row, SOLO_NAME, "Solo play", try_solo)
-	_add_button(row, CANCEL_NAME, "Cancel", try_cancel)
-	_add_button(row, POLL_NAME, "Poll", try_poll)
-	_add_button(row, SPRINT_NAME, "Sprint", _on_sprint)
+	_add_button(row, QUICK_NAME, UiCopy.QUICK_PLAY, try_quick)
+	_add_button(row, CREATE_NAME, UiCopy.CREATE_ROOM, try_create_room)
+	_add_button(row, JOIN_NAME, UiCopy.JOIN_ROOM, try_join_room)
+	_add_button(row, SOLO_NAME, UiCopy.SOLO_PLAY, try_solo)
+	_add_button(row, CANCEL_NAME, UiCopy.CANCEL, try_cancel)
+	_add_button(row, POLL_NAME, UiCopy.POLL, try_poll)
+	_add_button(row, SPRINT_NAME, UiCopy.SPRINT, _on_sprint)
 	var server_row: HBoxContainer = HBoxContainer.new()
 	server_row.name = "ServerActions"
 	root.add_child(server_row)
 	_server_edit = LineEdit.new()
 	_server_edit.name = SERVER_NAME
-	_server_edit.placeholder_text = "Server host"
+	_server_edit.placeholder_text = UiCopy.text(UiCopy.SERVER_HOST)
 	_server_edit.max_length = 64
 	_server_edit.focus_mode = Control.FOCUS_CLICK
 	_server_edit.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_server_edit.text_submitted.connect(_on_edit_submitted)
 	server_row.add_child(_server_edit)
-	_add_button(server_row, APPLY_SERVER_NAME, "Apply server", try_apply_server_host)
+	_add_button(server_row, APPLY_SERVER_NAME, UiCopy.APPLY_SERVER, try_apply_server_host)
 	_sync_server_edit()
 	_room_edit = LineEdit.new()
 	_room_edit.name = ROOM_NAME
-	_room_edit.placeholder_text = "Room code"
+	_room_edit.placeholder_text = UiCopy.text(UiCopy.ROOM_CODE)
 	_room_edit.max_length = 6
 	_room_edit.focus_mode = Control.FOCUS_CLICK
 	_room_edit.text_submitted.connect(_on_edit_submitted)
@@ -1074,10 +1074,10 @@ func _ensure_http() -> void:
 	add_child(_http)
 
 
-func _add_button(row: BoxContainer, node_name: String, text: String, handler: Callable) -> void:
+func _add_button(row: BoxContainer, node_name: String, copy_key: String, handler: Callable) -> void:
 	var button: Button = Button.new()
 	button.name = node_name
-	button.text = text
+	button.text = UiCopy.text(copy_key)
 	button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	button.focus_mode = Control.FOCUS_NONE
 	button.pressed.connect(handler)

@@ -5,7 +5,7 @@ extends Node
 ## default official course occupancy, destructible placeholders,
 ## compiled portal-link gizmos, checkpoint-order gizmos, and live
 ## standing labels from the latest snapshot. Solo play starts a local
-## embedded match session and keeps "离线试玩，成绩不上传" on the HUD.
+## embedded match session and keeps `craft_arena.ui.offline_banner` on the HUD.
 ## Live HTTP/WS stays off in headless
 ## so CI --quit does not call localhost.
 ## `-- --package-check` short-circuits all of that and prints the exported
@@ -27,6 +27,7 @@ var lobby: MatchLobbyShellGd = null
 
 func _ready() -> void:
 	var user_args: PackedStringArray = OS.get_cmdline_user_args()
+	UiCopy.ensure_loaded()
 	if PackageCheckGd.requested(user_args):
 		get_tree().quit(PackageCheckGd.run_and_print())
 		return

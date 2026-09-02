@@ -11,6 +11,7 @@ const PackageCheckGd := preload("res://src/client/package_check.gd")
 
 const ALWAYS_MANDATORY: PackedStringArray = [
 	"courses_readable",
+	"locale_table_loadable",
 	"user_draft_roundtrip",
 	"no_mcp_autoload",
 	"runtime_material",
@@ -68,6 +69,7 @@ func test_report_names_all_three_official_courses() -> void:
 	for path: String in paths:
 		assert_true(path.begins_with("res://content/official/traprush/"), path)
 		assert_true(path.ends_with(".json"), path)
+	assert_eq(str(report["locale_table_path"]), "res://content/locale/craft_arena.csv")
 
 
 func test_probe_file_does_not_survive_the_check() -> void:

@@ -23,8 +23,8 @@ func test_begin_course_01_publishes_one_player_without_writes() -> void:
 	assert_eq(offline.session.player_count(), 1)
 	assert_eq(offline.session.tick_index(), 0)
 	var banner: String = str(offline.status_view().get("banner", ""))
-	assert_eq(banner, MatchOfflineSession.BANNER)
-	assert_eq(banner, "离线试玩，成绩不上传")
+	assert_eq(banner, UiCopy.text(MatchOfflineSession.BANNER_KEY))
+	assert_eq(UiCopy.text(MatchOfflineSession.BANNER_KEY, "zh_CN"), "离线试玩，成绩不上传")
 	assert_false(offline.allows_settlement())
 	assert_false(offline.allows_online_writes())
 
@@ -145,7 +145,7 @@ func test_course_01_finish_is_local_mvp_without_online_write() -> void:
 	assert_false(offline.allows_settlement())
 	assert_false(offline.allows_online_writes())
 	var finish_banner: String = str(offline.status_view().get("banner", ""))
-	assert_eq(finish_banner, MatchOfflineSession.BANNER)
+	assert_eq(finish_banner, UiCopy.text(MatchOfflineSession.BANNER_KEY))
 
 
 func test_tight_play_range_resets_two_cell_move() -> void:
