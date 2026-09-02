@@ -53,23 +53,23 @@ Worktree 端口偏移见 README「并行工作区」；本文件不复述端口�
 
 ---
 
-## 本刀：角色脚底对齐胶囊底面（freeze-exception）
+## 本刀：拆对局会话（C5 第 3 章，bootstrap / intents / scan / view）
 
-上一刀（[#205](https://github.com/czmomocha/craftarena/pull/205)）拆了匹配会话。本刀只改角色视觉的竖直偏移：从「沉到 1 米占位盒底」改成「沉到权威胶囊底面」。**窗口里其它东西应与上一刀相同**。权威仿真、固体贴合、协议都不动。
+上一刀（[#206](https://github.com/czmomocha/craftarena/pull/206)）把角色脚底对齐胶囊底面。本刀只拆 `TraprushMatchSession`：公开 API 仍在门面上，裁决顺序不变。**窗口里其它东西应与上一刀相同**。协议、Schema、官方课都不动。
 
 本刀**不需要** `npm run dev`（Solo 就能看完前 3 步）。
 
-1. **Solo 站在出生方块顶面上**：按「共用启动」打开主场景（不必起三后端），点 **单人试玩** / **Solo play**。等角色落下（大约不到一秒），从默认 45° 镜头看本席角色的脚。
-   - 预期：脚底与灰色实心方块**顶面齐平**，脚踝不埋进方块。头顶 `anim` 为 `idle`（或带 `*` 的本席前缀）。
-   - 失败：小腿/脚还在方块里面 ⇒ `CHARACTER_FOOT_LIFT` 仍是半格盒底，或大厅没读 `SharedVisualAssetCatalog` 那一份。浮在顶面上方大约半米 ⇒ 偏移写反了或没下沉。
+1. **Solo 开玩仍落下、脚仍齐**：按「共用启动」打开主场景（不必起三后端），点 **单人试玩** / **Solo play**。等角色落下（大约不到一秒）。
+   - 预期：角色站在出生方块顶面上，脚底齐平；头顶 `anim` 为 `idle`（或带 `*` 的本席前缀）；状态行仍有 `pads=` / `floor=` / `solids=`。
+   - 失败：立刻崩、不生成胶囊、或不落下 ⇒ `create()` / `commit_tick` 拆坏了。脚又陷入方块 ⇒ 不该动的表现偏移被连带改了。
 
-2. **走一段路、跳一次，落地仍齐**：WASD 沿出生点前方的石色方块走几格，空格跳一下，落地后再看脚。
-   - 预期：走路时脚底一直贴着方块顶面；落地后再次齐平，不会越走越沉。
-   - 失败：只在出生点齐、走过之后陷入 ⇒ 复用席位节点时视觉子节点的 `position` 被改掉了。跳起来脚钉在地面 ⇒ 错误地把脚底绑到了地块而不是胶囊。
+2. **走路、跳、打箱仍是原来的键**：WASD 走几格，空格跳一下，Q 打碎出生点前方的箱。
+   - 预期：走得到、跳得起来、箱子碎掉（官方课出生点已拾爆破球）。落地后脚仍齐。
+   - 失败：按键没反应、跳不起来、或箱不碎 ⇒ 意图分发没接到 `match_session_intents`。走两步突然传送或复位 ⇒ 占用扫描顺序被改了。
 
-3. **Preview 同一份偏移**（可选，若本机开编辑器）：F6 打开 Preview 沙箱，Play 后看玩家标记的脚。
-   - 预期：脚底同样贴在立足固体顶面，和大厅 Solo 是同一高度关系。
-   - 失败：Preview 仍陷入、大厅已经齐 ⇒ `AuthoringPreviewMap` 没走 `CHARACTER_FOOT_LIFT`。
+3. **R 复位仍回检查点**：沿路走到第一块垫之后按 R。
+   - 预期：回到最近已验收检查点落点，进度不回退。
+   - 失败：R 没反应或整场重开 ⇒ Reset 没进 IntentStepper。
 
 4. **自动化全绿 + 裁决不变**：
    ```bash
@@ -78,27 +78,35 @@ Worktree 端口偏移见 README「并行工作区」；本文件不复述端口�
    & $env:GODOT4_CONSOLE --headless --path game -- --package-check
    & $env:GODOT4_CONSOLE --headless --path game -- --bot-run
    ```
-   - 预期：`npm test` 无回归；`redline-scan` `no findings`；GUT 全绿（含 `test_character_visual_asset.gd` 与 `test_placeholder_spec.gd` 新增的脚底对齐用例）；`--package-check` `ok=true`；`--bot-run` 三张课 `completable`，**动作序列与步数逐项不变**（5 / 5 / 12 步）。
-   - 失败：bot-run 步数变了 ⇒ 表现偏移意外进了裁决，停下来查，别先改断言。`test_settled_pose_puts_visual_feet_on_the_solid_top` 红 ⇒ 落地公式或 `meters_from_fixed` 换算被改了。
+   - 预期：`npm test` 无回归；`redline-scan` `no findings`；GUT 全绿（含 `test_traprush_match_session.gd` 与新增 `test_traprush_match_session_split.gd`）；`--package-check` `ok=true`；`--bot-run` 三张课 `completable`，**动作序列与步数逐项不变**（5 / 5 / 12 步）。
+   - 失败：bot-run 步数变了 ⇒ 拆分改了裁决，停下来查，别先改断言。
 
 ### 本刀不测
 
-- **在线双人 WS 对局**：偏移是客户端表现映射，Solo / Preview 与线上共用同一常量；
-- **改胶囊半径或高度**：本刀只改脚底读哪一个面，数值仍是 D4 的 0.125 格；
+- **在线双人 WS 对局**：会话是权威内核，Solo 与线上共用同一套 `TraprushMatchSession`；
+- **拆 Preview / 控制面**：本刀只拆对局会话；
 - **字体 / locale 热切换 / 触控 UI**。
 
 ### 诚实边界
 
-- 扫掠是闭区间接触即重叠，真实落地可能比「几何贴顶」高出一个子步；肉眼应仍是齐平，不会再陷入 0.31 m；
-- 角色网格脚底在原点是这条规则的前提；换一个原点在骨盆的模型要另开一章，不能靠再减半格「修」；
+- 门面仍持有 `_world` / `_players` 等字段；协作者读这些字段，不是新的权威源；
+- `hash_state` 仍覆盖位姿、进度、门闩、库存与硬直，合同与拆前相同；
 - 嵌入子窗口仍然不得自己设 `content_scale_*`。
 
 ### 仍然欠着（不因本章消失）
 
-- E9 全仓（`match_snapshot_map.gd` 仍约 404 行；对局会话 / Preview / 控制面等仍超 400）；
+- E9 全仓（Preview / 控制面 / `course_completion_probe.gd` / `graybox_course.gd` / `simulation_world.gd` 等仍超 400）；
 - 字体入包（思源黑体 / Noto Sans SC 子集范围待人类拍）；
 - 触控 UI；按 `asset_id` 解析视觉；传送门没有专用模型；
 - 扫掠步数无上限。
+
+---
+
+## 上一刀：角色脚底对齐胶囊底面（freeze-exception）
+
+> **本节已随 [#206](https://github.com/czmomocha/craftarena/pull/206) 合入，保留只为追溯。验当前 PR 只看上面的「本刀」。**
+
+该刀把角色视觉从 1 米占位盒底改到权威胶囊底面。窗口里脚贴方块顶，权威命令不变。
 
 ---
 

@@ -105,7 +105,7 @@ repo/
 │  │  ├─ client/                 # platform/input/prediction/presentation；大厅门面 `match_lobby_shell.gd` + chrome/net/sampler/stage/hud/director；匹配门面 `match_join_session.gd` + codec/accept
 │  │  ├─ creator/                # shared shell/edit_commands/preview
 │  │  └─ games/
-│  │     ├─ traprush/
+│  │     ├─ traprush/            # 对局门面 `match_session.gd` + bootstrap/intents/scan/view
 │  │     └─ bastion/
 │  ├─ content/
 │  │  ├─ official/
