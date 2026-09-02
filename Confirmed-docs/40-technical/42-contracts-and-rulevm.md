@@ -190,7 +190,7 @@ Undo / Redo 是会话内对成功命令派生的反向 payload（`place`↔`remo
 | AuthoringPreview | `game/src/creator/authoring_preview.gd` |
 | Preview 补丁等级名 | `game/src/creator/preview_patch_levels.gd` |
 | Preview 宿主种类 | `game/src/creator/authoring_preview_host_kinds.gd` |
-| AuthoringPreviewShell | `game/src/creator/authoring_preview_shell.gd` |
+| AuthoringPreviewShell | `game/src/creator/authoring_preview_shell.gd` + chrome / sampler / hud / play / view |
 | AuthoringPreviewMap | `game/src/creator/authoring_preview_map.gd` + convert / occupancy / gizmos / overlay / player |
 | Preview 目视沙箱 | `game/src/creator/preview_sandbox.tscn` |
 | AuthoringEditorShell | `game/src/creator/authoring_editor_shell.gd` |

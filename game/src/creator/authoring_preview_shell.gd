@@ -2,50 +2,38 @@ class_name AuthoringPreviewShell
 extends Node
 
 ## Independent Preview window host (CD-32 §4). AuthoringSession stays open.
+## Collaborators are chrome / sampler / hud / play / view so this file stays
+## under E9 400 lines. Public API stays on this type.
 ## Creates a Godot Window in code and maps preview transforms to 1 m boxes,
 ## portal gizmos, checkpoint-order labels, and reachability-issue overlay.
 ## Play compiles the connected Preview world into a SimulationBundle, loads
 ## it, and draws the player pose as a presentation stub. While playing and
 ## visible, PlayInput maps WASD / analog to a world-space MoveIntent;
-## play_move_step is a presentation stub, not a product speed. Reset button and R rising-edge
-## encode ResetToCheckpointIntent; that sample is a stub, not a hold
-## duration. Use item button and use_item rising-edge encode UseItemIntent;
-## play_use_item_damage / reach are stubs, not a blast table. A granted
-## bomb is required. Sprint button and Left Shift rising-edge encode
-## SprintIntent along current yaw; a granted dash is required. Jump button
-## and jump rising-edge encode JumpIntent; play_jump_dy / play_support_dy
-## / play_fall_dy are stubs, not a locked jump height or product gravity.
-## Advance tick 按调用方加速度积分（TraprushGravity），意图仍不 tick。
-## play_fall_dy 默认一整格/点击的加速度：从静止第一下仍落一格，之后加速。
-## Play copies an 8-cell AABB stub onto Preview (not a product bound).
-## Occupancy accepts overlapping checkpoint pads through PadAccept and portal boxes
-## through PortalLanding.try_land_exit; status shows pads=n/m, floor=n,
-## finish=n, crates=n/m, hazards=n/m, and solids=n/m.
-## Tab host
-## is reserved and refused.
-## The window defaults to 1280×720 maximized; HUD buttons use
-## FOCUS_NONE so Space stays jump, not Play. Re-open raises the existing
-## window (grab_focus) and rebuilds it if the native instance was freed.
-## UI scales from the D4 1920×1080 base (PlaceholderSpec.UI_BASE_SIZE).
-## The camera is the D4 45° / 45° rig; distance and FOV are unchanged
-## placeholders, so this is not a product FOV.
+## play_move_step is a presentation stub, not a product speed.
+## Tab host is reserved and refused. Buttons use FOCUS_NONE so Space stays
+## jump. Re-open raises the existing window and rebuilds if the native
+## instance was freed. UI scales from the D4 1920×1080 base on the **main**
+## window; this embedded sub-window must not set `content_scale_*`.
 ## Never settlement.
 
 const OutOfRangeReset := preload("res://src/games/traprush/out_of_range_reset.gd")
 const PlayStubs := preload("res://src/games/traprush/play_stubs.gd")
-const TITLE: String = UiCopy.WINDOW_PREVIEW
-const WINDOW_SIZE: Vector2i = Vector2i(1280, 720)
-const WINDOW_MIN_SIZE: Vector2i = Vector2i(960, 540)
-const PLAY_NAME: String = "Play"
-const STOP_NAME: String = "Stop"
-const RESET_NAME: String = "Reset"
-const USE_ITEM_NAME: String = "UseItem"
-const SPRINT_NAME: String = "Sprint"
-const JUMP_NAME: String = "Jump"
-const ADVANCE_TICK_NAME: String = "AdvanceTick"
-const _STATUS_NAME: String = "Status"
-const _MAP_NAME: String = "PreviewMap"
-const _OVERLAY_NAME: String = "Overlay"
+const ChromeGd := preload("res://src/creator/authoring_preview_shell_chrome.gd")
+const HudGd := preload("res://src/creator/authoring_preview_shell_hud.gd")
+const PlayGd := preload("res://src/creator/authoring_preview_shell_play.gd")
+const SamplerGd := preload("res://src/creator/authoring_preview_shell_sampler.gd")
+const ViewGd := preload("res://src/creator/authoring_preview_shell_view.gd")
+
+const TITLE: String = ChromeGd.TITLE
+const WINDOW_SIZE: Vector2i = ChromeGd.WINDOW_SIZE
+const WINDOW_MIN_SIZE: Vector2i = ChromeGd.WINDOW_MIN_SIZE
+const PLAY_NAME: String = ChromeGd.PLAY_NAME
+const STOP_NAME: String = ChromeGd.STOP_NAME
+const RESET_NAME: String = ChromeGd.RESET_NAME
+const USE_ITEM_NAME: String = ChromeGd.USE_ITEM_NAME
+const SPRINT_NAME: String = ChromeGd.SPRINT_NAME
+const JUMP_NAME: String = ChromeGd.JUMP_NAME
+const ADVANCE_TICK_NAME: String = ChromeGd.ADVANCE_TICK_NAME
 
 var kind: String = AuthoringPreviewHostKinds.WINDOW
 var preview: AuthoringPreview = null
@@ -65,16 +53,12 @@ var play_support_dy: int = PlayStubs.SUPPORT_DY
 ## Advance tick is a click, not a frame, so Preview falls a whole cell per step.
 var play_fall_dy: int = PlayStubs.PREVIEW_FALL_DY
 var play_range_half: int = OutOfRangeReset.STUB_HALF
-var _status: Label = null
-var _reset_held: bool = false
-var _use_item_held: bool = false
-var _sprint_held: bool = false
-var _jump_held: bool = false
-var _play_input: PlayInput = PlayInput.new()
-var _play_moving: bool = false
-var _play_anim: PlayAnimState = PlayAnimState.new()
-var _play_view_busy: bool = false # rebuilds must not re-enter _process sampling
-var _map_playing: bool = false # 上次建图时是不是在试玩，用来判「该强制重建」
+var play_anim: PlayAnimState = PlayAnimState.new()
+var chrome: ChromeGd = ChromeGd.new()
+var sampler: SamplerGd = SamplerGd.new()
+var play: PlayGd = PlayGd.new()
+var view: ViewGd = ViewGd.new()
+var _play_view_busy: bool = false
 
 
 static func create(p_kind: String) -> AuthoringPreviewShell:
@@ -99,7 +83,7 @@ func open_from(session: AuthoringSession) -> bool:
 		return false
 	_rebuild_map()
 	_refresh_status()
-	return _raise_window()
+	return chrome.raise_window()
 
 
 func show_window() -> bool:
@@ -107,36 +91,22 @@ func show_window() -> bool:
 		return false
 	if not preview.connected:
 		return false
-	var rebuilt: bool = not _window_alive()
+	var rebuilt: bool = not chrome.is_alive()
 	_ensure_window()
 	if window == null:
 		return false
 	if rebuilt:
 		_rebuild_map()
 	_refresh_status()
-	return _raise_window()
+	return chrome.raise_window()
 
 
 func hide_window() -> void:
-	if _window_alive():
-		window.visible = false
+	chrome.hide_window()
 
 
 func is_window_visible() -> bool:
-	return _window_alive() and window.visible
-
-
-func _window_alive() -> bool:
-	return window != null and is_instance_valid(window)
-
-
-func _raise_window() -> bool:
-	if not _window_alive():
-		return false
-	window.visible = true
-	if window.is_inside_tree():
-		window.grab_focus()
-	return true
+	return chrome.is_visible()
 
 
 func try_apply_patch(level: String, command: SharedCommand) -> bool:
@@ -151,64 +121,29 @@ func try_apply_patch(level: String, command: SharedCommand) -> bool:
 func try_start_play(seed: int = 1, radius: int = 0, cylinder_height: int = 0) -> bool:
 	if preview == null or _play_view_busy:
 		return false
-	_reset_held = false
-	_use_item_held = false
-	_sprint_held = false
-	_jump_held = false
-	_play_moving = false
-	_play_anim.reset()
-	_copy_use_item_stubs()
-	_copy_sprint_stubs()
-	_copy_jump_stubs()
-	_copy_fall_stub()
-	_copy_play_range_stub()
-	_copy_hazard_hit_stubs()
-	_play_view_busy = true
-	var ok: bool = preview.try_start_play(seed, radius, cylinder_height)
-	_rebuild_map()
-	_refresh_status()
-	_play_view_busy = false
-	return ok
+	sampler.reset_held_flags()
+	sampler.play_moving = false
+	play_anim.reset()
+	play.copy_start_stubs(self)
+	return _run_play_verb(func() -> bool: return preview.try_start_play(seed, radius, cylinder_height))
 
 
 func try_stop_play() -> bool:
 	if preview == null or _play_view_busy:
 		return false
-	_reset_held = false
-	_use_item_held = false
-	_sprint_held = false
-	_jump_held = false
-	_play_input.reset_held()
-	_play_moving = false
-	_play_anim.reset()
-	_play_view_busy = true
-	var ok: bool = preview.try_stop_play()
-	_rebuild_map()
-	_refresh_status()
-	_play_view_busy = false
-	return ok
+	sampler.reset_all()
+	play_anim.reset()
+	return _run_play_verb(preview.try_stop_play)
 
 
 func try_advance_play() -> bool:
 	if preview == null or _play_view_busy:
 		return false
-	_play_view_busy = true
-	var ok: bool = preview.try_advance_play()
-	_rebuild_map()
-	_refresh_status()
-	_play_view_busy = false
-	return ok
+	return _run_play_verb(preview.try_advance_play)
 
 
 static func move_payload_from_vector(move_x: float, move_z: float, step: int) -> Dictionary:
-	var axes: Vector2i = PlayInput.step_from_vector(move_x, move_z, step)
-	if axes == Vector2i.ZERO:
-		return {}
-	return {
-		"intent": PlayerIntentNames.MOVE,
-		"dx": axes.x,
-		"dz": axes.y,
-	}
+	return SamplerGd.move_payload_from_vector(move_x, move_z, step)
 
 
 static func move_payload_from_axes(
@@ -218,28 +153,19 @@ static func move_payload_from_axes(
 	right: bool,
 	step: int
 ) -> Dictionary:
-	var vector: Vector2 = PlayInput.vector_from_axes(forward, back, left, right)
-	return move_payload_from_vector(vector.x, vector.y, step)
+	return SamplerGd.move_payload_from_axes(forward, back, left, right, step)
 
 
 func try_apply_play_intent(payload: Dictionary) -> bool:
 	if preview == null or _play_view_busy:
 		return false
-	_play_view_busy = true
-	var ok: bool = preview.try_apply_play_intent(payload)
-	_rebuild_map()
-	_refresh_status()
-	_play_view_busy = false
-	return ok
+	return _run_play_verb(func() -> bool: return preview.try_apply_play_intent(payload))
 
 
 func try_sample_play_vector(move_x: float, move_z: float) -> bool:
-	_play_moving = absf(move_x) > PlayInput.IDLE or absf(move_z) > PlayInput.IDLE
-	if preview == null or not preview.is_playing():
-		return false
-	if not _window_alive() or not window.visible:
-		return false
-	var payload: Dictionary = move_payload_from_vector(move_x, move_z, play_move_step)
+	var payload: Dictionary = sampler.try_vector(
+		move_x, move_z, play_move_step, _is_playing(), chrome.is_visible()
+	)
 	if payload.is_empty():
 		return false
 	return try_apply_play_intent(payload)
@@ -251,70 +177,30 @@ func try_sample_play_move(forward: bool, back: bool, left: bool, right: bool) ->
 
 
 func try_sample_play_use_item(pressed: bool) -> bool:
-	if preview == null or not preview.is_playing():
-		_use_item_held = pressed
+	if not sampler.try_rising(pressed, "use_item", _is_playing(), chrome.is_visible()):
 		return false
-	if not _window_alive() or not window.visible:
-		_use_item_held = pressed
-		return false
-	var rising: bool = pressed and not _use_item_held
-	_use_item_held = pressed
-	if not rising:
-		return false
-	_copy_use_item_stubs()
-	return try_apply_play_intent({
-		"intent": PlayerIntentNames.USE_ITEM,
-	})
+	play.copy_use_item_stubs(self)
+	return try_apply_play_intent(play.use_item_intent())
 
 
 func try_sample_play_sprint(pressed: bool) -> bool:
-	if preview == null or not preview.is_playing():
-		_sprint_held = pressed
+	if not sampler.try_rising(pressed, "sprint", _is_playing(), chrome.is_visible()):
 		return false
-	if not _window_alive() or not window.visible:
-		_sprint_held = pressed
-		return false
-	var rising: bool = pressed and not _sprint_held
-	_sprint_held = pressed
-	if not rising:
-		return false
-	_copy_sprint_stubs()
-	return try_apply_play_intent({
-		"intent": PlayerIntentNames.SPRINT,
-	})
+	play.copy_sprint_stubs(self)
+	return try_apply_play_intent(play.sprint_intent())
 
 
 func try_sample_play_reset(pressed: bool) -> bool:
-	if preview == null or not preview.is_playing():
-		_reset_held = pressed
+	if not sampler.try_rising(pressed, "reset", _is_playing(), chrome.is_visible()):
 		return false
-	if not _window_alive() or not window.visible:
-		_reset_held = pressed
-		return false
-	var rising: bool = pressed and not _reset_held
-	_reset_held = pressed
-	if not rising:
-		return false
-	return try_apply_play_intent({
-		"intent": PlayerIntentNames.RESET_TO_CHECKPOINT,
-	})
+	return try_apply_play_intent(play.reset_intent())
 
 
 func try_sample_play_jump(pressed: bool) -> bool:
-	if preview == null or not preview.is_playing():
-		_jump_held = pressed
+	if not sampler.try_rising(pressed, "jump", _is_playing(), chrome.is_visible()):
 		return false
-	if not _window_alive() or not window.visible:
-		_jump_held = pressed
-		return false
-	var rising: bool = pressed and not _jump_held
-	_jump_held = pressed
-	if not rising:
-		return false
-	_copy_jump_stubs()
-	return try_apply_play_intent({
-		"intent": PlayerIntentNames.JUMP,
-	})
+	play.copy_jump_stubs(self)
+	return try_apply_play_intent(play.jump_intent())
 
 
 func allows_settlement() -> bool:
@@ -326,113 +212,52 @@ func allows_online_writes() -> bool:
 
 
 func status_view() -> Dictionary:
-	var entity_count: int = 0
-	var connected: bool = false
-	var preview_revision: int = 0
-	var needs_restart: bool = false
-	var playing: bool = false
-	var accepted_count: int = 0
-	var checkpoint_count: int = 0
-	var floor_index: int = 0
-	var finish_tick: int = -1
-	var crate_alive: int = 0
-	var crate_count: int = 0
-	var hazard_alive: int = 0
-	var hazard_count: int = 0
-	var reach_ok: bool = true
-	var reach_issue_count: int = 0
-	if preview != null:
-		connected = preview.connected
-		preview_revision = preview.preview_revision
-		needs_restart = preview.needs_restart
-		playing = preview.is_playing()
-		accepted_count = preview.play_accepted_count()
-		checkpoint_count = preview.play_checkpoint_count()
-		floor_index = preview.play_floor_index()
-		finish_tick = preview.play_finish_tick()
-		crate_alive = preview.play_destructible_alive_count()
-		crate_count = preview.play_destructible_count()
-		hazard_alive = preview.play_hazard_solid_count()
-		hazard_count = preview.play_hazard_count()
-		if preview.world != null:
-			entity_count = preview.world.entity_count()
-	if map != null:
-		reach_ok = map.reachability_ok()
-		reach_issue_count = map.reachability_issue_count()
-	return {
-		"connected": connected,
-		"preview_revision": preview_revision,
-		"entity_count": entity_count,
-		"needs_restart": needs_restart,
-		"playing": playing,
-		"accepted_count": accepted_count,
-		"checkpoint_count": checkpoint_count,
-		"floor_index": floor_index,
-		"finish_tick": finish_tick,
-		"crate_alive": crate_alive,
-		"crate_count": crate_count,
-		"hazard_alive": hazard_alive,
-		"hazard_count": hazard_count,
-		"window_visible": is_window_visible(),
-		"reach_ok": reach_ok,
-		"reach_issue_count": reach_issue_count,
-	}
+	return HudGd.build_view(preview, map, is_window_visible())
 
 
 func status_label_text() -> String:
-	if _status == null:
-		return ""
-	return _status.text
+	return chrome.status_text()
 
 
-## D4 的 UI 基准 1920×1080 由**主窗口**的 stretch 承担；嵌入子窗口作为 canvas
-## item 继承它，所以这里**故意不设** `content_scale_*`（设了会让渲染与鼠标命中
-## 错开，理由见 `match_lobby_shell.gd` 同名注释）。
-func _ensure_window() -> void:
-	if _window_alive():
+func _apply_play_anim() -> void:
+	view.apply_play_anim(self)
+
+
+func _process(_delta: float) -> void:
+	if _play_view_busy:
 		return
-	window = null
-	map = null
-	_map_playing = false
-	_status = null
-	var host_viewport: Viewport = get_viewport()
-	if host_viewport != null:
-		host_viewport.gui_embed_subwindows = true
-	window = Window.new()
-	window.title = UiCopy.text(TITLE)
-	window.size = WINDOW_SIZE
-	window.min_size = WINDOW_MIN_SIZE
-	window.mode = Window.MODE_MAXIMIZED
-	window.exclusive = false
-	window.transient = false
-	window.own_world_3d = true
-	window.close_requested.connect(_on_close_requested)
-	var overlay: VBoxContainer = VBoxContainer.new()
-	overlay.name = _OVERLAY_NAME
-	overlay.set_anchors_preset(Control.PRESET_TOP_WIDE)
-	overlay.offset_left = 8
-	overlay.offset_top = 8
-	overlay.offset_right = -8
-	window.add_child(overlay)
-	_status = Label.new()
-	_status.name = _STATUS_NAME
-	overlay.add_child(_status)
-	var action_row: HBoxContainer = HBoxContainer.new()
-	action_row.name = "PlayActions"
-	overlay.add_child(action_row)
-	_add_button(action_row, PLAY_NAME, UiCopy.PLAY, _on_play)
-	_add_button(action_row, STOP_NAME, UiCopy.STOP, _on_stop)
-	_add_button(action_row, RESET_NAME, UiCopy.RESET, _on_reset)
-	_add_button(action_row, USE_ITEM_NAME, UiCopy.USE_ITEM, _on_use_item)
-	_add_button(action_row, SPRINT_NAME, UiCopy.SPRINT, _on_sprint)
-	_add_button(action_row, JUMP_NAME, UiCopy.JUMP, _on_jump)
-	_add_button(action_row, ADVANCE_TICK_NAME, UiCopy.ADVANCE_TICK, _on_advance_tick)
-	map = AuthoringPreviewMap.new()
-	map.name = _MAP_NAME
-	window.add_child(map)
-	add_child(window)
-	map.ensure_rig()
-	window.gui_release_focus()
+	if not _is_playing() or not chrome.is_visible():
+		return
+	sampler.drive_keyboard(self)
+	_apply_play_anim()
+
+
+func _ensure_window() -> void:
+	if chrome.is_alive() and view.map_alive():
+		window = chrome.window
+		map = view.map
+		return
+	if not chrome.is_alive():
+		window = null
+		map = null
+		view.clear()
+		window = chrome.attach(self, {
+			"play": _on_play,
+			"stop": _on_stop,
+			"reset": _on_reset,
+			"use_item": _on_use_item,
+			"sprint": _on_sprint,
+			"jump": _on_jump,
+			"advance": _on_advance_tick,
+			"close": _on_close_requested,
+		})
+		add_child(window)
+	else:
+		window = chrome.window
+	map = view.mount(window)
+	if map != null:
+		map.ensure_rig()
+	chrome.release_focus()
 
 
 func _on_close_requested() -> void:
@@ -448,177 +273,46 @@ func _on_stop() -> void:
 
 
 func _on_reset() -> void:
-	try_apply_play_intent({
-		"intent": PlayerIntentNames.RESET_TO_CHECKPOINT,
-	})
+	try_apply_play_intent(play.reset_intent())
 
 
 func _on_use_item() -> void:
-	_copy_use_item_stubs()
-	try_apply_play_intent({
-		"intent": PlayerIntentNames.USE_ITEM,
-	})
+	play.copy_use_item_stubs(self)
+	try_apply_play_intent(play.use_item_intent())
 
 
 func _on_sprint() -> void:
-	_copy_sprint_stubs()
-	try_apply_play_intent({
-		"intent": PlayerIntentNames.SPRINT,
-	})
+	play.copy_sprint_stubs(self)
+	try_apply_play_intent(play.sprint_intent())
 
 
 func _on_jump() -> void:
-	_copy_jump_stubs()
-	try_apply_play_intent({
-		"intent": PlayerIntentNames.JUMP,
-	})
+	play.copy_jump_stubs(self)
+	try_apply_play_intent(play.jump_intent())
 
 
 func _on_advance_tick() -> void:
 	try_advance_play()
 
 
-func _copy_use_item_stubs() -> void:
-	if preview == null:
-		return
-	preview.play_use_item_damage = play_use_item_damage
-	preview.play_use_item_reach_dx = play_use_item_reach_dx
-	preview.play_use_item_reach_dy = play_use_item_reach_dy
-	preview.play_use_item_reach_dz = play_use_item_reach_dz
-
-
-func _copy_sprint_stubs() -> void:
-	if preview == null:
-		return
-	preview.play_sprint_step = play_sprint_step
-	preview.play_item_cooldown_ticks = play_item_cooldown_ticks
-
-
-func _copy_jump_stubs() -> void:
-	if preview == null:
-		return
-	preview.play_jump_dy = play_jump_dy
-	preview.play_support_dy = play_support_dy
-
-
-func _copy_fall_stub() -> void:
-	if preview == null:
-		return
-	preview.play_fall_dy = play_fall_dy
-
-
-func _copy_play_range_stub() -> void:
-	if preview == null:
-		return
-	preview.enable_play_range(play_range_half)
-
-
-func _copy_hazard_hit_stubs() -> void:
-	if preview == null:
-		return
-	preview.play_hazard_knockback_step = play_hazard_knockback_step
-	preview.play_respawn_stun_ticks = play_respawn_stun_ticks
-
-
-func _process(_delta: float) -> void:
-	if _play_view_busy:
-		return
-	if preview == null or not preview.is_playing():
-		return
-	if not _window_alive() or not window.visible:
-		return
-	var events: Dictionary = _play_input.sample_keyboard()
-	try_sample_play_vector(PlayInput.move_x_of(events), PlayInput.move_z_of(events))
-	try_sample_play_reset(PlayInput.flag_of(events, "reset"))
-	try_sample_play_use_item(PlayInput.flag_of(events, "use_item"))
-	try_sample_play_sprint(PlayInput.flag_of(events, "sprint"))
-	try_sample_play_jump(PlayInput.flag_of(events, "jump"))
-	_apply_play_anim()
-
-
-func _add_button(row: BoxContainer, node_name: String, copy_key: String, handler: Callable) -> void:
-	var button: Button = Button.new()
-	button.name = node_name
-	button.text = UiCopy.text(copy_key)
-	button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	button.focus_mode = Control.FOCUS_NONE
-	button.pressed.connect(handler)
-	row.add_child(button)
-
-
-## AuthoringPreviewMap.rebuild 现在是脏检查（世界没变就不重建），所以这里要把
-## 「世界没变但节点树该换个样子」的两个时刻显式说出来：开玩与停玩会改占位盒显隐
-## 和检查点标记。其余每帧调用（按住方向键、Advance）世界指纹不变，整段跳过。
 func _rebuild_map() -> void:
-	if map == null or preview == null:
-		return
-	var playing: bool = preview.is_playing() and preview.play_world != null
-	if playing != _map_playing:
-		map.invalidate()
-		_map_playing = playing
-	map.rebuild(preview.world)
-	if playing:
-		map.show_player_pose(preview.play_world.get_pose(preview.player_id))
-		map.mark_accepted_checkpoints(preview.play_accepted_ids())
-		_apply_play_hazard_visibility()
-		_apply_play_anim()
-	else:
-		map.clear_player_pose()
-
-
-func _apply_play_anim() -> void:
-	if map == null or preview == null or not preview.is_playing():
-		return
-	var facts: Dictionary = PlayAnimState.facts(
-		preview.play_airborne(),
-		_play_moving,
-		preview.play_stun_remaining() > 0,
-		preview.play_portal_latched(),
-		false,
-		preview.play_broke_this_tick()
-	)
-	map.set_anim_state(_play_anim.resolve(facts))
-
-
-func _apply_play_hazard_visibility() -> void:
-	if map == null or preview == null or not preview.is_playing():
-		return
-	var lookup: Dictionary = {}
-	for key: Variant in preview.play_hazard_ids.keys():
-		if typeof(key) != TYPE_INT:
-			continue
-		var entity_id: int = key
-		lookup[entity_id] = preview.play_is_hazard_solid(entity_id)
-	map.apply_hazard_visibility(lookup)
+	view.rebuild(self)
+	if view.map_alive():
+		map = view.map
 
 
 func _refresh_status() -> void:
-	if _status == null or preview == null:
-		return
-	var entity_count: int = 0
-	if preview.world != null:
-		entity_count = preview.world.entity_count()
-	var reach_ok: bool = true
-	var reach_issue_count: int = 0
-	if map != null:
-		reach_ok = map.reachability_ok()
-		reach_issue_count = map.reachability_issue_count()
-	_status.text = "connected=%s revision=%d entities=%d restart=%s playing=%s pads=%d/%d floor=%d finish=%d crates=%d/%d hazards=%d/%d solids=%d/%d reach_ok=%s issues=%d" % [
-		str(preview.connected),
-		preview.preview_revision,
-		entity_count,
-		str(preview.needs_restart),
-		str(preview.is_playing()),
-		preview.play_accepted_count(),
-		preview.play_checkpoint_count(),
-		preview.play_floor_index(),
-		preview.play_finish_tick(),
-		preview.play_destructible_alive_count(),
-		preview.play_destructible_count(),
-		preview.play_hazard_solid_count(),
-		preview.play_hazard_count(),
-		preview.play_solid_count(),
-		preview.play_solid_count(),
-		str(reach_ok),
-		reach_issue_count,
-	]
+	chrome.set_status_text(HudGd.format_line(preview, map))
+
+
+func _is_playing() -> bool:
+	return preview != null and preview.is_playing()
+
+
+func _run_play_verb(verb: Callable) -> bool:
+	_play_view_busy = true
+	var ok: bool = verb.call()
+	_rebuild_map()
+	_refresh_status()
+	_play_view_busy = false
+	return ok
