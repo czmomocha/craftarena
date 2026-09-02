@@ -118,6 +118,10 @@ CI 比开发机慢约 1.5 倍，所以预算必须按 CI 这一列定。最初�
 
 **后续观察点**：`test_traprush_official_path_floors.gd` 一个脚本占了 CI 侧 GUT 总时长的三分之一。它在权威仿真上把三张官方课整段走完，代价是真实的，但再加课就会重新逼近预算。下次赛道扩容时先看这一行。
 
+## 7. 后续（2026-09-02，C5 第 15 章）
+
+当时「不做」的取样上限已另立深审章落地：`SimulationWorldMove.MAX_SWEEP_STEPS = 256`，超限拒绝整段位移，不粗化取样。`radius=1` 下落一整格不再跑 65536 次，会立刻失败。本节历史数字与处置不改。口径见 [CD-42 §1.1](../../Confirmed-docs/40-technical/42-contracts-and-rulevm.md)。
+
 ## 6. 怎么复跑本文件的结论
 
 ```powershell

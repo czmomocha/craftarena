@@ -1,11 +1,19 @@
 class_name SimulationWorldMove
 extends RefCounted
 
+## Constitution art.17 budget for one discrete sweep. Not a product speed.
+## Production capsule (SCALE/8) may travel 32 cells in one call; a 1-unit
+## radius falling one cell used to sample 65536 times (2026-08-28 CI hang).
+const MAX_SWEEP_STEPS: int = 256
+
 ## Discrete sweep moves for SimulationWorld.
 ## Public API stays on the world facade so this file can stay under E9.
 ## Samples are not continuous analytic TOI. A blocked sample rejects the
 ## whole try_move_*; until_blocked commits the last free sample.
-## radius is the only step scale. Sweep step count has no product cap.
+## radius is the step scale: ceil(|d| / radius), min 1.
+## Over MAX_SWEEP_STEPS rejects the whole move (same as overflow). It does
+## not coarsen samples, so in-budget landings and replay hashes stay put.
+## Zero radius still destination-only and does not spend the budget.
 
 
 func try_set_pose(
@@ -114,7 +122,9 @@ func _sweep_clear_xz(
 	var chebyshev: int = abs_dx_res.value
 	if abs_dz_res.value > chebyshev:
 		chebyshev = abs_dz_res.value
-	var step_count: int = _sweep_step_count(chebyshev, radius)
+	var step_count: int = sweep_step_count(chebyshev, radius)
+	if step_count < 1:
+		return false
 	var sample_i: int = 1
 	while true:
 		var step_dx_res: FixedResult = Fixed.try_mul_div(dx, sample_i, step_count)
@@ -168,7 +178,9 @@ func _sweep_last_free_xz(
 	var chebyshev: int = abs_dx_res.value
 	if abs_dz_res.value > chebyshev:
 		chebyshev = abs_dz_res.value
-	var step_count: int = _sweep_step_count(chebyshev, radius)
+	var step_count: int = sweep_step_count(chebyshev, radius)
+	if step_count < 1:
+		return failed
 	var last_free_x: int = start_x
 	var last_free_z: int = start_z
 	var sample_i: int = 1
@@ -211,7 +223,9 @@ func _sweep_clear_y(
 	var abs_dy_res: FixedResult = _try_abs(dy)
 	if not abs_dy_res.ok:
 		return false
-	var step_count: int = _sweep_step_count(abs_dy_res.value, radius)
+	var step_count: int = sweep_step_count(abs_dy_res.value, radius)
+	if step_count < 1:
+		return false
 	var sample_i: int = 1
 	while true:
 		var step_dy_res: FixedResult = Fixed.try_mul_div(dy, sample_i, step_count)
@@ -242,7 +256,9 @@ func _sweep_last_free_y(
 	var abs_dy_res: FixedResult = _try_abs(dy)
 	if not abs_dy_res.ok:
 		return FixedResult.fail()
-	var step_count: int = _sweep_step_count(abs_dy_res.value, radius)
+	var step_count: int = sweep_step_count(abs_dy_res.value, radius)
+	if step_count < 1:
+		return FixedResult.fail()
 	var last_free_y: int = start_y
 	var sample_i: int = 1
 	while true:
@@ -261,12 +277,26 @@ func _sweep_last_free_y(
 	return FixedResult.success(last_free_y)
 
 
-func _sweep_step_count(length: int, radius: int) -> int:
+## ceil(|length| / radius) with no budget. radius must be > 0.
+## Returns 0 when the count cannot be formed.
+static func uncapped_sweep_step_count(length: int, radius: int) -> int:
+	if radius <= 0:
+		return 0
 	var step_count: int = length / radius
 	if length % radius != 0:
 		step_count += 1
 	if step_count < 1:
 		step_count = 1
+	return step_count
+
+
+## In-budget step count, or 0 when the uncapped count exceeds MAX_SWEEP_STEPS.
+static func sweep_step_count(length: int, radius: int) -> int:
+	var step_count: int = uncapped_sweep_step_count(length, radius)
+	if step_count < 1:
+		return 0
+	if step_count > MAX_SWEEP_STEPS:
+		return 0
 	return step_count
 
 

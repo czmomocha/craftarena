@@ -54,48 +54,47 @@ Worktree 端口偏移见 README「并行工作区」；本文件不复述端口�
 
 ---
 
-## 本刀：E1 真导出（C5 第 14 章）
+## 本刀：扫掠取样预算（C5 第 15 章）
 
-按 [导出包核查清单](desktop-export-check.md) 打出 Windows 包，并修到 `--package-check` 全绿。**真机是导出的 `CraftArena.exe`，不是编辑器里的 `--path game`。** Headless 自检不能代替开窗。不需要 `npm run dev`。
+权威扫掠加了 `MAX_SWEEP_STEPS = 256`。生产胶囊单次走/跳/落都远小于预算，窗口里应与上一刀相同。不需要 `npm run dev`。验的是编辑器 / `--path game` 窗口，不是导出包。
 
-1. 若本机还没有本分支刚打的包，仓库根目录导出 Windows：
+1. 仓库根目录开窗口化主场景：
    ```powershell
-   & $env:GODOT4_CONSOLE --headless --path game --export-release "Windows Desktop" "../export/windows/CraftArena.exe"
+   & $env:GODOT4 --path game
    ```
-   - 预期：退出码 0；`export\windows\CraftArena.exe` 与 `.pck` 都在。
-   - 失败：缺导出模板、或 `Cannot export project with preset` ⇒ 先看清单 §1 / §5。
-
-2. 包内自检（机器判定，先于开窗）：
-   ```powershell
-   & "export\windows\CraftArena.exe" --headless -- --package-check
-   ```
-   - 预期：一行 JSON，`ok=true`，`failures=[]`，`locale_banner_zh` 为 **离线试玩，成绩不上传**，七条 `*_visual_loadable` 为 true。
-   - 失败：`locale_table_loadable` 红且横幅变成键名 ⇒ `UiCopy` 又绕开了 `get_csv_line`。视觉项红 ⇒ `.glb` 没进包或贴合失败。
-
-3. 双击 `export\windows\CraftArena.exe`（**不要**加 `--headless`）。
    - 预期：出现大厅窗口。本机 locale 为 `zh*` 时窗题是 **机关狂奔**，按钮从左到右含 **单人试玩**；其余 locale 仍是 **Traprush** / **Solo play**。状态行含 `join=idle`、`play=idle`、`tls=off`、`course=3/5/1`。
-   - 失败：闪退、黑窗、只有控制台、或窗题/按钮变成 `craft_arena.ui.window_traprush` / `craft_arena.ui.solo_play`。
+   - 失败：没有窗口、立刻退出、或只有 Headless 日志。
 
-4. 点 **单人试玩** / **Solo play**，点窗口内部一次，按 WASD 与空格。
-   - 预期：角色视觉会走、会跳、会落回脚下地块（不是突然只剩 1 米盒）。
-   - 失败：人消失、不能动、或跳不起来 ⇒ 导出包里的视觉 / 输入与源码大厅不一致。
+2. 点 **单人试玩** / **Solo play**，点窗口内部一次，按 WASD 与空格。
+   - 预期：角色会走、会跳、会落回脚下地块；空格仍是跳，不是点按钮。
+   - 失败：不能动、跳不起来、或穿进地块。
+
+3. 沿官方课出生点 −Z 走到地块边缘并走下去（或从出生点向外走下路面）。
+   - 预期：先下落，随后出界复位回出生 / 最近检查点（开发桩 ±8 格）。下落过程中人不会停在半空。
+   - 失败：半空冻结不动，或穿过固体地块。
 
 ### 本刀不测
 
 - 解冻令、协议帧、Schema、官方课 JSON；
 - 改 `SNAPSHOT_EVERY_TICKS` / `HEARTBEAT_EVERY_TICKS` / `INTERP_STEP` 数字；
-- 在线匹配、控制面 GUI；
-- 字体入包、触控 UI。
+- 在线匹配、导出包、字体入包、触控 UI。
 
 ### 诚实边界
 
-- 冻结令仍在；E1 只证明包能打出来且清单全绿；
-- Web 包本刀已导出，本地 http.server 开窗仍须人做（清单 §4.2）；
-- 扫掠步数仍无上限（宪法第十七条缺口）。
+- 冻结令仍在；本章不改变预算内的碰撞落点；
+- `is_pose_blocked` 仍是全量扫描，没有空间划分。
 
 ---
 
-## 上一刀：E9 剩余 + E3/E6 回写（C5 第 13 章）
+## 上一刀：E1 真导出（C5 第 14 章）
+
+> **本节随 [#218](https://github.com/czmomocha/craftarena/pull/218) 合入；验当前 PR 只看上面的「本刀」。**
+
+按 [导出包核查清单](desktop-export-check.md) 打出 Windows 包，并修到 `--package-check` 全绿。真机是导出的 `CraftArena.exe`。
+
+---
+
+## 上上刀：E9 剩余 + E3/E6 回写（C5 第 13 章）
 
 > **本节随 [#217](https://github.com/czmomocha/craftarena/pull/217) 合入；验当前 PR 只看上面的「本刀」。**
 

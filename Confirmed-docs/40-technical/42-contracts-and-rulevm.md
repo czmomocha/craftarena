@@ -16,6 +16,7 @@
 | 定点 | Q48.16，向零截断；数字只在 §1.1 |
 | Schema | Component v1 + Bundle v2（`gameplay_asset`） |
 | PLAYER 意图 | Move / Jump / Reset / UseItem / Shove / **SprintIntent（id=6）** |
+| 扫掠预算 | 单次最多 **256** 样本；超限拒绝整段，不粗化密度。数字在 §1.1 |
 | Rule VM | **未建**。无字节码、无 gas |
 
 ## 1. Component Schema v1
@@ -64,8 +65,9 @@
 | 溢出 | 拒绝该次运算，不饱和、不回绕成合法值 |
 | 乘法 | 64×64→128 再除；禁止先算 `a * b` 再除 |
 | 三角函数 | 4096 项整数 LUT + BAM 索引 + 整数线性插值；禁止引擎 `sin`/`cos` |
+| 单次扫掠取样 | `MAX_SWEEP_STEPS = 256`。步数仍是 `ceil(|d| / radius)`（最少 1）。超限拒绝该次 `try_move_*` / `until_blocked`（与溢出相同），**不**改取样密度。零半径仍只查终点、不花预算。不是产品速度。实现：`game/src/simulation/simulation_world_move.gd` |
 
-实现：`game/src/shared/fixed/`。`float` 换算只允许出现在 `game/src/client/` 与后续 creator 表现映射，不得进入 `shared/` / `simulation/`。
+实现：`game/src/shared/fixed/`。`float` 换算只允许出现在 `game/src/client/` 与后续 creator 表现映射，不得进入 `shared/` / `simulation/`。扫掠预算的数字只在上表与 `SimulationWorldMove.MAX_SWEEP_STEPS`。
 
 ### 1.2 字段标识符（v1）
 
