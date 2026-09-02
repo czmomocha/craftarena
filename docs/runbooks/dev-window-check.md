@@ -1,4 +1,4 @@
-# 开发机窗口验收
+﻿# 开发机窗口验收
 
 本文件是 [CD-52 §3.2](../../Confirmed-docs/50-engineering/52-ai-workflow.md) 的可执行版本：人类验收**当前完整章节 PR** 时照「本刀」逐步做。
 
@@ -54,7 +54,154 @@ Worktree 端口偏移见 README「并行工作区」；本文件不复述端口�
 
 ---
 
-## 本刀：文档治理（C5 第 7 章）
+## 本刀：E9 剩余 + E3/E6 回写（C5 第 13 章）
+
+把控制面 `server.ts` / `database.ts`、MatchHost `registry.ts`、`visual_asset_catalog.gd`、`match_snapshot_map.gd` 拆到 400 行以下。公开 API 与 `--bot-run` 步数不变。人类把现有网络桩升为 E3 锁定值（**不改数字**），并签署 E6 = 好玩。**没有新的窗口外观，控制面无新 GUI**。不需要 `npm run dev`。
+
+1. 仓库根目录跑 GUT fast 层（或至少 `test_c5_e9_remaining_split.gd`、`test_visual_asset_sharing.gd`）：
+   ```bash
+   npm run test:gut:fast
+   ```
+   - 预期：全绿；新拆分用例断言视觉目录 / 快照映射各文件均 < 400 行。
+   - 失败：`try_instantiate` / `apply_players` 红 ⇒ 门面把公开方法转丢了。
+
+2. 官方课步数：
+   ```powershell
+   & $env:GODOT4_CONSOLE --headless --path game -- --bot-run
+   ```
+   - 预期：三张课仍是 `completable`，步数 **5 / 5 / 12**。
+   - 失败：步数变了或 `not_completable` ⇒ 拆分误改了权威仿真。
+
+3. 大厅 **F5**（不要 F6）。点 **单人试玩**，WASD 走两步，空格跳一下。
+   - 预期：角色视觉还在（不是突然只剩 1 米盒）；能走、能跳。
+   - 失败：人消失、不能动、或跳不起来 ⇒ 快照映射 / 视觉目录委托坏了。
+
+### 本刀不测
+
+- 解冻令、协议帧、Schema、官方课 JSON；
+- 改 `SNAPSHOT_EVERY_TICKS` / `HEARTBEAT_EVERY_TICKS` / `INTERP_STEP` 数字；
+- 在线匹配、控制面 GUI（本刀无新窗口）。
+
+### 诚实边界
+
+- 冻结令仍在；E3 锁定的是现桩，不是新测出来的 Hz；
+- 测试 / addons / GUT 不在 E9 本口径；
+- 扫掠步数仍无上限（宪法第十七条缺口）。
+
+---
+
+## 上一刀：编辑壳 + 拓扑编译器（C5 第 11–12 章）
+
+> **本节随上一章 PR 提交；验当前 PR 只看上面的「本刀」。**
+
+第 11 章把 `AuthoringEditorShell` 拆成 chrome / place / follow。第 12 章把 `TraprushTopologyCompiler` 拆成 bags / fields。全部压到 400 行以下。公开 API 与 `--bot-run` 步数不变。**没有新的窗口外观**。不需要 `npm run dev`。
+
+1. 仓库根目录跑 GUT fast 层（或至少 `test_authoring_editor_e9_split.gd`、`test_traprush_topology_e9_split.gd`、`test_authoring_editor_shell.gd`、`test_traprush_topology_compiler.gd`）：
+   ```bash
+   npm run test:gut:fast
+   ```
+   - 预期：全绿；新拆分用例断言编辑壳 / 编译器各文件均 < 400 行。
+   - 失败：place / undo / Preview 跟随 / 官方课编译红 ⇒ 门面把公开方法转丢了。
+
+2. 官方课步数：
+   ```powershell
+   & $env:GODOT4_CONSOLE --headless --path game -- --bot-run
+   ```
+   - 预期：三张课仍是 `completable`，步数 **5 / 5 / 12**。
+   - 失败：步数变了或 `not_completable` ⇒ 拓扑编译袋语义变了。
+
+3. 编辑器打开 `res://src/creator/editor_sandbox.tscn`，**F6**（不要 F5）。
+   - 预期：出现编辑窗口；状态行含 `entities=`、`reach_ok=`、`follow=`；已有一个检查点与一个 dangling 传送；点 **Preview** 后 `follow=true`，再 Place 一个占用，Preview 仍跟着。
+   - 失败：窗口不出现、工具条没了、Preview 不再跟随 ⇒ chrome / follow 委托坏了。
+
+### 本刀不测
+
+- 控制面 / MatchHost registry 拆分（下一章）；
+- 解冻令、协议帧、Schema、官方课 JSON、Tick / 快照 / 插值锁定。
+
+### 诚实边界
+
+- E9 仍欠：控制面 `server.ts` / `database.ts`、MatchHost `registry.ts`、`visual_asset_catalog.gd`、`match_snapshot_map.gd`；
+- 扫掠步数仍无上限（宪法第十七条缺口）。
+
+---
+
+## 上一刀：仿真世界 + bundle；灰盒 + 探针（C5 第 9–10 章）
+
+> **本节随 [#213](https://github.com/czmomocha/craftarena/pull/213) 提交；验当前 PR 只看上面的「本刀」。**
+
+第 9 章把 `SimulationWorld` 拆成 query / move、把 `SimulationBundle` 拆成 decode / bags。第 10 章把灰盒拆成 layout / assemble / play、把完成探针拆成 heuristic / search。全部压到 400 行以下。公开 API 与 `--bot-run` 步数不变。**没有新的窗口外观**。不需要 `npm run dev`。
+
+1. 仓库根目录跑 GUT fast 层（或至少 `test_simulation_e9_split.gd`、`test_traprush_e9_split.gd`、`test_traprush_graybox_course.gd`、`test_traprush_course_completion_probe.gd`）：
+   ```bash
+   npm run test:gut:fast
+   ```
+   - 预期：全绿；新拆分用例断言仿真世界 / bundle / 灰盒 / 探针各文件均 < 400 行。
+   - 失败：占用 / 扫掠 / v1→v2 解码 / 灰盒 `try_*` / 探针 `run_path` 红 ⇒ 门面把公开方法转丢了。
+
+2. 官方课步数：
+   ```powershell
+   & $env:GODOT4_CONSOLE --headless --path game -- --bot-run
+   ```
+   - 预期：三张课仍是 `completable`，步数 **5 / 5 / 12**。
+   - 失败：步数变了或 `not_completable` ⇒ 扫掠、bundle 解码或探针搜索语义变了。
+
+3. （抽查）`& $env:GODOT4 --path game`，点 **单人试玩**，WASD 走两步、空格跳一下。
+   - 预期：角色仍落在出生点固体上，能走、能跳；状态行仍有 `join=` / `solids=`。
+   - 失败：一开玩掉出世界或走不动 ⇒ 占用查询或扫掠委托坏了。
+
+### 本刀不测
+
+- 控制面 / 编辑壳 / 拓扑编译器拆分（下一章）；
+- 解冻令、协议帧、Schema、官方课 JSON、Tick / 快照 / 插值锁定。
+
+### 诚实边界
+
+- E9 仍欠：控制面 `server.ts` / `database.ts`、MatchHost `registry.ts`、`authoring_editor_shell.gd`、`traprush_topology_compiler.gd`；
+- 扫掠步数仍无上限（宪法第十七条缺口）。
+
+---
+
+## 上一刀：CD-61 回写（C5 第 8 章）
+
+> **本节随 CD-61 回写提交；验当前 PR 只看上面的「本刀」。**
+
+本章只把已批准的重排写进里程碑正文，**没有开发机可见行为**。不需要 `npm run dev`，不必开 Godot 窗口。
+
+1. 打开 [CD-61](../../Confirmed-docs/60-plan/61-milestones.md) 文首「当前生效值」与 §1。
+   - 预期：写 **本文件是现行口径**；开发顺序含 M-Export → M-Art → M4a → M4b → M5；纠偏冻结令仍优先于进度压力。
+   - 失败：仍写「待人类逐条批准后才回写」，或正文还只有旧的「M4：规则字节码与热发布」 ⇒ 回写没落地。
+
+2. 打开同一文件的 M3 / M5 / §5。
+   - 预期：M3 验收后有诚实边界（爆破球 + 冲刺；表现增强不是 M3 退出条件）；M5 不再把 Windows / Android/iOS 导出当退出条件；§5 给 CD-11 §4 每条和「表现 / 美术」「平台导出与 Web」「账号 + 草稿云」写了所有者；没有 M8。
+   - 失败：导出仍挂在 M5，或 §5 缺失 ⇒ E12 仍不成立。
+
+3. 打开 [重排草案](../plans/cd-61-rearrangement-draft.md) 与 [CD-91 D.10](../../Confirmed-docs/90-reference/91-decision-log.md)。
+   - 预期：草案状态是 **已批准并回写**，§8 全勾；CD-91 有 `cd61_rearrangement = approved_writeback` 覆盖 `draft_pending_human`。
+   - 失败：草案仍待批，或决策日志没覆盖 ⇒ 批准记录与正文脱节。
+
+4. 自动化：
+   ```bash
+   npm test
+   ```
+   - 预期：`tools/dev-launcher/tests/cd61_writeback.test.ts` 与 `doc_governance.test.ts` 全绿。
+   - 失败：里程碑标题、M3/M5 字符串或 §5 对不上。
+
+### 本刀不测
+
+- 大厅 / Preview / 导出包窗口；
+- 解冻令、协议、官方课、`--bot-run` 步数。
+
+### 诚实边界
+
+- 回写 **不解除** 纠偏冻结令；M4a / M4b / M6 / M7 / 表现增强仍不得开工；
+- M0–M2 已退出记录与 §3 / §4 验收场景编号未改。
+
+---
+
+## 上一刀：文档治理（C5 第 7 章）
+
+> **本节随 [#211](https://github.com/czmomocha/craftarena/pull/211) 提交；验当前 PR 只看上面的「本刀」。**
 
 本章只改所有者文档、runbook 文件名和 CD-61 草案，**没有开发机可见行为**。
 
@@ -67,25 +214,14 @@ Worktree 端口偏移见 README「并行工作区」；本文件不复述端口�
    - 失败：仍写「已治理」的包体/传送，或道具表仍自称未锁 ⇒ 文档与事实又不一致。
 
 3. 打开 [CD-61 重排草案](../plans/cd-61-rearrangement-draft.md)。
-   - 预期：标明待人类逐条批准；[CD-61](../../Confirmed-docs/60-plan/61-milestones.md) 仍写「本文件仍是现行口径」。
-   - 失败：CD-61 已被悄悄改成新里程碑 ⇒ 违反 D6（草案先批）。
+   - 预期（第 7 章当时）：标明待人类逐条批准；CD-61 仍写现行口径且尚未回写新编号。
+   - 失败：当时就把新编号写进 CD-61 ⇒ 违反 D6（草案先批）。
 
-4. 自动化：
-   ```bash
-   npm test
-   ```
-   - 预期：`tools/dev-launcher/tests/doc_governance.test.ts` 全绿。不必开 Godot 窗口。
-   - 失败：缺「当前生效值」、旧 runbook 路径还在、或 CD-62 字符串对不上。
+4. 自动化：`npm test`，预期 `doc_governance.test.ts` 全绿。
 
-### 本刀不测
+### 诚实边界（第 7 章）
 
-- 大厅 / Preview / 导出包窗口；
-- 解冻令、协议、官方课、`--bot-run` 步数。
-
-### 诚实边界
-
-- CD-61 **没有**在本章改成新路线；草案合入不等于重排已拍板；
-- 其它所有者文档里未收敛的「实现落点」长段仍可能在，本章只保证文首「当前生效值」可 30 秒读完，并拆掉 CD-41 §5 与 CD-21 那两处点名的追加链。
+- 第 7 章合入不等于重排已拍板；回写是第 8 章。
 
 ---
 
@@ -497,6 +633,6 @@ Worktree 端口偏移见 README「并行工作区」；本文件不复述端口�
 - **`block_slope` 现在不能生成**：权威碰撞形状白名单只有 `box` / `sphere` / `capsule` / `platform_prefab`，**没有 slope**，Schema 层就表达不了；
 - **`bridge` 既无参考图也无接线入口**；**`spawn_grid` 连数据源都没有**（出生点不在 bundle 的 7 个袋里）；
 - **门比人矮**（gate 0.76–0.79 m vs 角色 1.134 m）与**滚柱超一格**（1.200 m）：两个已实测的美术问题，等解析入口那刀一起处理；
-- macOS 上 `@gltf-transform/cli@4.5.0` 仍未实测；烘焙流水线（人类 2026-08-30 明确不在 C4）；按实体 diff、远端协议层 RTT 回填、字体与本地化键、动画状态契约、D7 输入抽象层、角色胶囊尚未进资产表、扫掠取样代价无上限（宪法第十七条缺口）、`match_lobby_shell.gd` 已 1,516 行（E9 要求 < 400）。
+- macOS 上 `@gltf-transform/cli@4.5.0` 仍未实测；烘焙流水线（人类 2026-08-30 明确不在 C4）；按实体 diff、字体与本地化键、动画状态契约、D7 输入抽象层、角色胶囊尚未进资产表、扫掠取样代价无上限（宪法第十七条缺口）、`match_lobby_shell.gd` 已 1,516 行（E9 要求 < 400）。
 
 ---

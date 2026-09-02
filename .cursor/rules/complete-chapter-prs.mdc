@@ -15,12 +15,12 @@ alwaysApply: true
 
 真机：PR Test plan 与 [开发机窗口验收](docs/runbooks/dev-window-check.md) 本刀必须是编号步骤（怎么开、点什么、期望 / 失败）；禁止只写「真机再看一眼」。无 GUI 的章写「无」加原因。人工检查，不是 CI 门禁。口径见 [CD-52 §3.2](Confirmed-docs/50-engineering/52-ai-workflow.md)。
 
-- 做（本刀 = C5 第 7 章：文档治理）：每份所有者文档文首「当前生效值」；CD-41 §5 巨段收敛；CD-21 一期最小道具回写；CD-62 状态纠偏 + 两条新增；runbook 更名为 [开发机窗口验收](docs/runbooks/dev-window-check.md)；CD-61 重排草案（不改现行里程碑正文）；D2/D11 Web 与域名口径同步 CD-11 / CD-51。`npm test` 钉死上述字符串。
-- 不做：把 CD-61 草案写成已拍板；改协议 / Schema / 官方课 JSON；拆剩余超 400 行文件；字体入包；触控 UI；用 ICMP 锁定 Tick / 快照 / 插值。
-- 仍欠着（不因本章合入而消失）：E9 全仓（控制面 / `course_completion_probe.gd` / `graybox_course.gd` / `simulation_world.gd` / `simulation_bundle.gd` / `authoring_editor_shell.gd` 等仍超 400）；触控 UI；按 `asset_id` 解析视觉；传送门模型；字体入包；远端协议层 RTT 回填；C3 网络参数锁定；E6 有美术之后的可玩性签署；扫掠取样代价无上限；CD-61 重排须人类逐条批准后才回写。
+- 做（本刀 = C5 第 13 章：E9 剩余 + E3/E6 回写）：把控制面 `server.ts` / `database.ts`、MatchHost `registry.ts`、`visual_asset_catalog.gd`、`match_snapshot_map.gd` 拆到 < 400 行。公开 API 仍在门面上。人类已拍 E3（现桩升锁定、不改数字）与 E6（好玩），写入所有者文档。`npm run test:gut:fast` 含 `test_c5_e9_remaining_split.gd`；`npm test` 含 `e9_split.test.ts`；`--bot-run` 步数仍为 5 / 5 / 12。
+- 不做：解除纠偏冻结令；开工 M4a / M4b / M6 / M7 / 表现增强；改协议 / Schema / 官方课 JSON；发明新 Hz 或改冻结常量数字；字体入包；触控 UI。
+- 仍欠着（不因本章合入而消失）：触控 UI；按 `asset_id` 解析视觉；传送门模型；字体入包；扫掠取样代价无上限；E1 安装包；解冻后的 M 线。
 - 仍不做：给嵌入子窗口设 `content_scale_*`；把 locale 热切换做成产品设置页。
 
 纠偏归属：C5
 是否新增冻结常量引用：否
-审查级别：轻审（所有者文档与 runbook；无玩法 / 协议变更；CD-53 §1.1 不新增强断言）
-隔离方式：`feat/c5-doc-governance`
+审查级别：常审（控制面 / MatchHost + 表现层拆分 + 文档回写；无协议 / Schema 变更；CD-53 §1.1 不新增强断言）
+隔离方式：`feat/c5-e9-remaining`（叠在 `feat/c5-cd61-writeback` 上）

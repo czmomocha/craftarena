@@ -16,7 +16,7 @@
 | 产品形态 | TLS WebSocket 网关（宪法第二十二条） |
 | 测试期 | 明文 `http`/`ws` 可打到自备远端；**公开运营前**回到 TLS |
 | 命令 id | 1–5 同前；**6 = SprintIntent**。探针 type 3/4 = ping/pong |
-| Tick / 快照 / 插值 | **未锁**。远端协议层 RTT 仍空，不得用 ICMP 锁定 |
+| Tick / 快照 / 插值 | **已锁（2026-09-02，E3）**：近端 ICMP 与一场协议层样本未证伪现桩，人类把现桩升为锁定值，**不改代码常量**。数字见 §4。远端样本只在 [server-deploy.md §13](../../docs/runbooks/server-deploy.md#13-协议层-rttc3) |
 
 ## 1. 序列化分工
 
@@ -26,7 +26,7 @@
 - 实时命令与快照使用**纯 GDScript 可实现的版本化二进制 Schema**，不绑定 ScenePath。
 - 对局实时面 v1 帧布局（实现：`game/src/shared/protocol/match_frame_codec.gd`；字节序为 PackedByteArray 原生小端）：
   - 命令帧（定长 35 字节）：`[version:u8=1][type:u8=1][tick:s64][intent_id:u8][dx:s64][dz:s64][yaw_bam:s64]`。intent_id：1=Move / 2=Jump / 3=ResetToCheckpoint / 4=UseItem / 5=Shove / 6=SprintIntent；非 Move 的 dx/dz/yaw 为保留字段，编解码均要求为零；`yaw_bam = -1` 表示省略。命令帧不带 slot，连接身份由服务端持有；Shove 无线上目标 id；Interact 仍无 id、未接线；
-  - 探针帧（定长 18 字节）：`[version:u8=1][type:u8=3 ping / 4 pong][seq:s64][client_send_ms:s64]`。服务端原样回显，不解析时钟；远端样本仍空，见 [server-deploy.md §13](../../docs/runbooks/server-deploy.md)；
+  - 探针帧（定长 18 字节）：`[version:u8=1][type:u8=3 ping / 4 pong][seq:s64][client_send_ms:s64]`。服务端原样回显，不解析时钟；远端样本见 [server-deploy.md §13](../../docs/runbooks/server-deploy.md)，数字不在本文件复述；
   - 快照帧（变长）：`[version:u8=1][type:u8=2][tick:s64][player_count:u8]`，随后每玩家 41 字节（`x/y/z/yaw_bam` s64×4 + `accepted_count:u8` + `finish_tick:s64`），再 `[crate_count:u8]` 与每箱 16 字节（`entity_id:s64` + `durability:s64`，0 为已毁）；
   - 解码拒绝：版本不符、未知类型、截断、尾随字节、保留字段非零；编码规范（同一逻辑帧恒得同一字节）；新增 intent id 属协议变更，旧解码器拒绝。
 
@@ -52,10 +52,21 @@
 - 定点 `SimulationCore` 追求跨平台可复现，但网络仍是**服务器权威快照模型**，不改为客户端确定性锁步；
 - Godot 浮点物理与视觉节点不参与关键状态哈希。
 
-实现落点（2026-08-24）：对局进程在本场端口监听 WebSocket（`match_server.gd`），连接经 `MatchRealtime` 映射到槽位（网关带上的 `slot` 走 `occupy_slot`，缺席位时按需占用最小空槽；非法或已占用席位拒绝，不回落到最低空槽；断开释放占用、仿真进度保留，同一席位可再占用；满员拒绝）；二进制命令帧（§1 布局）解码后 FIFO 排队，**每占用槽位每个 commit_tick 至多一条**（先到先得，后到拒绝），在服务端自己的 commit_tick 边界按到达顺序应用——命令帧里的 tick 只解码、不信任，服务端 tick 权威；断开丢弃该槽已排队命令。快照帧不能当命令。每 2 个引擎 tick 广播一帧二进制快照（占位节奏，非产品快照频率，见 §4）。快照含全部已配置槽位（含未占用）与可破坏箱耐久。全部配置玩家冲线后，心跳 JSON 带上单局结算记录；心跳另含 `valid_input_tick`（最近一次通过校验且改变权威状态的真人命令所在 tick，从未发生为 -1），MatchHost 仅在该值前进时续租，心跳本身不续租，见 [CD-44 §3](44-deployment.md#3-进程隔离与租约)。墙钟发送速率仍待（§4）。对局会话另拒绝 |dx| 或 |dz| 超过 `Fixed.SCALE` 的 Move（每命令一格，超限整条不应用），见 [CD-21 §8](../20-gameplay/21-traprush.md#8-网络与仿真基线)。Shove 无线上目标 id：会话在一格邻域内选最近其它胶囊，沿 XZ 远离施术者用调用方 `shove_step` 推开；`shove_step` 超过 `Fixed.SCALE` 则整条拒绝。出界复位：`range_enabled` 时调用方 AABB 外写回最近检查点；boot / Solo 打开 ±8 格桩，不是产品场地。`commit_tick` 在 `world.tick()` 之后经 `TraprushHazardCycle` 按已有 `cooldown_ticks` 切换 hazard 固体；lease 比较仍在 tick 前，周期机关切换不单独续租。意图不推进 tick。官方赛道各 1 个机关。
+实现落点（2026-08-24）：对局进程在本场端口监听 WebSocket（`match_server.gd`），连接经 `MatchRealtime` 映射到槽位（网关带上的 `slot` 走 `occupy_slot`，缺席位时按需占用最小空槽；非法或已占用席位拒绝，不回落到最低空槽；断开释放占用、仿真进度保留，同一席位可再占用；满员拒绝）；二进制命令帧（§1 布局）解码后 FIFO 排队，**每占用槽位每个 commit_tick 至多一条**（先到先得，后到拒绝），在服务端自己的 commit_tick 边界按到达顺序应用——命令帧里的 tick 只解码、不信任，服务端 tick 权威；断开丢弃该槽已排队命令。快照帧不能当命令。每 2 个引擎 tick 广播一帧二进制快照（锁定节奏，见 §4）。快照含全部已配置槽位（含未占用）与可破坏箱耐久。全部配置玩家冲线后，心跳 JSON 带上单局结算记录；心跳另含 `valid_input_tick`（最近一次通过校验且改变权威状态的真人命令所在 tick，从未发生为 -1），MatchHost 仅在该值前进时续租，心跳本身不续租，见 [CD-44 §3](44-deployment.md#3-进程隔离与租约)。墙钟发送速率由 60 tick/s 与锁定间隔导出（§4）。对局会话另拒绝 |dx| 或 |dz| 超过 `Fixed.SCALE` 的 Move（每命令一格，超限整条不应用），见 [CD-21 §8](../20-gameplay/21-traprush.md#8-网络与仿真基线)。Shove 无线上目标 id：会话在一格邻域内选最近其它胶囊，沿 XZ 远离施术者用调用方 `shove_step` 推开；`shove_step` 超过 `Fixed.SCALE` 则整条拒绝。出界复位：`range_enabled` 时调用方 AABB 外写回最近检查点；boot / Solo 打开 ±8 格桩，不是产品场地。`commit_tick` 在 `world.tick()` 之后经 `TraprushHazardCycle` 按已有 `cooldown_ticks` 切换 hazard 固体；lease 比较仍在 tick 前，周期机关切换不单独续租。意图不推进 tick。官方赛道各 1 个机关。
 
-## 4. 未锁定项
+## 4. 已锁定的网络参数
 
-Tick 频率、输入发送频率、快照频率、插值窗口和对账阈值**仍未锁**。C1 ICMP 与 C3 ping/pong 只列出了样本入口；远端协议层 RTT 仍空，不得用 ICMP 把本节改成已锁定实测值。见 [CD-63](../60-plan/63-open-decisions.md) 与 [server-deploy.md §13](../../docs/runbooks/server-deploy.md)。
+人类 2026-09-02 锁定 E3：**不要发明新 Hz**。近端 ICMP 与一场协议层 RTT（P50=16ms，数字只在 [server-deploy.md §13](../../docs/runbooks/server-deploy.md)）**未证伪**现桩，因此把现桩升为锁定值，**不改代码常量**。ICMP / 该场探针仍不是改数字的依据。
+
+| 项 | 锁定值 | 落点 |
+|---|---|---|
+| Tick | 对局 / Solo = 60 physics tick/s。本次覆盖 D5「不锁 Tick Hz」。Preview 仍 1 次 Advance | `TraprushPlayStubs` / 引擎 physics |
+| 快照 | 每 2 个引擎 tick 一帧 | `SNAPSHOT_EVERY_TICKS = 2`（`match_server.gd`） |
+| 心跳 | 每 60 个引擎 tick 一行 | `HEARTBEAT_EVERY_TICKS = 60` |
+| 插值步 | `Fixed.SCALE / 2` | `play_interp_step` / `PlaceholderSpec.INTERP_STEP` |
+| 输入发送 | 每客户端帧采样方向向量 + 上升沿；命令帧 `tick=0`。无独立发送 Hz 常量 | `PlayInput` / 大厅采样 |
+| 对账 | 只跟从最新已解码快照 tick。无独立阈值常量 | `MatchSnapshotFollow` |
+
+迁出 [CD-63 §1.5](../60-plan/63-open-decisions.md)。覆盖 [CD-91](../90-reference/91-decision-log.md) `protocol_rtt_remote_sample` 里「不覆盖 CD-63 §1.5」。
 
 网络故障测试的执行方式与门禁状态见 [CD-53 §2.5](../50-engineering/53-testing-and-ci.md)。

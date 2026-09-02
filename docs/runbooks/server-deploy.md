@@ -9,7 +9,7 @@
 - 本文件**不写死**任何 IP、域名、VPS 规格、发行版或 SSH 落点。真实值由你在执行时代入。
 - 云主机上的额外差异（安全组、数据盘）见 [`infra/tencent-cloud/README.md`](../../infra/tencent-cloud/README.md)。
 
-> **状态：人类已于 2026-08-27 在自备测试机构建 compose，完成远端双机对局，并按 §8–§9 回填了 §12 的 10 分钟窗口与 7 局空转。24h ICMP（C1 产出 6）人类 2026-08-28 启动、2026-08-31 对照原始文件回填，已并列进 §12。** 仓库仍不写 IP / 域名。§12 的结论是：24h ICMP 仍是近端 ~3ms、全天只丢 1 包；10 分钟 0% **可以**代表这条路径的全天量级；新信息是长尾（max 369ms）。**没有**证伪快照 / 心跳 / 插值占位桩；7 局空转**证实** CPU 先于内存。C3 不得把 ICMP 当成锁定 [CD-43 §4](../../Confirmed-docs/40-technical/43-networking-and-replay.md#4-未锁定项) 的依据。
+> **状态：人类已于 2026-08-27 在自备测试机构建 compose，完成远端双机对局，并按 §8–§9 回填了 §12 的 10 分钟窗口与 7 局空转。24h ICMP（C1 产出 6）人类 2026-08-28 启动、2026-08-31 对照原始文件回填，已并列进 §12。协议层 RTT（§13）人类 2026-09-02 采 `protocol_rtt.jsonl`，AI 按最后一场回填。** 仓库仍不写 IP / 域名，也不提交 jsonl。§12 的结论是：24h ICMP 仍是近端 ~3ms、全天只丢 1 包；10 分钟 0% **可以**代表这条路径的全天量级；新信息是长尾（max 369ms）。§13 最后一场协议层主体是 P50=16ms（高于同路径 ICMP ~3ms）。**没有**证伪快照 / 心跳 / 插值占位桩；7 局空转**证实** CPU 先于内存。人类 2026-09-02 锁定 E3：现桩升锁定、**不改数字**。ICMP 或这一场近端协议层样本**不是**改 [CD-43 §4](../../Confirmed-docs/40-technical/43-networking-and-replay.md#4-已锁定的网络参数) 数字的依据。
 
 ## 占位符
 
@@ -278,7 +278,7 @@ C1 第 2 章只跑了约 10 分钟 / 600 次。纠偏方案 C1 产出 6 要的�
 4. 把数字填进 §12 表，并写明是 24h 窗口。近端 10 分钟那一列**不要删**，并列，避免把两个窗口合成一个数。
 5. 笔记本休眠、Wi-Fi 切换、VPN 开关都会污染窗口。发生了就在执行记录里写，不要假装是稳定公网。
 
-数字已于 2026-08-31 对照原始文件回填 §12。C3 **仍不得**用 ICMP 锁定 [CD-43 §4](../../Confirmed-docs/40-technical/43-networking-and-replay.md#4-未锁定项)——24h 窗口确认了近端 0% 量级可维持一天，并记下 10 分钟看不见的长尾；Tick / 快照 / 插值仍等 §13。
+数字已于 2026-08-31 对照原始文件回填 §12。24h 窗口确认了近端 0% 量级可维持一天，并记下 10 分钟看不见的长尾。§13 已有一场协议层样本。人类 2026-09-02 把现桩升为 [CD-43 §4](../../Confirmed-docs/40-technical/43-networking-and-replay.md#4-已锁定的网络参数) 锁定值，**不改数字**。ICMP / 该场仍不是改 Hz 的依据。
 
 ---
 
@@ -385,19 +385,19 @@ docker compose down -v       # 连数据库一起删。会丢结算记录，确�
 | RTT P50 / P90 / P95 | 无数据（全在 127.0.0.1） | min 3 / P50 3 / P90 3 / P95 4 / max 18（ms）；sent=received=600 | min 2 / P50 3 / P90 3 / P95 3 / max 369（ms）；sent=86400，received=86399 | 主体仍是近端 ~3ms，远小于 60Hz 一拍（~16.7ms）。24h 新信息是长尾（max 369ms；≥100ms 28 次）。**不能**当「真公网」去改快照 / 插值；369ms 也只是 ICMP echo，不是快照到达间隔。 |
 | 丢包率 | 无数据 | 0% | 1 / 86400（≈ 0.0012%；Windows 汇总显示 0%） | **10 分钟 0% 可以代表这条近端路径的全天量级。** 唯一丢失是一次孤立超时，不是连片中断。仍是 ICMP echo，不是 TCP/WS。**不据此改协议常量。** |
 | 抖动（IPDV） | 无数据 | 0.16ms | 0.40ms | 比 10 分钟窗口略高，来自偶发尖峰，不是持续抖动。超时不进入 IPDV。 |
-| 快照频率 `SNAPSHOT_EVERY_TICKS` | 占位桩 = 2（每 2 个引擎 tick 一帧） | 无协议层到达间隔 | 无协议层到达间隔 | **仍未证伪。** C3 不得用 ICMP 改这个桩或写入 [CD-43 §4](../../Confirmed-docs/40-technical/43-networking-and-replay.md#4-未锁定项)。锁定前仍要有 §13 的 WebSocket 样本。 |
+| 快照频率 `SNAPSHOT_EVERY_TICKS` | 锁定值 = 2（每 2 个引擎 tick 一帧；2026-09-02 升锁定，数字未改） | 无协议层到达间隔 | 无协议层到达间隔 | **未被证伪，已升锁定。** §13 一场 WebSocket **探针** RTT（P50=16ms）不是快照到达间隔。不得用 ICMP 或该探针改这个数字。见 [CD-43 §4](../../Confirmed-docs/40-technical/43-networking-and-replay.md#4-已锁定的网络参数)。 |
 | 心跳频率 `HEARTBEAT_EVERY_TICKS` | 占位桩 = 60 | 7 局均拉起；空转无真人输入，心跳本就不续租 | 未重采 | **本样本未证伪。** |
 | 插值窗口 `play_interp_step` | 表现桩 `Fixed.SCALE / 2`，不是插值窗口 | 无 | 无 | **本样本未提供把桩换成窗口的依据。** 长尾 369ms 也不是插值窗口的测量。 |
 | 本席预测与对账 | 无对账；新快照 tick 清 overlay，硬贴最新权威 | 无预测误差 / 快照到达延迟 | 无 | **本样本未证伪，也未证明需要平滑对账。** |
 | 7 局并发 CPU（空转） | 推导「CPU 先崩」，未实测 | 七行 `201`。负载后 `match-host` 容器 **198.92%**；7 个 Godot Headless 各约 27–30% CPU；node MatchHost ~0%。`control-plane` 7.05%，`gateway` 0.00%（无客户端连入） | 未重采 | **证实 CPU 先于内存**（仍只凭 8-27）。7 局空转已约两核。缺 `nproc`，不得把百分比写成整机利用率。 |
 | 7 局并发内存 | 推导约 3 GB，未实测 | 空载 → 7 局：gateway 63.02→64.5 MiB；match-host 66.89→**422.2 MiB** / 3.339 GiB；control-plane 93.54→108.1 MiB。容器内 `ps` RSS：Godot 各约 114 MiB，node ~122 MiB，合计 ~920 MiB | 未重采 | **3 GB 推导对空转偏高**（仍只凭 8-27）。内存远未到限。cgroup（422 MiB）与 RSS（~920 MiB）不一致，并列记录，不得只取更乐观的那个。 |
 
-网络参数的所有者文档是 [CD-43 §4](../../Confirmed-docs/40-technical/43-networking-and-replay.md#4-未锁定项)，容量是 [CD-44 §2](../../Confirmed-docs/40-technical/44-deployment.md#2-容量与排队)。**本手册不改那两处**——即使以后要改占位数字，也由 C3 按结论一次性写入，避免冻结期反复搬家。
+网络参数的所有者文档是 [CD-43 §4](../../Confirmed-docs/40-technical/43-networking-and-replay.md#4-已锁定的网络参数)，容量是 [CD-44 §2](../../Confirmed-docs/40-technical/44-deployment.md#2-容量与排队)。**本手册不改那两处数字**——E3 已把现桩升锁定且未改代码常量。
 
 ### 对纠偏退出条件的含义
 
 - **E2**（有 RTT / 丢包 / 资源基线）：本表两个 ICMP 窗口都有数；双机对局与写库已在 2026-08-27 验证；7 局空转资源已采。C1 产出 6 的 24 小时采样**已回填**。
-- **E3**（列出并修正零延迟下做错的网络参数）：本表**列出**了。被证实的是容量推导「CPU 先于内存」，以及「这条近端 ICMP 0% 量级可以维持一天」。被证伪的是「7 局空转大约要 3 GB」。快照 / 心跳 / 插值 / 对账占位桩在 ICMP 上**仍然没有被证伪**，因此**不修正**那些代码常量。24h 记下的长尾（max 369ms）也不是插值窗口的测量。E3 的「修正」仍留给有 §13 协议层样本之后做，不能用本表锁 [CD-63 §1.5](../../Confirmed-docs/60-plan/63-open-decisions.md)。
+- **E3**（列出并修正零延迟下做错的网络参数）：本表**列出**了。被证实的是容量推导「CPU 先于内存」，以及「这条近端 ICMP 0% 量级可以维持一天」。被证伪的是「7 局空转大约要 3 GB」。快照 / 心跳 / 插值 / 对账占位桩在 ICMP 上**没有被证伪**，因此**不修正**那些代码常量。人类 2026-09-02 把现桩升为锁定值（见 [CD-43 §4](../../Confirmed-docs/40-technical/43-networking-and-replay.md#4-已锁定的网络参数)），并迁出 [CD-63 §1.5](../../Confirmed-docs/60-plan/63-open-decisions.md)。24h 长尾（max 369ms）与 §13 P50=16ms 都不是改数字的依据。
 
 ### 资源摘录（空转）
 
@@ -428,10 +428,11 @@ craftarena-control-plane-1   7.05%     108.1MiB / 3.339GiB
 | 日期 | 执行人 | 结果 |
 |---|---|---|
 | 2026-08-27 | 人类 | 远端部署与双机对局已跑通 |
-| 2026-08-27 | 人类采数，AI 回填本表 | ICMP 600：P50/P90=3ms，P95=4ms，丢包 0%，IPDV 0.16ms。7 局空转全 `201`；match-host 198.92% / 422.2 MiB。结论见上表：CPU 先于内存成立；网络占位桩未被证伪；C3 不得用本样本锁定 CD-43 §4 |
+| 2026-08-27 | 人类采数，AI 回填本表 | ICMP 600：P50/P90=3ms，P95=4ms，丢包 0%，IPDV 0.16ms。7 局空转全 `201`；match-host 198.92% / 422.2 MiB。结论见上表：CPU 先于内存成立；网络占位桩未被证伪；不得用本样本改锁定数字 |
 | 2026-08-28 | 人类 | 24h ICMP（§8.1）启动。compose 更新不影响本机 ping。 |
 | 2026-08-31 | 人类交数（未过自校验） | 第一次数字 sent=86400 / received=600 / loss 99.31% / max=18ms。与 10 分钟窗口逐项相同，对不上原始文件汇总行。作废。 |
-| 2026-08-31 | 对照 `rtt-raw-24h.txt` 改正（文件不入库） | 汇总行：已发送 86400，已接收 86399，丢失 1（显示 0%）；最短 2ms，最长 369ms，平均 3ms。逐行：86399 次 `时间=Nms`，1 次孤立「请求超时」（约第 6 小时）。§8 脚本：P50/P90/P95=3/3/3 ms，IPDV 0.40ms；≥100ms 28 次。结论：近端 0% 量级可维持一天；长尾记下来；**仍不得**用 ICMP 锁 CD-43 §4。协议层样本仍空（§13）。 |
+| 2026-08-31 | 对照 `rtt-raw-24h.txt` 改正（文件不入库） | 汇总行：已发送 86400，已接收 86399，丢失 1（显示 0%）；最短 2ms，最长 369ms，平均 3ms。逐行：86399 次 `时间=Nms`，1 次孤立「请求超时」（约第 6 小时）。§8 脚本：P50/P90/P95=3/3/3 ms，IPDV 0.40ms；≥100ms 28 次。结论：近端 0% 量级可维持一天；长尾记下来；不得用 ICMP 改锁定数字。当时协议层样本仍空（§13）。 |
+| 2026-09-02 | 人类采 jsonl，AI 回填 §13；同日锁定 E3 | ICMP 表不改。协议层见 §13：最后一场 n=106、丢失 0、P50/P90/P95=16/19/25 ms。现桩升锁定，数字未改。 |
 
 ---
 
@@ -452,14 +453,23 @@ C3 第 6 章把探针做成了对局二进制帧：客户端发 ping（type=3）
 0. 测试机：按 [§4.1](#41-日常更新测试机) `bash infra/compose/craftarena-compose.sh update`（第一次还没有脚本就先 `git pull --ff-only origin main`）。`status` 打印的 commit 必须已经含 C3 第 6 章 ping/pong（PR #177 合入 `main` 之后）。只 `git pull` 不 `build` 不够。
 1. 两台客户端：源码跑则两边 `git pull` 后 `--path game`；导出包则重新导出。旧包没有 `rtt=`。至少一台不走 `127.0.0.1`。按 §5–§7 进同一 2 人房。
 2. 进场后站着等至少 60 秒，让探针打满约 60 个样本（默认约每秒 1 次；在途探针未回则 5 秒记一次丢失）。
-3. 状态行记下最后一次 `rtt=` 与 `rtt_n=`。更完整的序列在客户端 `user://protocol_rtt.jsonl`（Windows 源码运行大约是 `%APPDATA%\Godot\app_userdata\Craft Arena\protocol_rtt.jsonl`）。**不要提交**该文件：即使行内不含主机，时间戳也能和别的日志对上。
-4. 用下面的脚本出 P50/P90/P95（只统计 `event=protocol_rtt` 的 `rtt_ms`；`protocol_rtt_loss` 另行计丢失次数）：
+3. 状态行记下最后一次 `rtt=` 与 `rtt_n=`。更完整的序列在客户端 `user://protocol_rtt.jsonl`（Windows 源码运行大约是 `%APPDATA%\Godot\app_userdata\Craft Arena\protocol_rtt.jsonl`）。**不要提交**该文件：即使行内不含主机，时间戳也能和别的日志对上。同机两个 Godot 共用这一份 userdata，会写进**同一个** jsonl。
+4. 用下面的脚本出 P50/P90/P95。jsonl **跨场追加**：`seq` 回到 1 视为新会话。**只统计最后一场**的 `event=protocol_rtt` 的 `rtt_ms`；该场的 `protocol_rtt_loss` 另行计丢失。不要把全文混算。
 
 ```powershell
 $path = "$env:APPDATA\Godot\app_userdata\Craft Arena\protocol_rtt.jsonl"
-$rows = Get-Content $path | ForEach-Object { $_ | ConvertFrom-Json }
-$rtt = @($rows | Where-Object { $_.event -eq "protocol_rtt" } | ForEach-Object { [int]$_.rtt_ms } | Sort-Object)
-$lost = @($rows | Where-Object { $_.event -eq "protocol_rtt_loss" }).Count
+$all = Get-Content $path | ForEach-Object { $_ | ConvertFrom-Json }
+$sess = @()
+foreach ($r in $all) {
+    $seq = [int]$r.seq
+    $reset = $sess.Count -gt 0 -and $seq -eq 1 -and -not (
+        ([int]$sess[-1].seq -eq 1) -and ($sess[-1].event -eq $r.event)
+    )
+    if ($reset) { $sess = @() }
+    $sess += $r
+}
+$rtt = @($sess | Where-Object { $_.event -eq "protocol_rtt" } | ForEach-Object { [int]$_.rtt_ms } | Sort-Object)
+$lost = @($sess | Where-Object { $_.event -eq "protocol_rtt_loss" }).Count
 function Get-Pct([int[]]$s, [int]$p) {
     if ($s.Count -eq 0) { return -1 }
     $i = [math]::Max(0, [math]::Ceiling($p * $s.Count / 100.0) - 1)
@@ -477,10 +487,30 @@ function Get-Pct([int[]]$s, [int]$p) {
 
 5. 把数字填进下表。不入库 IP、票据、`match-id`。
 
-| 项 | 回环 / 近端（开发机） | 远端双机（待填） | 结论 |
-|---|---|---|---|
-| 协议层 RTT P50 / P90 / P95 | 本刀只要求状态行出现 `rtt=`，不把回环毫秒写成基线 | | 有数之前不得改快照 / 插值桩 |
-| 探针丢失 | | | `protocol_rtt_loss` 次数；不是 ICMP 丢包 |
-| 与 §12 ICMP 对照 | 10 分钟与 24h 窗口 ICMP P50 都是 3ms；24h 丢 1 包、max 369ms | | 协议层应 ≥ 同路径 ICMP 的主体（~3ms）；若远小于 3ms 则采样有 bug。协议层丢失不要用 ICMP 那 1 次超时去对拍——echo 与 WebSocket 不是同一条队列 |
+采样边界（必须和数字一起读，缺一条就把对应结论降级）：
 
-AI 不得代填远端格子。C3 锁定 Tick / 快照 / 插值要等这张表有真实数字。§12 的 24h ICMP 已回填，**仍不得**只用 ICMP（10 分钟或 24h 的 ~3ms / ~0%）去改占位桩。
+- 原始 `protocol_rtt.jsonl` **不入库**。人类 2026-09-02 采集（文件 mtime 当天 19:25）。全文 1058 行，按 `seq` 回到 1 切成 5 场：
+  - 场 1：成功 24，P50=238ms（78–428）
+  - 场 2：丢失 212，成功 0（`t_ms` 与场 1 重叠，像同机双进程抢写）
+  - 场 3：成功 626，P50=1065ms
+  - 场 4：成功 90，P50=1066ms
+  - **场 5（本表）**：成功 106，丢失 0，墙钟跨度约 105 s
+- 若把全文 846 个成功样本 + 212 次丢失混算：P50/P90/P95=1064/1095/1117 ms。那会把两段 ~1s 的场写进基线，**禁止**。
+- 本表只取最后一场：min 6 / P50 16 / P90 19 / P95 25 / max 164（ms）。≥20ms 10 次，≥50ms 2 次，≥100ms 1 次。
+- 同路径 ICMP（§12）P50 仍是 3ms。协议层主体 16ms ≥ 3ms，不是把墙钟写成 0 的采样 bug。差值大约是 WebSocket + 网关 + 对局进程，不是 ICMP echo。
+- 这条路径仍是**近端 / 同区域**量级，不能当成跨省公网弱网。一场约 105 秒，不是 24h。
+- 探针 RTT **不是**快照到达间隔，也不是插值窗口。
+
+| 项 | 回环 / 近端（开发机） | 远端双机（2026-09-02，最后一场） | 结论 |
+|---|---|---|---|
+| 协议层 RTT P50 / P90 / P95 | 本刀只要求状态行出现 `rtt=`，不把回环毫秒写成基线 | min 6 / P50 16 / P90 19 / P95 25 / max 164（ms）；n=106 | 主体 ~16ms，高于同路径 ICMP ~3ms，方向正确。**不改** `SNAPSHOT_EVERY_TICKS` / `HEARTBEAT_EVERY_TICKS` / `play_interp_step` |
+| 探针丢失 | | 本场 0 | `protocol_rtt_loss` 不是 ICMP 丢包。全文另有 212 次丢失属更早会话，不并入本格 |
+| 与 §12 ICMP 对照 | 10 分钟与 24h 窗口 ICMP P50 都是 3ms；24h 丢 1 包、max 369ms | 协议层 P50=16ms vs ICMP P50=3ms；协议层 max 164ms vs ICMP max 369ms | 协议层丢失不要用 ICMP 那 1 次超时去对拍。本样本仍未证伪快照 / 心跳 / 插值占位桩 |
+
+人类 2026-09-02 采数，AI 按最后一场回填本表。同日锁定 E3：现桩升锁定，**不改**代码常量。本表与 §12 ICMP **不是**改 [CD-43 §4](../../Confirmed-docs/40-technical/43-networking-and-replay.md#4-已锁定的网络参数) 数字的依据。
+
+### 13.3 执行记录
+
+| 日期 | 执行人 | 结果 |
+|---|---|---|
+| 2026-09-02 | 人类采 jsonl，AI 回填本表 | 最后一场 n=106、丢失 0、P50/P90/P95=16/19/25 ms。jsonl 不入库。仍不得锁 CD-43 §4。 |

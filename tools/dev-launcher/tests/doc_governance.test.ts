@@ -110,10 +110,10 @@ describe("C5 document governance", () => {
 		assert.doesNotMatch(source, /资源变体、子包、按需资源模块/);
 	});
 
-	it("keeps CD-61 in force and parks the rearrangement as a draft", () => {
+	it("keeps the approved rearrangement draft as the approval record", () => {
 		assert.equal(existsSync(join(REPO_ROOT, DRAFT)), true, DRAFT);
 		const draft = read(DRAFT);
-		assert.match(draft, /待人类逐条批准/);
+		assert.match(draft, /已批准并回写/);
 		assert.match(draft, /CD-11 §4/);
 		assert.match(draft, /表现\/美术/);
 		assert.match(draft, /平台导出与 Web/);
@@ -123,7 +123,8 @@ describe("C5 document governance", () => {
 
 		const live = read("Confirmed-docs/60-plan/61-milestones.md");
 		assert.match(live, /cd-61-rearrangement-draft\.md/);
-		assert.match(live, /本文件仍是现行口径/);
+		assert.match(live, /本文件是现行口径/);
+		assert.doesNotMatch(live, /待人类逐条批准后才回写/);
 	});
 
 	it("syncs the Web gate and export timing already decided in D2/D11", () => {

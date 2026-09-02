@@ -204,7 +204,7 @@ Undo / Redo 是会话内对成功命令派生的反向 payload（`place`↔`remo
 | AuthoringPreviewShell | `game/src/creator/authoring_preview_shell.gd` + chrome / sampler / hud / play / view |
 | AuthoringPreviewMap | `game/src/creator/authoring_preview_map.gd` + convert / occupancy / gizmos / overlay / player |
 | Preview 目视沙箱 | `game/src/creator/preview_sandbox.tscn` |
-| AuthoringEditorShell | `game/src/creator/authoring_editor_shell.gd` |
+| AuthoringEditorShell | `game/src/creator/authoring_editor_shell.gd` + chrome / place / follow |
 | AuthoringEditorPluginHost | `game/src/creator/authoring_editor_plugin_host.gd` |
 | 内部开发 EditorPlugin | `game/addons/authoring_editor/plugin.cfg` |
 | AuthoringDraftStore | `game/src/creator/authoring_draft_store.gd` |
@@ -218,8 +218,8 @@ Undo / Redo 是会话内对成功命令派生的反向 payload（`place`↔`remo
 | 第一张官方 TRAPRUSH 赛道 | `game/content/official/traprush/course_01.json` |
 | 第二张官方 TRAPRUSH 赛道 | `game/content/official/traprush/course_02.json` |
 | 第三张官方 TRAPRUSH 赛道 | `game/content/official/traprush/course_03.json` |
-| SimulationBundle | `game/src/ugc/simulation_bundle.gd`（v2：`assets` 袋 + 每袋 `asset_id`/`gameplay_version`；v1 仍解码并迁移到内置"占满一格"资产） |
-| TRAPRUSH 拓扑编译 | `game/src/ugc/traprush_topology_compiler.gd`（资产准入在这里；不读 `zone.shape`） |
+| SimulationBundle | `game/src/ugc/simulation_bundle.gd` + decode / bags（v2：`assets` 袋 + 每袋 `asset_id`/`gameplay_version`；v1 仍解码并迁移到内置"占满一格"资产） |
+| TRAPRUSH 拓扑编译 | `game/src/ugc/traprush_topology_compiler.gd` + bags / fields（资产准入在这里；不读 `zone.shape`） |
 | TRAPRUSH 拓扑加载 | `game/src/games/traprush/traprush_topology_loader.gd`（半长来自 `assets`；只接受 `box`） |
 | 周期机关固体切换 | `game/src/games/traprush/hazard_cycle.gd` |
 | 对局进程多人仿真循环 | `game/src/games/traprush/match_session.gd`（`fall_dy` 默认 0；boot / Solo 占位 `-SCALE/16`） |

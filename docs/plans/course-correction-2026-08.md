@@ -4,7 +4,7 @@
 > 状态：**已拍板，执行中**。人类 2026-08-26 填完 §4 并签字；**2026-08-27 修订 C1 远端部署口径**（见 §4.0.1 / D11）。§4.0 是签字后的口径汇总；与 D1–D10 原始填写冲突时，**§4.0.1 点名覆盖的子项以修订为准**，其余仍以 D1–D10 为准
 > 触发：2026-08-26 第三方开发审视
 > 上位约束：[CD-00 宪法](../../Confirmed-docs/00-constitution/CONSTITUTION.md)，尤其第一、八、九、十八、二十四、二十六条
-> 与 CD-61 的关系：**本方案不修改 [CD-61](../../Confirmed-docs/60-plan/61-milestones.md)**。里程碑重排是本方案的产出之一，按 §7 在人类拍板后同步
+> 与 CD-61 的关系：人类 2026-09-02 批准重排草案并回写 [CD-61](../../Confirmed-docs/60-plan/61-milestones.md)（C5 第 8 章）。**纠偏冻结令仍优先于 CD-61 进度压力**，解除前可开工范围仍是 C0–C5。
 
 ---
 
@@ -242,7 +242,7 @@ C1 与 C2 可按 [CD-52 §5](../../Confirmed-docs/50-engineering/52-ai-workflow.
    - 「`_mcp_game_helper` 进 Headless」→ 按 C1 **第一次真导出**实证后的 exclude + 自检，标已缓解；
    - 「传送迷路或跳关」→ **已缓解**（镜头过渡零实现）；
    - **新增**「单人审查带宽超载」与「在零延迟条件下锁定网络参数」；
-4. ~~**CD-61 重排**~~ **本刀输出草案**（人类拍板，见 D6/D9）：[cd-61-rearrangement-draft.md](cd-61-rearrangement-draft.md)。CD-61 **仍是现行口径**，批准前不回写新编号。
+4. ~~**CD-61 重排**~~ **草案已批准并回写**（C5 第 8 章）：[cd-61-rearrangement-draft.md](cd-61-rearrangement-draft.md) 是批准记录；现行口径在 [CD-61](../../Confirmed-docs/60-plan/61-milestones.md)。
 5. ~~**裁决 Web 矛盾**~~ **本刀**：同步 CD-11 §6/§9 与 CD-51 §5。Web 仍是一期持续入口；域名 + 证书不在 C1，**公开运营前**补齐；
 6. ~~把 `docs/runbooks/chapter-device-check.md` 更名为「开发机窗口验收」~~ **已做**（C5 第 7 章）：现文件 `docs/runbooks/dev-window-check.md`，"真机"一词留给导出包。
 
@@ -271,12 +271,12 @@ C1 与 C2 可按 [CD-52 §5](../../Confirmed-docs/50-engineering/52-ai-workflow.
 | D2 Web 通道 | A：Web 是一期持续入口。C1 第 1 章已含 Web 导出。**域名 + Let's Encrypt 不在 C1 必须项**（2026-08-27 修订，见 §4.0.1 / D11） |
 | D3 远端测试机 | 已有符合性能的机器；第二台真机用现有多台 PC / Mac；无计费上限约束。**规格 / 发行版 / SSH / 域名不是 C1 必须项**（2026-08-27，见 D11） |
 | D4 美术规格 | 1 格 = 1 表现米（维持）；角色高 0.125 格 / 半径 0.125 格（维持）；相机斜 45°；TRAPRUSH 危险色 = 洋红；UI 基准 1920×1080；描边见 D8；字体 = 思源黑体 / Noto Sans SC **子集化入包**（2026-08-26 补答） |
-| D5 道具与机关 | A：爆破球 + 冲刺。机关伤害 / 击退 **在 C3 一并做**。复活硬直 **1.0 s**（人类 2026-08-28；对局/Solo 已按占位 60 Hz 换成 60 tick，不锁 Tick Hz；Preview 仍 1 次 Advance） |
+| D5 道具与机关 | A：爆破球 + 冲刺。机关伤害 / 击退 **在 C3 一并做**。复活硬直 **1.0 s**（人类 2026-08-28；对局/Solo 已按占位 60 Hz 换成 60 tick；Preview 仍 1 次 Advance）。Tick 60 于 2026-09-02 由 E3 升为锁定值 |
 | D6 里程碑重排 | A：C5 输出 CD-61 修订草案，人类逐条批准 |
 | D7 移动端触控 | A：C4 内只做输入抽象层，触控 UI 留到导出验证 |
 | D8 描边 | A：纠偏期不做描边，用色块 + 明度分区实现可读性 |
 | D9 纪律 | 接受 §5.1 冻结令；章粒度提高 **5×**；接受 §5.2 审查抽样分级 |
-| D10 可玩性反馈 | A：维持不做外部测试。2026-08-28 非正式试玩：色块阶段**不能**定义「好不好玩」；脑补美术后认为可玩、值得期待。不是 E6 最终签署 |
+| D10 可玩性反馈 | A：维持不做外部测试。2026-08-28 非正式试玩：色块阶段**不能**定义「好不好玩」。**E6 已于 2026-09-02 签署：好玩**（有第一批美术之后；非外部测试；不解冻） |
 | D11 C1 远端部署 | 2026-08-27：`server-deploy.md` 通用步骤 + 占位符；测试期明文 `http`/`ws`；规格/发行版/SSH/域名非必须；部署由人类执行 |
 
 **仍未填、且会阻塞后续批次的空白**（宪法第五条：AI 不得自选，需人类补答）：
@@ -460,7 +460,9 @@ CD-11 §5 明确"一期不做开发期间外部真人玩法测试"（已接受�
 
 **你的决定**：___A___
 
-2026-08-28 非正式试玩（人类，色块阶段）：还无法定义「好不好玩」，因为没有美术、全是色块。让人简单玩了一下，脑补以后的表现，觉得**可以玩、值得期待**。这不是 E6「首次可玩性结论」的最终签署，也不视为已验证创作者体验。美术进来后再签一次。
+2026-08-28 非正式试玩（人类，色块阶段）：还无法定义「好不好玩」，因为没有美术、全是色块。让人简单玩了一下，脑补以后的表现，觉得**可以玩、值得期待**。这不是 E6「首次可玩性结论」的最终签署，也不视为已验证创作者体验。
+
+2026-09-02（人类，有第一批 `.glb` 之后）：签署 E6 首次可玩性结论 = **好玩**。不是外部测试，也不视为已验证创作者体验。**不解除 §1 冻结令**。
 
 ---
 
@@ -536,13 +538,13 @@ cell = Fixed.SCALE 与由其推导的一切 cell/2 占用半长
 |---|---|---|
 | E1 | 存在 Windows 包，且包内核查清单全绿 | G1 |
 | E2 | 远端测试机上两台真机完成一局并写库；有 RTT/丢包/资源基线（不要求手册写死机房/IP/域名） | G2 — **基线已有**：双机对局 + 10 分钟 ICMP + 7 局空转 2026-08-27；24h ICMP 2026-08-31 回填（数字只在 [server-deploy.md §12](../runbooks/server-deploy.md#12-本批必须回填的结论)）。**不是** E3 |
-| E3 | 已明确列出并修正在零延迟条件下做错的网络参数 | G2 — **只列出、未修正代码常量**：近端 ICMP 0% 量级可维持一天（24h 丢 1 包）；快照 / 心跳 / 插值桩仍未被协议层证伪。锁定等 [§13](../runbooks/server-deploy.md#13-协议层-rttc3) |
+| E3 | 已明确列出并修正在零延迟条件下做错的网络参数 | G2 — **2026-09-02 已锁**：近端 ICMP 0% 量级可维持一天；§13 一场近端协议层样本 P50=16ms **未证伪**现桩。人类把现桩升为锁定值，**不改代码常量**（Tick 60、`SNAPSHOT_EVERY_TICKS=2`、`HEARTBEAT_EVERY_TICKS=60`、`INTERP_STEP=SCALE/2`）。见 [CD-43 §4](../../Confirmed-docs/40-technical/43-networking-and-replay.md#4-已锁定的网络参数) |
 | E4 | BotRunner 能自动判定官方赛道可完成性 | G3 |
 | E5 | 重力 + 至少 1 个道具进入权威仿真，且有回放哈希覆盖 | G3 |
-| E6 | 存在一张符合 CD-61 §4.1 **语义**（非仅条目）的赛道，人类给出首次可玩性结论 | G3 |
+| E6 | 存在一张符合 CD-61 §4.1 **语义**（非仅条目）的赛道，人类给出首次可玩性结论 | G3 — **2026-09-02 已签：好玩**（`course_01` 语义课 + 第一批美术）。不是外部测试。不解冻 |
 | E7 | `GameplayAsset` 契约落地；权威碰撞与视觉网格分离；第一个 `.glb` 入库 | G4 — **已满足**：契约与结构性分离 2026-08-29（C4 第 3 章，[ADR-0006](../adr/0006-gameplay-asset-contract.md)）；第一批 `.glb`（1 角色 + 1 地块）与视觉解析链路 2026-08-30（C4 第 5 章），分离从此**数值上**也成立（角色 1.03 m 网格 / 地块等比缩到一格的薄板 / 权威胶囊 0.125 格 / 占位盒 1 米）。**遗留但不属 E7**：按 `asset_id` 解析视觉仍未做（垫 / 门 / 终点 / 箱 / 滚柱已于 2026-09-02 按袋类型接上）；传送门仍无模型；角色胶囊仍不是资产 |
 | E8 | D4 全部数值已拍板并落入所有者文档，占位常量收敛到单一配置源 | G4 — **后半已满足**：占位常量 2026-08-29 收敛到 `placeholder_spec.gd`（C4 第 1 章）。**前半 2026-08-31 基本满足**：D4 数值已落 [CD-11 §8.2](../../Confirmed-docs/10-product/11-scope-and-platforms.md) 并接线（相机 45°、UI 1920×1080）。仍空三项：相机距离 / FOV（D4 未问，维持）、UI 安全区（D4 未答）、BASTION 色板（M6/M7 冻结中）；字体已拍板但**未入包** |
-| E9 | 最大文件 < 400 行；`CODEOWNERS` 覆盖 client 与 games | G5 |
+| E9 | 最大文件 < 400 行；`CODEOWNERS` 覆盖 client 与 games | G5 — **生产路径已收口**（C5 第 13 章拆完控制面 / registry / 视觉目录 / 快照映射）。测试 / addons / GUT 不在本口径 |
 | E10 | 每周合入 PR 数在 D9 上限内，且深审级章有逐行审查记录 | G5 |
 | E11 | CD-53 §4.2–§4.4 与 CD-62 状态与事实一致；`chapter-device-check.md` 已更名为 `dev-window-check.md`（开发机窗口验收） | G6 |
 | E12 | CD-61 中 CD-11 §4 每条必做项都有里程碑所有者 | G6 |
@@ -601,7 +603,7 @@ cell = Fixed.SCALE 与由其推导的一切 cell/2 占用半长
 | CD-51 §5 | 导出预设与 Web 预设时机（C5 第 7 章：三套已在 `export_presets.cfg`；删「核心切片稳定后加入」）；资源导入规范扩写（**2026-08-30 已做**：新增 §5.1） | C1 / C4 |
 | CD-52 §3 | 章粒度下限、审查分级、任务单两行新增（已写入任务单模板） | D9 |
 | CD-53 §4.2–§4.4 | 补"当前实现状态"（C2 已做；C5 第 7 章更正「重力与道具仍缺」与 PR Web 预览口径） | C2 / C5 |
-| CD-61 | 三条纵向线归属、M4 拆分、导出前移、M3 验收条修正 → **草案** [cd-61-rearrangement-draft.md](cd-61-rearrangement-draft.md)；正文仍是现行口径 | D6 |
+| CD-61 | 三条纵向线归属、M4 拆分、导出前移、M3 验收条修正 → **已回写**（C5 第 8 章）。批准记录 [cd-61-rearrangement-draft.md](cd-61-rearrangement-draft.md) | D6 |
 | CD-62 | 三条状态修正 + 两条新增（C5 第 7 章）；**「测试期远端明文网关」已接受**已于 2026-08-27 登记 | C5 / D11 |
 | CD-63 | D5 拍板项迁出（复活硬直已迁；一期最小道具爆破球 + 冲刺 C5 第 7 章迁出） | D5 |
 | `chapter-device-check.md` → `dev-window-check.md` | 更名为开发机窗口验收（C5 第 7 章已做） | C5 |
@@ -635,9 +637,9 @@ cell = Fixed.SCALE 与由其推导的一切 cell/2 占用半长
 | 批次 | 状态 | 落点 |
 |---|---|---|
 | C0 立刻闸门 | 已合入 | `.github/CODEOWNERS`、`.cursor/rules/course-correction-freeze.mdc`、`.cursor/rules/chapter-granularity-and-review.mdc`、[docs/audits/2026-08-26-audit.md](../audits/2026-08-26-audit.md)、本文件 §4.0 |
-| C1 真机与真网络 | 第 1、2 章已合入；B 段部署、双机与 §12 数字 **人类已于 2026-08-27 采、已回填** | 导出预设 + 包内核查 + compose + `server-deploy.md` + 客户端 `--server=` + [§12 表](../runbooks/server-deploy.md#12-本批必须回填的结论)。结论：近端 ICMP 未证伪快照/插值桩；7 局空转证实 CPU 先于内存。不写死 IP/域名，不配 Let's Encrypt。日常更新脚本 [`craftarena-compose.sh`](../../infra/compose/craftarena-compose.sh)（手册 [§4.1](../runbooks/server-deploy.md#41-日常更新测试机)）。24h ICMP **已回填**（[§12](../runbooks/server-deploy.md#12-本批必须回填的结论)：sent=86400 / received=86399 / 丢 1 包，P50/P90/P95=3ms，max 369ms；第一次交数 99.31% 未过自校验，已作废）。协议层 RTT 闭环见 C3 第 6 章；远端样本见 [§13](../runbooks/server-deploy.md#13-协议层-rttc3)，**仍未填**（测试机须重建到含 ping/pong 的 main）。**不得**用 ICMP 锁定 Tick / 快照 / 插值 |
+| C1 真机与真网络 | 第 1、2 章已合入；B 段部署、双机与 §12 数字 **人类已于 2026-08-27 采、已回填** | 导出预设 + 包内核查 + compose + `server-deploy.md` + 客户端 `--server=` + [§12 表](../runbooks/server-deploy.md#12-本批必须回填的结论)。结论：近端 ICMP 未证伪快照/插值桩；7 局空转证实 CPU 先于内存。不写死 IP/域名，不配 Let's Encrypt。日常更新脚本 [`craftarena-compose.sh`](../../infra/compose/craftarena-compose.sh)（手册 [§4.1](../runbooks/server-deploy.md#41-日常更新测试机)）。24h ICMP **已回填**（[§12](../runbooks/server-deploy.md#12-本批必须回填的结论)：sent=86400 / received=86399 / 丢 1 包，P50/P90/P95=3ms，max 369ms；第一次交数 99.31% 未过自校验，已作废）。协议层 RTT 闭环见 C3 第 6 章；远端样本见 [§13](../runbooks/server-deploy.md#13-协议层-rttc3)，**已于 2026-09-02 回填**（最后一场 n=106，P50/P90/P95=16/19/25 ms，丢失 0）。人类同日锁定 E3：现桩升锁定、**不改数字**；ICMP / 该场仍不是改 Hz 的依据 |
 | C2 度量与自动可玩性 | 第 1、2 章已合入 | 第 1 章：走路可达探针 + 占位桩收敛。第 2 章：`tests/integration/` 与 `tests/replay/` 真实用例 + CI 收集、CD-53 §4.2–§4.4 状态列、[返工率首份数据](../audits/2026-08-27-ai-rework-rate.md)。不做 Node 包装、不把 `--bot-run` 接进 CI |
-| C3 核心玩法前提 | 第 1–8 章（第 8 章进行中） | 第 1 章：权威重力积分（`TraprushGravity`）+ 跳跃冲量弧 + 落地归零 `vy` + `hash_state` 含 `vy` + 灰盒磁带回放。第 2 章：三张官方课必经路铺始终固体；`course_01` 上层偏到 `z=-3*CELL`；`course_03` 箱子旁绕行立足面；走路上不掉、走下路面才复位。第 3 章：服务端裁决的爆破球拾取/使用与冲刺位移；伪造命中被拒；`SprintIntent` `intent_id=6`；v1 `pickups` 袋。第 4 章：固体半周期占用重叠才命中；注入击退后仍重叠则环境失败复位；出界复位写入同一硬直桩；不读 Authoring damage/knockback。第 5 章：改默认课 `course_01`（不加第 4 张课）：+X 五步仍是危险捷径；从 CP1 向 +Z 走更长安全路，经侧向 two_way 与 one_way 上楼汇合；走下路面下落复位。诚实边界：±8 格 + 冻结 `play_move_step` 下干净完赛做不到 90 秒墙钟。第 6 章：v1 ping/pong（type 3/4）原样回显；在线对局采样协议层 RTT；不改快照/心跳/插值桩。第 7 章：探针 `forbid_portal_ids` + `--route=safe` 封掉 course_01 entity 10，证明安全路可完成；默认 `--bot-run` 仍走捷径。第 8 章：D5 复活硬直 **1.0 s** 接到对局 / Solo（占位 60 physics tick/s → 60 tick）；Preview 仍 1 次 Advance；不锁 Tick Hz、不改快照协议。D10 非正式试玩：色块阶段不签署「好玩」；脑补后认为可玩、值得期待。网络参数锁定仍待远端协议层样本。24h ICMP 已回填（见 [server-deploy.md §12](../runbooks/server-deploy.md#12-本批必须回填的结论)）：近端 ~3ms、全天丢 1 包，10 分钟 0% 可以代表这条路径的全天量级；长尾 max 369ms 记下来。**不得**用 ICMP 锁定 Tick / 快照 / 插值 |
+| C3 核心玩法前提 | 第 1–8 章（第 8 章进行中） | 第 1 章：权威重力积分（`TraprushGravity`）+ 跳跃冲量弧 + 落地归零 `vy` + `hash_state` 含 `vy` + 灰盒磁带回放。第 2 章：三张官方课必经路铺始终固体；`course_01` 上层偏到 `z=-3*CELL`；`course_03` 箱子旁绕行立足面；走路上不掉、走下路面才复位。第 3 章：服务端裁决的爆破球拾取/使用与冲刺位移；伪造命中被拒；`SprintIntent` `intent_id=6`；v1 `pickups` 袋。第 4 章：固体半周期占用重叠才命中；注入击退后仍重叠则环境失败复位；出界复位写入同一硬直桩；不读 Authoring damage/knockback。第 5 章：改默认课 `course_01`（不加第 4 张课）：+X 五步仍是危险捷径；从 CP1 向 +Z 走更长安全路，经侧向 two_way 与 one_way 上楼汇合；走下路面下落复位。诚实边界：±8 格 + 冻结 `play_move_step` 下干净完赛做不到 90 秒墙钟。第 6 章：v1 ping/pong（type 3/4）原样回显；在线对局采样协议层 RTT；不改快照/心跳/插值桩。第 7 章：探针 `forbid_portal_ids` + `--route=safe` 封掉 course_01 entity 10，证明安全路可完成；默认 `--bot-run` 仍走捷径。第 8 章：D5 复活硬直 **1.0 s** 接到对局 / Solo（占位 60 physics tick/s → 60 tick）；Preview 仍 1 次 Advance；不锁 Tick Hz、不改快照协议。D10 非正式试玩：色块阶段不签署「好玩」；脑补后认为可玩、值得期待。**E3 / E6 已于 2026-09-02 由人类拍板**（现桩升锁定、可玩性 = 好玩）。24h ICMP 已回填（见 [server-deploy.md §12](../runbooks/server-deploy.md#12-本批必须回填的结论)）：近端 ~3ms、全天丢 1 包，10 分钟 0% 可以代表这条路径的全天量级；长尾 max 369ms 记下来。协议层远端样本已回填（见 [server-deploy.md §13](../runbooks/server-deploy.md#13-协议层-rttc3)）：最后一场 n=106，P50=16ms。ICMP / 该场**不是**改锁定数字的依据 |
 | C4 资产契约与美术规格 | 第 1–12 章已合入 | 产出 1–6 已齐。产出 5「1 角色 + 1 组地形块」两半均已交，**E7 满足**；**E8 前半 2026-08-31 基本满足**（D4 数值落 [CD-11 §8.2](../../Confirmed-docs/10-product/11-scope-and-platforms.md) 并接线）。**资产预算已于 2026-08-30 拍板**（[CD-11 §8.1](../../Confirmed-docs/10-product/11-scope-and-platforms.md)：静态 3,000 / 角色 6,000 三角面、贴图 512、单文件 2 MB；AI 生成产物可作正式资产），[烘焙试验 §7](asset-bake-trial-2026-08.md) 三项全部关闭。第 12 章（[#203](https://github.com/czmomocha/craftarena/pull/203)）：本地化键 `craft_arena.ui.*`（`en` + `zh_CN`），`UiCopy` 自解析 CSV；**不入字体** |
-| C5 治理与里程碑重排 | 第 7 章（本刀）文档治理 | 第 1 章已合入（[#204](https://github.com/czmomocha/craftarena/pull/204)）：大厅壳拆成 chrome / net / sampler / stage / hud / director。第 2 章已合入（[#205](https://github.com/czmomocha/craftarena/pull/205)）：匹配会话拆成 codec / accept / 门面。第 3 章已合入（[#207](https://github.com/czmomocha/craftarena/pull/207)）：对局会话拆成 bootstrap / intents / scan / view。第 4 章已合入（[#208](https://github.com/czmomocha/craftarena/pull/208)）：Preview 会话拆成 bootstrap / intents / scan / view。第 5 章已合入（[#209](https://github.com/czmomocha/craftarena/pull/209)）：Preview 映射拆成 convert / occupancy / gizmos / overlay / player。第 6 章已合入（[#210](https://github.com/czmomocha/craftarena/pull/210)）：Preview 壳拆成 chrome / sampler / hud / play / view。第 7 章：所有者文档「当前生效值」、CD-62 纠偏、runbook 更名、CD-61 草案、D2/D11 Web 口径。**诚实边界**：E9 全仓仍欠；CD-61 新编号须人类批准后才回写；远端协议层 RTT 仍空 |
+| C5 治理与里程碑重排 | 第 13 章（本刀）E9 剩余 + E3/E6 回写 | 第 1–12 章：大厅/匹配/对局/Preview 壳与映射、文档治理、CD-61 回写、仿真世界 + bundle、灰盒 + 探针、编辑壳 + 拓扑编译。第 13 章：控制面 `server`/`database`、MatchHost `registry`、`visual_asset_catalog`、`match_snapshot_map` 拆到 < 400 行；人类锁定 E3（现桩升锁定、不改数字）并签署 E6 = **好玩**。公开 API 仍在门面上。`--bot-run` 仍为 5 / 5 / 12。**诚实边界**：冻结令未解除；测试 / addons / GUT 不在 E9 本口径；触控 UI、按 `asset_id` 解析、传送门模型、字体入包、扫掠步数无上限仍欠 |
 | freeze-exception（单项，不属任何批次） | 已开工 | **MatchHost 引擎路径静默回退**（PR #186 遗留项，人类 2026-08-30 选 A「单独一刀修」）：`GODOT4` 缺失时不再退成 PATH 上的 `godot`，改为启动期拒绝；拉起失败的进程输出进 `match failed to start` 日志与 `POST /matches` 的 502 `message`。按 §1.3 走最小变更，不碰 `game/`、不改协议、不新增冻结常量引用。落点：`backend/match-host/src/{config,registry,main}.ts`、[CD-51 §4](../../Confirmed-docs/50-engineering/51-dev-environment.md)、README。**第二项：Godot AI 脏写入不再进提交**（C4 第 6、7 章连续记账，2026-08-31 开工）：插件在 `.gitignore` 里、每次运行都把 `autoload/_mcp_game_helper` 与 `res://addons/godot_ai/plugin.cfg` 写回 `game/project.godot`，**改不了它的写入行为**，所以改成「一条命令还原 + 提交前拦住」。新工具 `tools/godot-project-settings/`（纯文本、幂等、不起 Godot；`npm run godot-settings:check` / `:scrub`；只摘名字命中 `_mcp_game_helper` 或路径指向 `addons/godot_ai/` 的 autoload 与 `editor_plugins/enabled` 里该目录的元素，别的改动一个不碰），`tools/shell-guard/` 对 Agent 的 `git commit` / `git add` fail closed 拦截，`npm test` 新增一条读磁盘副本的守卫。**不做** git 原生 `pre-commit`（要改 `core.hooksPath`，属宪法第十八条人类门禁），因此人手敲的 git 仍不被拦；也**不承诺**工作树永远干净。不碰 `game/`、不改协议 |
