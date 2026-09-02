@@ -53,52 +53,60 @@ Worktree 端口偏移见 README「并行工作区」；本文件不复述端口�
 
 ---
 
-## 本刀：拆对局会话（C5 第 3 章，bootstrap / intents / scan / view）
+## 本刀：拆 Preview 会话（C5 第 4 章，bootstrap / intents / scan / view）
 
-上一刀（[#206](https://github.com/czmomocha/craftarena/pull/206)）把角色脚底对齐胶囊底面。本刀只拆 `TraprushMatchSession`：公开 API 仍在门面上，裁决顺序不变。**窗口里其它东西应与上一刀相同**。协议、Schema、官方课都不动。
+上一刀（[#207](https://github.com/czmomocha/craftarena/pull/207)）把对局会话拆成 bootstrap / intents / scan / view。本刀只拆 `AuthoringPreview`：公开 API 仍在门面上，试玩占用顺序不变。**窗口里其它东西应与上一刀相同**。协议、Schema、官方课都不动。
 
-本刀**不需要** `npm run dev`（Solo 就能看完前 3 步）。
+本刀**不需要** `npm run dev`（F6 Preview 沙箱就能看完前 3 步）。
 
-1. **Solo 开玩仍落下、脚仍齐**：按「共用启动」打开主场景（不必起三后端），点 **单人试玩** / **Solo play**。等角色落下（大约不到一秒）。
-   - 预期：角色站在出生方块顶面上，脚底齐平；头顶 `anim` 为 `idle`（或带 `*` 的本席前缀）；状态行仍有 `pads=` / `floor=` / `solids=`。
-   - 失败：立刻崩、不生成胶囊、或不落下 ⇒ `create()` / `commit_tick` 拆坏了。脚又陷入方块 ⇒ 不该动的表现偏移被连带改了。
+1. **Preview 开玩仍能 Advance 落下**：编辑器打开 `res://src/creator/course_sandbox.tscn`，**F6**（不要 F5），点 **Play**。再点 **Advance tick** 两三次。
+   - 预期：角色出现在出生垫上；Advance 后落下并站在出生方块顶面；状态行仍有 `pads=` / `floor=` / `solids=`。
+   - 失败：立刻崩、点 Play 没胶囊、或 Advance 不落下 ⇒ `try_start_play` / `try_advance_play` 拆坏了。
 
-2. **走路、跳、打箱仍是原来的键**：WASD 走几格，空格跳一下，Q 打碎出生点前方的箱。
-   - 预期：走得到、跳得起来、箱子碎掉（官方课出生点已拾爆破球）。落地后脚仍齐。
-   - 失败：按键没反应、跳不起来、或箱不碎 ⇒ 意图分发没接到 `match_session_intents`。走两步突然传送或复位 ⇒ 占用扫描顺序被改了。
+2. **走路、跳、打箱仍是原来的键**：WASD 走几格，空格跳一下，Q 或 **UseItem** 打碎出生点前方的箱。
+   - 预期：走得到、跳得起来、箱子碎掉（官方课出生点已拾爆破球）。
+   - 失败：按键没反应、跳不起来、或箱不碎 ⇒ 意图没接到 `authoring_preview_intents`。走两步突然传送或复位 ⇒ 占用扫描顺序被改了。
 
-3. **R 复位仍回检查点**：沿路走到第一块垫之后按 R。
+3. **R 复位仍回检查点**：沿路走到第一块垫之后按 R 或点 **Reset**。
    - 预期：回到最近已验收检查点落点，进度不回退。
    - 失败：R 没反应或整场重开 ⇒ Reset 没进 IntentStepper。
 
-4. **自动化全绿 + 裁决不变**：
+4. **自动化全绿 + 试玩合同不变**：
    ```bash
    npm run typecheck; npm test; npm run redline-scan
    npm run test:gut:full
    & $env:GODOT4_CONSOLE --headless --path game -- --package-check
    & $env:GODOT4_CONSOLE --headless --path game -- --bot-run
    ```
-   - 预期：`npm test` 无回归；`redline-scan` `no findings`；GUT 全绿（含 `test_traprush_match_session.gd` 与新增 `test_traprush_match_session_split.gd`）；`--package-check` `ok=true`；`--bot-run` 三张课 `completable`，**动作序列与步数逐项不变**（5 / 5 / 12 步）。
-   - 失败：bot-run 步数变了 ⇒ 拆分改了裁决，停下来查，别先改断言。
+   - 预期：`npm test` 无回归；`redline-scan` `no findings`；GUT 全绿（含既有 `test_authoring_preview*.gd` 与新增 `test_authoring_preview_split.gd`）；`--package-check` `ok=true`；`--bot-run` 三张课 `completable`，**动作序列与步数逐项不变**（5 / 5 / 12 步）。
+   - 失败：Preview GUT 红 ⇒ 拆分改了试玩合同，停下来查，别先改断言。bot-run 步数变了 ⇒ 不该动的对局路径被连带改了。
 
 ### 本刀不测
 
-- **在线双人 WS 对局**：会话是权威内核，Solo 与线上共用同一套 `TraprushMatchSession`；
-- **拆 Preview / 控制面**：本刀只拆对局会话；
+- **大厅 Solo / 在线对局**：本刀只拆 Preview 会话；对局会话上一刀已拆完；
+- **拆 Preview 映射 / 壳 / 控制面**：`authoring_preview_map.gd` 与 `authoring_preview_shell.gd` 仍超 400；
 - **字体 / locale 热切换 / 触控 UI**。
 
 ### 诚实边界
 
-- 门面仍持有 `_world` / `_players` 等字段；协作者读这些字段，不是新的权威源；
-- `hash_state` 仍覆盖位姿、进度、门闩、库存与硬直，合同与拆前相同；
+- 门面仍持有 `world` / `play_world` 等字段；协作者读这些字段，不是新的权威源；
+- 安全点 Patch、试玩占用顺序（垫→门→垫→终点）与拆前相同；
 - 嵌入子窗口仍然不得自己设 `content_scale_*`。
 
 ### 仍然欠着（不因本章消失）
 
-- E9 全仓（Preview / 控制面 / `course_completion_probe.gd` / `graybox_course.gd` / `simulation_world.gd` 等仍超 400）；
+- E9 全仓（`authoring_preview_map.gd` / `authoring_preview_shell.gd` / 控制面 / `course_completion_probe.gd` / `graybox_course.gd` / `simulation_world.gd` 等仍超 400）；
 - 字体入包（思源黑体 / Noto Sans SC 子集范围待人类拍）；
 - 触控 UI；按 `asset_id` 解析视觉；传送门没有专用模型；
 - 扫掠步数无上限。
+
+---
+
+## 上一刀：拆对局会话（C5 第 3 章，bootstrap / intents / scan / view）
+
+> **本节已随 [#207](https://github.com/czmomocha/craftarena/pull/207) 合入，保留只为追溯。验当前 PR 只看上面的「本刀」。**
+
+该刀把 `TraprushMatchSession` 拆成 bootstrap / intents / scan / view，压到 400 行以下。公开 API 与 `--bot-run` 步数不变。
 
 ---
 
