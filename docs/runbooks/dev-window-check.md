@@ -54,7 +54,43 @@ Worktree 端口偏移见 README「并行工作区」；本文件不复述端口�
 
 ---
 
-## 本刀：仿真世界 + bundle；灰盒 + 探针（C5 第 9–10 章）
+## 本刀：编辑壳 + 拓扑编译器（C5 第 11–12 章）
+
+第 11 章把 `AuthoringEditorShell` 拆成 chrome / place / follow。第 12 章把 `TraprushTopologyCompiler` 拆成 bags / fields。全部压到 400 行以下。公开 API 与 `--bot-run` 步数不变。**没有新的窗口外观**。不需要 `npm run dev`。
+
+1. 仓库根目录跑 GUT fast 层（或至少 `test_authoring_editor_e9_split.gd`、`test_traprush_topology_e9_split.gd`、`test_authoring_editor_shell.gd`、`test_traprush_topology_compiler.gd`）：
+   ```bash
+   npm run test:gut:fast
+   ```
+   - 预期：全绿；新拆分用例断言编辑壳 / 编译器各文件均 < 400 行。
+   - 失败：place / undo / Preview 跟随 / 官方课编译红 ⇒ 门面把公开方法转丢了。
+
+2. 官方课步数：
+   ```powershell
+   & $env:GODOT4_CONSOLE --headless --path game -- --bot-run
+   ```
+   - 预期：三张课仍是 `completable`，步数 **5 / 5 / 12**。
+   - 失败：步数变了或 `not_completable` ⇒ 拓扑编译袋语义变了。
+
+3. 编辑器打开 `res://src/creator/editor_sandbox.tscn`，**F6**（不要 F5）。
+   - 预期：出现编辑窗口；状态行含 `entities=`、`reach_ok=`、`follow=`；已有一个检查点与一个 dangling 传送；点 **Preview** 后 `follow=true`，再 Place 一个占用，Preview 仍跟着。
+   - 失败：窗口不出现、工具条没了、Preview 不再跟随 ⇒ chrome / follow 委托坏了。
+
+### 本刀不测
+
+- 控制面 / MatchHost registry 拆分（下一章）；
+- 解冻令、协议帧、Schema、官方课 JSON、Tick / 快照 / 插值锁定。
+
+### 诚实边界
+
+- E9 仍欠：控制面 `server.ts` / `database.ts`、MatchHost `registry.ts`、`visual_asset_catalog.gd`、`match_snapshot_map.gd`；
+- 扫掠步数仍无上限（宪法第十七条缺口）。
+
+---
+
+## 上一刀：仿真世界 + bundle；灰盒 + 探针（C5 第 9–10 章）
+
+> **本节随 [#213](https://github.com/czmomocha/craftarena/pull/213) 提交；验当前 PR 只看上面的「本刀」。**
 
 第 9 章把 `SimulationWorld` 拆成 query / move、把 `SimulationBundle` 拆成 decode / bags。第 10 章把灰盒拆成 layout / assemble / play、把完成探针拆成 heuristic / search。全部压到 400 行以下。公开 API 与 `--bot-run` 步数不变。**没有新的窗口外观**。不需要 `npm run dev`。
 
