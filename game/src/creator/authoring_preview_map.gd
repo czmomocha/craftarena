@@ -30,11 +30,17 @@ extends Node3D
 ## 里是同一个；解析失败时两边同样回退到占位盒。占用视觉按组件 / zone 标签接
 ## （垫+门、终点门、箱、滚柱、始终固体地块），与对局袋类型对齐；传送门实体
 ## 仍是占位盒。箱与滚柱保留 D4 危险色 overlay。
+##
+## `set_anim_state` 把 C4 表现动画状态写到玩家标记 metadata 与子 Label3D `anim`。
+## 契约读出，不是 HUD、也不是 clip。Preview 没有基础推击，shove 永远 false。
 
 const CAMERA_NAME: String = "PreviewCamera"
 const LIGHT_NAME: String = "PreviewLight"
 const PLAYER_NAME: String = "player_marker"
 const VISUAL_NAME: String = "visual"
+const ANIM_NAME: String = "anim"
+const ANIM_META: String = "anim_state"
+const ANIM_LIFT: float = 1.6
 const PLACEHOLDER_PREFIX: String = "entity_"
 const LINK_PREFIX: String = "portal_link_"
 const DANGLE_PREFIX: String = "portal_dangle_"
@@ -372,6 +378,42 @@ func player_visual_node() -> Node3D:
 	if player == null:
 		return null
 	return player.get_node_or_null(VISUAL_NAME) as Node3D
+
+
+func player_anim_node() -> Label3D:
+	var player: MeshInstance3D = player_node()
+	if player == null:
+		return null
+	return player.get_node_or_null(ANIM_NAME) as Label3D
+
+
+func player_anim_state() -> String:
+	var player: MeshInstance3D = player_node()
+	if player == null or not player.has_meta(ANIM_META):
+		return ""
+	return str(player.get_meta(ANIM_META))
+
+
+func set_anim_state(state: String) -> bool:
+	if not PlayAnimState.contains(state):
+		return false
+	var player: MeshInstance3D = player_node()
+	if player == null:
+		return false
+	player.set_meta(ANIM_META, state)
+	var label: Label3D = player_anim_node()
+	if label == null:
+		label = Label3D.new()
+		label.name = ANIM_NAME
+		label.font_size = 48
+		label.pixel_size = 0.015
+		label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+		label.outline_size = 8
+		label.position = Vector3(0.0, ANIM_LIFT, 0.0)
+		label.modulate = PlaceholderSpec.STANDING_RUNNING_ALBEDO
+		player.add_child(label)
+	label.text = state
+	return true
 
 
 func mapped_count() -> int:

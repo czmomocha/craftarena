@@ -32,6 +32,10 @@ extends Node3D
 ##
 ## apply_players 复用席位节点，只有席位数变化才增删（见 `_sync_players`）。
 ## 这不是优化偏好，是每帧预算：全清全建会每帧重新 instantiate 角色 `.glb`。
+##
+## `set_anim_state` 把 C4 表现动画状态写到席位 metadata 与子 Label3D `anim`。
+## 那是契约读出，不是 HUD 字段、也不是 clip。在线快照缺接地 / 硬直字段，
+## 大厅只在 Solo 接线。
 
 const MatchSnapshotFollowGd := preload("res://src/client/match_snapshot_follow.gd")
 
@@ -45,6 +49,9 @@ const FACE_NAME: String = "face"
 const FACE_OFFSET: Vector3 = Vector3(0.0, 0.15, -0.55)
 const FACE_SIZE: Vector3 = Vector3(0.18, 0.18, 0.28)
 const VISUAL_NAME: String = "visual"
+const ANIM_NAME: String = "anim"
+const ANIM_META: String = "anim_state"
+const ANIM_LIFT: float = 1.6
 const OWN_ALBEDO: Color = PlaceholderSpec.OWN_ALBEDO
 const REMOTE_ALBEDO: Color = PlaceholderSpec.REMOTE_ALBEDO
 
@@ -198,6 +205,44 @@ func visual_node(slot: int) -> Node3D:
 	if player == null:
 		return null
 	return player.get_node_or_null(VISUAL_NAME) as Node3D
+
+
+func anim_node(slot: int) -> Label3D:
+	var player: MeshInstance3D = player_node(slot)
+	if player == null:
+		return null
+	return player.get_node_or_null(ANIM_NAME) as Label3D
+
+
+func anim_state(slot: int) -> String:
+	var player: MeshInstance3D = player_node(slot)
+	if player == null or not player.has_meta(ANIM_META):
+		return ""
+	return str(player.get_meta(ANIM_META))
+
+
+## 把表现状态写到席位。未知名字拒绝，避免 HUD 打出随便一个字符串。
+## 标签是契约读出：人眼能在 Solo 里看见 idle/run/jump，clip 仍不播。
+func set_anim_state(slot: int, state: String) -> bool:
+	if not PlayAnimState.contains(state):
+		return false
+	var player: MeshInstance3D = player_node(slot)
+	if player == null:
+		return false
+	player.set_meta(ANIM_META, state)
+	var label: Label3D = anim_node(slot)
+	if label == null:
+		label = Label3D.new()
+		label.name = ANIM_NAME
+		label.font_size = 48
+		label.pixel_size = 0.015
+		label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+		label.outline_size = 8
+		label.position = Vector3(0.0, ANIM_LIFT, 0.0)
+		label.modulate = PlaceholderSpec.STANDING_RUNNING_ALBEDO
+		player.add_child(label)
+	label.text = state
+	return true
 
 
 ## 有多少个席位真的用上了视觉资产。0 表示全部回退到占位盒。

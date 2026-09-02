@@ -53,6 +53,7 @@ extends Node
 ## F rising-edge encodes ShoveIntent (no target id).
 ## Shift rising-edge encodes SprintIntent (consumes a granted dash).
 ## Solo copies the match-server jump/support/fall stubs; _process advances
+## interpolation only. Solo 角色挂 C4 表现动画状态读出（`anim`），不播 clip。
 ## (falls) before sampling Space so a hop is not landed in the same frame.
 ## Solo opens an 8-cell play-range stub (not a product bound).
 ## play_move_step is a presentation stub, not a product speed.
@@ -183,6 +184,8 @@ var _jump_held: bool = false
 var _shove_held: bool = false
 var _sprint_held: bool = false
 var _play_input: PlayInput = PlayInput.new()
+var _play_moving: bool = false
+var _play_anim: PlayAnimState = PlayAnimState.new()
 var _opened_socket: bool = false
 
 
@@ -395,6 +398,8 @@ func try_solo() -> bool:
 		return false
 	_prepare_offline_stubs()
 	_reset_interp()
+	_play_moving = false
+	_play_anim.reset()
 	course_path = OfficialTraprushCoursesGd.document_path(id)
 	if not offline.try_begin(course_path, web_platform):
 		_refresh_status()
@@ -411,6 +416,8 @@ func try_stop_offline() -> bool:
 	if not offline.try_stop():
 		return false
 	_reset_interp()
+	_play_moving = false
+	_play_anim.reset()
 	if map != null:
 		map.follow_slot = -1
 		map.apply_players([])
@@ -542,6 +549,7 @@ func on_binary(bytes: PackedByteArray, now_ms: int = -1) -> bool:
 
 
 func try_sample_play_vector(move_x: float, move_z: float) -> PackedByteArray:
+	_play_moving = absf(move_x) > PlayInput.IDLE or absf(move_z) > PlayInput.IDLE
 	if window == null or not window.visible:
 		return PackedByteArray()
 	if _offline_playing():
@@ -1422,7 +1430,23 @@ func _apply_snapshot_map() -> void:
 			pad_total = course.pad_count()
 		standings.follow_slot = _camera_follow_slot()
 		standings.apply_players(players, pad_total)
+	_apply_solo_anim()
 	_refresh_status()
+
+
+func _apply_solo_anim() -> void:
+	if not _offline_playing() or map == null or offline == null or offline.session == null:
+		return
+	var session: TraprushMatchSession = offline.session
+	var facts: Dictionary = PlayAnimState.facts(
+		session.player_airborne(0),
+		_play_moving,
+		session.player_stun_remaining(0) > 0,
+		session.player_portal_latched(0),
+		session.player_shoved_this_tick(0),
+		session.player_broke_this_tick(0)
+	)
+	map.set_anim_state(0, _play_anim.resolve(facts))
 
 
 func _active_follow() -> MatchSnapshotFollowGd:

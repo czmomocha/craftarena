@@ -1105,6 +1105,42 @@ func test_solo_jump_hops_on_spawn_footing() -> void:
 	assert_ne(after_arc_y, after_y)
 
 
+func test_solo_anim_starts_idle_then_run() -> void:
+	_shell = _open_shell()
+	assert_true(_shell.try_solo())
+	assert_eq(_shell.map.anim_state(0), PlayAnimState.IDLE)
+	assert_eq(_shell.map.anim_node(0).text, PlayAnimState.IDLE)
+	assert_false(_shell.try_sample_play_move(true, false, false, false).is_empty())
+	assert_eq(_shell.map.anim_state(0), PlayAnimState.RUN)
+	assert_true(_shell.try_sample_play_move(false, false, false, false).is_empty())
+	_shell._apply_snapshot_map()
+	assert_eq(_shell.map.anim_state(0), PlayAnimState.IDLE)
+
+
+func test_solo_jump_sets_jump_then_land() -> void:
+	_shell = _open_shell()
+	assert_true(_shell.try_solo())
+	var spawn: Dictionary = _shell.offline.session.player_pose(0)
+	var spawn_y: int = spawn.get("y", 0)
+	assert_false(_shell.try_sample_play_jump(true).is_empty())
+	var hopped: Dictionary = _shell.offline.session.player_pose(0)
+	var hopped_y: int = hopped.get("y", 0)
+	assert_eq(hopped_y, spawn_y + Fixed.SCALE / 4)
+	assert_eq(_shell.map.anim_state(0), PlayAnimState.JUMP)
+	var saw_land: bool = false
+	for _tick: int in range(24):
+		assert_true(_shell.offline.try_advance())
+		_shell._apply_snapshot_map()
+		var state: String = _shell.map.anim_state(0)
+		if state == PlayAnimState.LAND:
+			saw_land = true
+			break
+		assert_eq(state, PlayAnimState.JUMP)
+	assert_true(saw_land)
+	_shell._apply_snapshot_map()
+	assert_eq(_shell.map.anim_state(0), PlayAnimState.IDLE)
+
+
 func test_solo_walk_off_spawn_footing_drops_y() -> void:
 	_shell = _open_shell()
 	assert_true(_shell.try_solo())

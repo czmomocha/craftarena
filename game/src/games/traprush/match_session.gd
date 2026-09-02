@@ -281,6 +281,67 @@ func player_stun_remaining(slot: int) -> int:
 	return stun
 
 
+func player_last_shove_tick(slot: int) -> int:
+	return _player_tick_field(slot, "last_shove_tick")
+
+
+func player_last_use_item_tick(slot: int) -> int:
+	return _player_tick_field(slot, "last_use_item_tick")
+
+
+func player_shoved_this_tick(slot: int) -> bool:
+	return player_last_shove_tick(slot) == tick_index()
+
+
+func player_broke_this_tick(slot: int) -> bool:
+	return player_last_use_item_tick(slot) == tick_index()
+
+
+func player_portal_latched(slot: int) -> bool:
+	var player: Dictionary = _player_at(slot)
+	if player.is_empty():
+		return false
+	var latch_raw: Variant = player.get("latch", {})
+	if typeof(latch_raw) != TYPE_DICTIONARY:
+		return false
+	var latch: Dictionary = latch_raw
+	return not latch.is_empty()
+
+
+func player_vy(slot: int) -> int:
+	if _world == null:
+		return 0
+	var capsule_id: int = player_capsule_id(slot)
+	if capsule_id < 1:
+		return 0
+	return _world.get_vy(capsule_id)
+
+
+## 表现层用的空中判定。接触探针半格（占用盒顶到出生格面的空隙），
+## 不用本会话 Jump 的 1 格 support_dy。
+func player_airborne(slot: int) -> bool:
+	if _world == null:
+		return false
+	var capsule_id: int = player_capsule_id(slot)
+	if capsule_id < 1:
+		return false
+	return PlayAnimState.is_airborne(
+		player_vy(slot),
+		_world.is_supported_by_solid(capsule_id, PlayAnimState.CONTACT_DY)
+	)
+
+
+func _player_tick_field(slot: int, key: String) -> int:
+	var player: Dictionary = _player_at(slot)
+	if player.is_empty():
+		return -1
+	var raw: Variant = player.get(key, -1)
+	if typeof(raw) != TYPE_INT:
+		return -1
+	var tick: int = raw
+	return tick
+
+
 func destructible_alive_count() -> int:
 	var alive: int = 0
 	for key: Variant in _crate_health.keys():

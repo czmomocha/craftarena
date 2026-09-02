@@ -142,6 +142,38 @@ func test_shell_official_jump_stays_until_advance_lands() -> void:
 	assert_eq(_preview_shell.preview.play_world.tick_index, 2)
 
 
+func test_preview_anim_idle_then_jump_then_land() -> void:
+	var session: AuthoringSession = AuthoringSession.new()
+	assert_true(session.import_document(AuthoringDocument.load_json(COURSE_01_PATH)))
+	_preview_shell = AuthoringPreviewShell.create(AuthoringPreviewHostKinds.WINDOW)
+	add_child(_preview_shell)
+	assert_true(_preview_shell.open_from(session))
+	assert_true(_preview_shell.try_start_play(1, PLAY_RADIUS, PLAY_RADIUS))
+	assert_true(_preview_shell.try_advance_play())
+	assert_eq(_preview_shell.map.player_anim_state(), PlayAnimState.IDLE)
+	assert_true(_preview_shell.try_sample_play_jump(true))
+	assert_eq(_preview_shell.map.player_anim_state(), PlayAnimState.JUMP)
+	assert_true(_preview_shell.try_advance_play())
+	assert_eq(_preview_shell.map.player_anim_state(), PlayAnimState.LAND)
+	_preview_shell._apply_play_anim()
+	assert_eq(_preview_shell.map.player_anim_state(), PlayAnimState.IDLE)
+
+
+func test_preview_walk_sets_run() -> void:
+	var session: AuthoringSession = AuthoringSession.new()
+	assert_true(session.import_document(AuthoringDocument.load_json(COURSE_01_PATH)))
+	_preview_shell = AuthoringPreviewShell.create(AuthoringPreviewHostKinds.WINDOW)
+	add_child(_preview_shell)
+	assert_true(_preview_shell.open_from(session))
+	assert_true(_preview_shell.try_start_play(1, PLAY_RADIUS, PLAY_RADIUS))
+	assert_true(_preview_shell.try_advance_play())
+	assert_true(_preview_shell.try_sample_play_move(false, false, false, true))
+	assert_eq(_preview_shell.map.player_anim_state(), PlayAnimState.RUN)
+	assert_false(_preview_shell.try_sample_play_move(false, false, false, false))
+	_preview_shell._apply_play_anim()
+	assert_eq(_preview_shell.map.player_anim_state(), PlayAnimState.IDLE)
+
+
 func test_zero_accel_advance_coasts_jump_vy() -> void:
 	var preview: AuthoringPreview = _grounded_preview()
 	assert_true(preview.try_start_play(1, PLAY_RADIUS, PLAY_RADIUS))
