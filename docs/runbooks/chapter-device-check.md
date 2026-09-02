@@ -53,29 +53,27 @@ Worktree 端口偏移见 README「并行工作区」；本文件不复述端口�
 
 ---
 
-## 本刀：本地化键（`craft_arena.ui.*`，en + zh_CN，不入字体）
+## 本刀：拆大厅壳（C5 产出 1，L4 协作者）
 
-上一刀（[#202](https://github.com/czmomocha/craftarena/pull/202)）锁了表现动画状态。本刀把大厅 / Editor / Preview 的窗题、按钮、占位符和 CD-13 离线横幅改成走键。表在 `game/content/locale/craft_arena.csv`，`UiCopy` 自己解析。**不入字体**。locale 在建窗时采样，改系统语言要重启窗口才换字。
+上一刀（[#203](https://github.com/czmomocha/craftarena/pull/203)）锁了本地化键。本刀把 `MatchLobbyShell` 按 CD-41 L4 拆成 chrome / net / sampler / stage / hud / director，门面压到 400 行以下。**窗口里看起来应与上一刀相同**：按钮、HUD、Solo、鼠标命中都不能因拆文件而变。
 
-本刀**不需要** `npm run dev`（Solo 就能看完前 3 步；Preview / Editor 用 F6；第 4 步用 `--language` 换语言重启）。
+本刀**不需要** `npm run dev`（Solo 就能看完前 4 步）。
 
-1. **Solo 横幅是解析后的句子，不是键名**：按「共用启动」打开大厅，点从左到右第 4 个按钮（英文 **Solo play** / 中文 **单人试玩**）。看状态行第二行。
-   - 预期：locale 为 `zh*` 时出现 **「离线试玩，成绩不上传」**（CD-13 §3 原文，一个字不改）；其余 locale 出现 **`Offline play, scores are not uploaded`**（含逗号）。窗题与第 4 个按钮同时是中文或同时是英文。
-   - 失败：出现键名 `craft_arena.ui.offline_banner` ⇒ CSV 没进包或没解析到。中文横幅被改写成别的句子 ⇒ 打回（那句是产品原文）。横幅是中文、按钮还是 `Solo play` ⇒ 建窗时 locale 采样不一致。
+1. **大厅仍能打开，按钮还在原位**：按「共用启动」打开主场景。
+   - 预期：嵌入子窗口出现；从左到右仍是快速游戏 / 创建房间 / 加入房间 / 单人试玩 / 取消 / 查询队列（英文机对应 Quick play … Poll）；节点名仍是英文 `QuickPlay` 等。状态行仍有 `join=idle`、`play=idle`、`course=3/5/1`。第一行仍是 `FPS`。
+   - 失败：没有窗口、立刻退出、按钮缺了一个、或窗题变成键名。
 
-2. **按钮不再是散落的硬编码中英混排**：看从左到右前 6 个按钮，以及服务器行 placeholder。
-   - 预期：整行同一语言。中文机应是「快速游戏 / 创建房间 / 加入房间 / 单人试玩 / 取消 / 查询队列」，placeholder「服务器地址」「房间码」。英文机应是 Quick play / Create room / Join room / Solo play / Cancel / Poll，placeholder Server host / Room code。状态行仍是 `join=` / `FPS` 这种标识，没有被翻译。
-   - 失败：同一行中英混排 ⇒ 有的按钮没走键。节点名变成中文 ⇒ 测例会找不到节点，打回。
+2. **点 Solo 就是 Solo，不是旁边的 Poll**：把鼠标对准从左到右第 4 个按钮点一下。
+   - 预期：进入离线试玩；状态行出现离线横幅（中文「离线试玩，成绩不上传」/ 英文 `Offline play, scores are not uploaded`）和 `offline=playing`。**不要**点到第 6 个按钮（查询队列 / Poll）。
+   - 失败：点第 4 个按钮却进了排队或没反应 ⇒ 嵌入子窗口又被设了 `content_scale_*`（C4 第 6 章回归：渲染不缩放、输入缩放，4K 上会偏 1.5 倍）。没有横幅 ⇒ Solo 动词没接到 `MatchLobbyDirector`。
 
-3. **Preview / Editor 同一张表**：编辑器打开 `res://src/creator/course_sandbox.tscn`，**F6**（不要 F5）。
-   - 预期：Preview 窗题是 **Preview** 或 **预览**；Play / Stop 等按钮与大厅同一语言。Tools → Authoring Editor 打开的 Editor 窗题是 **Editor** 或 **编辑器**，「放置检查点」等与表一致。
-   - 失败：大厅已换字、Preview 仍是硬编码英文 ⇒ Preview 没走 `UiCopy`。
+3. **拆完之后 WASD / 空格仍是玩法**：Solo 里按 W 走一步，按空格跳。
+   - 预期：角色移动；空格起跳而不是点到「单人试玩」按钮（按钮 `FOCUS_NONE`）。状态行 `tick=` 会走。
+   - 失败：按键没反应、或空格又去点按钮 ⇒ 输入采样没接到 `MatchLobbySampler`，或焦点又被按钮抢走。
 
-4. **换语言要重启窗口**：停掉游戏，用另一语言再开一次。
-   - Windows 中文机看英文：`& $env:GODOT4 --path game --language en`
-   - 看中文：`& $env:GODOT4 --path game --language zh_CN`
-   - 预期：窗题、按钮、Solo 横幅整套跟着 `--language` 变。**不要**指望在已打开的窗口里热切换。
-   - 失败：`--language zh_CN` 仍全是英文 ⇒ `effective_locale` 没把 `zh*` 归一到 `zh_CN`，或 CSV 缺 `zh_CN` 列。
+4. **取消能停 Solo**：点 **取消** / **Cancel**。
+   - 预期：离线横幅消失，回到 `join=idle` / `play=idle`。窗口还在，没有整窗关掉。
+   - 失败：窗口被关掉、或停不下来 ⇒ 离场动词没接到 director。
 
 5. **自动化全绿 + 裁决不变**：
    ```bash
@@ -84,32 +82,39 @@ Worktree 端口偏移见 README「并行工作区」；本文件不复述端口�
    & $env:GODOT4_CONSOLE --headless --path game -- --package-check
    & $env:GODOT4_CONSOLE --headless --path game -- --bot-run
    ```
-   - 预期：`npm run typecheck` 无输出；`redline-scan` `no findings`；GUT 全绿；`--package-check` `ok=true` 且 `locale_table_loadable=true`；`--bot-run` 三张课 `completable`，**动作序列与步数逐项不变**（5 / 5 / 12 步）。
-   - 失败：bot-run 步数变了 ⇒ 文案层意外改了命令，停下来查，别先改断言。`locale_table_loadable=false` ⇒ CSV 路径或 `keep` 导入坏了。
+   - 预期：`npm run typecheck` 无输出；`redline-scan` `no findings`；GUT 全绿（含 `test_match_lobby_shell.gd` 与 `test_match_lobby_split.gd`）；`--package-check` `ok=true`；`--bot-run` 三张课 `completable`，**动作序列与步数逐项不变**（5 / 5 / 12 步）。
+   - 失败：bot-run 步数变了 ⇒ 拆壳意外改了命令，停下来查，别先改断言。`test_lobby_l4_files_stay_under_e9_line_cap` 红 ⇒ 门面或某个协作者又涨过 400 行。
 
 ### 本刀不测
 
-- **字体 / 缺字形 / 豆腐块**：字体未入包，中文机用系统字体；
-- **locale 热切换设置页**：建窗时采样，不做产品设置；
-- **公开未过滤昵称的子集范围**：跟字体绑定，须人类拍板；
-- **把 `join=` / `pads=` / `anim` 译成中文**；
-- **导出包内文案**：本机无 4.7.2 导出模板。`include_filter` 有守卫，真包未跑过。
+- **在线匹配 / 真 WS**：拆的是编排，不改协议；在线回归仍以 GUT 注入 HTTP 为准；
+- **拆 `match_join_session.gd`**：本刀不做；
+- **字体 / locale 热切换 / 触控 UI**。
 
 ### 诚实边界
 
-- 中文按钮是直译（快速游戏 / 单人试玩），不是营销文案；
-- `Poll` →「查询队列」是开发期动作，不是玩家向文案；
-- 改系统语言或 `--language` 之后必须重启窗口，已打开的按钮字不会变。
+- 壳变薄了，**不是** E9 全仓达标：`match_join_session.gd` 仍约 656 行；
+- HUD 仍是开发期 token（`join=` / `pads=`），不是产品文案；
+- 嵌入子窗口仍然不得自己设 `content_scale_*`。
 
 ### 仍然欠着（不因本章消失）
 
+- `match_join_session.gd` 超 E9；
 - 字体入包（思源黑体 / Noto Sans SC 子集范围待人类拍）；
 - 触控 UI；按 `asset_id` 解析视觉；传送门没有专用模型；
-- 扫掠步数无上限；`match_lobby_shell.gd` 仍超 E9 行数上限。
+- 扫掠步数无上限。
 
 ---
 
-## 上一刀：表现动画状态契约（idle / run / jump / land / shove / hit / break / portal）
+## 上一刀：本地化键（`craft_arena.ui.*`，en + zh_CN，不入字体）
+
+> **本节已随 [#203](https://github.com/czmomocha/craftarena/pull/203) 合入，保留只为追溯。验当前 PR 只看上面的「本刀」。**
+
+该刀把大厅 / Editor / Preview 的窗题、按钮、占位符和 CD-13 离线横幅改成走 `UiCopy` 键。**不入字体**。locale 在建窗时采样。
+
+---
+
+## 再上一刀：表现动画状态契约（idle / run / jump / land / shove / hit / break / portal）
 
 > **本节已随 [#202](https://github.com/czmomocha/craftarena/pull/202) 合入，保留只为追溯。验当前 PR 只看上面的「本刀」。**
 
