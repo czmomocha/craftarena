@@ -17,7 +17,7 @@ alwaysApply: true
 
 - 做（本刀 = C5 第 11–12 章：编辑壳 + 拓扑编译器）：第 11 章把 `AuthoringEditorShell` 拆成 chrome / place / follow；第 12 章把 `TraprushTopologyCompiler` 拆成 bags / fields。各文件均 < 400 行。公开 API 仍在门面上。`npm run test:gut:fast` 含 `test_authoring_editor_e9_split.gd` 与 `test_traprush_topology_e9_split.gd`；`--bot-run` 步数仍为 5 / 5 / 12。
 - 不做：解除纠偏冻结令；开工 M4a / M4b / M6 / M7 / 表现增强；改协议 / Schema / 官方课 JSON；拆控制面 / MatchHost registry；字体入包；触控 UI；用 ICMP 锁定 Tick / 快照 / 插值；发明 M8。
-- 仍欠着（不因本章合入而消失）：E9 其余（控制面 `server.ts` / `database.ts`、MatchHost `registry.ts`、`visual_asset_catalog.gd`、`match_snapshot_map.gd`）；触控 UI；按 `asset_id` 解析视觉；传送门模型；字体入包；远端协议层 RTT 回填；C3 网络参数锁定；E6 有美术之后的可玩性签署；扫掠取样代价无上限。
+- 仍欠着（不因本章合入而消失）：E9 其余（控制面 `server.ts` / `database.ts`、MatchHost `registry.ts`、`visual_asset_catalog.gd`、`match_snapshot_map.gd`）；触控 UI；按 `asset_id` 解析视觉；传送门模型；字体入包；C3 网络参数锁定；E6 有美术之后的可玩性签署；扫掠取样代价无上限。
 - 仍不做：给嵌入子窗口设 `content_scale_*`；把 locale 热切换做成产品设置页。
 
 纠偏归属：C5
