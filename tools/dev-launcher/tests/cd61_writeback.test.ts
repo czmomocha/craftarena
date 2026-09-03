@@ -31,7 +31,7 @@ describe("C5 CD-61 writeback after human approval", () => {
 		assert.match(live, /### M4a/);
 		assert.match(live, /### M4b/);
 		assert.doesNotMatch(live, /### M4：规则字节码与热发布/);
-		assert.match(live, /纠偏冻结/);
+		assert.match(live, /纠偏冻结令已解除/);
 	});
 
 	it("rewrites the M3 item gate and moves export off M5", () => {

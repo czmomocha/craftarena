@@ -140,13 +140,13 @@ describe("C5 document governance", () => {
 
 	it("copies D9 into the CD-52 task sheet the freeze rules already use", () => {
 		const workflow = read("Confirmed-docs/50-engineering/52-ai-workflow.md");
-		assert.match(workflow, /纠偏归属/);
-		assert.match(workflow, /是否新增冻结常量引用/);
+		assert.match(workflow, /里程碑归属/);
+		assert.match(workflow, /placeholder_spec/);
 		assert.match(workflow, /深审/);
 		assert.match(workflow, /章粒度/);
 	});
 
-	it("closes C5 against E3/E6 facts without unlocking the freeze", () => {
+	it("closes C5 against E3/E6 facts; freeze lift is a later overlay", () => {
 		const risks = read("Confirmed-docs/60-plan/62-risk-register.md");
 		assert.match(risks, /零延迟锁定网络参数[\s\S]{0,80}已治理/);
 		assert.doesNotMatch(risks, /锁定仍待人类拍板/);
@@ -157,9 +157,10 @@ describe("C5 document governance", () => {
 
 		const plan = read("docs/plans/course-correction-2026-08.md");
 		assert.match(plan, /C5 治理与里程碑重排[\s\S]{0,80}已结束/);
-		assert.match(plan, /不得\*\*把 C5 结束读成已解冻/);
+		assert.match(plan, /冻结令已解除/);
 
 		const decisions = read("Confirmed-docs/90-reference/91-decision-log.md");
 		assert.match(decisions, /c5_batch = complete_e9_lock_e11_facts/);
+		assert.match(decisions, /course_correction_freeze = lifted/);
 	});
 });
