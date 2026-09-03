@@ -137,6 +137,16 @@ func try_place_crate(entity_id: int, cell_x: int, cell_y: int, cell_z: int) -> b
 	return PlaceGd.try_place_crate(self, entity_id, cell_x, cell_y, cell_z)
 
 
+func try_place_pickup(
+	entity_id: int, cell_x: int, cell_y: int, cell_z: int, kind: String
+) -> bool:
+	return PlaceGd.try_place_pickup(self, entity_id, cell_x, cell_y, cell_z, kind)
+
+
+func try_move_entity(entity_id: int, cell_x: int, cell_y: int, cell_z: int) -> bool:
+	return PlaceGd.try_move_entity(self, entity_id, cell_x, cell_y, cell_z)
+
+
 func try_remove(entity_id: int) -> bool:
 	return try_edit({"op": "remove", "entity_id": entity_id})
 
@@ -316,6 +326,7 @@ func _rebuild_map(force: bool = false) -> void:
 	map.rebuild(session.world)
 	if validator != null:
 		validator.refresh(session.world)
+	chrome.sync_guides()
 
 
 func _refresh_status() -> void:
@@ -323,3 +334,4 @@ func _refresh_status() -> void:
 	if line.is_empty():
 		return
 	chrome.set_status_text(line)
+	chrome.sync_guides()

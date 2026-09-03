@@ -143,6 +143,12 @@ const STANDING_REMOTE_OUTLINE: Color = Color(0.0, 0.0, 0.0)
 ## Preview 走路可达性问题 gizmos。
 const REACH_ALBEDO: Color = Color(1.0, 0.82, 0.2)
 
+## Editor 3D 放置引导（仅 AuthoringEditorShell 地板/光标/选中框；不是占用色、不进编译）。
+const EDIT_GUIDE_FLOOR_FILL_ALBEDO: Color = Color(0.14, 0.16, 0.18, 0.92)
+const EDIT_GUIDE_GRID_LINE_ALBEDO: Color = Color(0.38, 0.42, 0.48, 0.9)
+const EDIT_GUIDE_CURSOR_ALBEDO: Color = Color(0.95, 0.85, 0.25, 0.45)
+const EDIT_GUIDE_SELECT_ALBEDO: Color = Color(1.0, 1.0, 1.0, 0.35)
+
 # 表现步长（占位桩，不是产品数值；锁定见文件头）
 
 ## 一次输入采样的水平位移量级。

@@ -13,6 +13,7 @@ const OccupancyGd := preload("res://src/creator/authoring_preview_map_occupancy.
 const GizmosGd := preload("res://src/creator/authoring_preview_map_gizmos.gd")
 const OverlayGd := preload("res://src/creator/authoring_preview_map_overlay.gd")
 const PlayerGd := preload("res://src/creator/authoring_preview_map_player.gd")
+const FloorGd := preload("res://src/creator/authoring_preview_map_floor.gd")
 
 const CAMERA_NAME: String = "PreviewCamera"
 const LIGHT_NAME: String = "PreviewLight"
@@ -382,8 +383,11 @@ func _count_mesh_prefix(prefix: String) -> int:
 func _clear_meshes() -> void:
 	var doomed: Array[Node] = []
 	for child: Node in get_children():
-		if child is MeshInstance3D or child is Label3D:
-			doomed.append(child)
+		if not (child is MeshInstance3D or child is Label3D):
+			continue
+		if FloorGd.is_guide_name(str(child.name)):
+			continue
+		doomed.append(child)
 	for child: Node in doomed:
 		remove_child(child)
 		child.free()

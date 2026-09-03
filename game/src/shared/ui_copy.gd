@@ -60,6 +60,8 @@ const PLACE_SOLID: String = "craft_arena.ui.place_solid"
 const PLACE_HAZARD: String = "craft_arena.ui.place_hazard"
 const PLACE_CRATE: String = "craft_arena.ui.place_crate"
 const PLACE_FINISH: String = "craft_arena.ui.place_finish"
+const PLACE_BOMB: String = "craft_arena.ui.place_bomb"
+const PLACE_DASH: String = "craft_arena.ui.place_dash"
 const FLOOR_UP: String = "craft_arena.ui.floor_up"
 const FLOOR_DOWN: String = "craft_arena.ui.floor_down"
 const FOCUS_ISSUE: String = "craft_arena.ui.focus_issue"
@@ -95,6 +97,8 @@ const ALL_KEYS: PackedStringArray = [
 	PLACE_HAZARD,
 	PLACE_CRATE,
 	PLACE_FINISH,
+	PLACE_BOMB,
+	PLACE_DASH,
 	FLOOR_UP,
 	FLOOR_DOWN,
 	FOCUS_ISSUE,

@@ -6,6 +6,7 @@ extends GutTest
 const AuthoringPreviewHostKinds := preload("res://src/creator/authoring_preview_host_kinds.gd")
 const AuthoringPreviewShell := preload("res://src/creator/authoring_preview_shell.gd")
 const AuthoringSession := preload("res://src/creator/authoring_session.gd")
+const AuthoringWindowLayout := preload("res://src/creator/authoring_window_layout.gd")
 const Levels := preload("res://src/creator/preview_patch_levels.gd")
 const SharedCommand := preload("res://src/shared/commands/shared_command.gd")
 
@@ -26,9 +27,15 @@ func test_open_window_keeps_authoring_session() -> void:
 	assert_true(_shell.open_from(session))
 	assert_true(_shell.is_window_visible())
 	assert_eq(_shell.window.title, UiCopy.text(AuthoringPreviewShell.TITLE))
-	assert_eq(_shell.window.size, AuthoringPreviewShell.WINDOW_SIZE)
-	assert_eq(_shell.window.min_size, AuthoringPreviewShell.WINDOW_MIN_SIZE)
-	assert_eq(_shell.window.mode, Window.MODE_MAXIMIZED)
+	assert_eq(_shell.window.mode, Window.MODE_WINDOWED)
+	var host_size: Vector2i = AuthoringWindowLayout.host_size_of(_shell)
+	var preview_r: Rect2i = AuthoringWindowLayout.preview_rect(host_size)
+	assert_eq(_shell.window.position, preview_r.position)
+	assert_eq(_shell.window.size, preview_r.size)
+	assert_eq(_shell.window.min_size, preview_r.size)
+	assert_true(_shell.window.unresizable)
+	assert_false(_shell.window.wrap_controls)
+	assert_eq(_shell.window.max_size, preview_r.size)
 	# C4 第 6 章回归守卫：嵌入子窗口不得自己设 content_scale（渲染与鼠标命中
 	# 会错开）。D4 的 UI 基准由主窗口 stretch 承担。
 	assert_eq(_shell.window.content_scale_mode, Window.CONTENT_SCALE_MODE_DISABLED)

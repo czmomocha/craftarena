@@ -94,7 +94,7 @@ AI 不得用"代码看起来正确"代替运行证据。
 性能或安全预算：
 输出物：
 开发机窗口步骤：写入 docs/runbooks/dev-window-check.md 本刀 | 无（原因）
-里程碑归属：M3 | M-Export | M-Art | M4a | M4b | M5 | M6 | M7
+里程碑归属：创作者可测 | M3 | M-Export | M-Art | M4a | M4b | M5 | M6 | M7
 是否绕过 placeholder_spec 散落几何/色板常量：否 | 是（必须说明）
 审查级别：深审 | 常审 | 轻审
 ```

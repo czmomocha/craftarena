@@ -4,6 +4,8 @@ extends RefCounted
 ## Preview follow / safe-point forward for AuthoringEditorShell.
 ## Public open_preview stays on the shell facade so this file stays under E9.
 
+const LayoutGd := preload("res://src/creator/authoring_window_layout.gd")
+
 
 static func open_preview(shell: AuthoringEditorShell) -> bool:
 	if shell.session == null:
@@ -15,9 +17,12 @@ static func open_preview(shell: AuthoringEditorShell) -> bool:
 		shell.add_child(shell.preview)
 	if shell.preview_follows and shell.preview.preview != null and shell.preview.preview.connected:
 		if shell.preview.show_window():
+			LayoutGd.apply_pair(shell.window, shell.preview.window, shell)
 			shell.refresh_status()
 			return true
 	shell.preview_follows = shell.preview.open_from(shell.session)
+	if shell.preview_follows:
+		LayoutGd.apply_pair(shell.window, shell.preview.window, shell)
 	shell.refresh_status()
 	return shell.preview_follows
 

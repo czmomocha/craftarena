@@ -3,13 +3,9 @@ extends VBoxContainer
 
 ## TRAPRUSH tool strip on AuthoringEditorShell (CD-32 §1).
 ## Emits existing EDIT ops only. Bastion panel is not this chapter.
-## Floor only changes the next place cell_y. Occupancy place uses the same
-## lattice as checkpoints. Place finish writes zone.tags finish; a second
-## finish still writes and is not a write gate. Occupancy ids skip the
-## reserved dangling portal target so Place finish still writes after a
-## sandbox dangling portal; the next Place portal fills that slot.
-## Hazard cooldown and crate
-## durability are stubs, not product seconds or blast tables. Never settlement.
+## The cell cursor (X/Y/Z SpinBoxes; 3D click sets X/Z) is the next place.
+## Floor up/down still changes Y. Place bomb / dash writes inventory.item_state.
+## Occupancy ids skip the reserved dangling portal target. Never settlement.
 
 const PLACE_CHECKPOINT_NAME: String = "PlaceCheckpoint"
 const PLACE_PORTAL_NAME: String = "PlacePortal"
@@ -17,69 +13,103 @@ const PLACE_SOLID_NAME: String = "PlaceSolid"
 const PLACE_HAZARD_NAME: String = "PlaceHazard"
 const PLACE_CRATE_NAME: String = "PlaceCrate"
 const PLACE_FINISH_NAME: String = "PlaceFinish"
+const PLACE_BOMB_NAME: String = "PlaceBomb"
+const PLACE_DASH_NAME: String = "PlaceDash"
 const REMOVE_LAST_NAME: String = "RemoveLast"
 const FLOOR_UP_NAME: String = "FloorUp"
 const FLOOR_DOWN_NAME: String = "FloorDown"
 const HAZARD_COOLDOWN_STUB: int = 1
 const CRATE_DURABILITY_STUB: int = 1
 const CRATE_REGEN_POLICY_STUB: int = 0
+const CursorGd := preload("res://src/creator/traprush_editor_panel_cursor.gd")
+const PickupKindsGd := preload("res://src/ugc/traprush_pickup_kinds.gd")
 
 var host: AuthoringEditorShell = null
-var floor_index: int = 0
+var cursor: CursorGd = null
 var _next_entity_id: int = 1
 var _next_order: int = 0
-var _next_cell_x: int = 0
 var _pending_portal_id: int = 0
+
+var floor_index: int:
+	get:
+		if cursor == null:
+			return 0
+		return cursor.cell_y
+	set(value):
+		if cursor != null:
+			cursor.set_cell(cursor.cell_x, value, cursor.cell_z)
+
+var cell_x: int:
+	get:
+		if cursor == null:
+			return 0
+		return cursor.cell_x
+	set(value):
+		if cursor != null:
+			cursor.set_cell(value, cursor.cell_y, cursor.cell_z)
+
+var cell_z: int:
+	get:
+		if cursor == null:
+			return 0
+		return cursor.cell_z
+	set(value):
+		if cursor != null:
+			cursor.set_cell(cursor.cell_x, cursor.cell_y, value)
 
 
 func adopt_world(world: AuthoringWorld) -> void:
 	_pending_portal_id = 0
 	_next_entity_id = 1
 	_next_order = 0
-	_next_cell_x = 0
-	if world == null:
-		return
-	var cell: int = 1
-	if world.grid != null and world.grid.cell > 0:
-		cell = world.grid.cell
-	var max_id: int = 0
-	var max_order: int = -1
-	var max_cell_x: int = -1
-	for entity_id: int in world.entity_ids():
-		if entity_id > max_id:
-			max_id = entity_id
-		var stored: SharedComponentRecord = world.get_record(entity_id)
-		if stored == null:
-			continue
-		if stored.components.has(SharedComponentNames.CHECKPOINT):
-			var bag: Variant = stored.components[SharedComponentNames.CHECKPOINT]
-			if typeof(bag) == TYPE_DICTIONARY:
-				var order_bag: Dictionary = bag
-				if order_bag.has("order") and typeof(order_bag["order"]) == TYPE_INT:
-					var order_val: int = order_bag["order"]
-					if order_val > max_order:
-						max_order = order_val
-		if stored.components.has(SharedComponentNames.TRANSFORM):
-			var pose: Variant = stored.components[SharedComponentNames.TRANSFORM]
-			if typeof(pose) == TYPE_DICTIONARY:
-				var pose_bag: Dictionary = pose
-				if pose_bag.has("x") and typeof(pose_bag["x"]) == TYPE_INT:
-					var x_val: int = pose_bag["x"]
-					var cell_x: int = x_val / cell
-					if cell_x > max_cell_x:
-						max_cell_x = cell_x
-	if max_id > 0:
-		_next_entity_id = max_id + 1
-	if max_order >= 0:
-		_next_order = max_order + 1
-	if max_cell_x >= 0:
-		_next_cell_x = max_cell_x + 1
+	var next_x: int = 0
+	if world != null:
+		var cell: int = 1
+		if world.grid != null and world.grid.cell > 0:
+			cell = world.grid.cell
+		var max_id: int = 0
+		var max_order: int = -1
+		var max_cell_x: int = -1
+		for entity_id: int in world.entity_ids():
+			if entity_id > max_id:
+				max_id = entity_id
+			var stored: SharedComponentRecord = world.get_record(entity_id)
+			if stored == null:
+				continue
+			if stored.components.has(SharedComponentNames.CHECKPOINT):
+				var bag: Variant = stored.components[SharedComponentNames.CHECKPOINT]
+				if typeof(bag) == TYPE_DICTIONARY:
+					var order_bag: Dictionary = bag
+					if order_bag.has("order") and typeof(order_bag["order"]) == TYPE_INT:
+						var order_val: int = order_bag["order"]
+						if order_val > max_order:
+							max_order = order_val
+			if stored.components.has(SharedComponentNames.TRANSFORM):
+				var pose: Variant = stored.components[SharedComponentNames.TRANSFORM]
+				if typeof(pose) == TYPE_DICTIONARY:
+					var pose_bag: Dictionary = pose
+					if pose_bag.has("x") and typeof(pose_bag["x"]) == TYPE_INT:
+						var x_val: int = pose_bag["x"]
+						var world_cell_x: int = x_val / cell
+						if world_cell_x > max_cell_x:
+							max_cell_x = world_cell_x
+		if max_id > 0:
+			_next_entity_id = max_id + 1
+		if max_order >= 0:
+			_next_order = max_order + 1
+		if max_cell_x >= 0:
+			next_x = max_cell_x + 1
+	if cursor != null:
+		cursor.set_cell(next_x, 0, 0)
 
 
 func mount(p_host: AuthoringEditorShell) -> void:
 	host = p_host
 	if get_child_count() > 0:
 		return
+	cursor = CursorGd.new()
+	add_child(cursor)
+	cursor.mount()
 	var place_row: HBoxContainer = HBoxContainer.new()
 	place_row.name = "PlaceRow"
 	add_child(place_row)
@@ -93,6 +123,11 @@ func mount(p_host: AuthoringEditorShell) -> void:
 	_add_button(occupancy_row, PLACE_HAZARD_NAME, UiCopy.PLACE_HAZARD, place_next_hazard)
 	_add_button(occupancy_row, PLACE_CRATE_NAME, UiCopy.PLACE_CRATE, place_next_crate)
 	_add_button(occupancy_row, PLACE_FINISH_NAME, UiCopy.PLACE_FINISH, place_next_finish)
+	var pickup_row: HBoxContainer = HBoxContainer.new()
+	pickup_row.name = "PickupRow"
+	add_child(pickup_row)
+	_add_button(pickup_row, PLACE_BOMB_NAME, UiCopy.PLACE_BOMB, place_next_bomb)
+	_add_button(pickup_row, PLACE_DASH_NAME, UiCopy.PLACE_DASH, place_next_dash)
 	var floor_row: HBoxContainer = HBoxContainer.new()
 	floor_row.name = "FloorRow"
 	add_child(floor_row)
@@ -101,21 +136,21 @@ func mount(p_host: AuthoringEditorShell) -> void:
 
 
 func place_next_checkpoint() -> bool:
-	if host == null:
+	if host == null or cursor == null:
 		return false
 	var entity_id: int = _peek_entity_id()
 	var order: int = _next_order
-	var cell_x: int = _next_cell_x
-	if not host.try_place_checkpoint(entity_id, order, cell_x, floor_index, 0):
+	if not host.try_place_checkpoint(entity_id, order, cursor.cell_x, cursor.cell_y, cursor.cell_z):
 		return false
 	_commit_entity_id(entity_id)
 	_next_order += 1
-	_next_cell_x += 1
+	cursor.bump_x()
+	_select_placed(entity_id)
 	return true
 
 
 func place_next_portal() -> bool:
-	if host == null:
+	if host == null or cursor == null:
 		return false
 	var entity_id: int = 0
 	var target_id: int = 0
@@ -129,64 +164,71 @@ func place_next_portal() -> bool:
 		target_id = entity_id + 1
 		while _world_has(target_id):
 			target_id += 1
-	if not host.try_place_portal(entity_id, target_id, _next_cell_x, floor_index, 0):
+	if not host.try_place_portal(entity_id, target_id, cursor.cell_x, cursor.cell_y, cursor.cell_z):
 		return false
 	_commit_entity_id(entity_id)
 	if _pending_portal_id > 0:
 		_pending_portal_id = 0
 	else:
 		_pending_portal_id = entity_id
-	_next_cell_x += 1
+	cursor.bump_x()
+	_select_placed(entity_id)
 	return true
 
 
 func place_next_solid() -> bool:
-	if host == null:
-		return false
-	var entity_id: int = _peek_entity_id()
-	var cell_x: int = _next_cell_x
-	if not host.try_place_solid(entity_id, cell_x, floor_index, 0):
-		return false
-	_commit_entity_id(entity_id)
-	_next_cell_x += 1
-	return true
+	return _place_occupancy(func(entity_id: int) -> bool:
+		return host.try_place_solid(entity_id, cursor.cell_x, cursor.cell_y, cursor.cell_z)
+	)
 
 
 func place_next_hazard() -> bool:
-	if host == null:
-		return false
-	var entity_id: int = _peek_entity_id()
-	var cell_x: int = _next_cell_x
-	if not host.try_place_hazard(entity_id, cell_x, floor_index, 0):
-		return false
-	_commit_entity_id(entity_id)
-	_next_cell_x += 1
-	return true
+	return _place_occupancy(func(entity_id: int) -> bool:
+		return host.try_place_hazard(entity_id, cursor.cell_x, cursor.cell_y, cursor.cell_z)
+	)
 
 
 func place_next_crate() -> bool:
-	if host == null:
-		return false
-	var entity_id: int = _peek_entity_id()
-	var cell_x: int = _next_cell_x
-	if not host.try_place_crate(entity_id, cell_x, floor_index, 0):
-		return false
-	_commit_entity_id(entity_id)
-	_next_cell_x += 1
-	return true
+	return _place_occupancy(func(entity_id: int) -> bool:
+		return host.try_place_crate(entity_id, cursor.cell_x, cursor.cell_y, cursor.cell_z)
+	)
 
 
 func place_next_finish() -> bool:
-	if host == null:
+	if not _place_occupancy(func(entity_id: int) -> bool:
+		return host.try_place_finish(entity_id, cursor.cell_x, cursor.cell_y, cursor.cell_z)
+	):
 		return false
-	var entity_id: int = _peek_entity_id()
-	var cell_x: int = _next_cell_x
-	if not host.try_place_finish(entity_id, cell_x, floor_index, 0):
-		return false
-	_commit_entity_id(entity_id)
-	_next_cell_x += 1
 	if host.map != null:
-		host.map.focus_entity(entity_id)
+		host.map.focus_entity(_last_placed_id())
+	return true
+
+
+func place_next_bomb() -> bool:
+	return _place_occupancy(func(entity_id: int) -> bool:
+		return host.try_place_pickup(
+			entity_id, cursor.cell_x, cursor.cell_y, cursor.cell_z, PickupKindsGd.BOMB
+		)
+	)
+
+
+func place_next_dash() -> bool:
+	return _place_occupancy(func(entity_id: int) -> bool:
+		return host.try_place_pickup(
+			entity_id, cursor.cell_x, cursor.cell_y, cursor.cell_z, PickupKindsGd.DASH
+		)
+	)
+
+
+func try_pick_cell_from_screen(screen: Vector2) -> bool:
+	if host == null or host.map == null or cursor == null:
+		return false
+	var camera: Camera3D = host.map.get_node_or_null(AuthoringPreviewMap.CAMERA_NAME) as Camera3D
+	if camera == null:
+		return false
+	if not cursor.try_pick_from_ray(camera.project_ray_origin(screen), camera.project_ray_normal(screen)):
+		return false
+	_refresh_host_status()
 	return true
 
 
@@ -212,6 +254,29 @@ func floor_up() -> void:
 func floor_down() -> void:
 	floor_index -= 1
 	_refresh_host_status()
+
+
+func _place_occupancy(writer: Callable) -> bool:
+	if host == null or cursor == null:
+		return false
+	var entity_id: int = _peek_entity_id()
+	if not writer.call(entity_id):
+		return false
+	_commit_entity_id(entity_id)
+	cursor.bump_x()
+	_select_placed(entity_id)
+	return true
+
+
+func _select_placed(entity_id: int) -> void:
+	if host == null or host.chrome == null:
+		return
+	host.chrome.selected_id = entity_id
+	host.chrome.sync_guides()
+
+
+func _last_placed_id() -> int:
+	return _next_entity_id - 1
 
 
 func _refresh_host_status() -> void:

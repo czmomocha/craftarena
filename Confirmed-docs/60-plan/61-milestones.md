@@ -19,7 +19,7 @@
 | 部分交付 | M-Export（C1 三预设）；M-Art（C4 契约与第一批 `.glb`） |
 | 未开工（顺序，不是冻结） | M4a、M4b、M6、M7；第 4 张及以后官方课属 M5 |
 | 纠偏闸门 | **已解除**（2026-09-03）。C0–C5 不是里程碑号。此后本文件进度顺序生效 |
-| 解冻后顺序 | M-Export 收尾 → M-Art 剩余 → M4a → M4b → M5 → M6 / M7 |
+| 解冻后顺序 | 创作者可测（插入）→ M-Export 收尾（仅 Android / iOS 烟测；TLS / PR 沙盒在 M5 之后）→ M-Art 剩余 → M4a → M4b → M5 → 公开 TLS / PR Web 沙盒 → M6 / M7 |
 
 ## 1. 开发顺序
 
@@ -29,11 +29,13 @@
 已完成的底座（M0–M2）
   → 权威联机收尾（M3；表现增强归 M-Art，不阻塞 M3 退出）
   → 纠偏闸门 C0–C5（已结束，不是里程碑号）
-  → 导出与公开 Web 通道（M-Export；TLS 在公开运营前）
+  → 创作者可测（插入：XYZ 放置、Place pickup、Preview 并排；不是新里程碑号）
+  → 导出烟测（M-Export 的 Android / iOS；公开 TLS 与 PR Web 沙盒推迟到 M5 之后）
   → 表现/美术剩余项（M-Art）
   → Rule VM（M4a）
   → 内容平台 + 账号/草稿云（M4b）
   → TRAPRUSH 纵向验收（M5）
+  → 公开 TLS / 每个 PR 的 Web 沙盒（仍属 M-Export 产出，2026-09-03 拍板推迟）
   → BASTION（M6 / M7）
   → 移动端触控 UI（D7）
   → 网页 / 微信小游戏减配
@@ -135,14 +137,14 @@
 
 产出（剩余）：
 
-- 公开运营前 TLS / 域名 / 受信证书（不在 C1，见 [CD-11 §9](../10-product/11-scope-and-platforms.md)）；
-- 每个 PR 的公开临时 Web 沙盒（[CD-53 §4.1](../50-engineering/53-testing-and-ci.md) 仍未实现）；
-- Android / iOS 导出烟测；
+- Android / iOS 导出烟测（解冻后、创作者可测之后可开工）；
+- 公开运营前 TLS / 域名 / 受信证书（**推迟到 M5 之后**，见 [CD-11 §9](../10-product/11-scope-and-platforms.md)）；
+- 每个 PR 的公开临时 Web 沙盒（**推迟到 M5 之后**；[CD-53 §4.1](../50-engineering/53-testing-and-ci.md) 仍未实现）；
 - Steam 预留（核心切片稳定后接入）。
 
-验收：三套已有预设仍可用；公开 Web 联机走 TLS；Android / iOS 能装上并进一局。触控 UI 仍属 D7，可后于本号烟测。
+验收：三套已有预设仍可用；公开 Web 联机走 TLS（M5 之后补）；Android / iOS 能装上并进一局。触控 UI 仍属 D7，可后于本号烟测。
 
-状态：**部分交付**。剩余项现可开工（本号是解冻后第一段）。
+状态：**部分交付**。人类 2026-09-03 拍板：公开 TLS 与 PR Web 沙盒排到 M5 之后；当前插入创作者可测章。不发明 M8。
 
 ### M-Art：表现与美术
 
