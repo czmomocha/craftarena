@@ -14,6 +14,7 @@ const MAP_PATHS: PackedStringArray = [
 	"res://src/creator/authoring_preview_map_gizmos.gd",
 	"res://src/creator/authoring_preview_map_overlay.gd",
 	"res://src/creator/authoring_preview_map_player.gd",
+	"res://src/creator/authoring_preview_map_floor.gd",
 ]
 
 

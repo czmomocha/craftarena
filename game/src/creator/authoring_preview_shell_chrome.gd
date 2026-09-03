@@ -6,8 +6,9 @@ extends RefCounted
 ## sub-window must not set `content_scale_*` (same reason as MatchLobbyChrome).
 
 const TITLE: String = UiCopy.WINDOW_PREVIEW
-const WINDOW_SIZE: Vector2i = Vector2i(1280, 720)
-const WINDOW_MIN_SIZE: Vector2i = Vector2i(960, 540)
+const LayoutGd := preload("res://src/creator/authoring_window_layout.gd")
+const WINDOW_SIZE: Vector2i = LayoutGd.FALLBACK_PANE_SIZE
+const WINDOW_MIN_SIZE: Vector2i = LayoutGd.PANE_MIN_SIZE
 const PLAY_NAME: String = "Play"
 const STOP_NAME: String = "Stop"
 const RESET_NAME: String = "Reset"
@@ -40,9 +41,6 @@ func attach(parent: Node, handlers: Dictionary) -> Window:
 		host_viewport.gui_embed_subwindows = true
 	window = Window.new()
 	window.title = UiCopy.text(TITLE)
-	window.size = WINDOW_SIZE
-	window.min_size = WINDOW_MIN_SIZE
-	window.mode = Window.MODE_MAXIMIZED
 	window.exclusive = false
 	window.transient = false
 	window.own_world_3d = true
@@ -69,12 +67,14 @@ func attach(parent: Node, handlers: Dictionary) -> Window:
 	_add_button(action_row, SPRINT_NAME, UiCopy.SPRINT, _handler(handlers, "sprint"))
 	_add_button(action_row, JUMP_NAME, UiCopy.JUMP, _handler(handlers, "jump"))
 	_add_button(action_row, ADVANCE_TICK_NAME, UiCopy.ADVANCE_TICK, _handler(handlers, "advance"))
+	LayoutGd.apply_preview(window, parent)
 	return window
 
 
 func raise_window() -> bool:
 	if not is_alive():
 		return false
+	LayoutGd.apply_preview(window, window.get_parent())
 	window.visible = true
 	if window.is_inside_tree():
 		window.grab_focus()

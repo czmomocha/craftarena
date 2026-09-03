@@ -54,9 +54,43 @@ Worktree 端口偏移见 README「并行工作区」；本文件不复述端口�
 
 ---
 
-## 本刀：解除纠偏冻结令
+## 本刀：创作者可测（XYZ / Place pickup / Preview 并排 / 点选拖拽）
 
-**无。** 本章只回写人类拍板（E10 选项 A、字体入包推迟、§1 解除），不改仿真、壳、协议或导出，没有开发机可见行为。
+**不需要三后端。** F6 跑 `res://src/creator/editor_sandbox.tscn`，或主场景里 Project > Tools > Authoring Editor。
+
+1. 打开 Authoring Editor。
+   - 预期：编辑窗口在主窗**左半**，`MODE_WINDOWED`，不是铺满。3D 里看得见深色地板网格。状态行含 `cursor=`。
+   - 失败：编辑窗最大化盖住一切 ⇒ `AuthoringWindowLayout.apply_editor` 没接到。没有地板 ⇒ `AuthoringPreviewMapFloor.sync` 没接到。
+2. 把 Z 旋到 `2`，点 **放置固体**。
+   - 预期：石色盒出现在当前 XYZ（z=2 格），不在 z=0。
+   - 失败：盒仍在 z=0 ⇒ 光标没进 `place`。
+3. 点编辑窗 3D **空地**（工具条下方，不要点按钮）。
+   - 预期：X/Z 旋钮变成点击落点的格；再 Place 落在那里。
+   - 失败：光标不动 ⇒ `window_input` 被 HUD 吃掉，或射线没打到楼层平面。
+4. 点 3D 里刚放的石色盒，拖到旁边一格后松开。
+   - 预期：盒子跟着鼠标走，松开后停在新格；状态行 `selected=` 为该实体；Undo 能撤回收。
+   - 失败：只能拧 SpinBox、拖了没写入 ⇒ 没走 `set_component`。拖完位置变成非整格 ⇒ 静默取整，打回。
+5. 再点另一个已有组件，按住 **Shift** 拖。
+   - 预期：盒子沿竖直方向改 Y（楼层），松开后写入。
+   - 失败：Shift 仍只改 XZ ⇒ 竖直平面没接到。
+6. 点 **放置检查点**，把 X 旋回与检查点同一格，点 **放置冲刺**，再点 **预览**。
+   - 预期：Preview 在主窗**右半**，**不盖住** Editor 右缘；两窗能同时看见全部按钮。
+   - 失败：Preview 压在 Editor 上 ⇒ 仍按 1600 override 写死，或 `wrap_controls` 把子窗撑宽。Preview 最大化挡住 Editor ⇒ 仍是旧的 `MODE_MAXIMIZED`。
+7. Preview 里点 **开始**，按 Left Shift（或冲刺按钮）。
+   - 预期：角色沿朝向冲一格；无冲刺拾取时 Shift 无效。
+   - 失败：有 dash 仍不动 ⇒ 拾取没编进 `pickups` 或开玩没授予。有 dash 却白给（没放拾取也能冲）⇒ 产品规则被改掉，打回。
+
+### 本刀不测
+
+- 大厅联机、官方课 JSON、TLS、导出包、系统原生可拖窗口（`gui_embed_subwindows` 仍为 true）、手机触控拖拽。
+
+---
+
+## 上一刀：解除纠偏冻结令
+
+> **本节随解除记录合入；验当前 PR 只看上面的「本刀」。**
+
+**无。** 该章只回写人类拍板（E10 选项 A、字体入包推迟、§1 解除），不改仿真、壳、协议或导出。
 
 ---
 

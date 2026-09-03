@@ -4,8 +4,6 @@ extends RefCounted
 ## Editor platform: code-created Window, tool strip, validator, status.
 ## D4 UI baseline lives on the **main** window stretch. This embedded
 ## sub-window must not set `content_scale_*` (same reason as MatchLobbyChrome).
-
-const WINDOW_SIZE: Vector2i = Vector2i(640, 560)
 const STATUS_NAME: String = "Status"
 const MAP_NAME: String = "EditorMap"
 const TOOLS_NAME: String = "TraprushTools"
@@ -15,12 +13,19 @@ const REDO_NAME: String = "Redo"
 const PREVIEW_NAME: String = "Preview"
 const TraprushEditorPanelGd := preload("res://src/creator/traprush_editor_panel.gd")
 const AuthoringValidatorPanelGd := preload("res://src/creator/authoring_validator_panel.gd")
+const LayoutGd := preload("res://src/creator/authoring_window_layout.gd")
+const PointerGd := preload("res://src/creator/authoring_editor_shell_pointer.gd")
+const FloorGd := preload("res://src/creator/authoring_preview_map_floor.gd")
 
 var window: Window = null
 var status: Label = null
 var tools: TraprushEditorPanelGd = null
 var validator: AuthoringValidatorPanelGd = null
 var map: AuthoringPreviewMap = null
+var selected_id: int = 0
+var dragging: bool = false
+var drag_vertical: bool = false
+var guides: FloorGd = FloorGd.new()
 
 
 func is_alive() -> bool:
@@ -34,6 +39,7 @@ func is_visible() -> bool:
 func ensure(shell: AuthoringEditorShell, handlers: Dictionary) -> void:
 	if is_alive():
 		_sync_shell(shell)
+		LayoutGd.apply_editor(window, shell)
 		return
 	if not Engine.is_editor_hint():
 		var host_viewport: Viewport = shell.get_viewport()
@@ -41,7 +47,6 @@ func ensure(shell: AuthoringEditorShell, handlers: Dictionary) -> void:
 			host_viewport.gui_embed_subwindows = true
 	window = Window.new()
 	window.title = UiCopy.text(AuthoringEditorShell.TITLE)
-	window.size = WINDOW_SIZE
 	window.exclusive = false
 	window.transient = false
 	window.own_world_3d = true
@@ -56,6 +61,7 @@ func ensure(shell: AuthoringEditorShell, handlers: Dictionary) -> void:
 	window.add_child(root)
 	status = Label.new()
 	status.name = STATUS_NAME
+	status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	root.add_child(status)
 	tools = TraprushEditorPanelGd.new()
 	tools.name = TOOLS_NAME
@@ -77,7 +83,11 @@ func ensure(shell: AuthoringEditorShell, handlers: Dictionary) -> void:
 	map.ensure_rig()
 	if validator != null:
 		validator.mount(map)
+	if not window.window_input.is_connected(_on_window_input):
+		window.window_input.connect(_on_window_input)
+	LayoutGd.apply_editor(window, shell)
 	_sync_shell(shell)
+	sync_guides()
 
 
 func hide_window() -> void:
@@ -88,6 +98,10 @@ func hide_window() -> void:
 func raise_window() -> bool:
 	if not is_alive():
 		return false
+	var host: Node = null
+	if tools != null:
+		host = tools.host
+	LayoutGd.apply_editor(window, host)
 	window.visible = true
 	return true
 
@@ -114,11 +128,20 @@ func format_line(shell: AuthoringEditorShell) -> String:
 	if validator != null:
 		reach_ok_flag = validator.reach_ok()
 		issue_n = validator.issue_count()
-	return "%s revision=%d entities=%d floor=%d undo=%s redo=%s reach_ok=%s issues=%d draft=%s disk=%s follow=%s" % [
+	var cursor_x: int = 0
+	var cursor_z: int = 0
+	if tools != null:
+		cursor_x = tools.cell_x
+		cursor_z = tools.cell_z
+	return "%s revision=%d entities=%d floor=%d cursor=%d,%d,%d selected=%d undo=%s redo=%s reach_ok=%s issues=%d draft=%s disk=%s follow=%s" % [
 		shell.surface,
 		shell.session.world.revision,
 		shell.session.world.entity_count(),
 		floor_index,
+		cursor_x,
+		floor_index,
+		cursor_z,
+		selected_id,
 		str(shell.session.can_undo()),
 		str(shell.session.can_redo()),
 		str(reach_ok_flag),
@@ -152,3 +175,20 @@ func _add_button(row: BoxContainer, node_name: String, copy_key: String, handler
 	if handler.is_valid():
 		button.pressed.connect(handler)
 	row.add_child(button)
+
+
+func sync_guides() -> void:
+	if map == null:
+		return
+	var floor_y: int = 0
+	var cursor_x: int = 0
+	var cursor_z: int = 0
+	if tools != null:
+		floor_y = tools.floor_index
+		cursor_x = tools.cell_x
+		cursor_z = tools.cell_z
+	guides.sync(map, floor_y, cursor_x, cursor_z, selected_id)
+
+
+func _on_window_input(event: InputEvent) -> void:
+	PointerGd.handle(self, event)

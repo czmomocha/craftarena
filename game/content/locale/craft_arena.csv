@@ -29,6 +29,8 @@ craft_arena.ui.place_solid,Place solid,放置固体
 craft_arena.ui.place_hazard,Place hazard,放置机关
 craft_arena.ui.place_crate,Place crate,放置箱子
 craft_arena.ui.place_finish,Place finish,放置终点
+craft_arena.ui.place_bomb,Place bomb,放置爆破球
+craft_arena.ui.place_dash,Place dash,放置冲刺
 craft_arena.ui.floor_up,Floor up,上一层
 craft_arena.ui.floor_down,Floor down,下一层
 craft_arena.ui.focus_issue,Focus issue,聚焦问题

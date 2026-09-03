@@ -14,11 +14,13 @@ alwaysApply: true
 下一动不是 Rule VM，也不是 BASTION。顺序：
 
 ```text
-M-Export 收尾 → M-Art 剩余 → M4a → M4b → M5 → M6 / M7
+创作者可测（XYZ / Place pickup / Preview 并排）
+  → M-Export 收尾（Android / iOS 烟测；TLS / PR 沙盒推迟到 M5 之后）
+  → M-Art 剩余 → M4a → M4b → M5 → 公开 TLS / PR Web 沙盒 → M6 / M7
 ```
 
-- **现在可以开工**：M-Export 剩余（公开 TLS / PR Web 沙盒 / Android·iOS 烟测）；M-Art 剩余里**除字体入包以外**的项（按 `asset_id` 解析、传送门模型、clip、镜头 / HUD / 皮肤）。
-- **现在不得开工**：M4a（Rule VM / gas）、M4b、M5 的第 4 张及以后官方课、M6 / M7（BASTION）。它们不是冻结，是 CD-61 还没轮到。
+- **现在可以开工**：插入的「创作者可测」章（XYZ 放置、Place bomb/dash、Preview `MODE_WINDOWED` 并排）；其后 M-Export 的 Android / iOS 烟测；M-Art 剩余里**除字体入包以外**的项（按 `asset_id` 解析、传送门模型、clip、镜头 / HUD / 皮肤）。
+- **现在不得开工**：公开 TLS / PR Web 沙盒（排到 M5 之后）；M4a（Rule VM / gas）、M4b、M5 的第 4 张及以后官方课、M6 / M7（BASTION）。它们不是冻结，是 CD-61 还没轮到。
 - **推迟到一期收尾**：字体入包（思源黑体 / Noto Sans SC）。接受玩家任意中文缺字。不挡 M-Export / M4a。
 
 禁止发明 M8。禁止用 ICMP 或一场协议层样本改已锁的 Tick / 快照 / 插值数字。
@@ -44,7 +46,7 @@ cell = Fixed.SCALE 与由其推导的一切 cell/2 占用半长
 章粒度 5× 与深/常/轻审查分级不随冻结令解除。模板见 [CD-52 §3](Confirmed-docs/50-engineering/52-ai-workflow.md)：
 
 ```text
-里程碑归属：M3 | M-Export | M-Art | M4a | M4b | M5 | M6 | M7
+里程碑归属：创作者可测 | M3 | M-Export | M-Art | M4a | M4b | M5 | M6 | M7
 是否绕过 placeholder_spec 散落几何/色板常量：否 | 是（必须说明）
 ```
 

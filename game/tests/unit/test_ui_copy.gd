@@ -18,7 +18,7 @@ func test_table_covers_every_key_in_both_locales() -> void:
 	assert_true(UiCopyGd.ensure_loaded())
 	assert_true(UiCopyGd.has_locale("en"))
 	assert_true(UiCopyGd.has_locale("zh_CN"))
-	assert_eq(UiCopyGd.ALL_KEYS.size(), 33)
+	assert_eq(UiCopyGd.ALL_KEYS.size(), 35)
 	for key: String in UiCopyGd.ALL_KEYS:
 		assert_true(key.begins_with("craft_arena."), key)
 		var english: String = UiCopyGd.text(key, "en")

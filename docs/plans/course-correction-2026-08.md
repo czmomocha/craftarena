@@ -4,7 +4,7 @@
 > 状态：**冻结令已解除**（2026-09-03）。人类 2026-08-26 填完 §4 并签字；**2026-08-27 修订 C1 远端部署口径**（见 §4.0.1 / D11）。C0–C5 批次已结束。人类 2026-09-03 关闭 E8 / E10 并解除 §1，见 [freeze-lift audit](../audits/2026-09-03-freeze-lift.md)。§4.0 是签字后的口径汇总；与 D1–D10 原始填写冲突时，**§4.0.1 点名覆盖的子项以修订为准**，其余仍以 D1–D10 为准
 > 触发：2026-08-26 第三方开发审视
 > 上位约束：[CD-00 宪法](../../Confirmed-docs/00-constitution/CONSTITUTION.md)，尤其第一、八、九、十八、二十四、二十六条
-> 与 CD-61 的关系：人类 2026-09-02 批准重排草案并回写 [CD-61](../../Confirmed-docs/60-plan/61-milestones.md)（C5 第 8 章）。**纠偏冻结令已解除**；此后 CD-61 进度顺序生效（M-Export 收尾 → M-Art 剩余 → M4a → M4b → M5 → M6 / M7）。
+> 与 CD-61 的关系：人类 2026-09-02 批准重排草案并回写 [CD-61](../../Confirmed-docs/60-plan/61-milestones.md)（C5 第 8 章）。**纠偏冻结令已解除**；此后进度顺序以 [CD-61 当前生效值](../../Confirmed-docs/60-plan/61-milestones.md) 为准（2026-09-03 插入创作者可测；公开 TLS / PR Web 沙盒排到 M5 之后；不发明 M8）。
 
 ---
 
@@ -528,7 +528,7 @@ cell = Fixed.SCALE 与由其推导的一切 cell/2 占用半长
 在任务单（[CD-52 §3](../../Confirmed-docs/50-engineering/52-ai-workflow.md)）中增加两行：
 
 ```text
-里程碑归属：M3 | M-Export | M-Art | M4a | M4b | M5 | M6 | M7
+里程碑归属：创作者可测 | M3 | M-Export | M-Art | M4a | M4b | M5 | M6 | M7
 是否绕过 placeholder_spec 散落几何/色板常量：否 | 是（必须说明）
 ```
 
@@ -636,7 +636,7 @@ E1–E14 于 2026-09-03 全绿，§1 冻结令同日解除。本表保留对照�
 2. ~~AI 按 D1 结果把 C0 拆成任务单并开工~~ C0 进行中；
 3. ~~D3 规格/域名/SSH 阻塞 C1 第 2 章~~ 已解除（2026-08-27，见 D11）；
 4. ~~C0 完成后按批次推进，每批结束对照 §6 勾选~~ C0–C5 批次工作已结束（2026-09-02，见 [c5-close audit](../audits/2026-09-02-c5-close.md)）；
-5. ~~E1–E14 全绿后，人类解除 §1 冻结令~~ **已解除**（2026-09-03，见 [freeze-lift audit](../audits/2026-09-03-freeze-lift.md)）。E8 字体入包推迟到一期收尾；E10 不设周上限，深审 = PR 失败模式 + 人类批准。下一动按 CD-61：M-Export 收尾。
+5. ~~E1–E14 全绿后，人类解除 §1 冻结令~~ **已解除**（2026-09-03，见 [freeze-lift audit](../audits/2026-09-03-freeze-lift.md)）。E8 字体入包推迟到一期收尾；E10 不设周上限，深审 = PR 失败模式 + 人类批准。下一动以 [CD-61 当前生效值](../../Confirmed-docs/60-plan/61-milestones.md) 为准（创作者可测 → M-Export 收尾的 Android / iOS；TLS / PR 沙盒在 M5 之后）。
 
 ### 9.1 批次进度
 

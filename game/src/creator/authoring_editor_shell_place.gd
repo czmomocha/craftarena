@@ -5,6 +5,10 @@ extends RefCounted
 ## Public try_place_* stays on the shell facade so this file stays under E9.
 
 
+const PickupKindsGd := preload("res://src/ugc/traprush_pickup_kinds.gd")
+const ConvertGd := preload("res://src/creator/authoring_preview_map_convert.gd")
+
+
 static func try_place_checkpoint(
 	shell: AuthoringEditorShell, entity_id: int, order: int, cell_x: int, cell_y: int, cell_z: int
 ) -> bool:
@@ -51,6 +55,67 @@ static func try_place_crate(
 		return false
 	var cell: int = shell.session.world.grid.cell
 	return shell.try_edit(crate_payload(entity_id, cell_x * cell, cell_y * cell, cell_z * cell))
+
+
+static func try_place_pickup(
+	shell: AuthoringEditorShell,
+	entity_id: int,
+	cell_x: int,
+	cell_y: int,
+	cell_z: int,
+	kind: String
+) -> bool:
+	if not PickupKindsGd.contains(kind):
+		return false
+	if shell.session == null or shell.session.world == null or shell.session.world.grid == null:
+		return false
+	var cell: int = shell.session.world.grid.cell
+	return shell.try_edit(pickup_payload(entity_id, cell_x * cell, cell_y * cell, cell_z * cell, kind))
+
+
+static func try_move_entity(
+	shell: AuthoringEditorShell, entity_id: int, cell_x: int, cell_y: int, cell_z: int
+) -> bool:
+	if shell.session == null or shell.session.world == null or shell.session.world.grid == null:
+		return false
+	var record: SharedComponentRecord = shell.session.world.get_record(entity_id)
+	if record == null:
+		return false
+	var pose: Dictionary = ConvertGd.pose_from_record(record)
+	if pose.is_empty():
+		return false
+	var pose_x_raw: Variant = pose.get("x", null)
+	var pose_y_raw: Variant = pose.get("y", null)
+	var pose_z_raw: Variant = pose.get("z", null)
+	if typeof(pose_x_raw) != TYPE_INT or typeof(pose_y_raw) != TYPE_INT or typeof(pose_z_raw) != TYPE_INT:
+		return false
+	var pose_x: int = pose_x_raw
+	var pose_y: int = pose_y_raw
+	var pose_z: int = pose_z_raw
+	var cell: int = shell.session.world.grid.cell
+	var x: int = cell_x * cell
+	var y: int = cell_y * cell
+	var z: int = cell_z * cell
+	if pose_x == x and pose_y == y and pose_z == z:
+		return true
+	if not shell.session.world.grid.accepts_xyz(x, y, z):
+		return false
+	var next: Dictionary = record.to_dictionary()
+	var components_raw: Variant = next.get("components", {})
+	if typeof(components_raw) != TYPE_DICTIONARY:
+		return false
+	var components: Dictionary = components_raw
+	var transform_raw: Variant = components.get(SharedComponentNames.TRANSFORM, {})
+	if typeof(transform_raw) != TYPE_DICTIONARY:
+		return false
+	var transform_bag: Dictionary = transform_raw
+	var transform: Dictionary = transform_bag.duplicate(true)
+	transform["x"] = x
+	transform["y"] = y
+	transform["z"] = z
+	components[SharedComponentNames.TRANSFORM] = transform
+	next["components"] = components
+	return shell.try_edit({"op": "set_component", "record": next})
 
 
 static func _try_place_zone(
@@ -142,6 +207,20 @@ static func crate_payload(entity_id: int, x: int, y: int, z: int) -> Dictionary:
 					"durability": TraprushEditorPanel.CRATE_DURABILITY_STUB,
 					"regen_policy_id": TraprushEditorPanel.CRATE_REGEN_POLICY_STUB,
 				},
+			},
+		},
+	}
+
+
+static func pickup_payload(entity_id: int, x: int, y: int, z: int, kind: String) -> Dictionary:
+	return {
+		"op": "place",
+		"record": {
+			"schema_version": 1,
+			"entity_id": entity_id,
+			"components": {
+				"transform": {"x": x, "y": y, "z": z, "yaw_bam": 0},
+				"inventory": {"item_state": kind},
 			},
 		},
 	}
