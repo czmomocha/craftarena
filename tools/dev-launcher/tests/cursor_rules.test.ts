@@ -25,19 +25,23 @@ function fencedBlockContaining(source: string, needle: string, label: string): s
 }
 
 describe(".cursor/rules course-correction freeze", () => {
-	it("applies to every session without reading the plan", () => {
+	it("applies to every session and says the freeze is lifted", () => {
 		const source = read(FREEZE_RULE);
 		assert.match(source, /^alwaysApply: true$/m);
+		assert.match(source, /已解除/);
 		assert.match(source, /E1[–-]E14/);
 		assert.match(source, /freeze-exception/);
 		assert.equal(existsSync(join(REPO_ROOT, PLAN)), true);
 	});
 
-	it("names every frozen work item so a fresh session cannot start one", () => {
+	it("names the CD-61 order so a fresh session cannot skip to Rule VM or BASTION", () => {
 		const source = read(FREEZE_RULE);
-		for (const frozen of ["M4", "M6", "M7", "Rule VM", "BASTION"]) {
-			assert.match(source, new RegExp(frozen.replaceAll(" ", "\\s")), frozen);
+		assert.match(source, /M-Export/);
+		assert.match(source, /M-Art/);
+		for (const later of ["M4a", "M6", "M7", "Rule VM", "BASTION"]) {
+			assert.match(source, new RegExp(later.replaceAll(" ", "\\s")), later);
 		}
+		assert.match(source, /不得跳/);
 	});
 
 	it("keeps the placeholder constant list identical to the plan", () => {
@@ -50,10 +54,10 @@ describe(".cursor/rules course-correction freeze", () => {
 	});
 
 	it("keeps the two extra task-sheet lines identical to the plan", () => {
-		const inRule = fencedBlockContaining(read(FREEZE_RULE), "纠偏归属", FREEZE_RULE);
-		const inPlan = fencedBlockContaining(read(PLAN), "纠偏归属", PLAN);
+		const inRule = fencedBlockContaining(read(FREEZE_RULE), "里程碑归属", FREEZE_RULE);
+		const inPlan = fencedBlockContaining(read(PLAN), "里程碑归属", PLAN);
 		assert.equal(inRule, inPlan);
-		assert.ok(inRule.includes("是否新增冻结常量引用"));
+		assert.ok(inRule.includes("placeholder_spec"));
 	});
 });
 

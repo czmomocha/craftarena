@@ -1,31 +1,31 @@
 ---
-description: Course-correction freeze - what is not allowed to start, and which placeholder constants must not spread
+description: Course-correction freeze lifted 2026-09-03 - follow CD-61 order; keep D9 discipline and placeholder_spec
 alwaysApply: true
 ---
 
-# 纠偏冻结令
+# 纠偏冻结令（已解除）
 
-来源：[纠偏方案 2026-08](docs/plans/course-correction-2026-08.md) §1 / §5.1 / §5.3，人类 2026-08-26 拍板（D9 = 是）。审视基线见 [docs/audits/2026-08-26-audit.md](docs/audits/2026-08-26-audit.md)。
+来源：[纠偏方案 2026-08](docs/plans/course-correction-2026-08.md) §1.4 / §6。人类 2026-09-03 关闭 E8 / E10 并解除 §1。审视基线见 [docs/audits/2026-08-26-audit.md](docs/audits/2026-08-26-audit.md)；解除记录见 [docs/audits/2026-09-03-freeze-lift.md](docs/audits/2026-09-03-freeze-lift.md)。
 
-**生效期**：到该方案 §6 的 E1–E14 全绿、人类明确解除为止。解除前本规则优先于 CD-61 的进度压力。
+**生效期已结束。** E1–E14 全绿。此后 [CD-61](Confirmed-docs/60-plan/61-milestones.md) 的进度顺序生效，本规则不再优先于 CD-61。`[freeze-exception]` 通道随冻结令关闭；阻断性缺陷按普通最小变更修。
 
-## 1. 不得开工
+## 1. 解冻后开工顺序（不得跳号）
 
-- CD-61 M3 剩余的**表现层增强**类章：镜头、UI、颜色、标签、HUD 字段、gizmos、皮肤、动效；
-- M4 全部（Rule VM、gas、签名、发布管线、热生效、回滚）；
-- M6 / M7 全部（BASTION）；
-- 第 4 张及以后的官方赛道；
-- 任何**新增**对第 3 节冻结常量的引用点。
+下一动不是 Rule VM，也不是 BASTION。顺序：
 
-## 2. 可以开工
+```text
+M-Export 收尾 → M-Art 剩余 → M4a → M4b → M5 → M6 / M7
+```
 
-只有纠偏方案的 C0–C5 六个批次。C3 会写玩法代码（重力、道具），**它不是新功能，是补回被跳过的核心前提**。
+- **现在可以开工**：M-Export 剩余（公开 TLS / PR Web 沙盒 / Android·iOS 烟测）；M-Art 剩余里**除字体入包以外**的项（按 `asset_id` 解析、传送门模型、clip、镜头 / HUD / 皮肤）。
+- **现在不得开工**：M4a（Rule VM / gas）、M4b、M5 的第 4 张及以后官方课、M6 / M7（BASTION）。它们不是冻结，是 CD-61 还没轮到。
+- **推迟到一期收尾**：字体入包（思源黑体 / Noto Sans SC）。接受玩家任意中文缺字。不挡 M-Export / M4a。
 
-阻断性缺陷（CI 红、`main` 不可运行、数据损坏）可修，按最小变更，PR 标 `[freeze-exception]` 并写理由。
+禁止发明 M8。禁止用 ICMP 或一场协议层样本改已锁的 Tick / 快照 / 插值数字。
 
-## 3. 占位常量冻结清单
+## 2. 占位常量仍须从单一配置源读
 
-以下常量在 D4 美术规格数值拍板前**不得新增引用点**（可修 bug，不可扩散）：
+D4 已拍板。下列名字**不得再散落新的 `const`**；新增章必须从 `game/src/shared/placeholder_spec.gd` 注入。可修 bug，不可扩散引用点。
 
 ```text
 CAPSULE_RADIUS / CAPSULE_HEIGHT / SPAWN_STRIDE      （game/src/server/match_server.gd）
@@ -37,17 +37,15 @@ OWN_ALBEDO / REMOTE_ALBEDO / HAZARD_ALBEDO / SOLID_ALBEDO / FINISH_ALBEDO
 cell = Fixed.SCALE 与由其推导的一切 cell/2 占用半长
 ```
 
-理由：文档每处都诚实写了「不是产品数值」，**但声明不降低更改成本**。这些值已被 940 个 GUT 用例、3 张官方赛道 JSON、Preview / Solo / 对局三条壳共同引用。改角色半径会连带改赛道布局、Shove 邻域、UseItem reach、出界半宽与全部占用相交断言。
+改角色半径仍会连带改赛道布局、Shove 邻域、UseItem reach、出界半宽与占用相交断言。只改 `placeholder_spec.gd` 一处。
 
-**配套义务**：新增章若必须读这些值，改为**从单一配置源注入**，不再散落 `const`。D4 拍板后只改一处。
+## 3. 每章任务单必须回答（D9，解冻后仍有效）
 
-## 4. 每章任务单必须多回答两行
-
-在 [CD-52 §3](Confirmed-docs/50-engineering/52-ai-workflow.md) 的任务单模板末尾加：
+章粒度 5× 与深/常/轻审查分级不随冻结令解除。模板见 [CD-52 §3](Confirmed-docs/50-engineering/52-ai-workflow.md)：
 
 ```text
-纠偏归属：C0 | C1 | C2 | C3 | C4 | C5 | freeze-exception（原因）
-是否新增冻结常量引用：否 | 是（必须说明为何无法注入）
+里程碑归属：M3 | M-Export | M-Art | M4a | M4b | M5 | M6 | M7
+是否绕过 placeholder_spec 散落几何/色板常量：否 | 是（必须说明）
 ```
 
-两行都不得留空。「是」而没有说明为何无法注入的章，人类应直接打回。
+两行都不得留空。「是」而没有说明的章，人类应直接打回。

@@ -14,7 +14,7 @@
 | 项 | 当前口径 |
 |---|---|
 | 提交边界 | 隔离分支可 commit/push；禁止向 `main` 提交/推送、合并、部署、发布 |
-| 章粒度 | 完整一章才开 PR；冻结期约 5× 纠偏前，禁止单字段成章 |
+| 章粒度 | 完整一章才开 PR；约 5× 纠偏前（D9，解冻后仍有效），禁止单字段成章 |
 | 审查分级 | 深审 / 常审 / 轻审，见 §3 |
 | 开发机窗口 | [dev-window-check.md](../../docs/runbooks/dev-window-check.md)；「真机」留给导出包 |
 | 并行 | 2 域；第 3 域未开 |
@@ -94,16 +94,16 @@ AI 不得用"代码看起来正确"代替运行证据。
 性能或安全预算：
 输出物：
 开发机窗口步骤：写入 docs/runbooks/dev-window-check.md 本刀 | 无（原因）
-纠偏归属：C0 | C1 | C2 | C3 | C4 | C5 | freeze-exception（原因）
-是否新增冻结常量引用：否 | 是（必须说明为何无法注入）
+里程碑归属：M3 | M-Export | M-Art | M4a | M4b | M5 | M6 | M7
+是否绕过 placeholder_spec 散落几何/色板常量：否 | 是（必须说明）
 审查级别：深审 | 常审 | 轻审
 ```
 
-冻结期内后三行不得留空。口径见 [纠偏方案 §5.2 / §5.3](../../docs/plans/course-correction-2026-08.md) 与 [章粒度下限与审查分级](../../.cursor/rules/chapter-granularity-and-review.mdc)。
+后三行不得留空（D9，解冻后仍有效）。口径见 [纠偏方案 §5.2 / §5.3](../../docs/plans/course-correction-2026-08.md) 与 [章粒度下限与审查分级](../../.cursor/rules/chapter-granularity-and-review.mdc)。
 
 `隔离方式` 必填。阶段 A（§5.1 的四条退出条件未全绿）只允许 `无`，即单 Agent 串行、共享当前 checkout。阶段 B 起必须填 `worktree` 或 `cloud`：**Cursor 的 subagent 默认共享父 Agent 的 checkout，不显式要求隔离会静默互相覆盖。** 不得留空。
 
-功能任务应控制在**半天到两天**可验证的粒度。**冻结期内一章必须是一条完整链路的闭合，规模约为纠偏前的 5 倍**；颜色、单个 HUD 字段、按钮焦点、窗口尺寸、Label 前缀不再单独成章。禁止用"实现完整 UGC 平台"这类无法审查的任务驱动 Agent。任务结束时由人类审查后立刻开 PR，不要让未提交产出跨夜留在 worktree 里（Cursor 托管 worktree 会自动清理，见 [CD-62](../60-plan/62-risk-register.md)）。提交粒度见 [§3.1](#31-提交粒度完整章节)。
+功能任务应控制在**半天到两天**可验证的粒度。**一章必须是一条完整链路的闭合，规模约为纠偏前的 5 倍**（D9，解冻后仍有效）；颜色、单个 HUD 字段、按钮焦点、窗口尺寸、Label 前缀不再单独成章。禁止用"实现完整 UGC 平台"这类无法审查的任务驱动 Agent。任务结束时由人类审查后立刻开 PR，不要让未提交产出跨夜留在 worktree 里（Cursor 托管 worktree 会自动清理，见 [CD-62](../60-plan/62-risk-register.md)）。提交粒度见 [§3.1](#31-提交粒度完整章节)。
 
 审查分级（人类按此分配深度，等权审查的结果是每章都浅）：
 
