@@ -1,8 +1,8 @@
 class_name AuthoringPreviewMapFloor
 extends RefCounted
 
-## Editor-only presentation grid. Not occupancy, not authority, not
-## placeholder_spec: the cell size still comes from 1 m = 1 cell (D4).
+## Editor-only presentation grid. Not occupancy, not authority.
+## Colours live in PlaceholderSpec (CI gate); cell size still comes from 1 m = 1 cell (D4).
 
 const ConvertGd := preload("res://src/creator/authoring_preview_map_convert.gd")
 const FLOOR_NAME: String = "EditGuide_Floor"
@@ -10,10 +10,6 @@ const GRID_NAME: String = "EditGuide_Grid"
 const CURSOR_NAME: String = "EditGuide_Cursor"
 const SELECT_NAME: String = "EditGuide_Select"
 const HALF_CELLS: int = 64
-const FILL_ALBEDO: Color = Color(0.14, 0.16, 0.18, 0.92)
-const LINE_ALBEDO: Color = Color(0.38, 0.42, 0.48, 0.9)
-const CURSOR_ALBEDO: Color = Color(0.95, 0.85, 0.25, 0.45)
-const SELECT_ALBEDO: Color = Color(1.0, 1.0, 1.0, 0.35)
 
 
 static func is_guide_name(node_name: String) -> bool:
@@ -53,7 +49,7 @@ func _sync_fill(map: AuthoringPreviewMap, plane_y: float) -> void:
 		var box: BoxMesh = BoxMesh.new()
 		var extent: float = float(HALF_CELLS * 2)
 		box.size = Vector3(extent, 0.02, extent)
-		box.material = ConvertGd.unshaded(FILL_ALBEDO)
+		box.material = ConvertGd.unshaded(PlaceholderSpec.EDIT_GUIDE_FLOOR_FILL_ALBEDO)
 		node.mesh = box
 		map.add_child(node)
 	node.position = Vector3(0.0, plane_y, 0.0)
@@ -80,7 +76,7 @@ func _sync_grid(map: AuthoringPreviewMap, plane_y: float) -> void:
 		i += 1
 	mesh.surface_end()
 	node.mesh = mesh
-	node.material_override = ConvertGd.unshaded(LINE_ALBEDO)
+	node.material_override = ConvertGd.unshaded(PlaceholderSpec.EDIT_GUIDE_GRID_LINE_ALBEDO)
 	node.visible = true
 
 
@@ -91,7 +87,7 @@ func _sync_cursor(map: AuthoringPreviewMap, cell_x: int, cell_y: int, cell_z: in
 		node.name = CURSOR_NAME
 		var box: BoxMesh = BoxMesh.new()
 		box.size = Vector3(1.02, 0.06, 1.02)
-		box.material = ConvertGd.unshaded(CURSOR_ALBEDO)
+		box.material = ConvertGd.unshaded(PlaceholderSpec.EDIT_GUIDE_CURSOR_ALBEDO)
 		node.mesh = box
 		map.add_child(node)
 	node.position = Vector3(float(cell_x), float(cell_y) - 0.47, float(cell_z))
@@ -114,7 +110,7 @@ func _sync_select(map: AuthoringPreviewMap, selected_id: int) -> void:
 		node.name = SELECT_NAME
 		var box: BoxMesh = BoxMesh.new()
 		box.size = Vector3(1.12, 1.12, 1.12)
-		box.material = ConvertGd.unshaded(SELECT_ALBEDO)
+		box.material = ConvertGd.unshaded(PlaceholderSpec.EDIT_GUIDE_SELECT_ALBEDO)
 		node.mesh = box
 		map.add_child(node)
 	node.position = target.position
