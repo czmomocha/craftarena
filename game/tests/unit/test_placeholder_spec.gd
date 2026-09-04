@@ -70,6 +70,11 @@ func test_ui_base_size_is_the_d4_baseline() -> void:
 	assert_eq(PlaceholderSpec.UI_BASE_SIZE, Vector2i(1920, 1080))
 
 
+func test_editor_floor_fill_alpha_stays_see_through() -> void:
+	assert_gt(PlaceholderSpec.EDIT_GUIDE_FLOOR_FILL_ALBEDO.a, 0.0)
+	assert_lt(PlaceholderSpec.EDIT_GUIDE_FLOOR_FILL_ALBEDO.a, 0.5)
+
+
 func test_preview_map_reads_the_same_spec_as_the_match_maps() -> void:
 	assert_eq(AuthoringPreviewMap.PLACEHOLDER_SIZE, MatchSolidMap.PLACEHOLDER_SIZE)
 	assert_eq(AuthoringPreviewMap.HAZARD_ALBEDO, MatchHazardMap.HAZARD_ALBEDO)

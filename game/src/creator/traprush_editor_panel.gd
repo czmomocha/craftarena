@@ -110,6 +110,8 @@ func mount(p_host: AuthoringEditorShell) -> void:
 	cursor = CursorGd.new()
 	add_child(cursor)
 	cursor.mount()
+	if not cursor.cell_changed.is_connected(_refresh_host_status):
+		cursor.cell_changed.connect(_refresh_host_status)
 	var place_row: HBoxContainer = HBoxContainer.new()
 	place_row.name = "PlaceRow"
 	add_child(place_row)

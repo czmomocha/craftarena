@@ -144,7 +144,9 @@ const STANDING_REMOTE_OUTLINE: Color = Color(0.0, 0.0, 0.0)
 const REACH_ALBEDO: Color = Color(1.0, 0.82, 0.2)
 
 ## Editor 3D 放置引导（仅 AuthoringEditorShell 地板/光标/选中框；不是占用色、不进编译）。
-const EDIT_GUIDE_FLOOR_FILL_ALBEDO: Color = Color(0.14, 0.16, 0.18, 0.92)
+## 填色 alpha 必须明显小于 1：切到其它楼层时平面挡在相机和已放实体之间，
+## 不走 TRANSPARENCY_ALPHA + 低 alpha 时下层实体会看起来像被删掉。
+const EDIT_GUIDE_FLOOR_FILL_ALBEDO: Color = Color(0.14, 0.16, 0.18, 0.2)
 const EDIT_GUIDE_GRID_LINE_ALBEDO: Color = Color(0.38, 0.42, 0.48, 0.9)
 const EDIT_GUIDE_CURSOR_ALBEDO: Color = Color(0.95, 0.85, 0.25, 0.45)
 const EDIT_GUIDE_SELECT_ALBEDO: Color = Color(1.0, 1.0, 1.0, 0.35)

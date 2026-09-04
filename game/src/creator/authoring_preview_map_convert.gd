@@ -75,6 +75,13 @@ static func unshaded(color: Color) -> StandardMaterial3D:
 	var material: StandardMaterial3D = StandardMaterial3D.new()
 	material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	material.albedo_color = color
+	# Spec colours already carry alpha (editor floor/cursor). Without this
+	# branch Godot treats them as opaque, so the current-floor plane hides
+	# entities on other floors.
+	if color.a < 1.0:
+		material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+		material.depth_draw_mode = BaseMaterial3D.DEPTH_DRAW_DISABLED
+		material.cull_mode = BaseMaterial3D.CULL_DISABLED
 	return material
 
 

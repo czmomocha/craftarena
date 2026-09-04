@@ -437,6 +437,66 @@ func test_editor_floor_guides_exist_after_open() -> void:
 	assert_eq(_shell.map.mapped_count(), 1)
 
 
+func test_unshaded_enables_alpha_when_spec_colour_is_translucent() -> void:
+	var fill: StandardMaterial3D = AuthoringPreviewMapConvert.unshaded(
+		PlaceholderSpec.EDIT_GUIDE_FLOOR_FILL_ALBEDO
+	)
+	assert_eq(fill.transparency, BaseMaterial3D.TRANSPARENCY_ALPHA)
+	assert_eq(fill.depth_draw_mode, BaseMaterial3D.DEPTH_DRAW_DISABLED)
+	assert_false(fill.no_depth_test)
+	var solid: StandardMaterial3D = AuthoringPreviewMapConvert.unshaded(PlaceholderSpec.SOLID_ALBEDO)
+	assert_eq(solid.transparency, BaseMaterial3D.TRANSPARENCY_DISABLED)
+
+
+func test_floor_change_keeps_existing_placeholders_visible() -> void:
+	_shell = AuthoringEditorShell.create(AuthoringSurfaceNames.INTERNAL_DEV)
+	add_child(_shell)
+	assert_true(_shell.open())
+	assert_true(_shell.tools.place_next_solid())
+	var placed: MeshInstance3D = _shell.map.placeholder_node(1)
+	assert_not_null(placed)
+	assert_true(placed.visible)
+	var instance_id: int = placed.get_instance_id()
+	_shell.tools.floor_up()
+	assert_eq(_shell.tools.floor_index, 1)
+	assert_eq(_shell.map.mapped_count(), 1)
+	placed = _shell.map.placeholder_node(1)
+	assert_not_null(placed)
+	assert_true(placed.visible)
+	assert_eq(placed.get_instance_id(), instance_id)
+	assert_almost_eq(placed.position.y, 0.0, EPS)
+	var fill: MeshInstance3D = _shell.map.get_node_or_null(AuthoringPreviewMapFloor.FLOOR_NAME) as MeshInstance3D
+	assert_not_null(fill)
+	assert_almost_eq(fill.position.y, 0.5, EPS)
+	var box: BoxMesh = fill.mesh as BoxMesh
+	assert_not_null(box)
+	var mat: StandardMaterial3D = box.material as StandardMaterial3D
+	assert_not_null(mat)
+	assert_eq(mat.transparency, BaseMaterial3D.TRANSPARENCY_ALPHA)
+	assert_eq(mat.depth_draw_mode, BaseMaterial3D.DEPTH_DRAW_DISABLED)
+	assert_false(mat.no_depth_test)
+	assert_gt(mat.albedo_color.a, 0.0)
+	assert_lt(mat.albedo_color.a, 0.5)
+
+
+func test_spin_y_moves_floor_guide_without_hiding_placeholders() -> void:
+	_shell = AuthoringEditorShell.create(AuthoringSurfaceNames.INTERNAL_DEV)
+	add_child(_shell)
+	assert_true(_shell.open())
+	assert_true(_shell.tools.place_next_solid())
+	var placed: MeshInstance3D = _shell.map.placeholder_node(1)
+	assert_not_null(placed)
+	_shell.tools.cursor.spin_y.value = 1.0
+	assert_eq(_shell.tools.floor_index, 1)
+	assert_eq(_shell.status_label_text().contains("floor=1"), true)
+	assert_eq(_shell.map.mapped_count(), 1)
+	assert_true(placed.visible)
+	assert_almost_eq(placed.position.y, 0.0, EPS)
+	var fill: MeshInstance3D = _shell.map.get_node_or_null(AuthoringPreviewMapFloor.FLOOR_NAME) as MeshInstance3D
+	assert_not_null(fill)
+	assert_almost_eq(fill.position.y, 0.5, EPS)
+
+
 func test_try_move_entity_rewrites_transform_and_same_cell_is_noop() -> void:
 	_shell = AuthoringEditorShell.create(AuthoringSurfaceNames.INTERNAL_DEV)
 	add_child(_shell)
