@@ -3,6 +3,8 @@ extends RefCounted
 
 ## Editor-only presentation grid. Not occupancy, not authority.
 ## Colours live in PlaceholderSpec (CI gate); cell size still comes from 1 m = 1 cell (D4).
+## Fill/grid must stay translucent and must not write depth: the current-floor
+## plane sits between the camera and already-placed entities on other floors.
 
 const ConvertGd := preload("res://src/creator/authoring_preview_map_convert.gd")
 const FLOOR_NAME: String = "EditGuide_Floor"

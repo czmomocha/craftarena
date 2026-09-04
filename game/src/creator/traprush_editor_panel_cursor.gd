@@ -5,6 +5,8 @@ extends HBoxContainer
 ## clicking the Editor 3D view only updates X/Z on the current floor.
 ## Not a new EDIT op.
 
+signal cell_changed
+
 const CELL_X_NAME: String = "CellX"
 const CELL_Y_NAME: String = "CellY"
 const CELL_Z_NAME: String = "CellZ"
@@ -83,6 +85,7 @@ func _on_spin_changed(_value: float) -> void:
 	cell_x = _spin_int(spin_x)
 	cell_y = _spin_int(spin_y)
 	cell_z = _spin_int(spin_z)
+	cell_changed.emit()
 
 
 func _spin_int(spin: SpinBox) -> int:
