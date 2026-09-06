@@ -47,17 +47,36 @@ extends RefCounted
 ## （见 `try_instantiate`）。共享的是 `Mesh` 资源，所以**不要改它的 surface
 ## material**；per-instance 的颜色一律用 `material_overlay` / `material_override`。
 
-## 角色占位视觉。TRELLIS / 混元 3D 类生成产物，按 CD-51 §5.1 烘焙到预算内后入库。
-## 这是**占位美术**：比例、朝向轴与配色都没有经过美术定稿，只用来把
-## DCC → GLB → LFS → 导入 → 表现层这条链路跑通。
+## 角色占位视觉。这是**占位美术**：比例、朝向轴与配色都没有经过美术定稿。
 ##
-## 换过一次模型（2026-09-01）：`robot_placeholder.glb`（0.74 × 1.03 × 0.61 m）
+## 换过两次。第一次 2026-09-01：`robot_placeholder.glb`（0.74 × 1.03 × 0.61 m）
 ## 换成同批混元 3D 生成的 `char_runner_base.glb`（0.7492 × 1.1340 × 0.4174 m）。
-## 旧文件**留着不删**，它是这条链路上第一个跑通的样本，也是共享 Mesh 快路径
-## 第一个真实用例；而且两者都不被任何测试写死尺寸，留着不产生维护成本。
-## 换它不产生新内容版本、不改 ContentHash、不动任何权威碰撞 —— 这正是
-## ADR-0006 Q4 = A（视觉不进 bundle、客户端按 `latest` 解析）要的效果。
-const CHARACTER_SCENE_PATH: String = "res://content/assets/characters/char_runner_base.glb"
+##
+## 第二次 2026-09-05（路线 A，人类拍板）：换成 Kenney Cube Pets 的
+## `animal-cat.glb`。**换它的理由不是审美，是前两个模型都没有 clip**——
+## C4 动画状态契约锁了八个状态名，`PlayAnimVisual` 要把其中四个接到真 clip 上，
+## 而生成产物是静态网格，连 `AnimationPlayer` 都没有，接线无处落地。
+## cat 自带 `idle` / `run` / `dance` / `gesture-negative`（另有 static / walk /
+## eat / gesture-positive 未映射），是仓库里第一个能让"角色动起来"成立的资产。
+##
+## 三条必须记下来的事实：
+##
+## 1. **它比前两个大**：AABB 1.25 × 1.586 × 1.806 m，脚底仍在原点（y=0，
+##    `CHARACTER_FOOT_LIFT` 的前提不变）。深 1.806 m 来自尾巴与前后腿伸展，
+##    **明显超出 1 米格**。视觉从不参与裁决（权威胶囊仍是 0.125 格），所以这
+##    不是缺陷阻塞，但真机上看得见，与"门比人矮""滚柱超一格"同类记账；
+## 2. **它走 instantiate，不走共享 Mesh 快路径**：7 个网格节点（body / Group /
+##    tail / 四条腿），`_build_template` 只对单网格资产扁平化。这是**必须**的
+##    ——快路径只保留 Mesh，会把 `AnimationPlayer` 与部件层级一起丢掉。
+##    每帧成本不受影响：`MatchSnapshotMap._sync_players` 复用席位节点，
+##    只有席位数变化才实例化；
+## 3. **skins = 0**：动画是部件级节点变换，不是骨骼蒙皮。所以
+##    `PlayAnimVisual` 的姿态偏移写在 visual 根节点上、clip 驱动 GLB 内部子节点，
+##    两者不冲突。资产预算也按静态件判（684 / 3,000 面）。
+##
+## 前两个文件**留着不删**，理由与地块那条一致：都没有被测试写死尺寸，
+## 回退就是改回这一行。第三方资产的许可证归档见 `content/assets/ATTRIBUTION.md`。
+const CHARACTER_SCENE_PATH: String = "res://content/assets/characters/animal-cat.glb"
 
 ## 地块占位视觉，画在**始终固体**占用上（官方赛道的路面、立足面与上层楼板都在
 ## `solids` 袋里）。周期机关与可破坏箱**不用**它：洋红危险色与橙色箱是 D4 已定
@@ -97,10 +116,13 @@ const CRATE_SCENE_PATH: String = "res://content/assets/crates/crate.glb"
 ## 周期滚柱。洋红 overlay 同上。生成网格可能略超一格，不压扁。
 const HAZARD_ROLLER_SCENE_PATH: String = "res://content/assets/hazards/hazard_roller.glb"
 
-## 模型自己的脚底在原点，权威胶囊原点在中心。下沉「柱高一半 + 半径」，脚底才
-## 落在胶囊底面（重力落地后就是固体顶面）。数值从 PlaceholderSpec 注入，不另写。
+## 模型自己的脚底在原点，权威胶囊原点在中心。角色贴合（`fit_character_on_cell`）
+## 让脚底落在胶囊底面 —— 下沉「柱高一半 + 半径」。数值从 PlaceholderSpec 注入。
 ## 不要沉到 1 米占位盒底：盒比胶囊高，重力把节点跟着胶囊沉下去之后，盒底
 ## 会陷入实心方块（C3 重力 + C4 实心块之后才看得见）。
+##
+## 本常量是**未贴合路径**的回退基准（裸 Node3D、无网格资产）。贴合过的 visual
+## 基准带缩放，读 `character_base_transform` 而不是本常量。
 const CHARACTER_FOOT_LIFT: Vector3 = Vector3(0.0, -PlaceholderSpec.CHARACTER_CAPSULE_BOTTOM_M, 0.0)
 
 const InstantiateGd := preload("res://src/shared/visual_asset_catalog_instantiate.gd")
@@ -205,6 +227,18 @@ static func fit_tile_on_cell(visual: Node3D) -> bool:
 
 static func fit_prop_on_cell(visual: Node3D) -> bool:
 	return FitGd.fit_prop_on_cell(visual)
+
+
+## 角色贴合：等比缩到 `CHARACTER_VISUAL_CELL_SPAN` 格宽、水平居中、脚底落在
+## 权威胶囊底面，并把基准 transform 记进 meta 供 `PlayAnimVisual` 读。
+static func fit_character_on_cell(visual: Node3D) -> bool:
+	return FitGd.fit_character_on_cell(visual)
+
+
+## 角色 visual 的基准 transform。`PlayAnimVisual` 的姿态叠加在它之上；
+## attach 与动画两侧必须读同一份，否则姿态会抹掉缩放。
+static func character_base_transform(visual: Node3D) -> Transform3D:
+	return FitGd.character_base_transform(visual)
 
 
 static func local_bounds(root: Node3D) -> AABB:

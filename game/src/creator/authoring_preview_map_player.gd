@@ -43,6 +43,9 @@ func clear(map: AuthoringPreviewMap) -> void:
 	node.free()
 
 
+## 与 MatchSnapshotMap.set_anim_state 同一套：写 metadata 与 Label3D 读出，再经
+## `PlayAnimVisual` 驱动 `visual` 子节点（路线 A，人类 2026-09-05 拍板）。
+## Preview 只有一个人，所以不带 slot。视觉缺失时仍写读出并返回 true。
 func set_anim_state(map: AuthoringPreviewMap, state: String) -> bool:
 	if not PlayAnimState.contains(state):
 		return false
@@ -62,6 +65,7 @@ func set_anim_state(map: AuthoringPreviewMap, state: String) -> bool:
 		label.modulate = PlaceholderSpec.STANDING_RUNNING_ALBEDO
 		player.add_child(label)
 	label.text = state
+	PlayAnimVisual.apply(map.player_visual_node(), state)
 	return true
 
 
@@ -97,7 +101,7 @@ func _attach_player_visual(map: AuthoringPreviewMap, player: MeshInstance3D) -> 
 	if visual == null:
 		return false
 	visual.name = AuthoringPreviewMap.VISUAL_NAME
-	visual.position = SharedVisualAssetCatalog.CHARACTER_FOOT_LIFT
+	SharedVisualAssetCatalog.fit_character_on_cell(visual)
 	player.add_child(visual)
 	SharedVisualAssetCatalog.tint(visual, PlaceholderSpec.PREVIEW_PLAYER_ALBEDO)
 	player.layers = 0

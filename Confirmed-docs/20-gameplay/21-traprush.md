@@ -78,7 +78,7 @@
 
 ### 3.4 表现动画状态
 
-一期角色网格没有 `skin`、没有 clip。纠偏 C4 产出 4 只锁**状态名与优先级**，让以后的绑定动画有固定入口，而不是各壳自己猜「什么叫落地」。
+一期角色网格没有 `skin`。纠偏 C4 产出 4 只锁**状态名与优先级**，让绑定动画有固定入口，而不是各壳自己猜「什么叫落地」。
 
 | 状态 | 何时 | 不是 |
 |---|---|---|
@@ -91,7 +91,13 @@
 | `break` | 本拍权威 UseItem 打碎箱子 | 破坏特效 |
 | `portal` | 传送门闩非空 | 镜头过渡 |
 
-`airborne` = 接触探针（半格）未踩到固体，**或** `vy != 0`。优先级（高→低）：`hit` > `portal` > `land` > `jump` > `shove` > `break` > `run` > `idle`。单一状态。实现：`game/src/shared/play_anim_state.gd`。**不播 clip**。v1 快照没有 vy / stun，在线远端不接线。时长仍属 [CD-63](../60-plan/63-open-decisions.md)。
+`airborne` = 接触探针（半格）未踩到固体，**或** `vy != 0`。优先级（高→低）：`hit` > `portal` > `land` > `jump` > `shove` > `break` > `run` > `idle`。单一状态。裁决落点 `game/src/shared/play_anim_state.gd`。
+
+**视觉驱动已接线**（路线 A，人类 2026-09-05 拍板）：`game/src/shared/play_anim_visual.gd` 把裁决结果接到角色 `visual` 节点——`idle` / `run` / `hit` / `portal` 播 GLB 内置 clip，`jump` / `land` / `shove` / `break` 用程序化姿态偏移补，两张表恰好覆盖八态。角色资产同日换为 `animal-cat.glb`（Kenney Cube Pets，CC0，7 网格 / 0 skin / 684 面），因为此前的生成产物是静态网格、没有 `AnimationPlayer`。`hit` 用 `gesture-negative`、`portal` 用 `dance` 是**语义近似**，属路线 A 已接受的折衷。姿态角度与升降是占位数值，未定稿；不引入时间轴、clip 间无 blend，**动画时长与过渡仍属 [CD-63](../60-plan/63-open-decisions.md)**。缺 `AnimationPlayer` 或缺 clip 名一律降级为静止，不报错。
+
+**角色贴合**（2026-09-07）：`fit_character_on_cell` 按资产 AABB 等比缩到 `CHARACTER_VISUAL_CELL_SPAN` 格宽、水平居中、脚底落在权威胶囊底面。此前角色是唯一没有贴合规则的资产类别。姿态叠加在贴合后的基准上（含 scale），两侧经 `character_base_transform` 同源读取，否则起跳会抹掉缩放。占格比例是表现占位值，所有者是 [CD-11 §8.2](../10-product/11-scope-and-platforms.md)。视觉不参与裁决，权威胶囊仍是 0.125 格。
+
+**只在 Solo 与 Preview 接线**：v1 快照没有 `vy` / `stun_remaining` / 库存，在线远端算不出 `airborne` 与 `hit`。接它要改协议帧（宪法第十八条），因此在线席位保持静止是预期行为，不是遗漏（**贴合不受此限**，三条壳一致）。第三方资产条款归档见 `game/content/assets/ATTRIBUTION.md`；入库范围仍待人类拍板。
 
 ## 4. 地图传送与立体移动
 

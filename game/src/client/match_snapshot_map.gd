@@ -33,9 +33,11 @@ extends Node3D
 ## apply_players 复用席位节点，只有席位数变化才增删（见 `_sync_players`）。
 ## 这不是优化偏好，是每帧预算：全清全建会每帧重新 instantiate 角色 `.glb`。
 ##
-## `set_anim_state` 把 C4 表现动画状态写到席位 metadata 与子 Label3D `anim`。
-## 那是契约读出，不是 HUD 字段、也不是 clip。在线快照缺接地 / 硬直字段，
-## 大厅只在 Solo 接线。
+## `set_anim_state` 把 C4 表现动画状态写到席位 metadata 与子 Label3D `anim`，
+## 并经 `PlayAnimVisual` 驱动 `visual` 子节点（路线 A，人类 2026-09-05 拍板）：
+## 有 clip 的状态播 clip，没有的用程序化姿态补。metadata 与 Label 仍是契约读出，
+## 不是 HUD 字段。视觉缺失（回退占位盒）时只写读出，不崩。在线快照缺接地 /
+## 硬直字段，大厅只在 Solo 接线。
 
 const MatchSnapshotFollowGd := preload("res://src/client/match_snapshot_follow.gd")
 const PlayersGd := preload("res://src/client/match_snapshot_map_players.gd")
@@ -223,7 +225,10 @@ func anim_state(slot: int) -> String:
 
 
 ## 把表现状态写到席位。未知名字拒绝，避免 HUD 打出随便一个字符串。
-## 标签是契约读出：人眼能在 Solo 里看见 idle/run/jump，clip 仍不播。
+## 标签是契约读出：人眼能在 Solo 里看见 idle/run/jump。视觉驱动交给
+## `PlayAnimVisual`——它自己判断 clip 态还是姿态态，也自己做缺 AnimationPlayer
+## 的降级。`visual` 不存在（资产没解析出来、回退占位盒）时仍写读出并返回 true：
+## 状态契约成立与否，不取决于美术到没到位。
 func set_anim_state(slot: int, state: String) -> bool:
 	if not PlayAnimState.contains(state):
 		return false
@@ -243,6 +248,7 @@ func set_anim_state(slot: int, state: String) -> bool:
 		label.modulate = PlaceholderSpec.STANDING_RUNNING_ALBEDO
 		player.add_child(label)
 	label.text = state
+	PlayAnimVisual.apply(visual_node(slot), state)
 	return true
 
 
