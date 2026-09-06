@@ -140,6 +140,7 @@ export GODOT_AI_DISABLE_TELEMETRY=true
 | 烘焙 | 生成产物入库前先按 [资产烘焙 runbook](../../docs/runbooks/asset-bake.md) 压到预算内 |
 | 生成源产物 | AI 生成工具（TRELLIS、混元 3D 等）的原始 `.glb` 与 4K 源贴图**不入库、不进 LFS**，只留本地，落点 `game/content/assets/_source_refs/`。它们按定义过不了 [CD-11 §8.1](../10-product/11-scope-and-platforms.md)，LFS 配额应留给**入库物**。该目录带自己的 `.gitignore`（扩展名清单，规则随目录走），只放行 `MANIFEST.md` / `.gitignore` / `.gdignore` 三份文本。两层分工：`MANIFEST.md` 是生成排队依据，有留存价值；`.gdignore` 挡**本机编辑器导入**，`.gitignore` 挡**入库**，少任何一层都不成立 |
 | 包内可读 | 新资产必须被 `--package-check` 覆盖到（**实例化**判定，不是 `file_exists`）：`.glb` 进包后是导入产物，导出过滤配错只在这里暴露 |
+| 来源与许可 | 每个入库资产都要在 `game/content/assets/ATTRIBUTION.md` 记一行。**第三方资产必须记许可条款原文位置**，不能只写协议缩写；入库本身属宪法第十八条人类门禁（新依赖和许可证），AI 只备齐材料。该文件 2026-09-05 随第一个第三方资产（Kenney Cube Pets，CC0）建立——在此之前全部资产都是自生成的，没有第三方条款需要归档 |
 
 **内嵌未压缩只解决入库形态，不解决显存。** 512² 三张未压缩贴图在运行时仍占约 3 MB VRAM；KTX2 / Basis 路径未测（见[烘焙试验 §5.2](../../docs/plans/asset-bake-trial-2026-08.md)"编码格式只省磁盘，不省显存"）。
 

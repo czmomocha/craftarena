@@ -56,6 +56,22 @@ const CHARACTER_HEIGHT: int = Fixed.SCALE / 8
 const CHARACTER_CAPSULE_BOTTOM_M: float = (
 	float(CHARACTER_HEIGHT / 2 + CHARACTER_RADIUS) / float(CELL) * METERS_PER_CELL
 )
+## 角色视觉的**水平占格比例**：贴合时按资产自身 AABB 等比缩放，让水平最长边
+## 落到 `METERS_PER_CELL * 本值`。
+##
+## 它存在的理由是角色此前**根本没有贴合规则**——地块走 `fit_tile_on_cell`、
+## 门 / 箱 / 滚柱走 `fit_prop_on_cell`，只有角色是把资产原始尺寸直接摆上去。
+## 前两个角色资产水平最长边 0.75 m / 0.74 m，本来就小于一格，所以看不出来；
+## 换成 Cube Pets 的猫（水平最长 1.806 m，尾巴与四足伸展）之后一眼可见。
+##
+## **为什么不是 1.0**：门 / 箱那类静物占满整格是对的，角色不是——权威胶囊直径
+## 只有 0.25 格，视觉占满一格会让角色在 1 格宽的路面上显得贴边、并与相邻格
+## 的物件穿插。0.7 是人类 2026-09-07 提出「动物有点大」后给的**占位值，未定稿**：
+## 它不是产品比例，改它只动这一行。D4 没有问过这一项。
+##
+## 缩放按 AABB 算而不是写死系数，理由与地块那条相同：Cube Pets 24 只动物尺寸
+## 各异（长颈鹿高、螃蟹扁），写死系数等于每换一只都要重算一次。
+const CHARACTER_VISUAL_CELL_SPAN: float = 0.7
 ## 出生偏移环的步长：slot i 向 -Z 退 i 格的一半。不是产品出生布局。
 const SPAWN_STRIDE: int = Fixed.SCALE / 2
 
