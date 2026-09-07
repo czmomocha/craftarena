@@ -136,6 +136,35 @@ func reset_player_if_out_of_range(session: TraprushMatchSession, player: Diction
 	return reset
 
 
+func reset_player_to_pad(session: TraprushMatchSession, player: Dictionary) -> bool:
+	if session._world == null or session._spawn == null:
+		return false
+	var capsule_id: int = player["capsule_id"]
+	var track: CheckpointTrack = player["track"]
+	var respawn: Dictionary = session._spawn.pose_for(track)
+	var pose_ok: bool = respawn.get("ok", false)
+	if not pose_ok:
+		return false
+	var x_raw: Variant = respawn.get("x", 0)
+	var y_raw: Variant = respawn.get("y", 0)
+	var z_raw: Variant = respawn.get("z", 0)
+	var yaw_raw: Variant = respawn.get("yaw_bam", 0)
+	if typeof(x_raw) != TYPE_INT or typeof(y_raw) != TYPE_INT:
+		return false
+	if typeof(z_raw) != TYPE_INT or typeof(yaw_raw) != TYPE_INT:
+		return false
+	var x: int = x_raw
+	var y: int = y_raw
+	var z: int = z_raw
+	var yaw_bam: int = yaw_raw
+	if not session._world.set_pose(capsule_id, x, y, z, yaw_bam):
+		return false
+	session._world.set_vy(capsule_id, 0)
+	player["latch"] = {}
+	player["stun_remaining"] = session.respawn_stun_ticks
+	return true
+
+
 func resolve_player_hazards(session: TraprushMatchSession, player: Dictionary) -> bool:
 	if session._world == null or session._spawn == null:
 		return false

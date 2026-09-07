@@ -41,6 +41,9 @@ var seat: int = -1
 var course: String = ""
 var settlement_line: String = ""
 var has_settlement: bool = false
+var settlement_rows: Array = []
+var settlement_mvp_slot: int = -1
+var settlement_pad_total: int = 0
 
 var _pending_method: String = ""
 var _pending_path: String = ""
@@ -202,6 +205,9 @@ func status_view() -> Dictionary:
 		"course": course,
 		"settlement_line": settlement_line,
 		"has_settlement": has_settlement,
+		"settlement_rows": settlement_rows,
+		"settlement_mvp_slot": settlement_mvp_slot,
+		"settlement_pad_total": settlement_pad_total,
 	}
 
 
@@ -243,6 +249,9 @@ func clear_ready_fields() -> void:
 	seat = -1
 	settlement_line = ""
 	has_settlement = false
+	settlement_rows = []
+	settlement_mvp_slot = -1
+	settlement_pad_total = 0
 
 
 func clear_pending() -> void:

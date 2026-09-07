@@ -8,6 +8,7 @@ const MatchCheckpointOrderMapGd := preload("res://src/client/match_checkpoint_or
 const MatchCourseMapGd := preload("res://src/client/match_course_map.gd")
 const MatchCrateMapGd := preload("res://src/client/match_crate_map.gd")
 const MatchHazardMapGd := preload("res://src/client/match_hazard_map.gd")
+const MatchPickupMapGd := preload("res://src/client/match_pickup_map.gd")
 const MatchPlaySessionGd := preload("res://src/client/match_play_session.gd")
 const MatchPortalLinkMapGd := preload("res://src/client/match_portal_link_map.gd")
 const MatchSnapshotFollowGd := preload("res://src/client/match_snapshot_follow.gd")
@@ -20,6 +21,7 @@ const MAP_NAME: String = "SnapshotMap"
 const COURSE_NAME: String = "CourseMap"
 const CRATE_NAME: String = "CrateMap"
 const HAZARD_NAME: String = "HazardMap"
+const PICKUP_NAME: String = "PickupMap"
 const SOLID_NAME: String = "SolidMap"
 const LINK_NAME: String = "PortalLinkMap"
 const ORDER_NAME: String = "CheckpointOrderMap"
@@ -29,6 +31,7 @@ var map: MatchSnapshotMapGd = null
 var course: MatchCourseMapGd = null
 var crates: MatchCrateMapGd = null
 var hazards: MatchHazardMapGd = null
+var pickups: MatchPickupMapGd = null
 var solids: MatchSolidMapGd = null
 var links: MatchPortalLinkMapGd = null
 var orders: MatchCheckpointOrderMapGd = null
@@ -54,6 +57,9 @@ func mount(window: Window) -> void:
 	hazards = MatchHazardMapGd.new()
 	hazards.name = HAZARD_NAME
 	map.add_child(hazards)
+	pickups = MatchPickupMapGd.new()
+	pickups.name = PICKUP_NAME
+	map.add_child(pickups)
 	solids = MatchSolidMapGd.new()
 	solids.name = SOLID_NAME
 	map.add_child(solids)
@@ -73,6 +79,7 @@ func bind_facade(shell: MatchLobbyShell) -> void:
 	shell.course = course
 	shell.crates = crates
 	shell.hazards = hazards
+	shell.pickups = pickups
 	shell.solids = solids
 	shell.links = links
 	shell.orders = orders
@@ -93,6 +100,8 @@ func apply_course(path: String) -> void:
 		crates.apply_path(path)
 	if hazards != null:
 		hazards.apply_path(path)
+	if pickups != null:
+		pickups.apply_path(path)
 	if solids != null:
 		solids.apply_path(path)
 	if links != null:
@@ -199,6 +208,8 @@ func apply_snapshot(
 		crates.apply_follow(follow)
 	if hazards != null:
 		hazards.apply_follow(follow)
+	if solids != null:
+		solids.apply_tick(follow.tick)
 	if play != null and play.state == MatchPlaySessionGd.STATE_IN_MATCH:
 		var predicted: Dictionary = play.predict.try_apply(
 			players,

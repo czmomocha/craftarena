@@ -12,6 +12,12 @@ func test_normalize_known_ids_and_reject_paths() -> void:
 	assert_true(OfficialCourses.is_id("course_02"))
 	assert_true(OfficialCourses.is_id("course_03"))
 	assert_eq(OfficialCourses.normalize_id("  course_02  "), "course_02")
+	assert_false(OfficialCourses.is_id("course_f_playable"))
+	assert_eq(OfficialCourses.normalize_id("course_f_playable"), "course_f_playable")
+	assert_eq(
+		OfficialCourses.document_path("course_f_playable"),
+		"res://content/official/traprush/course_f_playable.json"
+	)
 	assert_eq(OfficialCourses.normalize_id(""), "")
 	assert_eq(OfficialCourses.normalize_id("course_99"), "")
 	assert_eq(OfficialCourses.normalize_id("res://content/official/traprush/course_01.json"), "")

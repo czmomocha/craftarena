@@ -62,9 +62,18 @@ const PLACE_CRATE: String = "craft_arena.ui.place_crate"
 const PLACE_FINISH: String = "craft_arena.ui.place_finish"
 const PLACE_BOMB: String = "craft_arena.ui.place_bomb"
 const PLACE_DASH: String = "craft_arena.ui.place_dash"
+const PLACE_MOVER: String = "craft_arena.ui.place_mover"
+const MARK_CORNER: String = "craft_arena.ui.mark_corner"
+const FILL_SOLIDS: String = "craft_arena.ui.fill_solids"
+const COPY_ENTITY: String = "craft_arena.ui.copy_entity"
+const PASTE_ENTITY: String = "craft_arena.ui.paste_entity"
+const DELETE_SELECTED: String = "craft_arena.ui.delete_selected"
+const SELECT_BOX: String = "craft_arena.ui.select_box"
 const FLOOR_UP: String = "craft_arena.ui.floor_up"
 const FLOOR_DOWN: String = "craft_arena.ui.floor_down"
 const FOCUS_ISSUE: String = "craft_arena.ui.focus_issue"
+const RESULTS: String = "craft_arena.ui.results"
+const MVP: String = "craft_arena.ui.mvp"
 
 const ALL_KEYS: PackedStringArray = [
 	WINDOW_TRAPRUSH,
@@ -99,9 +108,18 @@ const ALL_KEYS: PackedStringArray = [
 	PLACE_FINISH,
 	PLACE_BOMB,
 	PLACE_DASH,
+	PLACE_MOVER,
+	MARK_CORNER,
+	FILL_SOLIDS,
+	COPY_ENTITY,
+	PASTE_ENTITY,
+	DELETE_SELECTED,
+	SELECT_BOX,
 	FLOOR_UP,
 	FLOOR_DOWN,
 	FOCUS_ISSUE,
+	RESULTS,
+	MVP,
 ]
 
 static var _loaded: bool = false

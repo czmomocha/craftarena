@@ -1,11 +1,11 @@
 class_name TraprushPlayStubs
 extends RefCounted
 
-## 动作占位桩的单一配置源。
+## 动作数值的单一配置源。
 ##
-## 这些**大多不是产品数值**：跳跃高度、重力、爆破伤害与推击力度都还没拍板
-## （[CD-63](Confirmed-docs/60-plan/63-open-decisions.md) §1）。它们只是让
-## 对局能跑起来的开发期占位值。例外：`RESPAWN_STUN_MS` 已由纠偏 D5 定为 1.0 s；
+## 跳跃 / 重力已由 F 线 FD 接到产品桩（D-F2 / D-F3）：`JUMP_DY = SCALE*5/4`，
+## `FALL_DY = -JUMP_DY`。爆破伤害与推击力度仍未拍板（[CD-63](Confirmed-docs/60-plan/63-open-decisions.md) §1）。
+## 例外：`RESPAWN_STUN_MS` 已由纠偏 D5 定为 1.0 s；
 ## 换算用的 `PHYSICS_TICKS_PER_SECOND_PLACEHOLDER` 仍是当前引擎 physics，不是
 ## [CD-43](Confirmed-docs/40-technical/43-networking-and-replay.md) 产品 Tick。
 ##
@@ -17,26 +17,22 @@ extends RefCounted
 ##
 ## 分成两组是因为语义不同，不是因为有人抄错了：
 ## MATCH 组给随引擎 tick 连续推进的场景（对局进程、Solo、BotRunner）；
-## PREVIEW 组给手动点 Advance tick 的编辑器 Preview，加速度更大，从静止
-## 开始第一下仍落一整格。后续点击会加速，这是积分而不是每下重置位移。
+## PREVIEW 组的下落加速度与对局同一 `FALL_DY`（F 线 FD；不再用 `-SCALE` 特判）。
 ##
 ## 出界半宽不在这里复制，直接用 TraprushOutOfRangeReset.STUB_HALF。
 
 const OutOfRangeReset := preload("res://src/games/traprush/out_of_range_reset.gd")
 const TraprushMatchSession := preload("res://src/games/traprush/match_session.gd")
 
-## 一格 hop 的竖直冲量。course_01 上层传送已偏到 z=-3*CELL，出生点 hop
-## 不再撞上楼 two_way。apply_jump 把本拍位移和 vy 都写成这个值，后续各拍由重力加速度拉回。
-## 数值仍是占位桩，不是产品跳跃高度。
-const JUMP_DY: int = Fixed.SCALE / 4
+## 一格 hop 的竖直冲量。D-F2：SCALE*5/4，下一拍到顶，峰值 1.25 格。
+## apply_jump 把本拍位移和 vy 都写成这个值，后续各拍由重力加速度拉回。
+const JUMP_DY: int = Fixed.SCALE * 5 / 4
 ## 向下探测立足固体，与灰盒同向。
 const SUPPORT_DY: int = -Fixed.SCALE
-## 与大厅 play_move_step 同量级的开发期重力加速度（每 tick 加到 vy）。
-## 不是恒定位移：从静止开始第一拍位移等于本值，之后越落越快。
-## 引擎约 60 physics tick/s 时，走下沿路立足面后大约十几拍触发出界复位。
-const FALL_DY: int = -Fixed.SCALE / 16
-## Preview 手动 Advance tick：一次点击的加速度。从静止开始第一下仍落一整格。
-const PREVIEW_FALL_DY: int = -Fixed.SCALE
+## D-F2 / D-F3：与跳跃冲量等量反向。下一拍到顶，峰值 1.25 格。
+const FALL_DY: int = -JUMP_DY
+## Preview Advance 与对局同一加速度，不再用 -SCALE 特判。
+const PREVIEW_FALL_DY: int = FALL_DY
 
 const USE_ITEM_DAMAGE: int = 1
 ## reach 只探 +Z 一格：要打箱必须先站到箱的 -Z 侧。不是产品爆破表。

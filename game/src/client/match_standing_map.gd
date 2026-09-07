@@ -17,7 +17,7 @@ const TraprushStandingGd := preload("res://src/games/traprush/standing.gd")
 
 const MARK_PREFIX: String = "standing_mark_"
 const OWN_MARK_PREFIX: String = "*"
-const STANDING_LIFT: float = 1.35
+const STANDING_LIFT: float = PlaceholderSpec.LABEL3D_STANDING_LIFT
 
 var follow_slot: int = -1
 var _standing_count: int = 0
@@ -177,10 +177,10 @@ func _write_mark(slot: int, pose: Dictionary, row: Dictionary) -> void:
 	if label == null:
 		label = Label3D.new()
 		label.name = mark_name(slot)
-		label.font_size = 64
-		label.pixel_size = 0.02
+		label.font_size = PlaceholderSpec.LABEL3D_FONT_SIZE
+		label.pixel_size = PlaceholderSpec.LABEL3D_PIXEL_SIZE
 		label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
-		label.outline_size = 12
+		label.outline_size = PlaceholderSpec.LABEL3D_OUTLINE_SIZE
 		add_child(label)
 	var text: String = mark_text(row)
 	if follow_slot >= 0 and slot == follow_slot:

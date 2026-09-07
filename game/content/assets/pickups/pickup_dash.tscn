@@ -1,0 +1,8 @@
+[gd_scene format=3]
+
+[sub_resource type="PrismMesh" id="PrismMesh_dash"]
+size = Vector3(0.45, 0.55, 0.45)
+
+[node name="PickupDash" type="MeshInstance3D"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.28, 0)
+mesh = SubResource("PrismMesh_dash")

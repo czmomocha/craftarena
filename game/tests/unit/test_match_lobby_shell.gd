@@ -28,6 +28,7 @@ const SharedComponentRecord := preload("res://src/shared/schema/component_record
 const TraprushTopologyCompiler := preload("res://src/ugc/traprush_topology_compiler.gd")
 const AuthoringWorld := preload("res://src/creator/authoring_world.gd")
 const PlayerIntentNames := preload("res://src/shared/commands/player_intent_names.gd")
+const TraprushPlayStubs := preload("res://src/games/traprush/play_stubs.gd")
 
 var _shell: MatchLobbyShell = null
 
@@ -532,6 +533,7 @@ func test_solo_refuses_web_and_online_busy() -> void:
 	assert_true(_shell.accept_http(201, _join("ABCD23", "ticket-solo")))
 	assert_eq(_shell.play.state, MatchPlaySession.STATE_CONNECTING)
 	assert_false(_shell.try_solo())
+	assert_eq(_shell.offline.last_error, "online_busy")
 	assert_eq(_shell.offline.state, MatchOfflineSession.STATE_IDLE)
 	assert_eq(_shell.play.websocket_url, "ws://127.0.0.1:8090/ws?ticket=ticket-solo")
 
@@ -1035,11 +1037,15 @@ func test_online_finish_tints_and_result_when_all_done() -> void:
 	assert_true(_shell.accept_http(200, _settlement_board()))
 	assert_true(_shell.status_label_text().contains("result="))
 	assert_true(_shell.status_label_text().contains("settled=#1s0,#2s1 mvp=0"))
+	assert_true(_shell.settlement_panel_visible())
+	assert_true(_shell.status_label_text().contains("clock="))
+	assert_ne(_shell.clock_label_text(), "")
 	assert_false(_shell.allows_settlement())
 	assert_false(_shell.allows_online_writes())
 	assert_true(_shell.try_cancel())
 	assert_false(_shell.status_label_text().contains("settled="))
 	assert_false(_shell.status_label_text().contains("result="))
+	assert_false(_shell.settlement_panel_visible())
 
 
 func test_online_finish_404_keeps_local_result_without_settled() -> void:
@@ -1096,13 +1102,22 @@ func test_solo_jump_hops_on_spawn_footing() -> void:
 	assert_false(_shell.try_sample_play_jump(true).is_empty())
 	var after: Dictionary = _shell.offline.session.player_pose(0)
 	var after_y: int = after.get("y", 2)
-	assert_eq(after_y, before_y + Fixed.SCALE / 4)
-	assert_almost_eq(_shell.map.player_node(0).position.y, 0.25, 0.0001)
+	assert_eq(after_y, before_y + TraprushPlayStubs.JUMP_DY)
+	assert_almost_eq(
+		_shell.map.player_node(0).position.y,
+		float(TraprushPlayStubs.JUMP_DY) / float(Fixed.SCALE),
+		0.0001
+	)
 	assert_true(_shell.try_sample_play_jump(true).is_empty())
-	assert_true(_shell.offline.try_advance())
-	var after_arc: Dictionary = _shell.offline.session.player_pose(0)
-	var after_arc_y: int = after_arc.get("y", 3)
-	assert_ne(after_arc_y, after_y)
+	var saw_arc: bool = false
+	for _tick: int in range(8):
+		assert_true(_shell.offline.try_advance())
+		var arc: Dictionary = _shell.offline.session.player_pose(0)
+		var arc_y: int = arc.get("y", 3)
+		if arc_y != after_y:
+			saw_arc = true
+			break
+	assert_true(saw_arc)
 
 
 func test_solo_anim_starts_idle_then_run() -> void:
@@ -1125,7 +1140,7 @@ func test_solo_jump_sets_jump_then_land() -> void:
 	assert_false(_shell.try_sample_play_jump(true).is_empty())
 	var hopped: Dictionary = _shell.offline.session.player_pose(0)
 	var hopped_y: int = hopped.get("y", 0)
-	assert_eq(hopped_y, spawn_y + Fixed.SCALE / 4)
+	assert_eq(hopped_y, spawn_y + TraprushPlayStubs.JUMP_DY)
 	assert_eq(_shell.map.anim_state(0), PlayAnimState.JUMP)
 	var saw_land: bool = false
 	for _tick: int in range(24):
@@ -1144,7 +1159,7 @@ func test_solo_jump_sets_jump_then_land() -> void:
 func test_solo_walk_off_spawn_footing_drops_y() -> void:
 	_shell = _open_shell()
 	assert_true(_shell.try_solo())
-	assert_eq(_shell.offline.session.fall_dy, -Fixed.SCALE / 16)
+	assert_eq(_shell.offline.session.fall_dy, TraprushPlayStubs.FALL_DY)
 	for _settle: int in range(8):
 		assert_true(_shell.offline.try_advance())
 	var rest: Dictionary = _shell.offline.session.player_pose(0)
@@ -1153,8 +1168,7 @@ func test_solo_walk_off_spawn_footing_drops_y() -> void:
 	## 出生点 −Z 现在有走到机关的踏板；先 +X 再 +Z 才落到空格。
 	assert_false(_shell.try_sample_play_move(false, false, false, true).is_empty())
 	assert_false(_shell.try_sample_play_move(false, true, false, false).is_empty())
-	for _drop: int in range(8):
-		assert_true(_shell.offline.try_advance())
+	assert_true(_shell.offline.try_advance())
 	var dropped: Dictionary = _shell.offline.session.player_pose(0)
 	var dropped_y: int = dropped.get("y", 2)
 	assert_lt(dropped_y, rest_y)

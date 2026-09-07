@@ -17,6 +17,7 @@ const AuthoringPreviewShell := preload("res://src/creator/authoring_preview_shel
 const AuthoringSession := preload("res://src/creator/authoring_session.gd")
 const PlayerIntentNames := preload("res://src/shared/commands/player_intent_names.gd")
 const SharedComponentRecord := preload("res://src/shared/schema/component_record.gd")
+const TraprushPlayStubs := preload("res://src/games/traprush/play_stubs.gd")
 
 const COURSE_01_PATH: String = "res://content/official/traprush/course_01.json"
 const COURSE_02_PATH: String = "res://content/official/traprush/course_02.json"
@@ -120,7 +121,7 @@ func test_shell_official_jump_stays_until_advance_lands() -> void:
 	add_child(_preview_shell)
 	assert_true(_preview_shell.open_from(session))
 	assert_true(_preview_shell.try_start_play(1, PLAY_RADIUS, PLAY_RADIUS))
-	assert_eq(_preview_shell.preview.play_fall_dy, -CELL)
+	assert_eq(_preview_shell.preview.play_fall_dy, TraprushPlayStubs.PREVIEW_FALL_DY)
 	assert_true(_preview_shell.try_advance_play())
 	var rest: Dictionary = _preview_shell.preview.play_world.get_pose(
 		_preview_shell.preview.player_id
@@ -131,15 +132,23 @@ func test_shell_official_jump_stays_until_advance_lands() -> void:
 		_preview_shell.preview.player_id
 	)
 	var hopped_y: int = hopped.get("y", 2)
-	assert_eq(hopped_y, rest_y + SPAWN_JUMP_DY)
+	assert_eq(hopped_y, rest_y + TraprushPlayStubs.JUMP_DY)
 	assert_eq(_preview_shell.preview.play_world.tick_index, 1)
+	## JUMP_DY == -FALL_DY：下一拍重力刚好抵消冲量，停在峰值；再一拍才落地。
+	assert_true(_preview_shell.try_advance_play())
+	var peak: Dictionary = _preview_shell.preview.play_world.get_pose(
+		_preview_shell.preview.player_id
+	)
+	var peak_y: int = peak.get("y", 3)
+	assert_eq(peak_y, hopped_y)
+	assert_eq(_preview_shell.preview.play_world.tick_index, 2)
 	assert_true(_preview_shell.try_advance_play())
 	var landed: Dictionary = _preview_shell.preview.play_world.get_pose(
 		_preview_shell.preview.player_id
 	)
-	var landed_y: int = landed.get("y", 3)
+	var landed_y: int = landed.get("y", 4)
 	assert_eq(landed_y, rest_y)
-	assert_eq(_preview_shell.preview.play_world.tick_index, 2)
+	assert_eq(_preview_shell.preview.play_world.tick_index, 3)
 
 
 func test_preview_anim_idle_then_jump_then_land() -> void:
@@ -153,8 +162,13 @@ func test_preview_anim_idle_then_jump_then_land() -> void:
 	assert_eq(_preview_shell.map.player_anim_state(), PlayAnimState.IDLE)
 	assert_true(_preview_shell.try_sample_play_jump(true))
 	assert_eq(_preview_shell.map.player_anim_state(), PlayAnimState.JUMP)
-	assert_true(_preview_shell.try_advance_play())
-	assert_eq(_preview_shell.map.player_anim_state(), PlayAnimState.LAND)
+	var saw_land: bool = false
+	for _tick: int in range(8):
+		assert_true(_preview_shell.try_advance_play())
+		if _preview_shell.map.player_anim_state() == PlayAnimState.LAND:
+			saw_land = true
+			break
+	assert_true(saw_land)
 	_preview_shell._apply_play_anim()
 	assert_eq(_preview_shell.map.player_anim_state(), PlayAnimState.IDLE)
 

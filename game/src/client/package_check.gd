@@ -121,6 +121,7 @@ static func _course_paths() -> PackedStringArray:
 		OfficialTraprushCoursesGd.COURSE_01,
 		OfficialTraprushCoursesGd.COURSE_02,
 		OfficialTraprushCoursesGd.COURSE_03,
+		OfficialTraprushCoursesGd.COURSE_F_PLAYABLE,
 	]
 	for id: String in ids:
 		paths.append(OfficialTraprushCoursesGd.document_path(id))

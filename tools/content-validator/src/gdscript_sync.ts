@@ -119,7 +119,7 @@ export function collectGdscriptSchemaMismatches(): SyncMismatch[] {
 
 	const bundleSchema = loadJsonFile(SIMULATION_BUNDLE_SCHEMA_PATH);
 	const bundleFields = parseStringConstants(readFileSync(SIMULATION_BUNDLE_PATH, "utf8"));
-	const schemaBundleFields = schemaRequired(bundleSchema);
+	const schemaBundleFields = schemaPropertyNames(bundleSchema);
 	pushListMismatch(mismatches, "simulation_bundle_fields", bundleFields, schemaBundleFields);
 
 	const bundleSchemaVersion = parseIntConstant(readFileSync(SIMULATION_BUNDLE_PATH, "utf8"), "SCHEMA_VERSION");
@@ -215,6 +215,14 @@ function commandKindEnum(schema: unknown): number[] {
 function schemaRequired(schema: unknown): string[] {
 	const values = asArray(property(schema, "required"));
 	return values.filter((value): value is string => typeof value === "string");
+}
+
+function schemaPropertyNames(schema: unknown): string[] {
+	const properties = property(schema, "properties");
+	if (typeof properties !== "object" || properties === null || Array.isArray(properties)) {
+		return [];
+	}
+	return Object.keys(properties);
 }
 
 function componentPropertyNames(schema: unknown): string[] {

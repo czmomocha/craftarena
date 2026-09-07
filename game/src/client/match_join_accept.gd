@@ -108,6 +108,13 @@ func _accept_settlement(session: MatchJoinSession, body: Dictionary) -> bool:
 		return true
 	session.settlement_line = str(parsed.get("line", ""))
 	session.has_settlement = session.settlement_line != ""
+	session.settlement_mvp_slot = mvp_value
+	session.settlement_pad_total = pad_value
+	var stored_raw: Variant = parsed.get("rows", [])
+	if typeof(stored_raw) == TYPE_ARRAY:
+		session.settlement_rows = stored_raw
+	else:
+		session.settlement_rows = []
 	session.error = ""
 	return true
 

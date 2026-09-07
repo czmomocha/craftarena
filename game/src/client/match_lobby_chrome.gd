@@ -27,6 +27,7 @@ const SERVER_NAME: String = "ServerHost"
 const APPLY_SERVER_NAME: String = "ApplyServer"
 const FPS_NAME: String = "Fps"
 const STATUS_NAME: String = "Status"
+const OverlayGd := preload("res://src/shared/play_hud_overlay.gd")
 
 var window: Window = null
 var frame_rate: FrameRateMeterGd = null
@@ -35,11 +36,16 @@ var room_edit: LineEdit = null
 var course_edit: LineEdit = null
 var seats_edit: LineEdit = null
 var server_edit: LineEdit = null
+var play_hud: OverlayGd = OverlayGd.new()
+var _on_camera_zoom: Callable = Callable()
+var _on_camera_pan: Callable = Callable()
 
 
 func attach(parent: Node, handlers: Dictionary) -> Window:
 	if window != null:
 		return window
+	_on_camera_zoom = _handler(handlers, "camera_zoom")
+	_on_camera_pan = _handler(handlers, "camera_pan")
 	if not Engine.is_editor_hint():
 		var host_viewport: Viewport = parent.get_viewport()
 		if host_viewport != null:
@@ -67,10 +73,12 @@ func attach(parent: Node, handlers: Dictionary) -> Window:
 	window.add_child(root)
 	frame_rate = FrameRateMeterGd.new()
 	frame_rate.name = FPS_NAME
+	frame_rate.add_theme_font_size_override("font_size", PlaceholderSpec.HUD_STATUS_FONT_SIZE)
 	root.add_child(frame_rate)
 	status = Label.new()
 	status.name = STATUS_NAME
 	status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	status.add_theme_font_size_override("font_size", PlaceholderSpec.HUD_STATUS_FONT_SIZE)
 	root.add_child(status)
 	var row: HBoxContainer = HBoxContainer.new()
 	row.name = "MatchActions"
@@ -116,6 +124,7 @@ func attach(parent: Node, handlers: Dictionary) -> Window:
 		on_submit
 	)
 	root.add_child(seats_edit)
+	play_hud.attach(window, root)
 	return window
 
 
@@ -200,17 +209,60 @@ func fps_text() -> String:
 	return frame_rate.fps_text()
 
 
+func sync_play_hud(view: Dictionary) -> void:
+	play_hud.apply(view)
+
+
+func clock_text() -> String:
+	return play_hud.clock_text()
+
+
+func split_text() -> String:
+	return play_hud.split_text()
+
+
+func settlement_visible() -> bool:
+	return play_hud.settlement_visible()
+
+
 func handle_window_input(event: InputEvent) -> void:
 	if window == null:
 		return
 	var mouse: InputEventMouseButton = event as InputEventMouseButton
-	if mouse == null or not mouse.pressed:
+	if mouse != null:
+		_handle_mouse_button(mouse)
+		return
+	var motion: InputEventMouseMotion = event as InputEventMouseMotion
+	if motion != null:
+		_handle_mouse_motion(motion)
+
+
+func _handle_mouse_button(mouse: InputEventMouseButton) -> void:
+	if mouse.button_index == MOUSE_BUTTON_WHEEL_UP or mouse.button_index == MOUSE_BUTTON_WHEEL_DOWN:
+		if not mouse.pressed:
+			return
+		if click_hits_line_edit(mouse.position):
+			return
+		var steps: int = 1 if mouse.button_index == MOUSE_BUTTON_WHEEL_UP else -1
+		if _on_camera_zoom.is_valid():
+			_on_camera_zoom.call(steps)
+		return
+	if not mouse.pressed:
 		return
 	if mouse.button_index != MOUSE_BUTTON_LEFT and mouse.button_index != MOUSE_BUTTON_RIGHT:
 		return
 	if click_hits_line_edit(mouse.position):
 		return
 	release_focus()
+
+
+func _handle_mouse_motion(motion: InputEventMouseMotion) -> void:
+	if (motion.button_mask & MOUSE_BUTTON_MASK_MIDDLE) == 0:
+		return
+	if click_hits_line_edit(motion.position):
+		return
+	if _on_camera_pan.is_valid():
+		_on_camera_pan.call(motion.relative)
 
 
 func click_hits_line_edit(point: Vector2) -> bool:

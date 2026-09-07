@@ -139,8 +139,8 @@ func test_course_pads_and_finish_get_visuals_and_hide_placeholder() -> void:
 		return
 	assert_not_null(finish.get_node_or_null(MatchCourseMap.VISUAL_NAME))
 	assert_eq(finish.layers, 0)
-	assert_null(_course.portal_node(10).get_node_or_null(MatchCourseMap.VISUAL_NAME))
-	assert_eq(_course.portal_node(10).layers, 1)
+	assert_not_null(_course.portal_node(10).get_node_or_null(MatchCourseMap.VISUAL_NAME))
+	assert_eq(_course.portal_node(10).layers, 0)
 
 
 func test_course_progress_overlay_follows_pad_albedo() -> void:
@@ -167,6 +167,8 @@ func test_course_falls_back_when_occupancy_paths_are_empty() -> void:
 	_course.pad_scene_path = ""
 	_course.gate_scene_path = ""
 	_course.finish_scene_path = ""
+	_course.portal_scene_path = ""
+	_course.spawn_scene_path = ""
 	assert_true(_course.apply_path(COURSE_01))
 	assert_eq(_course.visual_count(), 0)
 	assert_null(_course.visual_node(1))

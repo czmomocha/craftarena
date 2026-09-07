@@ -70,10 +70,11 @@ static func aim_camera(map: MatchSnapshotMap) -> void:
 	var followed: MeshInstance3D = map.player_node(map.follow_slot)
 	if followed != null:
 		target = followed.position
+	target += map.camera_pan
 	var camera: Camera3D = map.camera_node()
 	if camera == null:
 		return
-	camera.position = target + MatchSnapshotMap.CAMERA_OFFSET
+	camera.position = target + PlaceholderSpec.camera_offset_for_distance(map.camera_distance)
 	look_at_target(camera, target)
 
 

@@ -8,6 +8,7 @@ const DEFAULT_ID: String = "course_01"
 const COURSE_01: String = "course_01"
 const COURSE_02: String = "course_02"
 const COURSE_03: String = "course_03"
+const COURSE_F_PLAYABLE: String = "course_f_playable"
 const DEFAULT_SEATS: int = 2
 const MIN_SEATS: int = 1
 const MAX_SEATS: int = 8
@@ -18,9 +19,13 @@ static func is_id(value: String) -> bool:
 	return value == COURSE_01 or value == COURSE_02 or value == COURSE_03
 
 
+static func is_document_id(value: String) -> bool:
+	return is_id(value) or value == COURSE_F_PLAYABLE
+
+
 static func normalize_id(raw: String) -> String:
 	var trimmed: String = raw.strip_edges()
-	if is_id(trimmed):
+	if is_document_id(trimmed):
 		return trimmed
 	return ""
 

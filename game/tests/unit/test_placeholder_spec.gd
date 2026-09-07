@@ -62,12 +62,22 @@ func test_camera_distance_and_fov_are_unchanged_placeholders() -> void:
 	)
 	assert_almost_eq(PlaceholderSpec.CAMERA_DISTANCE, CAMERA_DISTANCE_BEFORE_D4, ANGLE_EPSILON)
 	assert_eq(PlaceholderSpec.CAMERA_FOV_DEG, 75.0, "Godot Camera3D 默认 FOV，D4 未给")
+	var far: Vector3 = PlaceholderSpec.camera_offset_for_distance(PlaceholderSpec.CAMERA_DISTANCE_MAX)
+	var near: Vector3 = PlaceholderSpec.camera_offset_for_distance(PlaceholderSpec.CAMERA_DISTANCE_MIN)
+	var far_h: float = sqrt(far.x * far.x + far.z * far.z)
+	var near_h: float = sqrt(near.x * near.x + near.z * near.z)
+	assert_almost_eq(rad_to_deg(atan2(far.y, far_h)), 45.0, ANGLE_EPSILON)
+	assert_almost_eq(rad_to_deg(atan2(near.y, near_h)), 45.0, ANGLE_EPSILON)
+	assert_eq(PlaceholderSpec.clamp_camera_distance(0.0), PlaceholderSpec.CAMERA_DISTANCE_MIN)
+	assert_eq(PlaceholderSpec.clamp_camera_distance(99.0), PlaceholderSpec.CAMERA_DISTANCE_MAX)
 
 
 ## D4 的 UI 基准只有一份数，三处窗口读同一个常量。窗口实例上的 content_scale
 ## 由两个壳自己的测试验（test_match_lobby_shell / test_authoring_preview_shell）。
 func test_ui_base_size_is_the_d4_baseline() -> void:
 	assert_eq(PlaceholderSpec.UI_BASE_SIZE, Vector2i(1920, 1080))
+	assert_eq(MatchStandingMap.STANDING_LIFT, PlaceholderSpec.LABEL3D_STANDING_LIFT)
+	assert_eq(MatchSnapshotMap.ANIM_LIFT, PlaceholderSpec.LABEL3D_ANIM_LIFT)
 
 
 func test_editor_floor_fill_alpha_stays_see_through() -> void:

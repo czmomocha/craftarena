@@ -98,7 +98,28 @@ const CAMERA_OFFSET: Vector3 = Vector3(
 ## Godot `Camera3D.fov` 的默认值。**D4 没给 FOV**，所以维持默认；显式写在这里
 ## 是为了让下一个想改镜头的人必须改 spec，而不是在某个 map 里悄悄设一个数。
 const CAMERA_FOV_DEG: float = 75.0
+## 滚轮调距：默认距离仍是 CAMERA_DISTANCE（D4 未答，不许改默认）。只允许在
+## 斜 45° 上走近/拉远，不改方位角与俯角。
+const CAMERA_DISTANCE_MIN: float = 8.0
+const CAMERA_DISTANCE_MAX: float = 20.0
+const CAMERA_ZOOM_STEP: float = 1.25
+## 中键拖移的水平平移上限（米）。不是自由旋转。
+const CAMERA_PAN_LIMIT: float = 4.0
+const CAMERA_PAN_SENS: float = 0.012
 const LIGHT_ROTATION_DEG: Vector3 = Vector3(-50.0, -30.0, 0.0)
+
+
+static func clamp_camera_distance(distance: float) -> float:
+	if distance < CAMERA_DISTANCE_MIN:
+		return CAMERA_DISTANCE_MIN
+	if distance > CAMERA_DISTANCE_MAX:
+		return CAMERA_DISTANCE_MAX
+	return distance
+
+
+static func camera_offset_for_distance(distance: float) -> Vector3:
+	var d: float = clamp_camera_distance(distance)
+	return Vector3(d / 2.0, d * _SIN_45, d / 2.0)
 
 # UI（D4：分辨率基准 1920×1080）
 
@@ -111,6 +132,17 @@ const LIGHT_ROTATION_DEG: Vector3 = Vector3(-50.0, -30.0, 0.0)
 ## 鼠标命中的按钮错开 `1/factor` 倍，右侧还会被切出可视区。两条壳各有一条回归
 ## 守卫钉住这件事。子窗口继承主窗口那一层缩放，不需要也不能再叠一层。
 const UI_BASE_SIZE: Vector2i = Vector2i(1920, 1080)
+## 玩法 HUD / 世界标签字号。不是产品字体（入包仍推迟）；只把挡视线的字缩小。
+const HUD_CLOCK_FONT_SIZE: int = 28
+const HUD_SPLIT_FONT_SIZE: int = 16
+const HUD_STATUS_FONT_SIZE: int = 13
+const LABEL3D_FONT_SIZE: int = 28
+const LABEL3D_PIXEL_SIZE: float = 0.008
+const LABEL3D_OUTLINE_SIZE: int = 6
+const LABEL3D_STANDING_LIFT: float = 0.95
+const LABEL3D_ANIM_LIFT: float = 1.2
+const LABEL3D_ANIM_FONT_SIZE: int = 20
+const LABEL3D_ANIM_PIXEL_SIZE: float = 0.006
 
 # 色板（D4：TRAPRUSH 危险色 = 洋红；其余仍是占位色块，见 D8「不做描边」）
 
@@ -121,6 +153,9 @@ const REMOTE_ALBEDO: Color = Color(0.2, 0.45, 0.95)
 const FACE_ALBEDO: Color = Color(0.95, 0.92, 0.35)
 ## Preview 里的玩家标记。Preview 只有一个人，没有本席/远端之分，今天与远端同色。
 const PREVIEW_PLAYER_ALBEDO: Color = REMOTE_ALBEDO
+
+## 表现预警提前量（D-F7 桩）。0.25 s @ 60 Hz。不进权威、不进快照。
+const HAZARD_WARN_TICKS: int = 15
 
 ## 洋红周期机关（D4 危险色）、石色固定固体、橙色可破坏箱。
 const HAZARD_ALBEDO: Color = Color(0.82, 0.18, 0.48)
@@ -138,6 +173,11 @@ const PAD_CURRENT_ALBEDO: Color = Color(0.55, 1.0, 0.45)
 const FINISH_PENDING_ALBEDO: Color = Color(0.95, 0.82, 0.2)
 const FINISH_CURRENT_ALBEDO: Color = Color(1.0, 0.92, 0.35)
 const FINISH_ACCEPTED_ALBEDO: Color = Color(0.42, 0.32, 0.08)
+
+## 拾取物与出生点标记（F 线 FC）。不是产品道具表色。
+const PICKUP_BOMB_ALBEDO: Color = Color(0.92, 0.42, 0.18)
+const PICKUP_DASH_ALBEDO: Color = Color(0.25, 0.78, 0.92)
+const SPAWN_MARKER_ALBEDO: Color = Color(0.95, 0.92, 0.35)
 
 ## 传送连线：双向 / 单向 / 悬空端。
 const PORTAL_TWO_WAY_ALBEDO: Color = Color(0.2, 0.75, 0.95)

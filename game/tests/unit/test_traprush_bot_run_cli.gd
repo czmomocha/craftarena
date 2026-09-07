@@ -71,6 +71,10 @@ func test_default_courses_are_the_official_three() -> void:
 			OfficialTraprushCourses.COURSE_03,
 		])
 	)
+	assert_eq(
+		BotRunCli.resolve_courses(PackedStringArray(["--course=course_f_playable"])),
+		PackedStringArray([OfficialTraprushCourses.COURSE_F_PLAYABLE])
+	)
 
 
 func test_safe_route_on_course_02_exits_1_without_searching() -> void:

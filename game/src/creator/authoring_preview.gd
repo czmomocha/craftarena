@@ -32,6 +32,7 @@ var play_destructible_ids: Dictionary = {}
 var play_destructible_health: Dictionary = {}
 var play_hazard_ids: Dictionary = {}
 var play_hazard_cycle: Array[Dictionary] = []
+var play_mover_cycle: Array[Dictionary] = []
 var play_solid_ids: Dictionary = {}
 var play_pickup_ids: Dictionary = {}
 var play_pickup_kinds: Dictionary = {}
@@ -120,6 +121,11 @@ func try_advance_play() -> bool:
 	_resolve_play_hazards()
 	_reset_play_if_out_of_range()
 	play_world.tick()
+	var blocked: PackedInt32Array = TraprushMoverCycle.apply(
+		play_world, play_mover_cycle, PackedInt32Array([player_id]), play_support_dy
+	)
+	if blocked.size() > 0:
+		_reset_play_to_pad()
 	HazardCycle.apply(play_world, play_hazard_cycle)
 	_resolve_play_hazards()
 	_reset_play_if_out_of_range()
@@ -304,6 +310,10 @@ func _apply_decoded(decoded: EditPayload) -> bool:
 
 func _reset_play_if_out_of_range() -> bool:
 	return scan.reset_play_if_out_of_range(self)
+
+
+func _reset_play_to_pad() -> bool:
+	return scan.reset_play_to_pad(self)
 
 
 func _resolve_play_hazards() -> bool:

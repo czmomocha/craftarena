@@ -1,0 +1,11 @@
+[gd_scene format=3]
+
+[sub_resource type="SphereMesh" id="SphereMesh_bomb"]
+radius = 0.28
+height = 0.56
+radial_segments = 12
+rings = 8
+
+[node name="PickupBomb" type="MeshInstance3D"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.28, 0)
+mesh = SubResource("SphereMesh_bomb")

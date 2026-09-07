@@ -143,6 +143,10 @@ func try_place_pickup(
 	return PlaceGd.try_place_pickup(self, entity_id, cell_x, cell_y, cell_z, kind)
 
 
+func try_place_mover(entity_id: int, cell_x: int, cell_y: int, cell_z: int) -> bool:
+	return PlaceGd.try_place_mover(self, entity_id, cell_x, cell_y, cell_z)
+
+
 func try_move_entity(entity_id: int, cell_x: int, cell_y: int, cell_z: int) -> bool:
 	return PlaceGd.try_move_entity(self, entity_id, cell_x, cell_y, cell_z)
 
@@ -335,3 +339,5 @@ func _refresh_status() -> void:
 		return
 	chrome.set_status_text(line)
 	chrome.sync_guides()
+	if tools != null:
+		tools.sync_params()

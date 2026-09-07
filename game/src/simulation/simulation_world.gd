@@ -86,6 +86,40 @@ func set_static_box_solid(box_id: int, solid: bool) -> bool:
 	return true
 
 
+func static_box_pose(box_id: int) -> Dictionary:
+	if not _has_box(box_id):
+		return {}
+	var box: StaticAabb = _boxes[box_id - 1]
+	return {
+		"x": box.x,
+		"y": box.y,
+		"z": box.z,
+		"hx": box.half_x,
+		"hy": box.half_y,
+		"hz": box.half_z,
+	}
+
+
+func try_set_static_box_pose(box_id: int, x: int, y: int, z: int) -> bool:
+	if not _has_box(box_id):
+		return false
+	var box: StaticAabb = _boxes[box_id - 1]
+	if box.x == x and box.y == y and box.z == z:
+		return true
+	var old: StaticAabb = StaticAabb.new()
+	old.x = box.x
+	old.y = box.y
+	old.z = box.z
+	old.half_x = box.half_x
+	old.half_y = box.half_y
+	old.half_z = box.half_z
+	box.x = x
+	box.y = y
+	box.z = z
+	index.relocate(box_id, old, box)
+	return true
+
+
 func is_static_box_solid(box_id: int) -> bool:
 	if not _has_box(box_id):
 		return false
