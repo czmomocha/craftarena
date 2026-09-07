@@ -528,7 +528,7 @@ cell = Fixed.SCALE 与由其推导的一切 cell/2 占用半长
 在任务单（[CD-52 §3](../../Confirmed-docs/50-engineering/52-ai-workflow.md)）中增加两行：
 
 ```text
-里程碑归属：创作者可测 | F 线 | M3 | M-Export | M-Art | M4a | M4b | M5 | M6 | M7
+里程碑归属：创作者可测 | F 线 | 可玩性深化 | M3 | M-Export | M-Art | M4a | M4b | M5 | M6 | M7
 是否绕过 placeholder_spec 散落几何/色板常量：否 | 是（必须说明）
 ```
 
