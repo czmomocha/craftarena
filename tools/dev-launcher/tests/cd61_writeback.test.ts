@@ -36,7 +36,7 @@ describe("C5 CD-61 writeback after human approval", () => {
 
 	it("rewrites the M3 item gate and moves export off M5", () => {
 		const live = read("Confirmed-docs/60-plan/61-milestones.md");
-		const m3 = headingSection(live, "### M3：", "### M-Export");
+		const m3 = headingSection(live, "### M3：", "### F 线");
 		assert.match(m3, /爆破球/);
 		assert.match(m3, /冲刺/);
 		assert.match(m3, /不是 M3 退出条件/);
