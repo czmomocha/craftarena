@@ -31,7 +31,9 @@ describe("course-correction freeze lift 2026-09-03", () => {
 
 		const live = read("Confirmed-docs/60-plan/61-milestones.md");
 		assert.match(live, /纠偏冻结令已解除|纠偏闸门[\s\S]{0,80}已解除/);
-		assert.match(live, /M-Export 收尾/);
+		assert.match(live, /Web 游玩分发/);
+		assert.match(live, /一期收尾/);
+		assert.match(live, /Android \/ iOS 烟测（一期收尾）/);
 	});
 
 	it("closes E8 font packaging and E10 without a weekly cap", () => {

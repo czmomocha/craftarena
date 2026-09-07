@@ -14,7 +14,7 @@
 | 项 | 当前口径 |
 |---|---|
 | 账号接线 | 未做。入场票据不绑账号 |
-| 离线 | 永不回写；恢复在线也不补传 |
+| 离线 | 永不回写；恢复在线也不补传。**测试期 Web 允许 Solo** |
 | 单局排名 | 名次 + MVP；无 MMR / 段位 |
 | 补票 | 已消费票补发同一席位；Cancel 不补票 |
 
@@ -54,13 +54,15 @@
 - 不回写在线成绩、奖励、战绩、排名和解锁；
 - UI 必须持续显示"离线试玩，成绩不上传"；
 - 恢复在线后不得补传离线结算；
-- 离线试玩只保证 PC、Android 和 iOS 安装版；Web 必须联网，但断网时需保住本地草稿缓存；
+- 离线试玩保证 PC 安装版与**测试期 Web**；Android / iOS 安装版仍属一期收尾导出后的范围。断网时需保住本地草稿缓存；
+- 测试期 Web Solo 与桌面 Solo 同一套本地内嵌权威，仍不回写；联机则用大厅填写的主机 + 端口打自备 VPS（明文口径见 [CD-11 §9](11-scope-and-platforms.md#9-公开-web-与传输安全d2--d11)）；
+- 公开运营前是否收回「Web 必须联网、禁止 Solo」，到一期收尾重审；
 - TRAPRUSH 可记录本机最佳命令轨迹并播放无碰撞幽灵，不下载他人幽灵；
 - BASTION 使用模板机器人按预算布障并以规则化策略建塔。
 
 实现落点（2026-09-02）：离线横幅走键 `craft_arena.ui.offline_banner`。`zh_CN` 仍是「离线试玩，成绩不上传」（本节原文）；`en` 为 `Offline play, scores are not uploaded`。大厅 HUD 写解析后的句子，不再把中文写进 `MatchOfflineSession`。字体入包推迟到一期收尾。落点见 [CD-11 §8](11-scope-and-platforms.md#8-产品表现与设备基线) 与 `game/src/shared/ui_copy.gd`。
 
-实现落点（2026-08-25）：机关狂奔大厅 `Solo play` 启动 `MatchOfflineSession`：把所选官方赛道（空则 `course_01`）编进与线上相同的 `TraprushMatchSession`，命令帧 tick 为 0，快照只跟从本地最新帧。HUD 在离线进行中持续写出「离线试玩，成绩不上传」。`allows_settlement` / `allows_online_writes` 恒为 false，不发匹配 HTTP 或网关 WS。`OS.has_feature("web")` 或注入 `web_platform` 时拒绝开玩。道具占位桩与对局进程/Preview 对齐（伤害 1，reach dz = `Fixed.SCALE`，dx/dy = 0）；官方 `course_01` 出生点 UseItem 打碎 +Z 箱。本机最佳轨迹幽灵、已缓存签名 UGC / 本地草稿试玩、个人试玩记录落盘仍待。落点见 [CD-12 §1](12-product-structure.md#1-入口结构) 与 [CD-42 §3.4](../40-technical/42-contracts-and-rulevm.md#34-实现落点)。
+实现落点（2026-08-25）：机关狂奔大厅 `Solo play` 启动 `MatchOfflineSession`：把所选官方赛道（空则 `course_01`）编进与线上相同的 `TraprushMatchSession`，命令帧 tick 为 0，快照只跟从本地最新帧。HUD 在离线进行中持续写出「离线试玩，成绩不上传」。`allows_settlement` / `allows_online_writes` 恒为 false，不发匹配 HTTP 或网关 WS。道具占位桩与对局进程/Preview 对齐（伤害 1，reach dz = `Fixed.SCALE`，dx/dy = 0）；官方 `course_01` 出生点 UseItem 打碎 +Z 箱。本机最佳轨迹幽灵、已缓存签名 UGC / 本地草稿试玩、个人试玩记录落盘仍待。落点见 [CD-12 §1](12-product-structure.md#1-入口结构) 与 [CD-42 §3.4](../40-technical/42-contracts-and-rulevm.md#34-实现落点)。**测试期允许 Web Solo**（2026-09-07）；接线属 Web 游玩分发第一刀。该章合入前，代码与 GUT 仍可能对 `web` / `web_platform` 断言 `web_locked`。
 
 ## 4. 单局排名
 

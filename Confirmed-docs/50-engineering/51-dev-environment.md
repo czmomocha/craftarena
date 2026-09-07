@@ -15,7 +15,7 @@
 |---|---|
 | 引擎 | Godot **4.7.2-stable** Standard；与导出模板同一精确版本 |
 | 导出 | 三套预设已在 `game/export_presets.cfg`（Windows desktop、Linux Headless、Web） |
-| Android / iOS | 仍占位 |
+| Android / iOS | 仍占位；开工时机见 [CD-61](../60-plan/61-milestones.md)（一期收尾） |
 | Godot MCP | 不入库；不进 CI / 玩家包 / MatchServer |
 
 ## 1. 基础工具
@@ -122,7 +122,7 @@ export GODOT_AI_DISABLE_TELEMETRY=true
 - 资源导入：统一 GLB，详见 §5.1；
 - 自动加载：只放稳定的基础服务，不把大量玩法状态塞进 Autoload；
 - 日志：开发构建输出结构化日志；
-- 导出：三套预设已写入 `game/export_presets.cfg`（Windows desktop、Linux Headless、Web）。Android / iOS 仍占位。
+- 导出：三套预设已写入 `game/export_presets.cfg`（Windows desktop、Linux Headless、Web）。Android / iOS 仍占位；开工时机见 [CD-61](../60-plan/61-milestones.md)（一期收尾）。
 
 ### 5.1 资产入库规范（当前生效值）
 

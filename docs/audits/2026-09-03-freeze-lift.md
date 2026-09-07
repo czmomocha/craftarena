@@ -24,9 +24,9 @@
 
 - D9 章粒度 5× + 深/常/轻
 - 几何 / 色板从 `placeholder_spec.gd` 注入
-- CD-61 顺序：M-Export 收尾 → M-Art 剩余 → M4a → M4b → M5 → M6 / M7
+- CD-61 顺序：以 [CD-61 当前生效值](../../Confirmed-docs/60-plan/61-milestones.md) 为准（本解除日之后的覆盖见 [CD-91 D.10](../../Confirmed-docs/90-reference/91-decision-log.md) `cd61_order = web_first_mobile_phase1_end`）
 - 不发明 M8；不改已锁网络数字
 
 ## 4. 下一动
 
-Agent 按 CD-61 开工 **M-Export 收尾**。不得跳到 Rule VM 或 BASTION。字体入包不排进下一刀。
+Agent 按 [CD-61](../../Confirmed-docs/60-plan/61-milestones.md) 开工。不得跳到 Rule VM 或 BASTION，直到可玩性深化收口。字体入包与 Android / iOS 烟测排到一期收尾。
