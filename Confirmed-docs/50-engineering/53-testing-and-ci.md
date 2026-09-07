@@ -162,7 +162,7 @@ AI 生成代码必须比普通手写代码有**更强的自动化证据**，因�
 - 对局大厅传送连线可视化：官方 course_01 画出 2 条 two_way 条且无方向点；course_02 布局不同且不留上一张连线幽灵；course_03 画出 3 条且 one_way 10 有方向点；空 bundle 清空；缺课 / 空路径 / 坏 dest 袋保留上一份；大厅打开即映射默认 course_01 连线，快照更新不改连线；MatchCourseMap / MatchCrateMap / MatchSnapshotMap 仍无连线节点；不插值、不预测、不结算；
 - 对局大厅检查点顺序可视化：官方 course_01 画出 3 个 order 标与 2 条顺序条；course_02 布局不同且不留上一张顺序幽灵；course_03 画出 4 标 / 3 条；空 bundle 清空；缺课 / 空路径 / 坏 order 袋保留上一份；重复 order 只打标不进顺序链；大厅打开即映射默认 course_01 顺序，快照更新不改顺序 gizmos；MatchCourseMap / MatchCrateMap / MatchPortalLinkMap / MatchSnapshotMap 仍无顺序节点；不插值、不预测、不结算；
 - 对局大厅进度与单局名次：已冲线按 `finish_tick` 再按槽位；未冲线排在其后按 `accepted_count` 再按槽位；无人冲线无 MVP；缺字段 / 负进度 / 坏快照拒绝并保留上一份；空名单清空；后一快照标签直接跳到新位姿；人数减少不留幽灵标；官方 course_01 未冲线显示 `n/3`；2 人会话一人冲线后 slot 0 为 `#1` 且为 MVP；大厅 HUD 写出 `standings=` / `mvp=`；MatchCourseMap / MatchCrateMap / MatchPortalLinkMap / MatchCheckpointOrderMap / MatchSnapshotMap 仍无名次节点；不插值、不预测、不结算、不锁路径距离；
-- 机关狂奔离线单人试玩：官方 course_01 开玩即 1 人快照且 HUD 持续「离线试玩，成绩不上传」；Web / 缺课拒绝；二次开玩须先停；Move 改本地位姿且 `try_advance` 推进 tick；Solo 仅一枚胶囊故 Shove 无目标不编码；Interact 不编码；course_01 五步冲线后本地 `finish_tick=0` 且 `allows_online_writes=false`；大厅 Solo 开玩不发 HTTP，在线进行中不能开离线，离线进行中不能开匹配，Cancel 停离线并清玩家盒；Solo 复用官方赛道选择器；不插值、不预测、不结算、不锁幽灵；
+- 机关狂奔离线单人试玩：官方 course_01 开玩即 1 人快照且 HUD 持续「离线试玩，成绩不上传」；缺课拒绝；**测试期允许 Web Solo**（接线属 Web 游玩分发第一刀；该章合入前测试仍可能断言 `web_locked`）；二次开玩须先停；Move 改本地位姿且 `try_advance` 推进 tick；Solo 仅一枚胶囊故 Shove 无目标不编码；Interact 不编码；course_01 五步冲线后本地 `finish_tick=0` 且 `allows_online_writes=false`；大厅 Solo 开玩不发 HTTP，在线进行中不能开离线，离线进行中不能开匹配，Cancel 停离线并清玩家盒；Solo 复用官方赛道选择器；不插值、不预测、不结算、不锁幽灵；
 - 对局命令门禁与双人 Headless 冲线：同槽同 tick 第二条命令拒绝且位姿只 +1 格；断开丢弃排队，重入后 commit 不继承旧 Move；快照帧不能当命令；两槽各一条 FIFO；官方 course_01 两槽经 MatchRealtime 各 5 步后 `finish_tick=4` 且 MVP 为 slot 0；同磁带同快照字节与状态哈希；冲线后 `allows_settlement` 为 true；`allows_online_writes` 为 false；不插值、不预测、不锁墙钟速率；
 - 机关狂奔单局结算写库：未全员冲线拒绝生成；course_01 两槽冲线后 payload 含 `finish_tick=4` / `pad_total=3` / `mvp_slot=0`；同磁带同哈希；心跳未完成无 settlement、完成后带上；离线冲线后 `allows_settlement` 仍为 false；控制面 POST 一次 201、第二次 409；注销会话后 GET 仍在；未知场 / `mmr` 多余字段 / 未完成 `finishTick` 拒绝；MatchHost 活场心跳或停止前从心跳 POST，无记录则不写，写失败不注销；不生成 MMR、不锁限时未全员结算；
 - 断线重连补票：入场票绑定席位，校验返回 `seat`；网关上游 URL 带 `slot=`；`occupy_slot` 占用指定席，非法/已占拒绝；断开丢排队、同槽再占恢复位姿；已消费票补发同席位新票且不占额外席；未消费/已作废/错场/未知票/多余字段拒绝；注销后不能补票；客户端 READY 补票换票，大厅 `IN_MATCH` 关闭后自动补票并跟从新快照；大厅 Cancel 本地离开不补票；不锁账号绑定、插值/预测、离开对局 HTTP；
@@ -335,7 +335,7 @@ AI 生成代码必须比普通手写代码有**更强的自动化证据**，因�
 | 门禁项 | 状态 | 实现方式 |
 |---|---|---|
 | 依赖与许可证变化检查 | 未实现 | 无自动化 diff。引入依赖必须人类批准；许可证不进 CI |
-| Windows/Android 导出烟测 | 人工已跑（E1，不在 CI） | C1 有 Windows / Linux Headless / Web 导出预设与[包内核查清单](../../docs/runbooks/desktop-export-check.md)。2026-09-02 Windows `--package-check` `ok=true`。不做 Android 导出（纠偏方案 C1 不做移动端）；不把导出放进 CI（宪法第二十四条） |
+| Windows/Android 导出烟测 | 人工已跑（E1，不在 CI） | C1 有 Windows / Linux Headless / Web 导出预设与[包内核查清单](../../docs/runbooks/desktop-export-check.md)。2026-09-02 Windows `--package-check` `ok=true`。Android 导出按 [CD-61](../60-plan/61-milestones.md) 排到一期收尾；不把导出放进 CI（宪法第二十四条） |
 | 内容发布和回滚演练 | 未实现 | M4 冻结；无签名发布管线、无 `latest` 指针演练 |
 
 ### 4.4 发布候选
