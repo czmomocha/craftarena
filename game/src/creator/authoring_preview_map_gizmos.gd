@@ -181,10 +181,10 @@ func _spawn_checkpoint_mark(
 	label.text = str(order)
 	label.set_meta(AuthoringPreviewMap.ENTITY_META, entity_id)
 	label.set_meta(AuthoringPreviewMap.ORDER_META, order)
-	label.font_size = 64
-	label.pixel_size = 0.02
+	label.font_size = PlaceholderSpec.LABEL3D_FONT_SIZE
+	label.pixel_size = PlaceholderSpec.LABEL3D_PIXEL_SIZE
 	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
-	label.outline_size = 12
+	label.outline_size = PlaceholderSpec.LABEL3D_OUTLINE_SIZE
 	if duplicated:
 		label.modulate = PlaceholderSpec.CHECKPOINT_DUP_ALBEDO
 	else:
@@ -197,10 +197,10 @@ func _spawn_finish_mark(map: AuthoringPreviewMap, entity_id: int, from: Vector3)
 	var label: Label3D = Label3D.new()
 	label.name = ConvertGd.finish_name(entity_id)
 	label.text = "finish"
-	label.font_size = 48
-	label.pixel_size = 0.02
+	label.font_size = PlaceholderSpec.LABEL3D_FONT_SIZE
+	label.pixel_size = PlaceholderSpec.LABEL3D_PIXEL_SIZE
 	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
-	label.outline_size = 12
+	label.outline_size = PlaceholderSpec.LABEL3D_OUTLINE_SIZE
 	label.modulate = AuthoringPreviewMap.FINISH_ALBEDO
 	label.position = from + Vector3(0.0, FINISH_LIFT, 0.0)
 	map.add_child(label)

@@ -57,10 +57,10 @@ func set_anim_state(map: AuthoringPreviewMap, state: String) -> bool:
 	if label == null:
 		label = Label3D.new()
 		label.name = AuthoringPreviewMap.ANIM_NAME
-		label.font_size = 48
-		label.pixel_size = 0.015
+		label.font_size = PlaceholderSpec.LABEL3D_ANIM_FONT_SIZE
+		label.pixel_size = PlaceholderSpec.LABEL3D_ANIM_PIXEL_SIZE
 		label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
-		label.outline_size = 8
+		label.outline_size = PlaceholderSpec.LABEL3D_OUTLINE_SIZE
 		label.position = Vector3(0.0, AuthoringPreviewMap.ANIM_LIFT, 0.0)
 		label.modulate = PlaceholderSpec.STANDING_RUNNING_ALBEDO
 		player.add_child(label)

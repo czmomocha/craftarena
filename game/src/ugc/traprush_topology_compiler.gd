@@ -79,5 +79,6 @@ static func compile(world: AuthoringWorld) -> SimulationBundle:
 		SimulationBundle.FIELD_HAZARDS: occupancy["hazards"],
 		SimulationBundle.FIELD_SOLIDS: occupancy["solids"],
 		SimulationBundle.FIELD_PICKUPS: occupancy["pickups"],
+		SimulationBundle.FIELD_MOVERS: occupancy["movers"],
 	}
 	return SimulationBundle.from_dictionary(body)

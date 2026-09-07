@@ -18,9 +18,11 @@ const JUMP_NAME: String = "Jump"
 const ADVANCE_TICK_NAME: String = "AdvanceTick"
 const STATUS_NAME: String = "Status"
 const OVERLAY_NAME: String = "Overlay"
+const PlayHudGd := preload("res://src/shared/play_hud_overlay.gd")
 
 var window: Window = null
 var status: Label = null
+var play_hud: PlayHudGd = PlayHudGd.new()
 
 
 func is_alive() -> bool:
@@ -36,6 +38,7 @@ func attach(parent: Node, handlers: Dictionary) -> Window:
 		return window
 	window = null
 	status = null
+	play_hud = PlayHudGd.new()
 	var host_viewport: Viewport = parent.get_viewport()
 	if host_viewport != null:
 		host_viewport.gui_embed_subwindows = true
@@ -67,6 +70,7 @@ func attach(parent: Node, handlers: Dictionary) -> Window:
 	_add_button(action_row, SPRINT_NAME, UiCopy.SPRINT, _handler(handlers, "sprint"))
 	_add_button(action_row, JUMP_NAME, UiCopy.JUMP, _handler(handlers, "jump"))
 	_add_button(action_row, ADVANCE_TICK_NAME, UiCopy.ADVANCE_TICK, _handler(handlers, "advance"))
+	play_hud.attach(window, overlay)
 	LayoutGd.apply_preview(window, parent)
 	return window
 
@@ -95,6 +99,18 @@ func status_text() -> String:
 	if status == null or not is_instance_valid(status):
 		return ""
 	return status.text
+
+
+func sync_play_hud(view: Dictionary) -> void:
+	play_hud.apply(view)
+
+
+func clock_text() -> String:
+	return play_hud.clock_text()
+
+
+func settlement_visible() -> bool:
+	return play_hud.settlement_visible()
 
 
 func release_focus() -> void:

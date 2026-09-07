@@ -71,11 +71,24 @@ func try_reconnect() -> bool:
 
 func try_solo() -> bool:
 	host.chrome.release_focus()
-	if host.offline == null or host.online_busy():
+	if host.offline == null:
+		return false
+	if host.online_busy():
+		host.offline.last_error = "online_busy"
+		host.refresh_status()
 		return false
 	var id: String = host.selected_course_id()
 	if id == "":
+		host.offline.last_error = "unknown_course"
+		host.refresh_status()
 		return false
+	if host.join != null and (
+		host.join.state == MatchJoinSessionGd.STATE_IDLE
+		or host.join.state == MatchJoinSessionGd.STATE_FAILED
+	):
+		host.join.error = ""
+		if host.join.state == MatchJoinSessionGd.STATE_FAILED:
+			host.join.state = MatchJoinSessionGd.STATE_IDLE
 	host.offline.apply_play_stubs()
 	host.stage.reset_interp()
 	host.sampler.reset_motion()
@@ -241,7 +254,16 @@ func _matchmake(action: Callable) -> bool:
 	host.chrome.release_focus()
 	if host.join == null or host.offline_playing():
 		return false
-	if host.selected_course_id() == "" or host.selected_seats() == 0:
+	if host.selected_seats() == 0:
+		return false
+	var id: String = host.selected_course_id()
+	if id == "":
+		host.join.fail_reason("unknown_course")
+		host.refresh_status()
+		return false
+	if not OfficialTraprushCoursesGd.is_id(id):
+		host.join.fail_reason("http_official_only")
+		host.refresh_status()
 		return false
 	if not action.call():
 		return false

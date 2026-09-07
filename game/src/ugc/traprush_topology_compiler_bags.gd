@@ -16,6 +16,7 @@ static func collect_occupancy(
 	var hazard_list: Array[Dictionary] = []
 	var solid_list: Array[Dictionary] = []
 	var pickup_list: Array[Dictionary] = []
+	var mover_list: Array[Dictionary] = []
 	var ids: Array[int] = world.entity_ids()
 	for entity_id: int in ids:
 		var record: SharedComponentRecord = world.get_record(entity_id)
@@ -33,7 +34,7 @@ static func collect_occupancy(
 				return {"ok": false}
 			continue
 		if FieldsGd.has_solid_tag(record):
-			if not _append_solid(entity_id, record, next_asset, used_assets, solid_list):
+			if not _append_solid(entity_id, record, next_asset, used_assets, solid_list, mover_list):
 				return {"ok": false}
 			continue
 		if record.components.has(SharedComponentNames.DESTRUCTIBLE):
@@ -56,6 +57,7 @@ static func collect_occupancy(
 		"hazards": hazard_list,
 		"solids": solid_list,
 		"pickups": pickup_list,
+		"movers": mover_list,
 	}
 
 
@@ -174,7 +176,8 @@ static func _append_solid(
 	record: SharedComponentRecord,
 	next_asset: Dictionary,
 	used_assets: Dictionary[int, int],
-	solid_list: Array[Dictionary]
+	solid_list: Array[Dictionary],
+	mover_list: Array[Dictionary]
 ) -> bool:
 	if record.components.has(SharedComponentNames.CHECKPOINT):
 		return false
@@ -193,6 +196,11 @@ static func _append_solid(
 		"y": solid_pose["y"],
 		"z": solid_pose["z"],
 	}, next_asset, used_assets))
+	if record.components.has(SharedComponentNames.MOVER):
+		var mover_bag: Dictionary = _parse_mover(entity_id, record)
+		if mover_bag.is_empty():
+			return false
+		mover_list.append(mover_bag)
 	return true
 
 
@@ -276,3 +284,35 @@ static func _append_pad(
 		"respawn_dz": checkpoint["respawn_dz"],
 	}, next_asset, used_assets))
 	return true
+
+
+static func _parse_mover(entity_id: int, record: SharedComponentRecord) -> Dictionary:
+	var raw: Variant = record.components[SharedComponentNames.MOVER]
+	if typeof(raw) != TYPE_DICTIONARY:
+		return {}
+	var bag: Dictionary = raw
+	var speed_raw: Variant = bag.get("speed", null)
+	var speed: int = 0
+	if typeof(speed_raw) == TYPE_INT:
+		speed = speed_raw
+	elif typeof(speed_raw) == TYPE_FLOAT:
+		var speed_float: float = speed_raw
+		if speed_float != floor(speed_float):
+			return {}
+		speed = int(speed_float)
+	else:
+		return {}
+	var loop_raw: Variant = bag.get("loop", null)
+	if typeof(loop_raw) != TYPE_BOOL:
+		return {}
+	var loop_on: bool = loop_raw
+	var path_raw: Variant = bag.get("path", null)
+	if typeof(path_raw) != TYPE_ARRAY:
+		return {}
+	var wire: Dictionary = {
+		"entity_id": entity_id,
+		"speed": speed,
+		"loop": loop_on,
+		"path": path_raw,
+	}
+	return SimulationBundleBags.parse_mover(wire)

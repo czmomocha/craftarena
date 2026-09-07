@@ -100,7 +100,7 @@ static func parse_json_object(text: String) -> Dictionary:
 static func match_body(course_id: String, seat_count: int) -> String:
 	var id: String = OfficialTraprushCoursesGd.normalize_id(course_id)
 	var seats_value: int = OfficialTraprushCoursesGd.normalize_seats(seat_count)
-	if id == "" or seats_value == 0:
+	if id == "" or not OfficialTraprushCoursesGd.is_id(id) or seats_value == 0:
 		return ""
 	return JSON.stringify({"course": id, "seats": seats_value})
 
@@ -141,6 +141,7 @@ static func parse_settlement_rows(rows: Array, mvp_slot: int) -> Dictionary:
 	var places: Dictionary = {}
 	var winner_slot: int = -1
 	var by_place: Dictionary = {}
+	var collected: Array[Dictionary] = []
 	for item: Variant in rows:
 		if typeof(item) != TYPE_DICTIONARY:
 			return {"ok": false}
@@ -170,6 +171,12 @@ static func parse_settlement_rows(rows: Array, mvp_slot: int) -> Dictionary:
 		slots[slot_value] = true
 		places[place_value] = true
 		by_place[place_value] = slot_value
+		collected.append({
+			"slot": slot_value,
+			"place": place_value,
+			"finish_tick": finish_value,
+			"accepted_count": accepted_value,
+		})
 		if place_value == 1:
 			winner_slot = slot_value
 	if winner_slot < 0 or winner_slot != mvp_slot:
@@ -180,4 +187,8 @@ static func parse_settlement_rows(rows: Array, mvp_slot: int) -> Dictionary:
 			return {"ok": false}
 		var slot_at_place: int = by_place.get(place_index, -1)
 		parts.append("#%ds%d" % [place_index, slot_at_place])
-	return {"ok": true, "line": "%s mvp=%d" % [",".join(parts), mvp_slot]}
+	return {
+		"ok": true,
+		"line": "%s mvp=%d" % [",".join(parts), mvp_slot],
+		"rows": collected,
+	}

@@ -2,7 +2,7 @@
 	"$schema": "https://json-schema.org/draft/2020-12/schema",
 	"$id": "https://craftarena.local/contracts/simulation_bundle.schema.json",
 	"title": "SimulationBundle",
-	"description": "v2 TRAPRUSH topology compile of AuthoringWorld. Field list owner: CD-42 §3.4. Pads, two_way/one_way portals, at most one finish occupancy bag, destructible occupancy bags, hazard occupancy bags (cooldown_ticks is the existing component field used as a half-period), always-solid occupancy bags (zone.tags includes solid), and pickup occupancy bags (inventory.item_state bomb/dash). Dangling portals are omitted. v2 adds the assets bag and gives every occupancy bag an asset_id + gameplay_version reference into it (ADR-0006): the authoritative collision travels with the published content instead of being hardcoded as cell/2 in the loader. Assets are strictly ascending by asset_id and every entry must be referenced. Visual meshes and navigation are never in the bundle; footprint is derived from the collision AABB. v1 bodies are still decoded by game/src/ugc/simulation_bundle.gd and migrated to the built-in lattice-cell asset, but v1 is no longer a valid wire form. Not a signed binary, not a Rule VM graph.",
+	"description": "v2 TRAPRUSH topology compile of AuthoringWorld. Field list owner: CD-42 §3.4. Pads, two_way/one_way portals, at most one finish occupancy bag, destructible occupancy bags, hazard occupancy bags (cooldown_ticks is the existing component field used as a half-period), always-solid occupancy bags (zone.tags includes solid), pickup occupancy bags (inventory.item_state bomb/dash), and optional movers (not required: compiled v2 without the key still decodes; pose is f(tick, path, speed, loop) and is not a snapshot field). Dangling portals are omitted. v2 adds the assets bag and gives every occupancy bag an asset_id + gameplay_version reference into it (ADR-0006): the authoritative collision travels with the published content instead of being hardcoded as cell/2 in the loader. Assets are strictly ascending by asset_id and every entry must be referenced. Visual meshes and navigation are never in the bundle; footprint is derived from the collision AABB. v1 bodies are still decoded by game/src/ugc/simulation_bundle.gd and migrated to the built-in lattice-cell asset, but v1 is no longer a valid wire form. Not a signed binary, not a Rule VM graph.",
 	"type": "object",
 	"additionalProperties": false,
 	"required": [
@@ -54,6 +54,10 @@
 		"pickups": {
 			"type": "array",
 			"items": { "$ref": "#/$defs/pickup" }
+		},
+		"movers": {
+			"type": "array",
+			"items": { "$ref": "#/$defs/mover" }
 		}
 	},
 	"$defs": {
@@ -252,6 +256,30 @@
 				"dest_yaw_bam": { "type": "integer" },
 				"asset_id": { "type": "integer", "minimum": 1 },
 				"gameplay_version": { "type": "integer", "minimum": 1 }
+			}
+		},
+		"mover": {
+			"type": "object",
+			"additionalProperties": false,
+			"required": ["entity_id", "speed", "loop", "path"],
+			"properties": {
+				"entity_id": { "type": "integer", "minimum": 1 },
+				"speed": { "type": "integer" },
+				"loop": { "type": "boolean" },
+				"path": {
+					"type": "array",
+					"minItems": 2,
+					"items": {
+						"type": "object",
+						"additionalProperties": false,
+						"required": ["x", "y", "z"],
+						"properties": {
+							"x": { "type": "integer" },
+							"y": { "type": "integer" },
+							"z": { "type": "integer" }
+						}
+					}
+				}
 			}
 		}
 	}

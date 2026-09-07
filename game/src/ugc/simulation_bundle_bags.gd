@@ -206,6 +206,70 @@ static func parse_pickup(body: Dictionary, carries_assets: bool) -> Dictionary:
 	return parsed
 
 
+static func parse_mover(body: Dictionary) -> Dictionary:
+	if body.size() != 4:
+		return {}
+	if not int_at_least(body, "entity_id", 1):
+		return {}
+	if not is_int_field(body, "speed"):
+		return {}
+	if not body.has("loop") or typeof(body["loop"]) != TYPE_BOOL:
+		return {}
+	if not body.has("path") or typeof(body["path"]) != TYPE_ARRAY:
+		return {}
+	var path_raw: Array = body["path"]
+	if path_raw.size() < 2:
+		return {}
+	var path: Array = []
+	for item: Variant in path_raw:
+		if typeof(item) != TYPE_DICTIONARY:
+			return {}
+		var point: Dictionary = item
+		if not is_int_field(point, "x") or not is_int_field(point, "y") or not is_int_field(point, "z"):
+			return {}
+		if point.size() != 3:
+			return {}
+		path.append({"x": point["x"], "y": point["y"], "z": point["z"]})
+	if not path_is_axial(path):
+		return {}
+	return {
+		"entity_id": body["entity_id"],
+		"speed": body["speed"],
+		"loop": body["loop"],
+		"path": path,
+	}
+
+
+static func path_is_axial(path: Array) -> bool:
+	var index: int = 1
+	while index < path.size():
+		var prev: Dictionary = path[index - 1]
+		var cur: Dictionary = path[index]
+		var diffs: int = 0
+		if not is_int_field(prev, "x") or not is_int_field(cur, "x"):
+			return false
+		if not is_int_field(prev, "y") or not is_int_field(cur, "y"):
+			return false
+		if not is_int_field(prev, "z") or not is_int_field(cur, "z"):
+			return false
+		var px: int = _int_at(prev, "x")
+		var py: int = _int_at(prev, "y")
+		var pz: int = _int_at(prev, "z")
+		var cx: int = _int_at(cur, "x")
+		var cy: int = _int_at(cur, "y")
+		var cz: int = _int_at(cur, "z")
+		if px != cx:
+			diffs += 1
+		if py != cy:
+			diffs += 1
+		if pz != cz:
+			diffs += 1
+		if diffs != 1:
+			return false
+		index += 1
+	return true
+
+
 static func merge_asset_ref(body: Dictionary, out: Dictionary, carries_assets: bool) -> bool:
 	if not carries_assets:
 		out["asset_id"] = SharedGameplayAssetCatalog.LATTICE_CELL_ID
@@ -229,6 +293,14 @@ static func int_at_least(body: Dictionary, key: String, minimum: int) -> bool:
 
 static func is_int_field(body: Dictionary, key: String) -> bool:
 	return body.has(key) and typeof(body[key]) == TYPE_INT
+
+
+static func _int_at(body: Dictionary, key: String) -> int:
+	var raw: Variant = body.get(key, null)
+	if typeof(raw) != TYPE_INT:
+		return 0
+	var value: int = raw
+	return value
 
 
 static func _bag_size(base: int, carries_assets: bool) -> int:

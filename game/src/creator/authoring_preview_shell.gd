@@ -14,7 +14,7 @@ extends Node
 ## jump. Re-open raises the existing window and rebuilds if the native
 ## instance was freed. UI scales from the D4 1920×1080 base on the **main**
 ## window; this embedded sub-window must not set `content_scale_*`.
-## Never settlement.
+## Never HTTP settlement. FA draws a local results table after finish.
 
 const OutOfRangeReset := preload("res://src/games/traprush/out_of_range_reset.gd")
 const PlayStubs := preload("res://src/games/traprush/play_stubs.gd")
@@ -23,6 +23,8 @@ const HudGd := preload("res://src/creator/authoring_preview_shell_hud.gd")
 const PlayGd := preload("res://src/creator/authoring_preview_shell_play.gd")
 const SamplerGd := preload("res://src/creator/authoring_preview_shell_sampler.gd")
 const ViewGd := preload("res://src/creator/authoring_preview_shell_view.gd")
+const PlayClockGd := preload("res://src/shared/play_clock.gd")
+const PlaySplitTrackerGd := preload("res://src/shared/play_split_tracker.gd")
 
 const TITLE: String = ChromeGd.TITLE
 const WINDOW_SIZE: Vector2i = ChromeGd.WINDOW_SIZE
@@ -58,6 +60,7 @@ var chrome: ChromeGd = ChromeGd.new()
 var sampler: SamplerGd = SamplerGd.new()
 var play: PlayGd = PlayGd.new()
 var view: ViewGd = ViewGd.new()
+var split_tracker: PlaySplitTrackerGd = PlaySplitTrackerGd.new()
 var _play_view_busy: bool = false
 
 
@@ -219,6 +222,14 @@ func status_label_text() -> String:
 	return chrome.status_text()
 
 
+func clock_label_text() -> String:
+	return chrome.clock_text()
+
+
+func settlement_panel_visible() -> bool:
+	return chrome.settlement_visible()
+
+
 func _apply_play_anim() -> void:
 	view.apply_play_anim(self)
 
@@ -302,7 +313,33 @@ func _rebuild_map() -> void:
 
 
 func _refresh_status() -> void:
+	var hud_view: Dictionary = HudGd.build_view(preview, map, chrome.is_visible())
+	var accepted: int = PlayClockGd.dict_int(hud_view, "accepted_count", -1)
+	var play_tick: int = PlayClockGd.dict_int(hud_view, "play_tick", -1)
+	var finish_tick: int = PlayClockGd.dict_int(hud_view, "finish_tick", -1)
+	if not _is_playing():
+		split_tracker.reset()
+	else:
+		split_tracker.observe(accepted, PlayClockGd.clock_tick(play_tick, finish_tick))
+	hud_view["play_hud_active"] = _is_playing()
+	hud_view["clock_tick"] = PlayClockGd.clock_tick(play_tick, finish_tick)
+	hud_view["split_line"] = split_tracker.popup_line()
+	if finish_tick >= 0:
+		hud_view["settlement_board"] = {
+			"ok": true,
+			"mvp_slot": 0,
+			"pad_total": PlayClockGd.dict_int(hud_view, "checkpoint_count", 0),
+			"rows": [{
+				"place": 1,
+				"slot": 0,
+				"finish_tick": finish_tick,
+				"accepted_count": accepted,
+			}],
+		}
+	else:
+		hud_view["settlement_board"] = {"ok": false}
 	chrome.set_status_text(HudGd.format_line(preview, map))
+	chrome.sync_play_hud(hud_view)
 
 
 func _is_playing() -> bool:

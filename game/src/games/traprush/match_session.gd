@@ -11,6 +11,7 @@ extends RefCounted
 
 const Gravity := preload("res://src/games/traprush/gravity.gd")
 const HazardCycle := preload("res://src/games/traprush/hazard_cycle.gd")
+const MoverCycle := preload("res://src/games/traprush/mover_cycle.gd")
 const TraprushMatchBootstrapGd := preload("res://src/games/traprush/match_session_bootstrap.gd")
 const TraprushMatchIntentsGd := preload("res://src/games/traprush/match_session_intents.gd")
 const TraprushMatchScanGd := preload("res://src/games/traprush/match_session_scan.gd")
@@ -58,6 +59,7 @@ var _crate_ids: Dictionary = {}
 var _crate_health: Dictionary = {}
 var _hazard_ids: Dictionary = {}
 var _hazard_cycle: Array[Dictionary] = []
+var _mover_cycle: Array[Dictionary] = []
 var _pickup_ids: Dictionary = {}
 var _pickup_kinds: Dictionary = {}
 var _spawn: TraprushCheckpointSpawn = null
@@ -189,6 +191,7 @@ func advance_sim_tick() -> void:
 		return
 	_tick_stuns()
 	_world.tick()
+	_apply_movers()
 	HazardCycle.apply(_world, _hazard_cycle)
 	for player: Dictionary in _players:
 		_resolve_player_hazards(player)
@@ -266,6 +269,21 @@ func _accept_player_finish(player: Dictionary) -> void:
 
 func _reset_player_if_out_of_range(player: Dictionary) -> bool:
 	return scan.reset_player_if_out_of_range(self, player)
+
+
+func _apply_movers() -> void:
+	var capsule_ids: PackedInt32Array = PackedInt32Array()
+	for player: Dictionary in _players:
+		var capsule_id: int = player["capsule_id"]
+		capsule_ids.append(capsule_id)
+	var blocked: PackedInt32Array = MoverCycle.apply(
+		_world, _mover_cycle, capsule_ids, support_dy
+	)
+	for capsule_id: int in blocked:
+		for player: Dictionary in _players:
+			if player["capsule_id"] == capsule_id:
+				scan.reset_player_to_pad(self, player)
+				break
 
 
 func _resolve_player_hazards(player: Dictionary) -> bool:

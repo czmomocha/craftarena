@@ -202,10 +202,10 @@ func _spawn_checkpoint_mark(entity_id: int, order: int, from: Vector3, duplicate
 	var label: Label3D = Label3D.new()
 	label.name = checkpoint_name(entity_id)
 	label.text = str(order)
-	label.font_size = 64
-	label.pixel_size = 0.02
+	label.font_size = PlaceholderSpec.LABEL3D_FONT_SIZE
+	label.pixel_size = PlaceholderSpec.LABEL3D_PIXEL_SIZE
 	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
-	label.outline_size = 12
+	label.outline_size = PlaceholderSpec.LABEL3D_OUTLINE_SIZE
 	if duplicated:
 		label.modulate = PlaceholderSpec.CHECKPOINT_DUP_ALBEDO
 	else:

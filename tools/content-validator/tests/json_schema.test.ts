@@ -59,6 +59,16 @@ describe("json schema subset", () => {
 		assert.ok(validateJsonSchema(schema, true, { schemaPath: "/tmp/x.json" }).length > 0);
 	});
 
+	it("rejects arrays shorter than minItems", () => {
+		const schema = { type: "array", minItems: 2, items: { type: "integer" } };
+		assert.deepEqual(validateJsonSchema(schema, [1, 2], { schemaPath: "/tmp/x.json" }), []);
+		assert.ok(
+			validateJsonSchema(schema, [1], { schemaPath: "/tmp/x.json" }).some((error) =>
+				error.message.includes("minItems"),
+			),
+		);
+	});
+
 	it("rejects arrays longer than maxItems", () => {
 		const schema = { type: "array", maxItems: 1, items: { type: "integer" } };
 		assert.deepEqual(validateJsonSchema(schema, [1], { schemaPath: "/tmp/x.json" }), []);

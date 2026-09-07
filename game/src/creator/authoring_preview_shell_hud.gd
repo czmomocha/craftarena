@@ -4,6 +4,8 @@ extends RefCounted
 ## Preview presentation: status dictionary + the connected= status line.
 ## Tokens stay untranslated. This is not a write gate.
 
+const PlayClockGd := preload("res://src/shared/play_clock.gd")
+
 
 static func build_view(
 	preview: AuthoringPreview,
@@ -19,6 +21,7 @@ static func build_view(
 	var checkpoint_count: int = 0
 	var floor_index: int = 0
 	var finish_tick: int = -1
+	var play_tick: int = -1
 	var crate_alive: int = 0
 	var crate_count: int = 0
 	var hazard_alive: int = 0
@@ -34,6 +37,8 @@ static func build_view(
 		checkpoint_count = preview.play_checkpoint_count()
 		floor_index = preview.play_floor_index()
 		finish_tick = preview.play_finish_tick()
+		if preview.play_world != null:
+			play_tick = preview.play_world.tick_index
 		crate_alive = preview.play_destructible_alive_count()
 		crate_count = preview.play_destructible_count()
 		hazard_alive = preview.play_hazard_solid_count()
@@ -53,6 +58,7 @@ static func build_view(
 		"checkpoint_count": checkpoint_count,
 		"floor_index": floor_index,
 		"finish_tick": finish_tick,
+		"play_tick": play_tick,
 		"crate_alive": crate_alive,
 		"crate_count": crate_count,
 		"hazard_alive": hazard_alive,
@@ -74,7 +80,7 @@ static func format_line(preview: AuthoringPreview, map: AuthoringPreviewMap) -> 
 	if map != null:
 		reach_ok = map.reachability_ok()
 		reach_issue_count = map.reachability_issue_count()
-	return "connected=%s revision=%d entities=%d restart=%s playing=%s pads=%d/%d floor=%d finish=%d crates=%d/%d hazards=%d/%d solids=%d/%d reach_ok=%s issues=%d" % [
+	return "connected=%s revision=%d entities=%d restart=%s playing=%s pads=%d/%d floor=%d finish=%d clock=%s crates=%d/%d hazards=%d/%d solids=%d/%d reach_ok=%s issues=%d" % [
 		str(preview.connected),
 		preview.preview_revision,
 		entity_count,
@@ -84,6 +90,9 @@ static func format_line(preview: AuthoringPreview, map: AuthoringPreviewMap) -> 
 		preview.play_checkpoint_count(),
 		preview.play_floor_index(),
 		preview.play_finish_tick(),
+		PlayClockGd.format_clock(
+			PlayClockGd.clock_tick(_play_tick(preview), preview.play_finish_tick())
+		),
 		preview.play_destructible_alive_count(),
 		preview.play_destructible_count(),
 		preview.play_hazard_solid_count(),
@@ -93,3 +102,9 @@ static func format_line(preview: AuthoringPreview, map: AuthoringPreviewMap) -> 
 		str(reach_ok),
 		reach_issue_count,
 	]
+
+
+static func _play_tick(preview: AuthoringPreview) -> int:
+	if preview == null or not preview.is_playing() or preview.play_world == null:
+		return -1
+	return preview.play_world.tick_index

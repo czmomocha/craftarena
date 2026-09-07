@@ -13,6 +13,7 @@ const CATALOG_PATHS: PackedStringArray = [
 	"res://src/shared/visual_asset_catalog.gd",
 	"res://src/shared/visual_asset_catalog_instantiate.gd",
 	"res://src/shared/visual_asset_catalog_fit.gd",
+	"res://src/shared/visual_asset_catalog_ids.gd",
 ]
 const MAP_PATHS: PackedStringArray = [
 	"res://src/client/match_snapshot_map.gd",

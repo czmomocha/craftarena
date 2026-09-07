@@ -16,6 +16,7 @@ const TraprushEditorPanelCursor := preload("res://src/creator/traprush_editor_pa
 const TraprushPickupKinds := preload("res://src/ugc/traprush_pickup_kinds.gd")
 const TraprushPlayStubs := preload("res://src/games/traprush/play_stubs.gd")
 const TraprushTopologyCompiler := preload("res://src/ugc/traprush_topology_compiler.gd")
+const SimulationBundle := preload("res://src/ugc/simulation_bundle.gd")
 const AuthoringWindowLayout := preload("res://src/creator/authoring_window_layout.gd")
 const AuthoringPreviewMapConvert := preload("res://src/creator/authoring_preview_map_convert.gd")
 const AuthoringPreviewMapFloor := preload("res://src/creator/authoring_preview_map_floor.gd")
@@ -124,6 +125,7 @@ func test_panel_buttons_exist_and_shared_shell_keeps_undo_preview() -> void:
 	assert_not_null(_shell.tools.find_child(TraprushEditorPanel.PLACE_FINISH_NAME, true, false))
 	assert_not_null(_shell.tools.find_child(TraprushEditorPanel.PLACE_BOMB_NAME, true, false))
 	assert_not_null(_shell.tools.find_child(TraprushEditorPanel.PLACE_DASH_NAME, true, false))
+	assert_not_null(_shell.tools.find_child(TraprushEditorPanel.PLACE_MOVER_NAME, true, false))
 	assert_not_null(_shell.tools.find_child(TraprushEditorPanelCursor.CELL_X_NAME, true, false))
 	assert_not_null(_shell.tools.find_child(TraprushEditorPanelCursor.CELL_Y_NAME, true, false))
 	assert_not_null(_shell.tools.find_child(TraprushEditorPanelCursor.CELL_Z_NAME, true, false))
@@ -557,6 +559,55 @@ func _dict_int(bag: Dictionary, key: String, fallback: int) -> int:
 		return fallback
 	var value: int = raw
 	return value
+
+
+func test_place_mover_compiles_into_movers_bag() -> void:
+	_shell = AuthoringEditorShell.create(AuthoringSurfaceNames.INTERNAL_DEV)
+	add_child(_shell)
+	assert_true(_shell.open())
+	assert_true(_shell.tools.place_next_mover())
+	var record: SharedComponentRecord = _shell.session.world.get_record(1)
+	assert_not_null(record)
+	assert_true(record.components.has(SharedComponentNames.MOVER))
+	var bundle: SimulationBundle = TraprushTopologyCompiler.compile(_shell.session.world)
+	assert_not_null(bundle)
+	assert_eq(bundle.movers.size(), 1)
+	assert_eq(bundle.solids.size(), 1)
+
+
+func test_param_spin_writes_set_component_cooldown() -> void:
+	_shell = AuthoringEditorShell.create(AuthoringSurfaceNames.INTERNAL_DEV)
+	add_child(_shell)
+	assert_true(_shell.open())
+	assert_true(_shell.tools.place_next_hazard())
+	var spin: SpinBox = _shell.tools.find_child("CooldownTicks", true, false) as SpinBox
+	assert_not_null(spin)
+	spin.value = 30
+	var record: SharedComponentRecord = _shell.session.world.get_record(1)
+	var hazard_raw: Variant = record.components[SharedComponentNames.HAZARD]
+	assert_eq(typeof(hazard_raw), TYPE_DICTIONARY)
+	var bag: Dictionary = hazard_raw
+	assert_eq(_dict_int(bag, "cooldown_ticks", 0), 30)
+
+
+func test_mark_fill_copy_paste_and_delete() -> void:
+	_shell = AuthoringEditorShell.create(AuthoringSurfaceNames.INTERNAL_DEV)
+	add_child(_shell)
+	assert_true(_shell.open())
+	_shell.tools.cursor.set_cell(0, 0, 0)
+	_shell.tools.batch.mark_corner()
+	_shell.tools.cursor.set_cell(1, 0, 0)
+	assert_true(_shell.tools.batch.fill_solids())
+	assert_true(_shell.session.world.has_entity(1))
+	assert_true(_shell.session.world.has_entity(2))
+	_shell.chrome.selected_id = 1
+	assert_true(_shell.tools.batch.copy_entity())
+	_shell.tools.cursor.set_cell(3, 0, 0)
+	assert_true(_shell.tools.batch.paste_entity())
+	assert_true(_shell.session.world.has_entity(3))
+	_shell.chrome.selected_id = 3
+	assert_true(_shell.tools.batch.delete_selected())
+	assert_false(_shell.session.world.has_entity(3))
 
 
 func _editor_right_of_preview_is_false() -> bool:

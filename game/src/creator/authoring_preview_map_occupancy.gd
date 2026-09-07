@@ -25,6 +25,12 @@ func spawn_placeholder(
 	elif record != null and record.components.has(SharedComponentNames.DESTRUCTIBLE):
 		albedo = AuthoringPreviewMap.CRATE_ALBEDO
 		kind = "crate"
+	elif record != null and record.components.has(SharedComponentNames.INVENTORY):
+		kind = "pickup"
+		albedo = _pickup_albedo(record)
+	elif record != null and record.components.has(SharedComponentNames.PORTAL):
+		kind = "portal"
+		albedo = PlaceholderSpec.PORTAL_TWO_WAY_ALBEDO
 	elif record != null and _record_has_finish_tag(record):
 		albedo = AuthoringPreviewMap.FINISH_ALBEDO
 		kind = "finish"
@@ -66,6 +72,12 @@ func _attach_kind_visual(
 		visual = SharedVisualAssetCatalog.try_instantiate_fitted_prop(map.crate_scene_path)
 	elif kind == "hazard":
 		visual = SharedVisualAssetCatalog.try_instantiate_fitted_prop(map.hazard_scene_path)
+	elif kind == "portal":
+		visual = SharedVisualAssetCatalog.try_instantiate_fitted_prop(
+			SharedVisualAssetCatalog.PORTAL_SCENE_PATH
+		)
+	elif kind == "pickup":
+		visual = SharedVisualAssetCatalog.try_instantiate_fitted_prop(_pickup_scene(albedo))
 	if visual == null:
 		return false
 	visual.name = AuthoringPreviewMap.VISUAL_NAME
@@ -91,6 +103,23 @@ func apply_hazard_visibility(map: AuthoringPreviewMap, solid_by_entity: Dictiona
 			continue
 		var solid: bool = solid_raw
 		node.visible = solid
+
+
+func _pickup_albedo(record: SharedComponentRecord) -> Color:
+	var raw: Variant = record.components[SharedComponentNames.INVENTORY]
+	if typeof(raw) != TYPE_DICTIONARY:
+		return PlaceholderSpec.PICKUP_BOMB_ALBEDO
+	var bag: Dictionary = raw
+	var kind_raw: Variant = bag.get("item_state", "")
+	if typeof(kind_raw) == TYPE_STRING and str(kind_raw) == "dash":
+		return PlaceholderSpec.PICKUP_DASH_ALBEDO
+	return PlaceholderSpec.PICKUP_BOMB_ALBEDO
+
+
+func _pickup_scene(albedo: Color) -> String:
+	if albedo == PlaceholderSpec.PICKUP_DASH_ALBEDO:
+		return SharedVisualAssetCatalog.PICKUP_DASH_SCENE_PATH
+	return SharedVisualAssetCatalog.PICKUP_BOMB_SCENE_PATH
 
 
 func record_has_finish_tag(record: SharedComponentRecord) -> bool:

@@ -33,6 +33,7 @@ const FIELD_DESTRUCTIBLES: String = "destructibles"
 const FIELD_HAZARDS: String = "hazards"
 const FIELD_SOLIDS: String = "solids"
 const FIELD_PICKUPS: String = "pickups"
+const FIELD_MOVERS: String = "movers"
 
 var cell: int = 0
 var source_revision: int = 0
@@ -44,6 +45,7 @@ var destructibles: Array[Dictionary] = []
 var hazards: Array[Dictionary] = []
 var solids: Array[Dictionary] = []
 var pickups: Array[Dictionary] = []
+var movers: Array[Dictionary] = []
 
 
 static func from_dictionary(data: Dictionary) -> SimulationBundle:
@@ -75,6 +77,9 @@ func to_dictionary() -> Dictionary:
 	var pickup_list: Array = []
 	for item: Dictionary in pickups:
 		pickup_list.append(item.duplicate(true))
+	var mover_list: Array = []
+	for item: Dictionary in movers:
+		mover_list.append(item.duplicate(true))
 	return {
 		FIELD_SCHEMA_VERSION: SCHEMA_VERSION,
 		FIELD_CELL: cell,
@@ -87,6 +92,7 @@ func to_dictionary() -> Dictionary:
 		FIELD_HAZARDS: hazard_list,
 		FIELD_SOLIDS: solid_list,
 		FIELD_PICKUPS: pickup_list,
+		FIELD_MOVERS: mover_list,
 	}
 
 

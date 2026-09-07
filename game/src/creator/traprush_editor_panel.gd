@@ -15,6 +15,7 @@ const PLACE_CRATE_NAME: String = "PlaceCrate"
 const PLACE_FINISH_NAME: String = "PlaceFinish"
 const PLACE_BOMB_NAME: String = "PlaceBomb"
 const PLACE_DASH_NAME: String = "PlaceDash"
+const PLACE_MOVER_NAME: String = "PlaceMover"
 const REMOVE_LAST_NAME: String = "RemoveLast"
 const FLOOR_UP_NAME: String = "FloorUp"
 const FLOOR_DOWN_NAME: String = "FloorDown"
@@ -23,9 +24,13 @@ const CRATE_DURABILITY_STUB: int = 1
 const CRATE_REGEN_POLICY_STUB: int = 0
 const CursorGd := preload("res://src/creator/traprush_editor_panel_cursor.gd")
 const PickupKindsGd := preload("res://src/ugc/traprush_pickup_kinds.gd")
+const ParamsGd := preload("res://src/creator/traprush_editor_panel_params.gd")
+const BatchGd := preload("res://src/creator/traprush_editor_panel_batch.gd")
 
 var host: AuthoringEditorShell = null
 var cursor: CursorGd = null
+var params: ParamsGd = null
+var batch: BatchGd = null
 var _next_entity_id: int = 1
 var _next_order: int = 0
 var _pending_portal_id: int = 0
@@ -125,6 +130,7 @@ func mount(p_host: AuthoringEditorShell) -> void:
 	_add_button(occupancy_row, PLACE_HAZARD_NAME, UiCopy.PLACE_HAZARD, place_next_hazard)
 	_add_button(occupancy_row, PLACE_CRATE_NAME, UiCopy.PLACE_CRATE, place_next_crate)
 	_add_button(occupancy_row, PLACE_FINISH_NAME, UiCopy.PLACE_FINISH, place_next_finish)
+	_add_button(occupancy_row, PLACE_MOVER_NAME, UiCopy.PLACE_MOVER, place_next_mover)
 	var pickup_row: HBoxContainer = HBoxContainer.new()
 	pickup_row.name = "PickupRow"
 	add_child(pickup_row)
@@ -135,6 +141,12 @@ func mount(p_host: AuthoringEditorShell) -> void:
 	add_child(floor_row)
 	_add_button(floor_row, FLOOR_UP_NAME, UiCopy.FLOOR_UP, floor_up)
 	_add_button(floor_row, FLOOR_DOWN_NAME, UiCopy.FLOOR_DOWN, floor_down)
+	batch = BatchGd.new()
+	add_child(batch)
+	batch.mount(host, self)
+	params = ParamsGd.new()
+	add_child(params)
+	params.mount(host)
 
 
 func place_next_checkpoint() -> bool:
@@ -222,6 +234,17 @@ func place_next_dash() -> bool:
 	)
 
 
+func place_next_mover() -> bool:
+	return _place_occupancy(func(entity_id: int) -> bool:
+		return host.try_place_mover(entity_id, cursor.cell_x, cursor.cell_y, cursor.cell_z)
+	)
+
+
+func sync_params() -> void:
+	if params != null:
+		params.sync_selection()
+
+
 func try_pick_cell_from_screen(screen: Vector2) -> bool:
 	if host == null or host.map == null or cursor == null:
 		return false
@@ -275,6 +298,7 @@ func _select_placed(entity_id: int) -> void:
 		return
 	host.chrome.selected_id = entity_id
 	host.chrome.sync_guides()
+	sync_params()
 
 
 func _last_placed_id() -> int:
@@ -284,6 +308,7 @@ func _last_placed_id() -> int:
 func _refresh_host_status() -> void:
 	if host != null:
 		host.refresh_status()
+	sync_params()
 
 
 func _add_button(row: HBoxContainer, node_name: String, copy_key: String, handler: Callable) -> void:

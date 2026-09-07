@@ -165,6 +165,9 @@ function applyArray(schema: SchemaObject, instance: unknown, path: string, ctx: 
 		return schema.type === "array" ? [{ path, message: "expected array" }] : [];
 	}
 	const errors: JsonSchemaError[] = [];
+	if (typeof schema.minItems === "number" && instance.length < schema.minItems) {
+		errors.push({ path, message: `shorter than minItems ${schema.minItems}` });
+	}
 	if (typeof schema.maxItems === "number" && instance.length > schema.maxItems) {
 		errors.push({ path, message: `longer than maxItems ${schema.maxItems}` });
 	}

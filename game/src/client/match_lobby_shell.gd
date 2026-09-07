@@ -14,6 +14,8 @@ const MatchPlaySessionGd := preload("res://src/client/match_play_session.gd")
 const MatchSnapshotFollowGd := preload("res://src/client/match_snapshot_follow.gd")
 const OfficialTraprushCoursesGd := preload("res://src/shared/official_traprush_courses.gd")
 const ServerEndpointGd := preload("res://src/client/server_endpoint.gd")
+const SettlementPanelGd := preload("res://src/shared/match_settlement_panel.gd")
+const PlaySplitTrackerGd := preload("res://src/shared/play_split_tracker.gd")
 
 const TITLE: String = MatchLobbyChromeGd.TITLE
 const WINDOW_SIZE: Vector2i = MatchLobbyChromeGd.WINDOW_SIZE
@@ -51,6 +53,7 @@ var map: MatchSnapshotMap = null
 var course: MatchCourseMap = null
 var crates: MatchCrateMap = null
 var hazards: MatchHazardMap = null
+var pickups: MatchPickupMap = null
 var solids: MatchSolidMap = null
 var links: MatchPortalLinkMap = null
 var orders: MatchCheckpointOrderMap = null
@@ -70,6 +73,7 @@ var queue_poll_s: float = DEFAULT_QUEUE_POLL_S
 var last_sent_command: PackedByteArray = PackedByteArray()
 var play_anim: PlayAnimState = PlayAnimState.new()
 var play_input: PlayInput = PlayInput.new()
+var split_tracker: PlaySplitTrackerGd = PlaySplitTrackerGd.new()
 func _init() -> void:
 	director.bind(self)
 
@@ -206,6 +210,12 @@ func status_label_text() -> String:
 	return chrome.status_text()
 func fps_label_text() -> String:
 	return chrome.fps_text()
+func clock_label_text() -> String:
+	return chrome.clock_text()
+func split_label_text() -> String:
+	return chrome.split_text()
+func settlement_panel_visible() -> bool:
+	return chrome.settlement_visible()
 func try_advance_interp() -> bool:
 	if not stage.try_advance_interp(is_window_visible(), play_interp_step, active_follow()):
 		return false
@@ -223,12 +233,32 @@ func allows_online_writes() -> bool:
 	return false
 func handle_window_input(event: InputEvent) -> void:
 	chrome.handle_window_input(event)
+func try_camera_zoom(steps: int) -> bool:
+	return map != null and map.try_zoom(steps)
+func try_camera_pan(relative: Vector2) -> bool:
+	return map != null and map.try_pan(relative)
 func refresh_status() -> void:
 	_refresh_status()
 
 
 func _refresh_status() -> void:
-	chrome.set_status_text(MatchLobbyHudGd.format_line(status_view()))
+	var view: Dictionary = status_view()
+	var play_state: String = ""
+	if play != null:
+		play_state = play.state
+	MatchLobbyHudGd.sync_play_progress(
+		view, split_tracker, _local_settlement_board(), offline_playing(), play_state
+	)
+	chrome.set_status_text(MatchLobbyHudGd.format_line(view))
+	chrome.sync_play_hud(view)
+
+
+func _local_settlement_board() -> Dictionary:
+	if not offline_playing() or offline == null:
+		return {"ok": false}
+	return SettlementPanelGd.board_from_session(offline.session)
+
+
 func dispatch_pending() -> void:
 	if not live_io or net == null or join == null:
 		return
@@ -327,6 +357,8 @@ func _ensure_window() -> void:
 		"edit_submitted": _on_edit_submitted,
 		"close": _on_close_requested,
 		"window_input": handle_window_input,
+		"camera_zoom": try_camera_zoom,
+		"camera_pan": try_camera_pan,
 	})
 	stage.mount(window)
 	stage.bind_facade(self)

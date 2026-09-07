@@ -1,0 +1,11 @@
+[gd_scene format=3]
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_spawn"]
+top_radius = 0.0
+bottom_radius = 0.28
+height = 0.7
+radial_segments = 8
+
+[node name="SpawnMarker" type="MeshInstance3D"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.4, 0)
+mesh = SubResource("CylinderMesh_spawn")

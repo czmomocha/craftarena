@@ -25,6 +25,15 @@ static func cell_of(value: int) -> int:
 
 func insert(box_id: int, box: StaticAabb) -> void:
 	_count = box_id
+	_insert_span(box_id, box)
+
+
+func relocate(box_id: int, old_box: StaticAabb, new_box: StaticAabb) -> void:
+	_remove_span(box_id, old_box)
+	_insert_span(box_id, new_box)
+
+
+func _insert_span(box_id: int, box: StaticAabb) -> void:
 	var span: Dictionary = _try_aabb_span(box.x, box.y, box.z, box.half_x, box.half_y, box.half_z)
 	var span_ok: bool = span.get("ok", false)
 	if not span_ok or not _span_in_budget(span):
@@ -46,6 +55,47 @@ func insert(box_id: int, box: StaticAabb) -> void:
 				cx += 1
 			cz += 1
 		cy += 1
+
+
+func _remove_span(box_id: int, box: StaticAabb) -> void:
+	var next_always: PackedInt32Array = PackedInt32Array()
+	for existing: int in _always:
+		if existing != box_id:
+			next_always.append(existing)
+	_always = next_always
+	var span: Dictionary = _try_aabb_span(box.x, box.y, box.z, box.half_x, box.half_y, box.half_z)
+	var span_ok: bool = span.get("ok", false)
+	if not span_ok or not _span_in_budget(span):
+		return
+	var cy: int = span["cy0"]
+	var cy1: int = span["cy1"]
+	var cz0: int = span["cz0"]
+	var cz1: int = span["cz1"]
+	var cx0: int = span["cx0"]
+	var cx1: int = span["cx1"]
+	while cy <= cy1:
+		var cz: int = cz0
+		while cz <= cz1:
+			var cx: int = cx0
+			while cx <= cx1:
+				_remove_cell(Vector3i(cx, cy, cz), box_id)
+				cx += 1
+			cz += 1
+		cy += 1
+
+
+func _remove_cell(key: Vector3i, box_id: int) -> void:
+	if not _cells.has(key):
+		return
+	var ids: PackedInt32Array = _cells[key]
+	var next: PackedInt32Array = PackedInt32Array()
+	for existing: int in ids:
+		if existing != box_id:
+			next.append(existing)
+	if next.is_empty():
+		_cells.erase(key)
+	else:
+		_cells[key] = next
 
 
 func candidates_for_capsule(capsule: KinematicCapsule) -> PackedInt32Array:

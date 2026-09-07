@@ -108,6 +108,10 @@ static func try_start_play(
 	preview.play_destructible_health = crate_health
 	preview.play_hazard_ids = hazard_ids
 	preview.play_hazard_cycle = cycle
+	var mover_cycle: Array[Dictionary] = TraprushMoverCycle.entries_from(bundle.movers, solid_ids)
+	if mover_cycle.size() != bundle.movers.size():
+		return false
+	preview.play_mover_cycle = mover_cycle
 	preview.play_solid_ids = solid_ids
 	preview.play_pickup_ids = pickup_ids
 	preview.play_pickup_kinds = pickup_kinds_from_bundle(bundle)

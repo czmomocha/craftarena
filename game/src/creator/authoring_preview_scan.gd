@@ -82,6 +82,33 @@ func reset_play_if_out_of_range(preview: AuthoringPreview) -> bool:
 	return reset
 
 
+func reset_play_to_pad(preview: AuthoringPreview) -> bool:
+	if not preview.is_playing() or preview.play_spawn == null or preview.play_track == null:
+		return false
+	var respawn: Dictionary = preview.play_spawn.pose_for(preview.play_track)
+	var pose_ok: bool = respawn.get("ok", false)
+	if not pose_ok:
+		return false
+	var x_raw: Variant = respawn.get("x", 0)
+	var y_raw: Variant = respawn.get("y", 0)
+	var z_raw: Variant = respawn.get("z", 0)
+	var yaw_raw: Variant = respawn.get("yaw_bam", 0)
+	if typeof(x_raw) != TYPE_INT or typeof(y_raw) != TYPE_INT:
+		return false
+	if typeof(z_raw) != TYPE_INT or typeof(yaw_raw) != TYPE_INT:
+		return false
+	var x: int = x_raw
+	var y: int = y_raw
+	var z: int = z_raw
+	var yaw_bam: int = yaw_raw
+	if not preview.play_world.set_pose(preview.player_id, x, y, z, yaw_bam):
+		return false
+	preview.play_world.set_vy(preview.player_id, 0)
+	preview._portal_latch = {}
+	preview._play_stun_remaining = preview.play_respawn_stun_ticks
+	return true
+
+
 func resolve_play_hazards(preview: AuthoringPreview) -> bool:
 	if not preview.is_playing() or preview.play_spawn == null or preview.play_track == null:
 		return false

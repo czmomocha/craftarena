@@ -18,6 +18,8 @@ const AuthoringDocumentGd := preload("res://src/creator/authoring_document.gd")
 const HazardCycleGd := preload("res://src/games/traprush/hazard_cycle.gd")
 const MatchSnapshotFollowGd := preload("res://src/client/match_snapshot_follow.gd")
 const TraprushTopologyCompilerGd := preload("res://src/ugc/traprush_topology_compiler.gd")
+const WarnGd := preload("res://src/client/match_hazard_warn.gd")
+const PlaySfxGd := preload("res://src/client/play_sfx.gd")
 
 const HAZARD_PREFIX: String = "hazard_"
 const VISUAL_NAME: String = "visual"
@@ -32,6 +34,7 @@ var _tick: int = 0
 var _poses: Array[Dictionary] = []
 var _live_solids: Array[Dictionary] = []
 var _hazard_count: int = 0
+var _warned: Dictionary = {}
 
 
 static func meters_from_fixed(value: int) -> float:
@@ -193,6 +196,10 @@ func _copy_poses(bags: Array[Dictionary]) -> Array[Dictionary]:
 	return poses
 
 
+func warn_node(entity_id: int) -> MeshInstance3D:
+	return get_node_or_null(WarnGd.warn_name(entity_id)) as MeshInstance3D
+
+
 ## 按 entity_id 复用节点：本 tick 处于固体半周期的补上，开放半周期的撤掉。
 ##
 ## 机关**不会移动**，每 tick 唯一会变的是显隐，而周期通常远长于一帧——也就是说
@@ -201,22 +208,32 @@ func _copy_poses(bags: Array[Dictionary]) -> Array[Dictionary]:
 func _rebuild() -> void:
 	_live_solids = []
 	var wanted: Dictionary = {}
+	var warn_wanted: Dictionary = {}
+	var next_warned: Dictionary = {}
 	for pose: Dictionary in _poses:
 		var cooldown_raw: Variant = pose.get("cooldown_ticks", -1)
 		if typeof(cooldown_raw) != TYPE_INT:
 			continue
 		var cooldown_ticks: int = cooldown_raw
-		if not HazardCycleGd.is_solid(_tick, cooldown_ticks):
-			continue
-		_live_solids.append({
-			"x": pose["x"],
-			"y": pose["y"],
-			"z": pose["z"],
-		})
 		var entity_id: int = pose["entity_id"]
-		wanted[hazard_name(entity_id)] = true
-		_ensure_box(hazard_name(entity_id), pose)
+		if HazardCycleGd.is_solid(_tick, cooldown_ticks):
+			_live_solids.append({
+				"x": pose["x"],
+				"y": pose["y"],
+				"z": pose["z"],
+			})
+			wanted[hazard_name(entity_id)] = true
+			_ensure_box(hazard_name(entity_id), pose)
+			continue
+		if WarnGd.is_warning(_tick, cooldown_ticks, PlaceholderSpec.HAZARD_WARN_TICKS):
+			warn_wanted[WarnGd.warn_name(entity_id)] = true
+			_ensure_warn(entity_id, pose)
+			if not _warned.has(entity_id):
+				PlaySfxGd.play(PlaySfxGd.SLOT_HAZARD_WARN)
+			next_warned[entity_id] = true
 	_despawn_hazards_except(wanted)
+	_despawn_warns_except(warn_wanted)
+	_warned = next_warned
 	_hazard_count = _visible_count()
 
 
@@ -231,6 +248,44 @@ func _ensure_box(node_name: String, pose: Dictionary) -> void:
 	var y: int = pose["y"]
 	var z: int = pose["z"]
 	node.position = Vector3(meters_from_fixed(x), meters_from_fixed(y), meters_from_fixed(z))
+
+
+func _ensure_warn(entity_id: int, pose: Dictionary) -> void:
+	var node_name: String = WarnGd.warn_name(entity_id)
+	var node: MeshInstance3D = get_node_or_null(node_name) as MeshInstance3D
+	var x: int = pose["x"]
+	var y: int = pose["y"]
+	var z: int = pose["z"]
+	var color: Color = WarnGd.pulse_albedo(_tick)
+	if node == null:
+		var mesh: BoxMesh = BoxMesh.new()
+		mesh.size = PLACEHOLDER_SIZE
+		mesh.material = _unshaded(color)
+		var material: StandardMaterial3D = mesh.material as StandardMaterial3D
+		if material != null:
+			material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+		node = MeshInstance3D.new()
+		node.name = node_name
+		node.mesh = mesh
+		add_child(node)
+	else:
+		var mesh: BoxMesh = node.mesh as BoxMesh
+		if mesh != null:
+			var material: StandardMaterial3D = mesh.material as StandardMaterial3D
+			if material != null:
+				material.albedo_color = color
+	node.position = Vector3(meters_from_fixed(x), meters_from_fixed(y), meters_from_fixed(z))
+
+
+func _despawn_warns_except(wanted: Dictionary) -> void:
+	var stale: Array[Node] = []
+	for child: Node in get_children():
+		var child_name: String = str(child.name)
+		if child_name.begins_with(WarnGd.WARN_PREFIX) and not wanted.has(child_name):
+			stale.append(child)
+	for node: Node in stale:
+		remove_child(node)
+		node.free()
 
 
 func _despawn_hazards_except(wanted: Dictionary) -> void:
@@ -281,12 +336,14 @@ func _attach_visual(hazard: MeshInstance3D) -> bool:
 func _clear_hazards() -> void:
 	var stale: Array[Node] = []
 	for child: Node in get_children():
-		if str(child.name).begins_with(HAZARD_PREFIX):
+		var child_name: String = str(child.name)
+		if child_name.begins_with(HAZARD_PREFIX) or child_name.begins_with(WarnGd.WARN_PREFIX):
 			stale.append(child)
 	for node: Node in stale:
 		remove_child(node)
 		node.free()
 	_hazard_count = 0
+	_warned.clear()
 
 
 func _unshaded(color: Color) -> StandardMaterial3D:

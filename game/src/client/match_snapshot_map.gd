@@ -54,11 +54,13 @@ const FACE_SIZE: Vector3 = Vector3(0.18, 0.18, 0.28)
 const VISUAL_NAME: String = "visual"
 const ANIM_NAME: String = "anim"
 const ANIM_META: String = "anim_state"
-const ANIM_LIFT: float = 1.6
+const ANIM_LIFT: float = PlaceholderSpec.LABEL3D_ANIM_LIFT
 const OWN_ALBEDO: Color = PlaceholderSpec.OWN_ALBEDO
 const REMOTE_ALBEDO: Color = PlaceholderSpec.REMOTE_ALBEDO
 
 var follow_slot: int = -1
+var camera_distance: float = PlaceholderSpec.CAMERA_DISTANCE
+var camera_pan: Vector3 = Vector3.ZERO
 ## 空字符串或解析失败 ⇒ 回退占位盒。是变量而不是常量，好让测试两条分支都能跑。
 var character_scene_path: String = SharedVisualAssetCatalog.CHARACTER_SCENE_PATH
 var _player_count: int = 0
@@ -96,6 +98,37 @@ func apply_players(players: Array, crates: Array = []) -> bool:
 		return false
 	ensure_rig()
 	_sync_players(players)
+	_aim_camera()
+	return true
+
+
+func try_zoom(steps: int) -> bool:
+	if steps == 0:
+		return false
+	var next: float = PlaceholderSpec.clamp_camera_distance(
+		camera_distance - float(steps) * PlaceholderSpec.CAMERA_ZOOM_STEP
+	)
+	if next == camera_distance:
+		return false
+	camera_distance = next
+	_aim_camera()
+	return true
+
+
+func try_pan(relative: Vector2) -> bool:
+	if relative.x == 0.0 and relative.y == 0.0:
+		return false
+	var right: Vector3 = Vector3(1.0, 0.0, -1.0).normalized()
+	var along: Vector3 = Vector3(-1.0, 0.0, -1.0).normalized()
+	var next: Vector3 = camera_pan
+	next += right * relative.x * PlaceholderSpec.CAMERA_PAN_SENS
+	next += along * relative.y * PlaceholderSpec.CAMERA_PAN_SENS
+	next.y = 0.0
+	if next.length() > PlaceholderSpec.CAMERA_PAN_LIMIT:
+		next = next.normalized() * PlaceholderSpec.CAMERA_PAN_LIMIT
+	if next.is_equal_approx(camera_pan):
+		return false
+	camera_pan = next
 	_aim_camera()
 	return true
 
@@ -240,10 +273,10 @@ func set_anim_state(slot: int, state: String) -> bool:
 	if label == null:
 		label = Label3D.new()
 		label.name = ANIM_NAME
-		label.font_size = 48
-		label.pixel_size = 0.015
+		label.font_size = PlaceholderSpec.LABEL3D_ANIM_FONT_SIZE
+		label.pixel_size = PlaceholderSpec.LABEL3D_ANIM_PIXEL_SIZE
 		label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
-		label.outline_size = 8
+		label.outline_size = PlaceholderSpec.LABEL3D_OUTLINE_SIZE
 		label.position = Vector3(0.0, ANIM_LIFT, 0.0)
 		label.modulate = PlaceholderSpec.STANDING_RUNNING_ALBEDO
 		player.add_child(label)

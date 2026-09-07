@@ -19,7 +19,10 @@ static func from_dictionary(data: Dictionary) -> SimulationBundle:
 	if version != SimulationBundle.SCHEMA_VERSION and version != SimulationBundle.MIGRATED_FROM_VERSION:
 		return null
 	var carries_assets: bool = version == SimulationBundle.SCHEMA_VERSION
+	var has_movers: bool = body.has(SimulationBundle.FIELD_MOVERS)
 	var expected_size: int = 11 if carries_assets else 10
+	if has_movers:
+		expected_size += 1
 	if body.size() != expected_size:
 		return null
 	if not body.has(SimulationBundle.FIELD_CELL) or typeof(body[SimulationBundle.FIELD_CELL]) != TYPE_INT:
@@ -189,6 +192,22 @@ static func from_dictionary(data: Dictionary) -> SimulationBundle:
 				return null
 		pickup_ids[pickup_id] = true
 		pickup_list.append(parsed_pickup)
+	var mover_list: Array[Dictionary] = []
+	if has_movers:
+		if typeof(body[SimulationBundle.FIELD_MOVERS]) != TYPE_ARRAY:
+			return null
+		var raw_movers: Array = body[SimulationBundle.FIELD_MOVERS]
+		for item: Variant in raw_movers:
+			if typeof(item) != TYPE_DICTIONARY:
+				return null
+			var mover_item: Dictionary = item
+			var parsed_mover: Dictionary = BagsGd.parse_mover(mover_item)
+			if parsed_mover.is_empty():
+				return null
+			var mover_id: int = parsed_mover["entity_id"]
+			if not solid_ids.has(mover_id):
+				return null
+			mover_list.append(parsed_mover)
 	var occupancy: Array[Dictionary] = []
 	occupancy.append_array(pads)
 	occupancy.append_array(portals)
@@ -221,6 +240,7 @@ static func from_dictionary(data: Dictionary) -> SimulationBundle:
 	bundle.hazards = hazard_list
 	bundle.solids = solid_list
 	bundle.pickups = pickup_list
+	bundle.movers = mover_list
 	return bundle
 
 

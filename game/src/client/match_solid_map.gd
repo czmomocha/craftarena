@@ -20,6 +20,7 @@ extends Node3D
 
 const AuthoringDocumentGd := preload("res://src/creator/authoring_document.gd")
 const TraprushTopologyCompilerGd := preload("res://src/ugc/traprush_topology_compiler.gd")
+const MoverCycleGd := preload("res://src/games/traprush/mover_cycle.gd")
 
 const SOLID_PREFIX: String = "solid_"
 const VISUAL_NAME: String = "visual"
@@ -31,6 +32,7 @@ var tile_scene_path: String = SharedVisualAssetCatalog.TERRAIN_TILE_SCENE_PATH
 var _has_course: bool = false
 var _cell: int = 0
 var _poses: Array[Dictionary] = []
+var _movers: Array[Dictionary] = []
 var _live_solids: Array[Dictionary] = []
 var _solid_count: int = 0
 var _visual_count: int = 0
@@ -65,7 +67,39 @@ func apply_bundle(bundle: SimulationBundle) -> bool:
 	_has_course = true
 	_cell = bundle.cell
 	_poses = _copy_poses(bundle.solids)
+	_movers = []
+	for item: Dictionary in bundle.movers:
+		_movers.append(item.duplicate(true))
 	_rebuild()
+	return true
+
+
+func apply_tick(tick_index: int) -> bool:
+	if not _has_course:
+		return false
+	for item: Dictionary in _movers:
+		var path_raw: Variant = item.get("path", [])
+		if typeof(path_raw) != TYPE_ARRAY:
+			continue
+		var path: Array = path_raw
+		var loop_raw: Variant = item.get("loop", true)
+		var loop_on: bool = true
+		if typeof(loop_raw) == TYPE_BOOL:
+			loop_on = loop_raw
+		var next: Dictionary = MoverCycleGd.pose_at(
+			tick_index, path, PlayClock.dict_int(item, "speed", 0), loop_on
+		)
+		if next.is_empty():
+			continue
+		var entity_id: int = PlayClock.dict_int(item, "entity_id", 0)
+		if entity_id < 1:
+			continue
+		_set_pose(
+			entity_id,
+			PlayClock.dict_int(next, "x", 0),
+			PlayClock.dict_int(next, "y", 0),
+			PlayClock.dict_int(next, "z", 0)
+		)
 	return true
 
 
@@ -179,6 +213,24 @@ func _copy_poses(bags: Array[Dictionary]) -> Array[Dictionary]:
 	for bag: Dictionary in bags:
 		poses.append(_xyz_from_bag(bag))
 	return poses
+
+
+func _set_pose(entity_id: int, x: int, y: int, z: int) -> void:
+	var index: int = 0
+	while index < _poses.size():
+		if PlayClock.dict_int(_poses[index], "entity_id", 0) == entity_id:
+			_poses[index]["x"] = x
+			_poses[index]["y"] = y
+			_poses[index]["z"] = z
+			break
+		index += 1
+	if index < _live_solids.size():
+		_live_solids[index]["x"] = x
+		_live_solids[index]["y"] = y
+		_live_solids[index]["z"] = z
+	var node: MeshInstance3D = solid_node(entity_id)
+	if node != null:
+		node.position = Vector3(meters_from_fixed(x), meters_from_fixed(y), meters_from_fixed(z))
 
 
 func _rebuild() -> void:

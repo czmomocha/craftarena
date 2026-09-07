@@ -182,6 +182,7 @@
 			"properties": {
 				"path": {
 					"type": "array",
+					"minItems": 2,
 					"items": { "$ref": "#/$defs/xyz_fixed" }
 				},
 				"speed": { "type": "integer" },

@@ -10,6 +10,9 @@ const MatchOfflineSessionGd := preload("res://src/client/match_offline_session.g
 const MatchPlaySessionGd := preload("res://src/client/match_play_session.gd")
 const MatchSnapshotFollowGd := preload("res://src/client/match_snapshot_follow.gd")
 const ServerEndpointGd := preload("res://src/client/server_endpoint.gd")
+const PlayClockGd := preload("res://src/shared/play_clock.gd")
+const PlaySplitTrackerGd := preload("res://src/shared/play_split_tracker.gd")
+const SettlementPanelGd := preload("res://src/shared/match_settlement_panel.gd")
 
 
 static func floor_index_from_y(y: int) -> int:
@@ -147,6 +150,9 @@ static func build_view(
 		"match_finished": match_finished,
 		"settlement_line": str(join_view.get("settlement_line", "")),
 		"has_settlement": join_view.get("has_settlement", false),
+		"settlement_rows": join_view.get("settlement_rows", []),
+		"settlement_mvp_slot": join_view.get("settlement_mvp_slot", -1),
+		"settlement_pad_total": join_view.get("settlement_pad_total", 0),
 		"window_visible": window_visible,
 	}
 
@@ -243,6 +249,11 @@ static func format_line(view: Dictionary) -> String:
 			var settled_line: String = str(view.get("settlement_line", ""))
 			if settled_line != "":
 				parts.append("settled=%s" % settled_line)
+		var clock_tick: int = PlayClockGd.clock_tick(tick, own_finish_tick)
+		parts.append("clock=%s" % PlayClockGd.format_clock(clock_tick))
+		var split_line: String = str(view.get("split_line", ""))
+		if split_line != "":
+			parts.append("split=%s" % split_line)
 	parts.append("course=%d/%d/%d" % [mapped_pads, mapped_portals, mapped_finish])
 	var mapped_crates: int = view.get("mapped_crates", 0)
 	parts.append("crates_mapped=%d" % mapped_crates)
@@ -259,3 +270,43 @@ static func format_line(view: Dictionary) -> String:
 	if standing_line != "":
 		parts.append(standing_line)
 	return " ".join(parts)
+
+
+static func sync_play_progress(
+	view: Dictionary,
+	tracker: PlaySplitTrackerGd,
+	local_board: Dictionary,
+	is_offline_playing: bool,
+	play_state: String
+) -> void:
+	var online: bool = play_state == MatchPlaySessionGd.STATE_IN_MATCH
+	var playing: bool = is_offline_playing or online
+	view["play_hud_active"] = playing
+	var tick: int = PlayClockGd.dict_int(view, "tick", -1)
+	var finish_tick: int = PlayClockGd.dict_int(view, "own_finish_tick", -1)
+	var clock_tick: int = PlayClockGd.clock_tick(tick, finish_tick)
+	view["clock_tick"] = clock_tick
+	if tracker == null:
+		view["split_line"] = ""
+	elif playing:
+		tracker.observe(PlayClockGd.dict_int(view, "own_accepted_count", -1), clock_tick)
+		view["split_line"] = tracker.popup_line()
+	else:
+		tracker.reset()
+		view["split_line"] = ""
+	var rows_raw: Variant = view.get("settlement_rows", [])
+	var rows: Array = []
+	if typeof(rows_raw) == TYPE_ARRAY:
+		rows = rows_raw
+	var join_board: Dictionary = SettlementPanelGd.board_from_join(
+		PlayClockGd.dict_bool(view, "has_settlement", false),
+		PlayClockGd.dict_int(view, "settlement_mvp_slot", -1),
+		PlayClockGd.dict_int(view, "settlement_pad_total", 0),
+		rows
+	)
+	if join_board.get("ok", false):
+		view["settlement_board"] = join_board
+	elif is_offline_playing:
+		view["settlement_board"] = local_board
+	else:
+		view["settlement_board"] = {"ok": false}

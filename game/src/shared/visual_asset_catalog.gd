@@ -116,6 +116,14 @@ const CRATE_SCENE_PATH: String = "res://content/assets/crates/crate.glb"
 ## 周期滚柱。洋红 overlay 同上。生成网格可能略超一格，不压扁。
 const HAZARD_ROLLER_SCENE_PATH: String = "res://content/assets/hazards/hazard_roller.glb"
 
+## F 线 FC：传送门 / 拾取 / 出生点。未知 asset_id 回退袋类型。
+const PORTAL_SCENE_PATH: String = "res://content/assets/portals/portal_gate.tscn"
+const PICKUP_BOMB_SCENE_PATH: String = "res://content/assets/pickups/pickup_bomb.tscn"
+const PICKUP_DASH_SCENE_PATH: String = "res://content/assets/pickups/pickup_dash.tscn"
+const SPAWN_MARKER_SCENE_PATH: String = "res://content/assets/spawns/spawn_marker.tscn"
+
+const IdsGd := preload("res://src/shared/visual_asset_catalog_ids.gd")
+
 ## 模型自己的脚底在原点，权威胶囊原点在中心。角色贴合（`fit_character_on_cell`）
 ## 让脚底落在胶囊底面 —— 下沉「柱高一半 + 半径」。数值从 PlaceholderSpec 注入。
 ## 不要沉到 1 米占位盒底：盒比胶囊高，重力把节点跟着胶囊沉下去之后，盒底
@@ -243,3 +251,34 @@ static func character_base_transform(visual: Node3D) -> Transform3D:
 
 static func local_bounds(root: Node3D) -> AABB:
 	return FitGd.local_bounds(root)
+
+
+static func scene_for(asset_id: int, bag_kind: String) -> String:
+	var by_id: String = IdsGd.scene_for_asset_id(asset_id)
+	if by_id != "":
+		return by_id
+	return scene_for_bag(bag_kind)
+
+
+static func scene_for_bag(bag_kind: String) -> String:
+	match bag_kind:
+		IdsGd.BAG_TILE:
+			return TERRAIN_TILE_SCENE_PATH
+		IdsGd.BAG_CHECKPOINT:
+			return CHECKPOINT_PAD_SCENE_PATH
+		IdsGd.BAG_FINISH:
+			return FINISH_GATE_SCENE_PATH
+		IdsGd.BAG_CRATE:
+			return CRATE_SCENE_PATH
+		IdsGd.BAG_HAZARD:
+			return HAZARD_ROLLER_SCENE_PATH
+		IdsGd.BAG_PORTAL:
+			return PORTAL_SCENE_PATH
+		IdsGd.BAG_PICKUP_BOMB:
+			return PICKUP_BOMB_SCENE_PATH
+		IdsGd.BAG_PICKUP_DASH:
+			return PICKUP_DASH_SCENE_PATH
+		IdsGd.BAG_SPAWN:
+			return SPAWN_MARKER_SCENE_PATH
+		_:
+			return ""

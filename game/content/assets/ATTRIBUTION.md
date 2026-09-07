@@ -42,6 +42,25 @@ CC0 允许个人、教育与**商业**用途，无署名义务。原始包内 `L
 | `finish/finish_gate.glb` | 混元 3D | 终点拱门 |
 | `crates/crate.glb` | 混元 3D | 可破坏箱 |
 | `hazards/hazard_roller.glb` | 混元 3D | 周期机关滚柱（已知：略超一格） |
+| `portals/portal_gate.tscn` | 内部 Mesh 占位 | F 线 FC 传送门视觉 |
+| `pickups/pickup_bomb.tscn` | 内部 Mesh 占位 | F 线 FC 爆破球 |
+| `pickups/pickup_dash.tscn` | 内部 Mesh 占位 | F 线 FC 冲刺 |
+| `spawns/spawn_marker.tscn` | 内部 Mesh 占位 | F 线 FC 出生点标记 |
+
+## 2.1 内部生成临时音频（无第三方许可）
+
+F 线 FB 测试期音效，目录 `game/content/audio/f_line_temp/`。**内部生成 WAV，无第三方许可。** 不是产品配乐，无 Music 总线。
+
+| 资产 | 来源 | 许可 | 入库日期 |
+|---|---|---|---|
+| `../../audio/f_line_temp/step.wav` | 内部生成 | 无第三方许可 | 2026-09-07 |
+| `../../audio/f_line_temp/jump.wav` | 内部生成 | 无第三方许可 | 2026-09-07 |
+| `../../audio/f_line_temp/land.wav` | 内部生成 | 无第三方许可 | 2026-09-07 |
+| `../../audio/f_line_temp/pickup.wav` | 内部生成 | 无第三方许可 | 2026-09-07 |
+| `../../audio/f_line_temp/crate.wav` | 内部生成 | 无第三方许可 | 2026-09-07 |
+| `../../audio/f_line_temp/hazard_warn.wav` | 内部生成 | 无第三方许可 | 2026-09-07 |
+| `../../audio/f_line_temp/portal.wav` | 内部生成 | 无第三方许可 | 2026-09-07 |
+| `../../audio/f_line_temp/finish.wav` | 内部生成 | 无第三方许可 | 2026-09-07 |
 
 ## 3. 维护规则
 
