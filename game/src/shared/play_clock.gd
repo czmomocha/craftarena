@@ -32,6 +32,14 @@ static func clock_tick(live_tick: int, finish_tick: int) -> int:
 	return live_tick
 
 
+## 一位小数的秒读数。给「还剩多久」这种短倒计时用；`format_clock` 那套
+## 分:秒.厘 在 0.7 秒上读起来是噪声。
+static func format_seconds(tick: int) -> String:
+	var safe_tick: int = maxi(tick, 0)
+	var tenths: int = (safe_tick * 10 + TICKS_PER_SECOND - 1) / TICKS_PER_SECOND
+	return "%d.%d" % [tenths / 10, tenths % 10]
+
+
 static func format_clock(tick: int) -> String:
 	var safe_tick: int = tick
 	if safe_tick < 0:

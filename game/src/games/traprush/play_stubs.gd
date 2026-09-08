@@ -48,6 +48,11 @@ const SPRINT_STEP: int = Fixed.SCALE
 const ITEM_COOLDOWN_TICKS: int = 1
 ## 机关击退四分之一格。不是 Authoring hazard.knockback / damage 字段。
 const HAZARD_KNOCKBACK_STEP: int = Fixed.SCALE / 4
+## 传送带每 tick 推八分之一格 —— 走路占位步长（`PlaceholderSpec.MOVE_STEP`，
+## 十六分之一格）的**两倍**。玩法意义全在这个比值上：顺着走加速三倍，逆着走
+## 仍会被带着往前一倍步长——**走不回去**，只能绕开或从旁边跳上去。
+## 占位桩，不是产品速度（CD-63 §1.3 仍延期）。
+const CONVEYOR_STEP: int = Fixed.SCALE / 8
 ## D5：一期环境失败硬直 1.0 s（人类 2026-08-28）。不锁 Tick Hz。
 ## 对局 / Solo / BotRunner 用当前引擎 physics 占位 Hz 换成 tick；改 Hz 只改
 ## PHYSICS_TICKS_PER_SECOND_PLACEHOLDER，不是 CD-43 产品 Tick。
@@ -88,5 +93,6 @@ static func apply_match(session: TraprushMatchSession) -> void:
 	session.sprint_step = SPRINT_STEP
 	session.item_cooldown_ticks = ITEM_COOLDOWN_TICKS
 	session.hazard_knockback_step = HAZARD_KNOCKBACK_STEP
+	session.conveyor_step = CONVEYOR_STEP
 	session.respawn_stun_ticks = RESPAWN_STUN_TICKS
 	session.enable_play_range(OutOfRangeReset.STUB_HALF)

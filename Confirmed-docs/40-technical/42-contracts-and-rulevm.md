@@ -212,7 +212,8 @@ Undo / Redo 是会话内对成功命令派生的反向 payload（`place`↔`remo
 | AuthoringEditorPluginHost | `game/src/creator/authoring_editor_plugin_host.gd` |
 | 内部开发 EditorPlugin | `game/addons/authoring_editor/plugin.cfg` |
 | AuthoringDraftStore | `game/src/creator/authoring_draft_store.gd` |
-| TraprushEditorPanel | `game/src/creator/traprush_editor_panel.gd` + cursor / params / batch |
+| TraprushEditorPanel | `game/src/creator/traprush_editor_panel.gd` + cursor / params / batch / ids（batch 只在 `internal_dev` 挂载，见 [CD-32 §1](../30-ugc/32-editor-and-preview.md)） |
+| 玩家包内创作入口 | `game/src/client/creator_entry.gd`（Web ⇒ `web_light`，其它导出平台 ⇒ `desktop_full`；`internal_dev` 不从这里给；草稿落 `user://creator_draft.json`） |
 | AuthoringWindowLayout | `game/src/creator/authoring_window_layout.gd` |
 | AuthoringValidatorPanel | `game/src/creator/authoring_validator_panel.gd` |
 | 编辑外壳目视沙箱 | `game/src/creator/editor_sandbox.tscn` |
@@ -224,11 +225,12 @@ Undo / Redo 是会话内对成功命令派生的反向 payload（`place`↔`remo
 | 第二张官方 TRAPRUSH 赛道 | `game/content/official/traprush/course_02.json` |
 | 第三张官方 TRAPRUSH 赛道 | `game/content/official/traprush/course_03.json` |
 | F 线示范课 | `game/content/official/traprush/course_f_playable.json`（不计入 M5 官方课 3～5 张；HTTP 匹配仍只 01–03） |
-| SimulationBundle | `game/src/ugc/simulation_bundle.gd` + decode / bags（v2：`assets` 袋 + 每袋 `asset_id`/`gameplay_version`；可选 `movers` 袋不进 required，旧编译体仍可解码；v1 仍解码并迁移到内置"占满一格"资产） |
+| SimulationBundle | `game/src/ugc/simulation_bundle.gd` + decode / bags（v2：`assets` 袋 + 每袋 `asset_id`/`gameplay_version`；可选袋 `movers` / `conveyors` 不进 required，省略与空数组等价，旧编译体仍可解码；两者的几何都住在 `solids`，本袋只带行为，`entity_id` 必须能在 `solids` 里找到；v1 仍解码并迁移到内置"占满一格"资产） |
 | TRAPRUSH 拓扑编译 | `game/src/ugc/traprush_topology_compiler.gd` + bags / fields（资产准入在这里；不读 `zone.shape`） |
 | TRAPRUSH 拓扑加载 | `game/src/games/traprush/traprush_topology_loader.gd`（半长来自 `assets`；只接受 `box`） |
 | 周期机关固体切换 | `game/src/games/traprush/hazard_cycle.gd` |
 | 移动平台周期 | `game/src/games/traprush/mover_cycle.gd`（位姿 = f(tick, path, speed, loop)；`SimulationWorld.try_set_static_box_pose` 更新 AABB 并重挂索引；载客跟 delta，跟不上则出界复位） |
+| 传送带周期 | `game/src/games/traprush/conveyor_cycle.gd`（几何不动，被**支撑**的胶囊每 tick 推一步；四向量化；多块支撑只认最小 `entity_id`；`zone.tags` 的 `conveyor` 标签不改 Component Schema v1） |
 | 对局进程多人仿真循环 | `game/src/games/traprush/match_session.gd`（`fall_dy` 默认 0；boot / Solo / Preview 壳注入 `TraprushPlayStubs.FALL_DY = -JUMP_DY`） |
 | 对局二进制协议 v1 | `game/src/shared/protocol/match_frame_codec.gd` |
 | TRAPRUSH 直播名次 | `game/src/games/traprush/standing.gd` |

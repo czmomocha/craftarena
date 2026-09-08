@@ -1222,6 +1222,11 @@ func test_solo_reset_after_portal_returns_to_last_pad() -> void:
 	assert_true(_shell.status_label_text().contains("finish=-1"))
 	assert_almost_eq(_shell.map.player_node(0).position.x, 2.0, 0.0001)
 	assert_almost_eq(_shell.map.player_node(0).position.y, 0.0, 0.0001)
+	# 复位是一次跳变。可玩性深化 轨 1 起，镜头不再同帧换机位，而是滑一小段，
+	# 让「我被送回哪」看得见；滑完才重新压在本席上。
+	assert_true(_shell.map.camera_teleport_active())
+	assert_true(_shell.map.advance_camera(PlaceholderSpec.CAMERA_TELEPORT_GLIDE_S))
+	assert_false(_shell.map.camera_teleport_active())
 	_assert_lobby_camera_on(_shell.map.player_node(0))
 
 

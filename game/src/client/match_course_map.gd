@@ -26,6 +26,7 @@ extends Node3D
 const AuthoringDocumentGd := preload("res://src/creator/authoring_document.gd")
 const TraprushTopologyCompilerGd := preload("res://src/ugc/traprush_topology_compiler.gd")
 const CourseMapVisualGd := preload("res://src/client/match_course_map_visual.gd")
+const FxGd := preload("res://src/client/match_course_map_fx.gd")
 
 const PAD_PREFIX: String = "pad_"
 const PORTAL_PREFIX: String = "portal_"
@@ -52,8 +53,13 @@ var _finish_count: int = 0
 var _visual_count: int = 0
 var _accepted_count: int = -1
 var _finish_tick: int = -1
-var _pad_orders: Dictionary = {}
+var _portal_ids: Array[int] = []
 var _finish_ids: Array[int] = []
+## 编译袋里的垫位姿 + `order` 副本。两个用途共用一份：`PlayWayfinder` 算
+## 「下一个目标在哪」要 Q48.16 权威格（节点位置是米，不能回读），三态染色与
+## 呼吸动效要 `order`。留两份表迟早会有一份忘了清。
+var _pad_targets: Array[Dictionary] = []
+var _finish_targets: Array[Dictionary] = []
 
 
 static func meters_from_fixed(value: int) -> float:
@@ -117,7 +123,7 @@ func apply_bundle(bundle: SimulationBundle) -> bool:
 	_clear_course()
 	for pad: Dictionary in bundle.pads:
 		var pad_id: int = pad["entity_id"]
-		_remember_pad_order(pad)
+		_remember_target(_pad_targets, pad, pad.get("order", -1))
 		_spawn_box(
 			pad_name(pad_id),
 			pad,
@@ -126,10 +132,13 @@ func apply_bundle(bundle: SimulationBundle) -> bool:
 		)
 	for portal: Dictionary in bundle.portals:
 		var portal_id: int = portal["entity_id"]
+		if not _portal_ids.has(portal_id):
+			_portal_ids.append(portal_id)
 		_spawn_box(portal_name(portal_id), portal, _portal_color(portal), "portal")
 	for finish: Dictionary in bundle.finish:
 		var finish_id: int = finish["entity_id"]
 		_remember_finish_id(finish_id)
+		_remember_target(_finish_targets, finish, -1)
 		_spawn_box(
 			finish_name(finish_id),
 			finish,
@@ -150,12 +159,27 @@ func apply_own_progress(accepted_count: int, finish_tick: int = -1) -> void:
 	_retint_finish()
 
 
+## 课内动效（可玩性深化 轨 2）：传送门旋翼按权威 tick 转，当前目标垫与已开放
+## 的终点呼吸。对局壳每帧调一次，不新建节点。见 `MatchCourseMapFx` 文件头。
+func apply_tick(tick: int) -> int:
+	return FxGd.apply_tick(self, tick)
+
+
 func own_accepted_count() -> int:
 	return _accepted_count
 
 
 func own_finish_tick() -> int:
 	return _finish_tick
+
+
+## 寻路输入：垫（带 `order`）与终点的 Q48.16 位姿。只读副本。
+func wayfind_pads() -> Array[Dictionary]:
+	return _pad_targets
+
+
+func wayfind_finish() -> Array[Dictionary]:
+	return _finish_targets
 
 
 func pad_count() -> int:
@@ -308,34 +332,34 @@ func _clear_course() -> void:
 	_portal_count = 0
 	_finish_count = 0
 	_visual_count = 0
-	_pad_orders.clear()
+	_portal_ids.clear()
 	_finish_ids.clear()
+	_pad_targets.clear()
+	_finish_targets.clear()
 
 
 func _spawn_spawn_marker() -> void:
 	MatchCourseMapSpawn.attach(self)
 
 
-func _remember_pad_order(pad: Dictionary) -> void:
-	if not pad.has("entity_id") or typeof(pad["entity_id"]) != TYPE_INT:
-		return
-	if not pad.has("order") or typeof(pad["order"]) != TYPE_INT:
-		return
-	var pad_id: int = pad["entity_id"]
-	var order: int = pad["order"]
-	if pad_id < 1 or order < 0:
-		return
-	_pad_orders[pad_id] = order
-
-
 func _order_of(entity_id: int) -> int:
-	if not _pad_orders.has(entity_id):
-		return -1
-	var raw: Variant = _pad_orders[entity_id]
-	if typeof(raw) != TYPE_INT:
-		return -1
-	var order: int = raw
-	return order
+	for bag: Dictionary in _pad_targets:
+		var bag_id: int = bag["entity_id"]
+		if bag_id == entity_id:
+			var order: int = bag["order"]
+			return order
+	return -1
+
+
+func _remember_target(into: Array[Dictionary], bag: Dictionary, order_raw: Variant) -> void:
+	var pose: Dictionary = _xyz_from_bag(bag)
+	if pose.is_empty():
+		return
+	var order: int = -1
+	if typeof(order_raw) == TYPE_INT:
+		order = order_raw
+	pose["order"] = order
+	into.append(pose)
 
 
 func _remember_finish_id(entity_id: int) -> void:
@@ -347,14 +371,10 @@ func _remember_finish_id(entity_id: int) -> void:
 
 
 func _retint_pads() -> void:
-	for entity_raw: Variant in _pad_orders.keys():
-		if typeof(entity_raw) != TYPE_INT:
-			continue
-		var entity_id: int = entity_raw
-		CourseMapVisualGd.tint(
-			pad_node(entity_id),
-			pad_albedo(_order_of(entity_id), _accepted_count)
-		)
+	for bag: Dictionary in _pad_targets:
+		var entity_id: int = bag["entity_id"]
+		var order: int = bag["order"]
+		CourseMapVisualGd.tint(pad_node(entity_id), pad_albedo(order, _accepted_count))
 
 
 func _retint_finish() -> void:

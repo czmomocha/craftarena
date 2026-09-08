@@ -33,6 +33,7 @@ var play_destructible_health: Dictionary = {}
 var play_hazard_ids: Dictionary = {}
 var play_hazard_cycle: Array[Dictionary] = []
 var play_mover_cycle: Array[Dictionary] = []
+var play_conveyor_cycle: Array[Dictionary] = []
 var play_solid_ids: Dictionary = {}
 var play_pickup_ids: Dictionary = {}
 var play_pickup_kinds: Dictionary = {}
@@ -55,6 +56,8 @@ var play_fall_dy: int = 0
 var play_sprint_step: int = 0
 var play_item_cooldown_ticks: int = 1
 var play_hazard_knockback_step: int = 0
+## 传送带每 tick 推的距离。调用方注入的占位桩，不是产品速度。
+var play_conveyor_step: int = 0
 var play_respawn_stun_ticks: int = 0
 var play_range_enabled: bool = false
 var play_range_min_x: int = 0
@@ -126,6 +129,13 @@ func try_advance_play() -> bool:
 	)
 	if blocked.size() > 0:
 		_reset_play_to_pad()
+	TraprushConveyorCycle.apply(
+		play_world,
+		play_conveyor_cycle,
+		PackedInt32Array([player_id]),
+		play_support_dy,
+		play_conveyor_step
+	)
 	HazardCycle.apply(play_world, play_hazard_cycle)
 	_resolve_play_hazards()
 	_reset_play_if_out_of_range()

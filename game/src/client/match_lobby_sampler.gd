@@ -29,6 +29,20 @@ func reset_motion() -> void:
 	play_moving = false
 
 
+## 拆一份采样结果：字节给调用方，`note` / `remap` 两个副作用回调由壳注入。
+## 壳只留一行转发，本函数住在这里是为了让壳低于 E9 400 行。
+func take(sample: Dictionary, note: Callable, remap: Callable) -> PackedByteArray:
+	var bytes_raw: Variant = sample.get("bytes", PackedByteArray())
+	var bytes: PackedByteArray = PackedByteArray()
+	if typeof(bytes_raw) == TYPE_PACKED_BYTE_ARRAY:
+		bytes = bytes_raw
+	if sample.get("note", false) == true:
+		note.call(bytes)
+	if sample.get("remap", false) == true:
+		remap.call()
+	return bytes
+
+
 func try_vector(
 	move_x: float,
 	move_z: float,

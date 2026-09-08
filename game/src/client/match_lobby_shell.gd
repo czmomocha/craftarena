@@ -59,6 +59,7 @@ var links: MatchPortalLinkMap = null
 var orders: MatchCheckpointOrderMap = null
 var standings: MatchStandingMap = null
 var frame_rate: FrameRateMeter = null
+var creator: CreatorEntry = null
 var window: Window = null
 var live_io: bool = false
 var web_platform: bool = false
@@ -158,6 +159,12 @@ func try_poll() -> bool:
 	return director.try_poll()
 func try_solo() -> bool:
 	return director.try_solo()
+## Web 轻量 Edit 入口。懒建，因为绝大多数会话只游玩不创作。见 CreatorEntry 文件头。
+func try_open_creator() -> bool:
+	creator = CreatorEntry.ensure(self, creator)
+	return creator != null and creator.try_open()
+func try_close_creator() -> bool:
+	return creator != null and creator.try_close()
 func try_stop_offline() -> bool:
 	return director.try_stop_offline()
 func try_cancel() -> bool:
@@ -204,7 +211,8 @@ func status_view() -> Dictionary:
 	return MatchLobbyHudGd.build_view(
 		join_view, play_view, offline_view, stage.mapped_counts(), active_follow(),
 		stage.camera_follow_slot(offline_playing(), play), selected_course_id(), selected_seats(),
-		control_plane_base, gateway_base, server_error, is_window_visible(), offline_playing()
+		control_plane_base, gateway_base, server_error, is_window_visible(), offline_playing(),
+		stage.wayfind
 	)
 func status_label_text() -> String:
 	return chrome.status_text()
@@ -214,6 +222,10 @@ func clock_label_text() -> String:
 	return chrome.clock_text()
 func split_label_text() -> String:
 	return chrome.split_text()
+func guide_label_text() -> String:
+	return chrome.guide_text()
+func setback_label_text() -> String:
+	return chrome.setback_text()
 func settlement_panel_visible() -> bool:
 	return chrome.settlement_visible()
 func try_advance_interp() -> bool:
@@ -310,6 +322,8 @@ func _process(delta: float) -> void:
 		return
 	if frame_rate != null:
 		frame_rate.sample(delta)
+	if map != null:
+		map.advance_camera(delta)  # 必须先于 apply_players，见 advance_camera 注释
 	if offline_playing():
 		try_advance_interp()
 		_apply_snapshot_map()
@@ -327,21 +341,7 @@ func _physics_process(_delta: float) -> void:
 		return
 	sampler.drive_keyboard(self)
 func _take_sample(sample: Dictionary) -> PackedByteArray:
-	var bytes_raw: Variant = sample.get("bytes", PackedByteArray())
-	var bytes: PackedByteArray = PackedByteArray()
-	if typeof(bytes_raw) == TYPE_PACKED_BYTE_ARRAY:
-		bytes = bytes_raw
-	var note_raw: Variant = sample.get("note", false)
-	if typeof(note_raw) == TYPE_BOOL:
-		var note: bool = note_raw
-		if note:
-			_note_command(bytes)
-	var remap_raw: Variant = sample.get("remap", false)
-	if typeof(remap_raw) == TYPE_BOOL:
-		var remap: bool = remap_raw
-		if remap:
-			_apply_snapshot_map()
-	return bytes
+	return sampler.take(sample, _note_command, _apply_snapshot_map)
 func _ensure_window() -> void:
 	if window != null:
 		return
@@ -350,6 +350,7 @@ func _ensure_window() -> void:
 		"create": try_create_room,
 		"join": try_join_room,
 		"solo": try_solo,
+		"creator": try_open_creator,
 		"cancel": try_cancel,
 		"poll": try_poll,
 		"sprint": _on_sprint,

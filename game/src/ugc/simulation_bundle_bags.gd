@@ -240,6 +240,24 @@ static func parse_mover(body: Dictionary) -> Dictionary:
 	}
 
 
+## 传送带袋。几何不在这里——传送带同时写进 `solids`，本袋只带方向，
+## 与 `movers` 同一条约定（见 `TraprushConveyorCycle` 文件头）。
+static func parse_conveyor(body: Dictionary) -> Dictionary:
+	if body.size() != 2:
+		return {}
+	if not int_at_least(body, "entity_id", 1):
+		return {}
+	if not is_int_field(body, "yaw_bam"):
+		return {}
+	var yaw_bam: int = body["yaw_bam"]
+	if yaw_bam < 0 or yaw_bam >= Fixed.BAM_TURN:
+		return {}
+	return {
+		"entity_id": body["entity_id"],
+		"yaw_bam": yaw_bam,
+	}
+
+
 static func path_is_axial(path: Array) -> bool:
 	var index: int = 1
 	while index < path.size():

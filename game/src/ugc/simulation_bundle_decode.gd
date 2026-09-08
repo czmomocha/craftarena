@@ -20,9 +20,11 @@ static func from_dictionary(data: Dictionary) -> SimulationBundle:
 		return null
 	var carries_assets: bool = version == SimulationBundle.SCHEMA_VERSION
 	var has_movers: bool = body.has(SimulationBundle.FIELD_MOVERS)
+	var has_conveyors: bool = body.has(SimulationBundle.FIELD_CONVEYORS)
 	var expected_size: int = 11 if carries_assets else 10
-	if has_movers:
-		expected_size += 1
+	for optional: String in SimulationBundle.OPTIONAL_FIELDS:
+		if body.has(optional):
+			expected_size += 1
 	if body.size() != expected_size:
 		return null
 	if not body.has(SimulationBundle.FIELD_CELL) or typeof(body[SimulationBundle.FIELD_CELL]) != TYPE_INT:
@@ -208,6 +210,25 @@ static func from_dictionary(data: Dictionary) -> SimulationBundle:
 			if not solid_ids.has(mover_id):
 				return null
 			mover_list.append(parsed_mover)
+	var conveyor_list: Array[Dictionary] = []
+	if has_conveyors:
+		if typeof(body[SimulationBundle.FIELD_CONVEYORS]) != TYPE_ARRAY:
+			return null
+		var conveyor_entity_ids: Dictionary[int, bool] = {}
+		var raw_conveyors: Array = body[SimulationBundle.FIELD_CONVEYORS]
+		for item: Variant in raw_conveyors:
+			if typeof(item) != TYPE_DICTIONARY:
+				return null
+			var conveyor_item: Dictionary = item
+			var parsed_conveyor: Dictionary = BagsGd.parse_conveyor(conveyor_item)
+			if parsed_conveyor.is_empty():
+				return null
+			var conveyor_id: int = parsed_conveyor["entity_id"]
+			# 传送带的几何住在 `solids` 里，本袋只带方向。指不到固体就是坏内容。
+			if not solid_ids.has(conveyor_id) or conveyor_entity_ids.has(conveyor_id):
+				return null
+			conveyor_entity_ids[conveyor_id] = true
+			conveyor_list.append(parsed_conveyor)
 	var occupancy: Array[Dictionary] = []
 	occupancy.append_array(pads)
 	occupancy.append_array(portals)
@@ -241,6 +262,7 @@ static func from_dictionary(data: Dictionary) -> SimulationBundle:
 	bundle.solids = solid_list
 	bundle.pickups = pickup_list
 	bundle.movers = mover_list
+	bundle.conveyors = conveyor_list
 	return bundle
 
 

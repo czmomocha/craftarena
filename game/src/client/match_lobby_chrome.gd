@@ -20,6 +20,7 @@ const CANCEL_NAME: String = "Cancel"
 const SOLO_NAME: String = "SoloPlay"
 const POLL_NAME: String = "Poll"
 const SPRINT_NAME: String = "Sprint"
+const CREATOR_NAME: String = "CreateCourse"
 const ROOM_NAME: String = "RoomCode"
 const COURSE_ID_NAME: String = "CourseId"
 const SEATS_NAME: String = "Seats"
@@ -97,6 +98,9 @@ func attach(parent: Node, handlers: Dictionary) -> Window:
 	_add_button(row, CANCEL_NAME, UiCopy.CANCEL, on_cancel)
 	_add_button(row, POLL_NAME, UiCopy.POLL, on_poll)
 	_add_button(row, SPRINT_NAME, UiCopy.SPRINT, on_sprint)
+	# 「创作课程」与「单人试玩」并排，不藏进二级菜单：拿到链接的人要能在同一屏
+	# 上看见「能玩」和「能做」两件事，那正是 Web 轻量 Edit 要补的那个洞。
+	_add_button(row, CREATOR_NAME, UiCopy.CREATE_COURSE, _handler(handlers, "creator"))
 	var server_row: HBoxContainer = HBoxContainer.new()
 	server_row.name = "ServerActions"
 	root.add_child(server_row)
@@ -219,6 +223,14 @@ func clock_text() -> String:
 
 func split_text() -> String:
 	return play_hud.split_text()
+
+
+func guide_text() -> String:
+	return play_hud.guide_text()
+
+
+func setback_text() -> String:
+	return play_hud.setback_text()
 
 
 func settlement_visible() -> bool:

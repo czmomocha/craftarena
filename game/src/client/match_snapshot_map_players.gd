@@ -65,17 +65,51 @@ static func clear_players(map: MatchSnapshotMap) -> void:
 	map._visual_count = 0
 
 
+## 相机看的是 `follow_transition.anchor`，不是本席位姿本身。常态下两者逐帧相等
+## （`track` 直接对齐），只有传送 / 复位那种一帧跳变才会短暂分开——那正是让
+## 「我从哪去了哪」看得见的那一段。没有本席时 `reset()`，下一次出现直接就位。
 static func aim_camera(map: MatchSnapshotMap) -> void:
-	var target: Vector3 = Vector3.ZERO
 	var followed: MeshInstance3D = map.player_node(map.follow_slot)
-	if followed != null:
-		target = followed.position
-	target += map.camera_pan
+	if followed == null:
+		map.follow_transition.reset()
+	elif not map.follow_transition.has_anchor():
+		map.follow_transition.snap_to(followed.position)
+	elif map.follow_transition.track(followed.position):
+		# 被传送之后还挂着上一处的中键平移量，等于把人跟丢。
+		map.camera_pan = Vector3.ZERO
 	var camera: Camera3D = map.camera_node()
 	if camera == null:
 		return
-	camera.position = target + PlaceholderSpec.camera_offset_for_distance(map.camera_distance)
-	look_at_target(camera, target)
+	var anchor: Vector3 = map.follow_transition.anchor + map.camera_pan
+	camera.position = anchor + PlaceholderSpec.camera_offset_for_distance(map.camera_distance)
+	look_at_target(camera, anchor)
+
+
+## 快照玩家袋 → Q48.16 位姿。字段缺失或类型不对返回空字典（该玩家不可映射）。
+static func pose_from_player(body: Dictionary) -> Dictionary:
+	var pose: Dictionary = {}
+	for key: String in ["x", "y", "z", "yaw_bam"]:
+		if not body.has(key) or typeof(body[key]) != TYPE_INT:
+			return {}
+		pose[key] = body[key]
+	return pose
+
+
+## C4 表现动画状态的头顶读出标签。已存在就复用，不重建。
+static func ensure_anim_label(player: MeshInstance3D) -> Label3D:
+	var label: Label3D = player.get_node_or_null(MatchSnapshotMap.ANIM_NAME) as Label3D
+	if label != null:
+		return label
+	label = Label3D.new()
+	label.name = MatchSnapshotMap.ANIM_NAME
+	label.font_size = PlaceholderSpec.LABEL3D_ANIM_FONT_SIZE
+	label.pixel_size = PlaceholderSpec.LABEL3D_ANIM_PIXEL_SIZE
+	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	label.outline_size = PlaceholderSpec.LABEL3D_OUTLINE_SIZE
+	label.position = Vector3(0.0, MatchSnapshotMap.ANIM_LIFT, 0.0)
+	label.modulate = PlaceholderSpec.STANDING_RUNNING_ALBEDO
+	player.add_child(label)
+	return label
 
 
 static func look_at_target(camera: Camera3D, target: Vector3) -> void:

@@ -108,6 +108,14 @@ const CAMERA_PAN_LIMIT: float = 4.0
 const CAMERA_PAN_SENS: float = 0.012
 const LIGHT_ROTATION_DEG: Vector3 = Vector3(-50.0, -30.0, 0.0)
 
+## 跟随锚点一帧内位移超过这么多米，就判为**跳变**（传送 / 复位），由
+## `CameraFollowTransition` 摊成一段滑行而不是瞬移换机位。一帧里最大的一次
+## 合法位移是冲刺 1 格 = 1 米，所以 2.5 留了足够余量，不会被普通移动误触。
+const CAMERA_TELEPORT_SNAP_M: float = 2.5
+## 跳变滑行时长（秒）。短到不夺走操作权，长到能看清「我从哪去了哪」。
+## 占位值，D4 没有问过镜头过渡；改它只动这一行。
+const CAMERA_TELEPORT_GLIDE_S: float = 0.35
+
 
 static func clamp_camera_distance(distance: float) -> float:
 	if distance < CAMERA_DISTANCE_MIN:
@@ -190,11 +198,29 @@ const CHECKPOINT_ALBEDO: Color = PAD_PENDING_ALBEDO
 ## 顺序重复的检查点，用一个不会与垫三态混淆的颜色喊出来。
 const CHECKPOINT_DUP_ALBEDO: Color = Color(0.95, 0.3, 0.85)
 
+## 本席头顶的世界导航箭头（可玩性深化，轨 1）：指向下一个检查点 / 终点。
+## 三色按楼层差分：同层 / 需要上楼 / 需要下楼。方向本身已经由朝向给出，颜色
+## 只回答「在这一层找还是换一层找」——那正是多层课里最容易丢的信息。
+const GUIDE_SAME_ALBEDO: Color = Color(0.98, 0.86, 0.3)
+const GUIDE_UP_ALBEDO: Color = Color(0.45, 0.95, 0.55)
+const GUIDE_DOWN_ALBEDO: Color = Color(0.95, 0.5, 0.85)
+const GUIDE_SIZE: Vector3 = Vector3(0.1, 0.1, 0.45)
+const GUIDE_LIFT: float = 0.72
+const GUIDE_FORWARD_M: float = 0.5
+
 ## 名次 Label：已冲线 / 仍在跑；本席与远端的描边。
 const STANDING_FINISHED_ALBEDO: Color = Color(1.0, 0.85, 0.2)
 const STANDING_RUNNING_ALBEDO: Color = Color(0.85, 0.9, 1.0)
 const STANDING_OWN_OUTLINE: Color = OWN_ALBEDO
 const STANDING_REMOTE_OUTLINE: Color = Color(0.0, 0.0, 0.0)
+
+## 课内动效（可玩性深化 轨 2）。全部由权威 tick 推出，不读墙钟；相位按
+## entity_id 错开。占位表现值，D4 没有问过动效节奏；改它们只动这三行。
+## 传送门旋翼转一整圈的 tick 数（60 tick/s 桩 ⇒ 2 秒一圈）。
+const FX_PORTAL_SPIN_TICKS: int = 120
+## 当前目标垫 / 已开放终点的呼吸周期与幅度。
+const FX_PULSE_TICKS: int = 48
+const FX_PULSE_AMPLITUDE: float = 0.12
 
 ## Preview 走路可达性问题 gizmos。
 const REACH_ALBEDO: Color = Color(1.0, 0.82, 0.2)

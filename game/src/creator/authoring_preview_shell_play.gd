@@ -47,6 +47,7 @@ func copy_hazard_hit_stubs(shell: AuthoringPreviewShell) -> void:
 	if shell.preview == null:
 		return
 	shell.preview.play_hazard_knockback_step = shell.play_hazard_knockback_step
+	shell.preview.play_conveyor_step = shell.play_conveyor_step
 	shell.preview.play_respawn_stun_ticks = shell.play_respawn_stun_ticks
 
 

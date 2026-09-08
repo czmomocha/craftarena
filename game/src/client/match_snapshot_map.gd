@@ -41,6 +41,7 @@ extends Node3D
 
 const MatchSnapshotFollowGd := preload("res://src/client/match_snapshot_follow.gd")
 const PlayersGd := preload("res://src/client/match_snapshot_map_players.gd")
+const GuideGd := preload("res://src/client/match_snapshot_map_guide.gd")
 
 const CAMERA_NAME: String = "SnapshotCamera"
 const LIGHT_NAME: String = "SnapshotLight"
@@ -55,12 +56,16 @@ const VISUAL_NAME: String = "visual"
 const ANIM_NAME: String = "anim"
 const ANIM_META: String = "anim_state"
 const ANIM_LIFT: float = PlaceholderSpec.LABEL3D_ANIM_LIFT
+const GUIDE_NAME: String = GuideGd.GUIDE_NAME
 const OWN_ALBEDO: Color = PlaceholderSpec.OWN_ALBEDO
 const REMOTE_ALBEDO: Color = PlaceholderSpec.REMOTE_ALBEDO
 
 var follow_slot: int = -1
 var camera_distance: float = PlaceholderSpec.CAMERA_DISTANCE
 var camera_pan: Vector3 = Vector3.ZERO
+## 跳变滑行状态机（可玩性深化，轨 1）。常态跟随不经过它做平滑，只有传送 /
+## 复位那种一帧大位移才会开一段滑行，见 `CameraFollowTransition` 文件头。
+var follow_transition: CameraFollowTransition = CameraFollowTransition.new()
 ## 空字符串或解析失败 ⇒ 回退占位盒。是变量而不是常量，好让测试两条分支都能跑。
 var character_scene_path: String = SharedVisualAssetCatalog.CHARACTER_SCENE_PATH
 var _player_count: int = 0
@@ -100,6 +105,46 @@ func apply_players(players: Array, crates: Array = []) -> bool:
 	_sync_players(players)
 	_aim_camera()
 	return true
+
+
+## 每帧推进一次跳变滑行时钟，再重瞄。壳在 `_process(delta)` 里调；顺序必须是
+## 先 advance 再 apply_players（后者内部 track），否则滑行第一帧会多走一个 delta。
+func advance_camera(delta: float) -> bool:
+	if not follow_transition.active:
+		return false
+	follow_transition.advance(delta)
+	_aim_camera()
+	return true
+
+
+func camera_teleport_active() -> bool:
+	return follow_transition.active
+
+
+## 本席头顶指向下一个目标的箭头。`direction` 是水平单位向量；零向量表示这一帧
+## 没有方向可指，等同于 `clear_guide`。表现读出，不进裁决。见 GuideGd 文件头。
+func set_guide(slot: int, direction: Vector3, floor_delta: int) -> bool:
+	if direction.is_zero_approx():
+		clear_guide(slot)
+		return false
+	return GuideGd.apply(self, slot, direction, floor_delta)
+
+
+func clear_guide(slot: int) -> void:
+	GuideGd.clear(self, slot)
+
+
+func clear_guides() -> void:
+	for slot: int in range(_player_count):
+		GuideGd.clear(self, slot)
+
+
+func guide_node(slot: int) -> MeshInstance3D:
+	return GuideGd.node_of(self, slot)
+
+
+func guide_count() -> int:
+	return GuideGd.count(self, _player_count)
 
 
 func try_zoom(steps: int) -> bool:
@@ -269,18 +314,7 @@ func set_anim_state(slot: int, state: String) -> bool:
 	if player == null:
 		return false
 	player.set_meta(ANIM_META, state)
-	var label: Label3D = anim_node(slot)
-	if label == null:
-		label = Label3D.new()
-		label.name = ANIM_NAME
-		label.font_size = PlaceholderSpec.LABEL3D_ANIM_FONT_SIZE
-		label.pixel_size = PlaceholderSpec.LABEL3D_ANIM_PIXEL_SIZE
-		label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
-		label.outline_size = PlaceholderSpec.LABEL3D_OUTLINE_SIZE
-		label.position = Vector3(0.0, ANIM_LIFT, 0.0)
-		label.modulate = PlaceholderSpec.STANDING_RUNNING_ALBEDO
-		player.add_child(label)
-	label.text = state
+	PlayersGd.ensure_anim_label(player).text = state
 	PlayAnimVisual.apply(visual_node(slot), state)
 	return true
 
@@ -331,26 +365,7 @@ func _players_are_mappable(players: Array) -> bool:
 
 
 func _pose_from_player(body: Dictionary) -> Dictionary:
-	if not body.has("x") or not body.has("y") or not body.has("z") or not body.has("yaw_bam"):
-		return {}
-	if typeof(body["x"]) != TYPE_INT:
-		return {}
-	if typeof(body["y"]) != TYPE_INT:
-		return {}
-	if typeof(body["z"]) != TYPE_INT:
-		return {}
-	if typeof(body["yaw_bam"]) != TYPE_INT:
-		return {}
-	var x: int = body["x"]
-	var y: int = body["y"]
-	var z: int = body["z"]
-	var yaw_bam: int = body["yaw_bam"]
-	return {
-		"x": x,
-		"y": y,
-		"z": z,
-		"yaw_bam": yaw_bam,
-	}
+	return PlayersGd.pose_from_player(body)
 
 
 func _spawn_player(slot: int, body: Dictionary) -> void:

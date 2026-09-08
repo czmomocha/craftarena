@@ -16,6 +16,7 @@ const PLACE_FINISH_NAME: String = "PlaceFinish"
 const PLACE_BOMB_NAME: String = "PlaceBomb"
 const PLACE_DASH_NAME: String = "PlaceDash"
 const PLACE_MOVER_NAME: String = "PlaceMover"
+const PLACE_CONVEYOR_NAME: String = "PlaceConveyor"
 const REMOVE_LAST_NAME: String = "RemoveLast"
 const FLOOR_UP_NAME: String = "FloorUp"
 const FLOOR_DOWN_NAME: String = "FloorDown"
@@ -26,6 +27,7 @@ const CursorGd := preload("res://src/creator/traprush_editor_panel_cursor.gd")
 const PickupKindsGd := preload("res://src/ugc/traprush_pickup_kinds.gd")
 const ParamsGd := preload("res://src/creator/traprush_editor_panel_params.gd")
 const BatchGd := preload("res://src/creator/traprush_editor_panel_batch.gd")
+const IdsGd := preload("res://src/creator/traprush_editor_panel_ids.gd")
 
 var host: AuthoringEditorShell = null
 var cursor: CursorGd = null
@@ -34,6 +36,8 @@ var batch: BatchGd = null
 var _next_entity_id: int = 1
 var _next_order: int = 0
 var _pending_portal_id: int = 0
+## 下一块传送带的朝向。每摆一块顺时针转 90°，摆四块就围出一圈，不另开方向面板。
+var _next_conveyor_yaw: int = 0
 
 var floor_index: int:
 	get:
@@ -65,45 +69,13 @@ var cell_z: int:
 
 func adopt_world(world: AuthoringWorld) -> void:
 	_pending_portal_id = 0
-	_next_entity_id = 1
-	_next_order = 0
-	var next_x: int = 0
-	if world != null:
-		var cell: int = 1
-		if world.grid != null and world.grid.cell > 0:
-			cell = world.grid.cell
-		var max_id: int = 0
-		var max_order: int = -1
-		var max_cell_x: int = -1
-		for entity_id: int in world.entity_ids():
-			if entity_id > max_id:
-				max_id = entity_id
-			var stored: SharedComponentRecord = world.get_record(entity_id)
-			if stored == null:
-				continue
-			if stored.components.has(SharedComponentNames.CHECKPOINT):
-				var bag: Variant = stored.components[SharedComponentNames.CHECKPOINT]
-				if typeof(bag) == TYPE_DICTIONARY:
-					var order_bag: Dictionary = bag
-					if order_bag.has("order") and typeof(order_bag["order"]) == TYPE_INT:
-						var order_val: int = order_bag["order"]
-						if order_val > max_order:
-							max_order = order_val
-			if stored.components.has(SharedComponentNames.TRANSFORM):
-				var pose: Variant = stored.components[SharedComponentNames.TRANSFORM]
-				if typeof(pose) == TYPE_DICTIONARY:
-					var pose_bag: Dictionary = pose
-					if pose_bag.has("x") and typeof(pose_bag["x"]) == TYPE_INT:
-						var x_val: int = pose_bag["x"]
-						var world_cell_x: int = x_val / cell
-						if world_cell_x > max_cell_x:
-							max_cell_x = world_cell_x
-		if max_id > 0:
-			_next_entity_id = max_id + 1
-		if max_order >= 0:
-			_next_order = max_order + 1
-		if max_cell_x >= 0:
-			next_x = max_cell_x + 1
+	_next_conveyor_yaw = 0
+	var state: Dictionary = IdsGd.adopt_state(world)
+	var next_entity_id: int = state["next_entity_id"]
+	var next_order: int = state["next_order"]
+	var next_x: int = state["next_x"]
+	_next_entity_id = next_entity_id
+	_next_order = next_order
 	if cursor != null:
 		cursor.set_cell(next_x, 0, 0)
 
@@ -131,6 +103,7 @@ func mount(p_host: AuthoringEditorShell) -> void:
 	_add_button(occupancy_row, PLACE_CRATE_NAME, UiCopy.PLACE_CRATE, place_next_crate)
 	_add_button(occupancy_row, PLACE_FINISH_NAME, UiCopy.PLACE_FINISH, place_next_finish)
 	_add_button(occupancy_row, PLACE_MOVER_NAME, UiCopy.PLACE_MOVER, place_next_mover)
+	_add_button(occupancy_row, PLACE_CONVEYOR_NAME, UiCopy.PLACE_CONVEYOR, place_next_conveyor)
 	var pickup_row: HBoxContainer = HBoxContainer.new()
 	pickup_row.name = "PickupRow"
 	add_child(pickup_row)
@@ -141,9 +114,13 @@ func mount(p_host: AuthoringEditorShell) -> void:
 	add_child(floor_row)
 	_add_button(floor_row, FLOOR_UP_NAME, UiCopy.FLOOR_UP, floor_up)
 	_add_button(floor_row, FLOOR_DOWN_NAME, UiCopy.FLOOR_DOWN, floor_down)
-	batch = BatchGd.new()
-	add_child(batch)
-	batch.mount(host, self)
+	# 批量生成按 CD-32 只给 internal_dev。Web 轻量拿到「矩形填充 / 框选删除」
+	# 等于把内部产线工具当产品发；那也是 `allows_batch_generate` 一直没被执行的
+	# 那条能力差（可玩性深化 轨 3）。
+	if host != null and AuthoringSurfaceNames.allows_batch_generate(host.surface):
+		batch = BatchGd.new()
+		add_child(batch)
+		batch.mount(host, self)
 	params = ParamsGd.new()
 	add_child(params)
 	params.mount(host)
@@ -238,6 +215,22 @@ func place_next_mover() -> bool:
 	return _place_occupancy(func(entity_id: int) -> bool:
 		return host.try_place_mover(entity_id, cursor.cell_x, cursor.cell_y, cursor.cell_z)
 	)
+
+
+func place_next_conveyor() -> bool:
+	var yaw_bam: int = _next_conveyor_yaw
+	if not _place_occupancy(func(entity_id: int) -> bool:
+		return host.try_place_conveyor(
+			entity_id, cursor.cell_x, cursor.cell_y, cursor.cell_z, yaw_bam
+		)
+	):
+		return false
+	_next_conveyor_yaw = (yaw_bam + Fixed.BAM_TURN / 4) % Fixed.BAM_TURN
+	return true
+
+
+func next_conveyor_yaw_bam() -> int:
+	return _next_conveyor_yaw
 
 
 func sync_params() -> void:
@@ -340,41 +333,14 @@ func _world_has(entity_id: int) -> bool:
 
 
 func _dangling_target_ids() -> Dictionary:
-	var reserved: Dictionary = {}
-	if host == null or host.session == null or host.session.world == null:
-		return reserved
-	var links: Array[Dictionary] = host.session.world.portal_links()
-	for link_value: Variant in links:
-		if typeof(link_value) != TYPE_DICTIONARY:
-			continue
-		var link: Dictionary = link_value
-		if str(link.get("kind", "")) != AuthoringPortalKinds.DANGLING:
-			continue
-		var dest_raw: Variant = link.get("dest_id", null)
-		if typeof(dest_raw) != TYPE_INT:
-			continue
-		var dest_id: int = dest_raw
-		if dest_id > 0:
-			reserved[dest_id] = true
-	return reserved
+	return IdsGd.dangling_target_ids(_world())
 
 
 func _pending_pair_entity_id() -> int:
-	if _pending_portal_id <= 0:
-		return 0
-	if host == null or host.session == null or host.session.world == null:
-		return 0
-	var record: SharedComponentRecord = host.session.world.get_record(_pending_portal_id)
-	if record == null or not record.components.has(SharedComponentNames.PORTAL):
-		return 0
-	var raw: Variant = record.components[SharedComponentNames.PORTAL]
-	if typeof(raw) != TYPE_DICTIONARY:
-		return 0
-	var portal: Dictionary = raw
-	var target_raw: Variant = portal.get("target_id", null)
-	if typeof(target_raw) != TYPE_INT:
-		return 0
-	var target_id: int = target_raw
-	if target_id <= 0 or _world_has(target_id):
-		return 0
-	return target_id
+	return IdsGd.pending_pair_entity_id(_world(), _pending_portal_id)
+
+
+func _world() -> AuthoringWorld:
+	if host == null or host.session == null:
+		return null
+	return host.session.world
