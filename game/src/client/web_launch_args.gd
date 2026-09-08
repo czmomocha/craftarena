@@ -14,7 +14,12 @@ const GATEWAY_FLAG: String = "--gateway="
 const QUERY_SERVER: String = "server"
 const QUERY_CONTROL_PLANE: String = "control-plane"
 const QUERY_GATEWAY: String = "gateway"
+const QUERY_EDIT: String = "edit"
+const EDIT_FLAG: String = "--edit"
 const PLAY_PATH_PREFIX: String = "/play"
+## `?edit=0` / `?edit=false` 明确关掉。其余任何值（含 `?edit`）都是开。
+## 不做「像布尔的字符串」的宽松解析：这是分发链接里的开关，含糊等于不可复现。
+const _EDIT_OFF: PackedStringArray = ["0", "false", "off", "no"]
 
 
 static func merge(user_args: PackedStringArray, search: String) -> PackedStringArray:
@@ -41,10 +46,27 @@ static func parse_search(search: String) -> Dictionary:
 		var raw_key: String = pair if eq < 0 else pair.substr(0, eq)
 		var raw_value: String = "" if eq < 0 else pair.substr(eq + 1)
 		var key: String = raw_key.uri_decode()
-		if key != QUERY_SERVER and key != QUERY_CONTROL_PLANE and key != QUERY_GATEWAY:
+		if (
+			key != QUERY_SERVER
+			and key != QUERY_CONTROL_PLANE
+			and key != QUERY_GATEWAY
+			and key != QUERY_EDIT
+		):
 			continue
 		parsed[key] = raw_value.uri_decode()
 	return parsed
+
+
+## 这次启动是不是要直接进创作。链接里带 `?edit=1` 就能把编辑器发给外人试，
+## 不必先教他去点大厅上的按钮；桌面用 `-- --edit`。
+static func wants_edit(user_args: PackedStringArray, search: String) -> bool:
+	for arg: String in user_args:
+		if arg == EDIT_FLAG:
+			return true
+	var query: Dictionary = parse_search(search)
+	if not query.has(QUERY_EDIT):
+		return false
+	return not _EDIT_OFF.has(str(query[QUERY_EDIT]).strip_edges().to_lower())
 
 
 static func has_flag(args: PackedStringArray, flag: String) -> bool:

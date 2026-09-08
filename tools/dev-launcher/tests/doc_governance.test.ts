@@ -102,7 +102,9 @@ describe("C5 document governance", () => {
 		const source = read("Confirmed-docs/60-plan/62-risk-register.md");
 		assert.match(source, /网页\/微信包体超限[\s\S]{0,80}未开始/);
 		assert.match(source, /第一次真导出/);
-		assert.match(source, /传送迷路或跳关[\s\S]{0,80}已缓解/);
+		// 可玩性深化第一批之前这里是「已缓解 / 镜头过渡零实现」。镜头过渡接上之后
+		// 状态升为已治理，但这一行仍必须点名镜头过渡——它是当初被记账的那个洞。
+		assert.match(source, /传送迷路或跳关[\s\S]{0,80}已治理/);
 		assert.match(source, /镜头过渡/);
 		assert.match(source, /单人审查带宽超载/);
 		assert.match(source, /在零延迟条件下锁定网络参数/);

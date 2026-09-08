@@ -145,6 +145,29 @@ static func has_solid_tag(record: SharedComponentRecord) -> bool:
 	return has_zone_tag(record, TraprushTopologyCompiler.SOLID_ZONE_TAG)
 
 
+## 传送带标签。`zone.tags` 是自由字符串表（CD-42 §1「触发与查询区域」），
+## 认识一个新标签不改 Schema、不废旧内容。见 `TraprushConveyorCycle` 文件头。
+static func has_conveyor_tag(record: SharedComponentRecord) -> bool:
+	return has_zone_tag(record, TraprushTopologyCompiler.CONVEYOR_ZONE_TAG)
+
+
+## 传送带的推送方向。缺 `yaw_bam` 或不是 int 返回 -1（整个编译失败）：
+## 一块方向不明的传送带在权威里没有确定行为，宁可拒绝发布。
+static func transform_yaw_bam(record: SharedComponentRecord) -> int:
+	if not record.components.has(SharedComponentNames.TRANSFORM):
+		return -1
+	var raw: Variant = record.components[SharedComponentNames.TRANSFORM]
+	if typeof(raw) != TYPE_DICTIONARY:
+		return -1
+	var body: Dictionary = raw
+	if typeof(body.get("yaw_bam", null)) != TYPE_INT:
+		return -1
+	var yaw_bam: int = body["yaw_bam"]
+	if yaw_bam < 0 or yaw_bam >= Fixed.BAM_TURN:
+		return -1
+	return yaw_bam
+
+
 static func has_zone_tag(record: SharedComponentRecord, tag: String) -> bool:
 	if not record.components.has(SharedComponentNames.ZONE):
 		return false

@@ -112,6 +112,12 @@ static func try_start_play(
 	if mover_cycle.size() != bundle.movers.size():
 		return false
 	preview.play_mover_cycle = mover_cycle
+	var conveyor_cycle: Array[Dictionary] = TraprushConveyorCycle.entries_from(
+		bundle.conveyors, solid_ids
+	)
+	if conveyor_cycle.size() != bundle.conveyors.size():
+		return false
+	preview.play_conveyor_cycle = conveyor_cycle
 	preview.play_solid_ids = solid_ids
 	preview.play_pickup_ids = pickup_ids
 	preview.play_pickup_kinds = pickup_kinds_from_bundle(bundle)
@@ -155,6 +161,8 @@ static func clear_play(preview: AuthoringPreview) -> void:
 	preview.play_destructible_health = {}
 	preview.play_hazard_ids = {}
 	preview.play_hazard_cycle = []
+	preview.play_mover_cycle = []
+	preview.play_conveyor_cycle = []
 	preview.play_solid_ids = {}
 	preview.play_pickup_ids = {}
 	preview.play_pickup_kinds = {}

@@ -8,12 +8,11 @@ static func attach(map: MatchCourseMap) -> void:
 	if map == null:
 		return
 	var spawn_id: int = 0
-	for entity_raw: Variant in map._pad_orders.keys():
-		if typeof(entity_raw) != TYPE_INT:
+	for bag: Dictionary in map.wayfind_pads():
+		var order: int = bag["order"]
+		if order != 0:
 			continue
-		var entity_id: int = entity_raw
-		if map._order_of(entity_id) != 0:
-			continue
+		var entity_id: int = bag["entity_id"]
 		spawn_id = entity_id
 		break
 	if spawn_id < 1:

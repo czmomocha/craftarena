@@ -85,6 +85,15 @@ function apply(schema: unknown, instance: unknown, path: string, ctx: Ctx): Json
 		if (typeof schema.exclusiveMinimum === "number" && instance <= schema.exclusiveMinimum) {
 			errors.push({ path, message: `not above exclusiveMinimum ${schema.exclusiveMinimum}` });
 		}
+		// Bounded integers only became a real constraint with the conveyor bag's
+		// yaw_bam (0..BAM_TURN-1). Until then the schema had no `maximum` at all,
+		// so this subset silently accepted anything a `minimum` let through.
+		if (typeof schema.maximum === "number" && instance > schema.maximum) {
+			errors.push({ path, message: `above maximum ${schema.maximum}` });
+		}
+		if (typeof schema.exclusiveMaximum === "number" && instance >= schema.exclusiveMaximum) {
+			errors.push({ path, message: `not below exclusiveMaximum ${schema.exclusiveMaximum}` });
+		}
 	}
 
 	if (schema.type === "object" || isObject(instance)) {

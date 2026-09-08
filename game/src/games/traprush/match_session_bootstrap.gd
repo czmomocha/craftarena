@@ -7,6 +7,7 @@ extends RefCounted
 
 const CheckpointSpawn := preload("res://src/games/traprush/checkpoint_spawn.gd")
 const CheckpointTrack := preload("res://src/games/traprush/checkpoint_track.gd")
+const ConveyorCycleGd := preload("res://src/games/traprush/conveyor_cycle.gd")
 const HazardCycle := preload("res://src/games/traprush/hazard_cycle.gd")
 const MoverCycleGd := preload("res://src/games/traprush/mover_cycle.gd")
 const TopologyLoader := preload("res://src/games/traprush/traprush_topology_loader.gd")
@@ -67,6 +68,13 @@ static func try_create(
 	if mover_cycle.size() != movers.size():
 		return null
 	session._mover_cycle = mover_cycle
+	var conveyors: Array = []
+	if bundle.conveyors != null:
+		conveyors = bundle.conveyors
+	var conveyor_cycle: Array[Dictionary] = ConveyorCycleGd.entries_from(conveyors, solid_ids)
+	if conveyor_cycle.size() != conveyors.size():
+		return null
+	session._conveyor_cycle = conveyor_cycle
 	var pickups_raw: Variant = loaded.get("pickup_ids", {})
 	if typeof(pickups_raw) != TYPE_DICTIONARY:
 		return null
@@ -105,6 +113,12 @@ static func try_create(
 			"dash": 0,
 			"taken": {},
 			"stun_remaining": 0,
+			# 最近一次**环境失败**的 tick 与原因（可玩性深化，轨 1：失败惩罚可读）。
+			# 权威在这里判定，但**不进 hash_state**：它是既有事件（位姿跳回 +
+			# stun_remaining，两者都已入 hash）的读出别名，不是独立的仿真输入。
+			# 把它入 hash 只会让全部已录制的回放哈希失效而不增加任何检测力。
+			"setback_tick": -1,
+			"setback_reason": PlaySetback.NONE,
 		})
 	for player: Dictionary in session._players:
 		session._accept_player_pads(player)

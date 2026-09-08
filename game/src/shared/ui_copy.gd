@@ -63,6 +63,7 @@ const PLACE_FINISH: String = "craft_arena.ui.place_finish"
 const PLACE_BOMB: String = "craft_arena.ui.place_bomb"
 const PLACE_DASH: String = "craft_arena.ui.place_dash"
 const PLACE_MOVER: String = "craft_arena.ui.place_mover"
+const PLACE_CONVEYOR: String = "craft_arena.ui.place_conveyor"
 const MARK_CORNER: String = "craft_arena.ui.mark_corner"
 const FILL_SOLIDS: String = "craft_arena.ui.fill_solids"
 const COPY_ENTITY: String = "craft_arena.ui.copy_entity"
@@ -74,6 +75,23 @@ const FLOOR_DOWN: String = "craft_arena.ui.floor_down"
 const FOCUS_ISSUE: String = "craft_arena.ui.focus_issue"
 const RESULTS: String = "craft_arena.ui.results"
 const MVP: String = "craft_arena.ui.mvp"
+const GUIDE_CHECKPOINT: String = "craft_arena.ui.guide_checkpoint"
+const GUIDE_FINISH: String = "craft_arena.ui.guide_finish"
+const GUIDE_FLOOR_UP: String = "craft_arena.ui.guide_floor_up"
+const GUIDE_FLOOR_DOWN: String = "craft_arena.ui.guide_floor_down"
+const GUIDE_FLOOR_SAME: String = "craft_arena.ui.guide_floor_same"
+const GUIDE_DONE: String = "craft_arena.ui.guide_done"
+const SETBACK_HAZARD: String = "craft_arena.ui.setback_hazard"
+const SETBACK_OUT_OF_RANGE: String = "craft_arena.ui.setback_out_of_range"
+const SETBACK_CRUSHED: String = "craft_arena.ui.setback_crushed"
+const SETBACK_RESPAWN_START: String = "craft_arena.ui.setback_respawn_start"
+const SETBACK_RESPAWN_CHECKPOINT: String = "craft_arena.ui.setback_respawn_checkpoint"
+const SETBACK_STUN: String = "craft_arena.ui.setback_stun"
+const CREATE_COURSE: String = "craft_arena.ui.create_course"
+const BACK_TO_LOBBY: String = "craft_arena.ui.back_to_lobby"
+const VALIDATOR_OK: String = "craft_arena.ui.validator_ok"
+const VALIDATOR_ISSUES: String = "craft_arena.ui.validator_issues"
+const AUTO_TICK: String = "craft_arena.ui.auto_tick"
 
 const ALL_KEYS: PackedStringArray = [
 	WINDOW_TRAPRUSH,
@@ -109,6 +127,7 @@ const ALL_KEYS: PackedStringArray = [
 	PLACE_BOMB,
 	PLACE_DASH,
 	PLACE_MOVER,
+	PLACE_CONVEYOR,
 	MARK_CORNER,
 	FILL_SOLIDS,
 	COPY_ENTITY,
@@ -120,6 +139,23 @@ const ALL_KEYS: PackedStringArray = [
 	FOCUS_ISSUE,
 	RESULTS,
 	MVP,
+	GUIDE_CHECKPOINT,
+	GUIDE_FINISH,
+	GUIDE_FLOOR_UP,
+	GUIDE_FLOOR_DOWN,
+	GUIDE_FLOOR_SAME,
+	GUIDE_DONE,
+	SETBACK_HAZARD,
+	SETBACK_OUT_OF_RANGE,
+	SETBACK_CRUSHED,
+	SETBACK_RESPAWN_START,
+	SETBACK_RESPAWN_CHECKPOINT,
+	SETBACK_STUN,
+	CREATE_COURSE,
+	BACK_TO_LOBBY,
+	VALIDATOR_OK,
+	VALIDATOR_ISSUES,
+	AUTO_TICK,
 ]
 
 static var _loaded: bool = false

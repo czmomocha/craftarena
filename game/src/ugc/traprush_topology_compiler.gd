@@ -49,6 +49,10 @@ const FieldsGd := preload("res://src/ugc/traprush_topology_compiler_fields.gd")
 
 const FINISH_ZONE_TAG: String = "finish"
 const SOLID_ZONE_TAG: String = "solid"
+## 传送带：固体 + 一个标签 + `transform.yaw_bam`。不新增组件，见
+## `TraprushConveyorCycle` 文件头。同时带 `mover` 的实体被拒——一块自己在走、
+## 又把人往别处推的地板，两段位移的先后顺序没有可解释的答案。
+const CONVEYOR_ZONE_TAG: String = "conveyor"
 
 
 static func compile(world: AuthoringWorld) -> SimulationBundle:
@@ -80,5 +84,6 @@ static func compile(world: AuthoringWorld) -> SimulationBundle:
 		SimulationBundle.FIELD_SOLIDS: occupancy["solids"],
 		SimulationBundle.FIELD_PICKUPS: occupancy["pickups"],
 		SimulationBundle.FIELD_MOVERS: occupancy["movers"],
+		SimulationBundle.FIELD_CONVEYORS: occupancy["conveyors"],
 	}
 	return SimulationBundle.from_dictionary(body)

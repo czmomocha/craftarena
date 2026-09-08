@@ -49,6 +49,7 @@ var play_shove_cooldown_ticks: int = 1
 var play_sprint_step: int = 0
 var play_item_cooldown_ticks: int = 1
 var play_hazard_knockback_step: int = 0
+var play_conveyor_step: int = 0
 var play_respawn_stun_ticks: int = 0
 var play_range_half: int = 0
 
@@ -93,6 +94,7 @@ func try_begin(path: String, _web_platform: bool = false) -> bool:
 	created.sprint_step = play_sprint_step
 	created.item_cooldown_ticks = play_item_cooldown_ticks
 	created.hazard_knockback_step = play_hazard_knockback_step
+	created.conveyor_step = play_conveyor_step
 	created.respawn_stun_ticks = play_respawn_stun_ticks
 	created.enable_play_range(play_range_half)
 	session = created
@@ -174,9 +176,17 @@ func status_view() -> Dictionary:
 	var follow_view: Dictionary = follow.status_view()
 	var tick: int = -1
 	var player_count: int = 0
+	# 环境失败的原因只有本地会话读得到：v1 快照帧不带它，加字段是协议不兼容
+	# 变更（宪法第十八条人类门禁）。线上因此没有 setback 读出，见 PlaySetback 文件头。
+	var setback_reason: String = PlaySetback.NONE
+	var setback_tick: int = -1
+	var stun_remaining: int = 0
 	if session != null:
 		tick = session.tick_index()
 		player_count = session.player_count()
+		setback_reason = session.player_setback_reason(0)
+		setback_tick = session.player_setback_tick(0)
+		stun_remaining = session.player_stun_remaining(0)
 	return {
 		"state": state,
 		"banner": UiCopy.text(BANNER_KEY) if state == STATE_PLAYING else "",
@@ -186,6 +196,9 @@ func status_view() -> Dictionary:
 		"tick": tick,
 		"player_count": player_count,
 		"crate_count": follow_view.get("crate_count", 0),
+		"setback_reason": setback_reason,
+		"setback_tick": setback_tick,
+		"stun_remaining": stun_remaining,
 	}
 
 
@@ -202,6 +215,7 @@ func apply_play_stubs() -> void:
 	play_sprint_step = PlayStubsGd.SPRINT_STEP
 	play_item_cooldown_ticks = PlayStubsGd.ITEM_COOLDOWN_TICKS
 	play_hazard_knockback_step = PlayStubsGd.HAZARD_KNOCKBACK_STEP
+	play_conveyor_step = PlayStubsGd.CONVEYOR_STEP
 	play_respawn_stun_ticks = PlayStubsGd.RESPAWN_STUN_TICKS
 	play_range_half = OutOfRangeResetGd.STUB_HALF
 

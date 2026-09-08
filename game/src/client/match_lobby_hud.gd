@@ -48,6 +48,24 @@ static func own_authority_y(players: Array, slot: int) -> int:
 	return y_raw
 
 
+## 本席的权威 Q48.16 位姿。缺席 / 字段类型不对返回空字典——`own_player_int`
+## 用 -1 当哨兵，而坐标本来就可以是 -1，不能共用那条路径。
+static func own_authority_pose(players: Array, slot: int) -> Dictionary:
+	if slot < 0 or slot >= players.size():
+		return {}
+	var raw: Variant = players[slot]
+	if typeof(raw) != TYPE_DICTIONARY:
+		return {}
+	var body: Dictionary = raw
+	var pose: Dictionary = {}
+	for key: String in ["x", "y", "z"]:
+		var value_raw: Variant = body.get(key, null)
+		if typeof(value_raw) != TYPE_INT:
+			return {}
+		pose[key] = value_raw
+	return pose
+
+
 static func all_players_finished(players: Array) -> bool:
 	if players.is_empty():
 		return false
@@ -84,7 +102,8 @@ static func build_view(
 	gateway_base: String,
 	server_error: String,
 	window_visible: bool,
-	offline_playing: bool
+	offline_playing: bool,
+	wayfind: Dictionary = {}
 ) -> Dictionary:
 	var own_accepted_count: int = -1
 	var own_finish_tick: int = -1
@@ -155,6 +174,11 @@ static func build_view(
 		"settlement_mvp_slot": join_view.get("settlement_mvp_slot", -1),
 		"settlement_pad_total": join_view.get("settlement_pad_total", 0),
 		"window_visible": window_visible,
+		"setback_reason": offline_view.get("setback_reason", PlaySetback.NONE),
+		"setback_tick": offline_view.get("setback_tick", -1),
+		"stun_remaining": offline_view.get("stun_remaining", 0),
+		"wayfind": wayfind,
+		"guide_token": PlayWayfinder.token(wayfind),
 	}
 
 
@@ -256,6 +280,12 @@ static func format_line(view: Dictionary) -> String:
 		var split_line: String = str(view.get("split_line", ""))
 		if split_line != "":
 			parts.append("split=%s" % split_line)
+		var guide_token: String = str(view.get("guide_token", ""))
+		if guide_token != "":
+			parts.append(guide_token)
+		var setback_token: String = str(view.get("setback_token", ""))
+		if setback_token != "":
+			parts.append(setback_token)
 	parts.append("course=%d/%d/%d" % [mapped_pads, mapped_portals, mapped_finish])
 	var mapped_crates: int = view.get("mapped_crates", 0)
 	parts.append("crates_mapped=%d" % mapped_crates)
@@ -296,6 +326,12 @@ static func sync_play_progress(
 	else:
 		tracker.reset()
 		view["split_line"] = ""
+	var wayfind_raw: Variant = view.get("wayfind", {})
+	var wayfind: Dictionary = {}
+	if typeof(wayfind_raw) == TYPE_DICTIONARY:
+		wayfind = wayfind_raw
+	view["guide_text"] = PlayWayfinder.guide_text(wayfind) if playing else ""
+	_sync_setback(view, playing)
 	var rows_raw: Variant = view.get("settlement_rows", [])
 	var rows: Array = []
 	if typeof(rows_raw) == TYPE_ARRAY:
@@ -312,3 +348,22 @@ static func sync_play_progress(
 		view["settlement_board"] = local_board
 	else:
 		view["settlement_board"] = {"ok": false}
+
+
+## 环境失败读出。只在窗口期内显示，过了就自己消失——常驻的失败提示会变成
+## 玩家学会忽略的一块 UI，那等于没写。
+static func _sync_setback(view: Dictionary, playing: bool) -> void:
+	view["setback_token"] = ""
+	view["setback_text"] = ""
+	if not playing:
+		return
+	var reason: String = str(view.get("setback_reason", PlaySetback.NONE))
+	var setback_tick: int = PlayClockGd.dict_int(view, "setback_tick", -1)
+	var tick: int = PlayClockGd.dict_int(view, "tick", -1)
+	if not PlaySetback.is_visible(reason, setback_tick, tick):
+		return
+	var stun: int = PlayClockGd.dict_int(view, "stun_remaining", 0)
+	view["setback_token"] = PlaySetback.token(reason, setback_tick, stun)
+	view["setback_text"] = PlaySetback.text(
+		reason, PlayClockGd.dict_int(view, "own_accepted_count", 0), stun
+	)

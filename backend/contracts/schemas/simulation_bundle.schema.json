@@ -58,6 +58,10 @@
 		"movers": {
 			"type": "array",
 			"items": { "$ref": "#/$defs/mover" }
+		},
+		"conveyors": {
+			"type": "array",
+			"items": { "$ref": "#/$defs/conveyor" }
 		}
 	},
 	"$defs": {
@@ -256,6 +260,16 @@
 				"dest_yaw_bam": { "type": "integer" },
 				"asset_id": { "type": "integer", "minimum": 1 },
 				"gameplay_version": { "type": "integer", "minimum": 1 }
+			}
+		},
+		"conveyor": {
+			"description": "A conveyor belt: the geometry is an always-solid bag entry, this bag only carries the push direction. entity_id must also appear in solids; yaw_bam follows the MatchMoveFacing BAM convention (0 = world -Z) and is quantised to four directions at load. Authored as zone.tags including both solid and conveyor plus transform.yaw_bam, so Component Schema v1 is unchanged. Optional: a compiled v2 body without the key still decodes.",
+			"type": "object",
+			"additionalProperties": false,
+			"required": ["entity_id", "yaw_bam"],
+			"properties": {
+				"entity_id": { "type": "integer", "minimum": 1 },
+				"yaw_bam": { "type": "integer", "minimum": 0, "maximum": 65535 }
 			}
 		},
 		"mover": {

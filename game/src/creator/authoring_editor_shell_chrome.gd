@@ -70,6 +70,9 @@ func ensure(shell: AuthoringEditorShell, handlers: Dictionary) -> void:
 	validator = AuthoringValidatorPanelGd.new()
 	validator.name = VALIDATOR_NAME
 	root.add_child(validator)
+	# CD-32 早就声明了 surface 之间的能力差，但在可玩性深化之前没有一处执行它：
+	# Web 轻量拿到的是和 internal_dev 一模一样的问题码清单。这里开始真的分级。
+	validator.details = AuthoringSurfaceNames.allows_validator_details(shell.surface)
 	var action_row: HBoxContainer = HBoxContainer.new()
 	action_row.name = "SharedActions"
 	root.add_child(action_row)
@@ -82,7 +85,7 @@ func ensure(shell: AuthoringEditorShell, handlers: Dictionary) -> void:
 	shell.add_child(window)
 	map.ensure_rig()
 	if validator != null:
-		validator.mount(map)
+		validator.mount(map, AuthoringSurfaceNames.allows_validator_details(shell.surface))
 	if not window.window_input.is_connected(_on_window_input):
 		window.window_input.connect(_on_window_input)
 	LayoutGd.apply_editor(window, shell)

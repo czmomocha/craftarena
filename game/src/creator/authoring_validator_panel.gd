@@ -4,19 +4,34 @@ extends VBoxContainer
 ## Read-only publish-check details on AuthoringEditorShell (CD-32 §1.1 / CD-21).
 ## Lists existing AuthoringReachability codes. Not a write gate.
 ## Focus frames the editor map camera on a transform entity. Never settlement.
+##
+## `details` 对应 CD-32 的 `allows_validator_details`（仅 `internal_dev`）。
+## 关掉时**仍然照常求值**，只是收起问题码清单与 Focus，留一行摘要：Web 轻量的
+## 创作者读不懂 `unreachable_checkpoint` 这种码，但必须知道「这张课现在能不能
+## 发」。把整块面板藏掉才是真的少了一条信息。
 
 const LIST_NAME: String = "IssueList"
 const FOCUS_NAME: String = "FocusIssue"
+const SUMMARY_NAME: String = "Summary"
 
 var map: AuthoringPreviewMap = null
+var details: bool = true
+var _summary: Label = null
 var _list: ItemList = null
 var _issues: Array[Dictionary] = []
 var _reach_ok: bool = true
 
 
-func mount(p_map: AuthoringPreviewMap) -> void:
+func mount(p_map: AuthoringPreviewMap, p_details: bool = true) -> void:
 	map = p_map
+	details = p_details
 	if get_child_count() > 0:
+		return
+	_summary = Label.new()
+	_summary.name = SUMMARY_NAME
+	add_child(_summary)
+	if not details:
+		_sync_summary()
 		return
 	_list = ItemList.new()
 	_list.name = LIST_NAME
@@ -41,6 +56,13 @@ func refresh(world: AuthoringWorld) -> void:
 			if typeof(item) == TYPE_DICTIONARY:
 				_issues.append(item)
 	_rebuild_list()
+	_sync_summary()
+
+
+func summary_text() -> String:
+	if _summary == null or not is_instance_valid(_summary):
+		return ""
+	return _summary.text
 
 
 func reach_ok() -> bool:
@@ -98,6 +120,17 @@ func _focus_issue_at(index: int) -> bool:
 		if map.focus_entity(entity_id):
 			return true
 	return false
+
+
+func _sync_summary() -> void:
+	if _summary == null or not is_instance_valid(_summary):
+		return
+	if _reach_ok and _issues.is_empty():
+		_summary.text = UiCopy.text(UiCopy.VALIDATOR_OK)
+		_summary.remove_theme_color_override("font_color")
+		return
+	_summary.text = UiCopy.text(UiCopy.VALIDATOR_ISSUES) % _issues.size()
+	_summary.add_theme_color_override("font_color", PlaceholderSpec.HAZARD_ALBEDO)
 
 
 func _rebuild_list() -> void:

@@ -16,6 +16,7 @@ const USE_ITEM_NAME: String = "UseItem"
 const SPRINT_NAME: String = "Sprint"
 const JUMP_NAME: String = "Jump"
 const ADVANCE_TICK_NAME: String = "AdvanceTick"
+const AUTO_TICK_NAME: String = "AutoTick"
 const STATUS_NAME: String = "Status"
 const OVERLAY_NAME: String = "Overlay"
 const PlayHudGd := preload("res://src/shared/play_hud_overlay.gd")
@@ -70,6 +71,7 @@ func attach(parent: Node, handlers: Dictionary) -> Window:
 	_add_button(action_row, SPRINT_NAME, UiCopy.SPRINT, _handler(handlers, "sprint"))
 	_add_button(action_row, JUMP_NAME, UiCopy.JUMP, _handler(handlers, "jump"))
 	_add_button(action_row, ADVANCE_TICK_NAME, UiCopy.ADVANCE_TICK, _handler(handlers, "advance"))
+	_add_auto_tick(action_row, _handler(handlers, "auto_tick"))
 	play_hud.attach(window, overlay)
 	LayoutGd.apply_preview(window, parent)
 	return window
@@ -124,6 +126,25 @@ func _handler(handlers: Dictionary, key: String) -> Callable:
 		return Callable()
 	var handler: Callable = raw
 	return handler
+
+
+func auto_tick_button() -> CheckButton:
+	if not is_alive():
+		return null
+	return window.get_node_or_null("%s/PlayActions/%s" % [OVERLAY_NAME, AUTO_TICK_NAME]) as CheckButton
+
+
+## 「自动推进」。默认开：`Advance tick` 那颗按钮是给单步调试用的，让外人靠点它
+## 走完一张课不是试玩，是折磨。默认连续跑，需要逐拍看时再关掉。
+func _add_auto_tick(row: BoxContainer, handler: Callable) -> void:
+	var toggle: CheckButton = CheckButton.new()
+	toggle.name = AUTO_TICK_NAME
+	toggle.text = UiCopy.text(UiCopy.AUTO_TICK)
+	toggle.focus_mode = Control.FOCUS_NONE
+	toggle.button_pressed = true
+	if handler.is_valid():
+		toggle.toggled.connect(handler)
+	row.add_child(toggle)
 
 
 func _add_button(row: BoxContainer, node_name: String, copy_key: String, handler: Callable) -> void:

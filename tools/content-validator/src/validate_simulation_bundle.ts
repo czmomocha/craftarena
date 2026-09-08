@@ -13,6 +13,13 @@ const OCCUPANCY_BAGS = [
 	"pickups",
 ] as const;
 
+/**
+ * 只带行为、几何住在 `solids` 里的可选袋。`SimulationBundleDecode` 对两者都要求
+ * `entity_id` 能在 `solids` 里找到；JSON Schema 表达不了跨袋引用，所以这条规则
+ * 必须在这里复核，否则 GDScript 拒了而 `npm test` 放行。
+ */
+const SOLID_BACKED_BAGS = ["movers", "conveyors"] as const;
+
 export function validateSimulationBundle(instance: unknown): JsonSchemaError[] {
 	const errors = validateJsonSchema(loadJsonFile(SIMULATION_BUNDLE_SCHEMA_PATH), instance, {
 		schemaPath: SIMULATION_BUNDLE_SCHEMA_PATH,
@@ -23,8 +30,41 @@ export function validateSimulationBundle(instance: unknown): JsonSchemaError[] {
 	for (const bag of OCCUPANCY_BAGS) {
 		pushDuplicateIds(errors, instance[bag], `$.${bag}`);
 	}
+	for (const bag of SOLID_BACKED_BAGS) {
+		pushDuplicateIds(errors, instance[bag], `$.${bag}`);
+	}
 	pushAssetErrors(errors, instance);
+	pushSolidBackedErrors(errors, instance);
 	return errors;
+}
+
+function pushSolidBackedErrors(errors: JsonSchemaError[], instance: JsonObject): void {
+	const solids = instance.solids;
+	const solidIds = new Set<number>();
+	if (Array.isArray(solids)) {
+		for (const item of solids) {
+			const entityId = isObject(item) ? integerOrUndefined(item.entity_id) : undefined;
+			if (entityId !== undefined) {
+				solidIds.add(entityId);
+			}
+		}
+	}
+	for (const bag of SOLID_BACKED_BAGS) {
+		const list = instance[bag];
+		if (!Array.isArray(list)) {
+			continue;
+		}
+		for (const [index, item] of list.entries()) {
+			const entityId = isObject(item) ? integerOrUndefined(item.entity_id) : undefined;
+			if (entityId === undefined || solidIds.has(entityId)) {
+				continue;
+			}
+			errors.push({
+				path: `$.${bag}/${index}/entity_id`,
+				message: "entity_id is not declared in solids",
+			});
+		}
+	}
 }
 
 /**

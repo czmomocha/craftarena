@@ -1,11 +1,93 @@
 [gd_scene format=3]
 
-[sub_resource type="TorusMesh" id="TorusMesh_portal"]
-inner_radius = 0.22
-outer_radius = 0.48
-rings = 12
-ring_segments = 16
+; 传送门占位模型（可玩性深化 轨 2：传送门模型与课内动效）。
+;
+; **仍是占位美术，不是定稿模型。** 它是程序化网格而不是 `.glb`：传送门是
+; 官方课里唯一还没有生成资产的一类占用，而本刀要解决的是「一眼认不出这是门」，
+; 不是「补齐美术」。新增第三方资产要走许可证归档与预算门禁（CD-51 §5.1 /
+; CD-11 §8.1），那是 M-Art 剩余项，不在这一刀里自选。
+;
+; 比上一版（单个 TorusMesh 圆环）多的三件事，每件都对应一个读不出来的东西：
+;
+; * `Base` 底座——圆环悬在半空时读不出「它站在这一格上」；
+; * `Core` 门芯——空心圆环从侧面看几乎消失，穿过去时没有「进入」的界面；
+; * `Swirl` 三片旋翼——静止的门和静止的装饰物长得一样。它由
+;   `MatchCourseMapFx` 按权威 tick 转，所以是确定性的，不读墙钟。
+;
+; 名字是契约：`MatchCourseMapFx.SWIRL_NAME` 按名字找 `Swirl`。改名要同改那边。
 
-[node name="PortalGate" type="MeshInstance3D"]
+[sub_resource type="TorusMesh" id="TorusMesh_frame"]
+inner_radius = 0.3
+outer_radius = 0.42
+rings = 12
+ring_segments = 20
+
+[sub_resource type="StandardMaterial3D" id="Material_frame"]
+albedo_color = Color(0.16, 0.62, 0.8, 1)
+metallic = 0.4
+roughness = 0.35
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_core"]
+top_radius = 0.3
+bottom_radius = 0.3
+height = 0.03
+radial_segments = 20
+rings = 1
+
+[sub_resource type="StandardMaterial3D" id="Material_core"]
+transparency = 1
+albedo_color = Color(0.35, 0.9, 1, 0.55)
+emission_enabled = true
+emission = Color(0.2, 0.75, 0.95, 1)
+emission_energy_multiplier = 1.6
+
+[sub_resource type="BoxMesh" id="BoxMesh_blade"]
+size = Vector3(0.05, 0.26, 0.02)
+
+[sub_resource type="StandardMaterial3D" id="Material_blade"]
+albedo_color = Color(0.9, 0.97, 1, 1)
+emission_enabled = true
+emission = Color(0.6, 0.92, 1, 1)
+emission_energy_multiplier = 1.2
+
+[sub_resource type="BoxMesh" id="BoxMesh_base"]
+size = Vector3(0.62, 0.07, 0.22)
+
+[sub_resource type="StandardMaterial3D" id="Material_base"]
+albedo_color = Color(0.13, 0.4, 0.52, 1)
+roughness = 0.6
+
+[node name="PortalGate" type="Node3D"]
+
+[node name="Base" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.035, 0)
+mesh = SubResource("BoxMesh_base")
+surface_material_override/0 = SubResource("Material_base")
+
+[node name="Frame" type="MeshInstance3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 0, -1, 0, 1, 0, 0, 0.5, 0)
-mesh = SubResource("TorusMesh_portal")
+mesh = SubResource("TorusMesh_frame")
+surface_material_override/0 = SubResource("Material_frame")
+
+[node name="Core" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0, -1, 0, 1, 0, 0, 0.5, 0)
+mesh = SubResource("CylinderMesh_core")
+surface_material_override/0 = SubResource("Material_core")
+
+[node name="Swirl" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5, 0)
+
+[node name="Blade0" type="MeshInstance3D" parent="Swirl"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.16, 0)
+mesh = SubResource("BoxMesh_blade")
+surface_material_override/0 = SubResource("Material_blade")
+
+[node name="Blade1" type="MeshInstance3D" parent="Swirl"]
+transform = Transform3D(-0.5, -0.866025, 0, 0.866025, -0.5, 0, 0, 0, 1, -0.1386, -0.08, 0)
+mesh = SubResource("BoxMesh_blade")
+surface_material_override/0 = SubResource("Material_blade")
+
+[node name="Blade2" type="MeshInstance3D" parent="Swirl"]
+transform = Transform3D(-0.5, 0.866025, 0, -0.866025, -0.5, 0, 0, 0, 1, 0.1386, -0.08, 0)
+mesh = SubResource("BoxMesh_blade")
+surface_material_override/0 = SubResource("Material_blade")

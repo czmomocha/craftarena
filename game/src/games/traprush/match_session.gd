@@ -10,6 +10,7 @@ extends RefCounted
 ## 公开 API 仍在本门面上。
 
 const Gravity := preload("res://src/games/traprush/gravity.gd")
+const ConveyorCycle := preload("res://src/games/traprush/conveyor_cycle.gd")
 const HazardCycle := preload("res://src/games/traprush/hazard_cycle.gd")
 const MoverCycle := preload("res://src/games/traprush/mover_cycle.gd")
 const TraprushMatchBootstrapGd := preload("res://src/games/traprush/match_session_bootstrap.gd")
@@ -37,6 +38,8 @@ var shove_cooldown_ticks: int = 1
 var sprint_step: int = 0
 var item_cooldown_ticks: int = 1
 var hazard_knockback_step: int = 0
+## 传送带每 tick 推的距离。调用方注入的占位桩，不是产品速度。0 ⇒ 传送带不推人。
+var conveyor_step: int = 0
 var respawn_stun_ticks: int = 0
 var range_enabled: bool = false
 var range_min_x: int = 0
@@ -60,6 +63,7 @@ var _crate_health: Dictionary = {}
 var _hazard_ids: Dictionary = {}
 var _hazard_cycle: Array[Dictionary] = []
 var _mover_cycle: Array[Dictionary] = []
+var _conveyor_cycle: Array[Dictionary] = []
 var _pickup_ids: Dictionary = {}
 var _pickup_kinds: Dictionary = {}
 var _spawn: TraprushCheckpointSpawn = null
@@ -128,6 +132,14 @@ func player_stun_remaining(slot: int) -> int:
 	return view.player_stun_remaining(self, slot)
 
 
+func player_setback_reason(slot: int) -> String:
+	return view.player_setback_reason(self, slot)
+
+
+func player_setback_tick(slot: int) -> int:
+	return view.player_tick_field(self, slot, "setback_tick")
+
+
 func player_last_shove_tick(slot: int) -> int:
 	return view.player_tick_field(self, slot, "last_shove_tick")
 
@@ -192,6 +204,7 @@ func advance_sim_tick() -> void:
 	_tick_stuns()
 	_world.tick()
 	_apply_movers()
+	_apply_conveyors()
 	HazardCycle.apply(_world, _hazard_cycle)
 	for player: Dictionary in _players:
 		_resolve_player_hazards(player)
@@ -284,6 +297,23 @@ func _apply_movers() -> void:
 			if player["capsule_id"] == capsule_id:
 				scan.reset_player_to_pad(self, player)
 				break
+
+
+## 传送带在移动平台之后、周期机关之前推。顺序不是随意的：平台先把乘客带到
+## 这一拍的位姿，传送带才知道谁站在自己身上；机关的固体切换再决定这一拍会不会
+## 被打。硬直中的玩家照样被推——被机关打晕后从带子上滑走，正是这块东西的用处。
+func _apply_conveyors() -> void:
+	if _conveyor_cycle.is_empty() or conveyor_step <= 0:
+		return
+	var capsule_ids: PackedInt32Array = PackedInt32Array()
+	for player: Dictionary in _players:
+		var capsule_id: int = player["capsule_id"]
+		capsule_ids.append(capsule_id)
+	ConveyorCycle.apply(_world, _conveyor_cycle, capsule_ids, support_dy, conveyor_step)
+
+
+func conveyor_count() -> int:
+	return _conveyor_cycle.size()
 
 
 func _resolve_player_hazards(player: Dictionary) -> bool:

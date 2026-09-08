@@ -131,8 +131,7 @@ func reset_player_if_out_of_range(session: TraprushMatchSession, player: Diction
 	)
 	var reset: bool = result.get("reset", false)
 	if reset:
-		player["latch"] = {}
-		player["stun_remaining"] = session.respawn_stun_ticks
+		mark_setback(session, player, PlaySetback.OUT_OF_RANGE)
 	return reset
 
 
@@ -160,8 +159,7 @@ func reset_player_to_pad(session: TraprushMatchSession, player: Dictionary) -> b
 	if not session._world.set_pose(capsule_id, x, y, z, yaw_bam):
 		return false
 	session._world.set_vy(capsule_id, 0)
-	player["latch"] = {}
-	player["stun_remaining"] = session.respawn_stun_ticks
+	mark_setback(session, player, PlaySetback.CRUSHED)
 	return true
 
 
@@ -183,9 +181,20 @@ func resolve_player_hazards(session: TraprushMatchSession, player: Dictionary) -
 		return false
 	var reset: bool = result.get("reset", false)
 	if reset:
-		player["latch"] = {}
-		player["stun_remaining"] = session.respawn_stun_ticks
+		mark_setback(session, player, PlaySetback.HAZARD)
 	return reset
+
+
+## 一次环境失败的三件事：清传送门闩、上硬直、记下原因与 tick。
+## 三个复位点此前各写两行、谁也不记原因，于是 HUD 无从解释那一秒的卡顿。
+## 原因是读出，不进 hash_state（理由见 `match_session_bootstrap.gd`）。
+func mark_setback(session: TraprushMatchSession, player: Dictionary, reason: String) -> void:
+	player["latch"] = {}
+	player["stun_remaining"] = session.respawn_stun_ticks
+	if not PlaySetback.contains(reason):
+		return
+	player["setback_reason"] = reason
+	player["setback_tick"] = session.tick_index()
 
 
 func player_stunned(player: Dictionary) -> bool:

@@ -17,6 +17,7 @@ static func collect_occupancy(
 	var solid_list: Array[Dictionary] = []
 	var pickup_list: Array[Dictionary] = []
 	var mover_list: Array[Dictionary] = []
+	var conveyor_list: Array[Dictionary] = []
 	var ids: Array[int] = world.entity_ids()
 	for entity_id: int in ids:
 		var record: SharedComponentRecord = world.get_record(entity_id)
@@ -34,7 +35,9 @@ static func collect_occupancy(
 				return {"ok": false}
 			continue
 		if FieldsGd.has_solid_tag(record):
-			if not _append_solid(entity_id, record, next_asset, used_assets, solid_list, mover_list):
+			if not _append_solid(
+				entity_id, record, next_asset, used_assets, solid_list, mover_list, conveyor_list
+			):
 				return {"ok": false}
 			continue
 		if record.components.has(SharedComponentNames.DESTRUCTIBLE):
@@ -58,6 +61,7 @@ static func collect_occupancy(
 		"solids": solid_list,
 		"pickups": pickup_list,
 		"movers": mover_list,
+		"conveyors": conveyor_list,
 	}
 
 
@@ -177,7 +181,8 @@ static func _append_solid(
 	next_asset: Dictionary,
 	used_assets: Dictionary[int, int],
 	solid_list: Array[Dictionary],
-	mover_list: Array[Dictionary]
+	mover_list: Array[Dictionary],
+	conveyor_list: Array[Dictionary]
 ) -> bool:
 	if record.components.has(SharedComponentNames.CHECKPOINT):
 		return false
@@ -201,6 +206,15 @@ static func _append_solid(
 		if mover_bag.is_empty():
 			return false
 		mover_list.append(mover_bag)
+	if not FieldsGd.has_conveyor_tag(record):
+		return true
+	# 自己在走 + 又把人往别处推：两段位移的先后顺序没有可解释的答案，拒绝发布。
+	if record.components.has(SharedComponentNames.MOVER):
+		return false
+	var yaw_bam: int = FieldsGd.transform_yaw_bam(record)
+	if yaw_bam < 0:
+		return false
+	conveyor_list.append({"entity_id": entity_id, "yaw_bam": yaw_bam})
 	return true
 
 

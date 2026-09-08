@@ -98,6 +98,18 @@ func player_stun_remaining(session: TraprushMatchSession, slot: int) -> int:
 	return stun
 
 
+## 最近一次环境失败的原因。空串 = 本局还没失败过。读出，不进 hash_state。
+func player_setback_reason(session: TraprushMatchSession, slot: int) -> String:
+	var player: Dictionary = session._player_at(slot)
+	if player.is_empty():
+		return PlaySetback.NONE
+	var raw: Variant = player.get("setback_reason", PlaySetback.NONE)
+	if typeof(raw) != TYPE_STRING:
+		return PlaySetback.NONE
+	var reason: String = raw
+	return reason
+
+
 func player_tick_field(session: TraprushMatchSession, slot: int, key: String) -> int:
 	var player: Dictionary = session._player_at(slot)
 	if player.is_empty():

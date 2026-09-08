@@ -40,6 +40,8 @@ var course_path: String = ""
 var apply_count: int = 0
 var interp_t: int = 0
 var interp_tick: int = -1
+## 本席的「下一个目标在哪」解算结果（可玩性深化，轨 1）。表现读出，不进裁决。
+var wayfind: Dictionary = {"ok": false, "kind": ""}
 
 
 func mount(window: Window) -> void:
@@ -210,6 +212,8 @@ func apply_snapshot(
 		hazards.apply_follow(follow)
 	if solids != null:
 		solids.apply_tick(follow.tick)
+	if course != null:
+		course.apply_tick(follow.tick)
 	if play != null and play.state == MatchPlaySessionGd.STATE_IN_MATCH:
 		var predicted: Dictionary = play.predict.try_apply(
 			players,
@@ -224,11 +228,11 @@ func apply_snapshot(
 	if map != null:
 		map.follow_slot = slot
 		map.apply_players(players, follow.crates)
+	var own_accepted: int = MatchLobbyHud.own_player_int(follow.players, slot, "accepted_count", true)
+	var own_finish_tick: int = MatchLobbyHud.own_player_int(follow.players, slot, "finish_tick", false)
 	if course != null:
-		course.apply_own_progress(
-			MatchLobbyHud.own_player_int(follow.players, slot, "accepted_count", true),
-			MatchLobbyHud.own_player_int(follow.players, slot, "finish_tick", false)
-		)
+		course.apply_own_progress(own_accepted, own_finish_tick)
+	_sync_wayfind(slot, own_accepted, own_finish_tick, follow.players)
 	if standings != null:
 		var pad_total: int = 0
 		if course != null:
@@ -265,8 +269,47 @@ func try_advance_interp(window_visible: bool, step: int, follow: MatchSnapshotFo
 	return true
 
 
+## 寻路只服务本席：目标由服务端已验收的垫数决定，方向由本席权威位姿决定。
+## 每帧复用同一个 `guide` 节点（`set_guide` 内部只写位姿与色），只有换席位时
+## 才拆掉旧的那支——本函数在对局壳里每帧被调一次，不能全清全建。
+func _sync_wayfind(slot: int, accepted_count: int, finish_tick: int, players: Array) -> void:
+	wayfind = {"ok": false, "kind": ""}
+	if map == null:
+		return
+	if slot < 0 or course == null:
+		map.clear_guides()
+		return
+	for other: int in range(map.player_count()):
+		if other != slot:
+			map.clear_guide(other)
+	var pose: Dictionary = MatchLobbyHud.own_authority_pose(players, slot)
+	if pose.is_empty():
+		map.clear_guide(slot)
+		return
+	var own_x: int = pose["x"]
+	var own_y: int = pose["y"]
+	var own_z: int = pose["z"]
+	wayfind = PlayWayfinder.plan(
+		course.wayfind_pads(),
+		course.wayfind_finish(),
+		accepted_count,
+		finish_tick,
+		own_x,
+		own_y,
+		own_z
+	)
+	var floor_delta: int = 0
+	var floor_raw: Variant = wayfind.get("floor_delta", 0)
+	if typeof(floor_raw) == TYPE_INT:
+		floor_delta = floor_raw
+	map.set_guide(slot, PlayWayfinder.direction_meters(wayfind), floor_delta)
+
+
 func clear_play_overlay() -> void:
+	wayfind = {"ok": false, "kind": ""}
 	if map != null:
+		map.clear_guides()
+		map.follow_transition.reset()
 		map.follow_slot = -1
 		map.apply_players([])
 	if standings != null:

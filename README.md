@@ -77,6 +77,7 @@ export GODOT_AI_DISABLE_TELEMETRY=true
 | 打开编辑器 | `& $env:GODOT4 --editor --path game` | `"$GODOT4" --editor --path game` |
 | 运行主场景（窗口，真机） | `& $env:GODOT4 --path game` | `"$GODOT4" --path game` |
 | 运行并指向远端服务器 | `& $env:GODOT4 --path game -- --server=<主机>` | `"$GODOT4" --path game -- --server=<主机>` |
+| 开窗即进创作（客户端内编辑器 + Preview 并排） | `& $env:GODOT4 --path game -- --edit` | `"$GODOT4" --path game -- --edit` |
 | Headless 导入检查 | `& $env:GODOT4_CONSOLE --headless --path game --import` | `"$GODOT4" --headless --path game --import` |
 | Headless 启动主场景 | `& $env:GODOT4_CONSOLE --headless --path game --quit` | `"$GODOT4" --headless --path game --quit` |
 | 单文件语法与类型检查 | `& $env:GODOT4_CONSOLE --headless --path game --check-only -s res://src/client/main.gd` | `"$GODOT4" --headless --path game --check-only -s res://src/client/main.gd` |
@@ -170,6 +171,8 @@ DevLauncher 只管本地开发编排，不做守护、重启和资源限制；�
 | 环境变量 | `CRAFTARENA_SERVER` / `CRAFTARENA_CONTROL_PLANE` / `CRAFTARENA_GATEWAY` | 双击 exe 时生效 |
 | 大厅输入框 | `Host[:port]` 一行加 **Apply server** | 运行中改；对局进行中会被拒 |
 | Web 查询串 | `index.html?server=<主机>` 或 `?server=<主机>:<控制面端口>` | 也可 `control-plane=` / `gateway=` 全 URL |
+
+浏览器上另有 `index.html?edit=1`：打开即落在**创作**（Web 轻量 Edit）而不是大厅，等价于桌面的 `-- --edit`。`?edit=0` / `?edit=false` 明确关掉；不带这个参数就是默认的游玩入口。大厅里也有一颗 **创作课程** 按钮。
 
 地址被拒时状态行出现 `server_error=`，**当前生效值不变**。解析与校验在 `game/src/client/server_endpoint.gd`。
 

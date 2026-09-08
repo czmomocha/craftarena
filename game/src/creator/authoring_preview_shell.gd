@@ -49,7 +49,12 @@ var play_use_item_reach_dz: int = PlayStubs.USE_ITEM_REACH_DZ
 var play_sprint_step: int = PlayStubs.SPRINT_STEP
 var play_item_cooldown_ticks: int = PlayStubs.ITEM_COOLDOWN_TICKS
 var play_hazard_knockback_step: int = PlayStubs.HAZARD_KNOCKBACK_STEP
-var play_respawn_stun_ticks: int = PlayStubs.PREVIEW_RESPAWN_STUN_TICKS
+var play_conveyor_step: int = PlayStubs.CONVEYOR_STEP
+## 手动 Advance 时 1 拍就过（点 60 下不是调试）；自动推进时用对局那 1.0 s。
+## `set_auto_tick` 在两者之间切换，见该函数注释。
+var play_respawn_stun_ticks: int = PlayStubs.RESPAWN_STUN_TICKS
+## 连续试玩（可玩性深化 轨 3：改完立刻试）。默认开。
+var play_auto_tick: bool = true
 var play_jump_dy: int = PlayStubs.JUMP_DY
 var play_support_dy: int = PlayStubs.SUPPORT_DY
 ## Advance tick is a click, not a frame, so Preview falls a whole cell per step.
@@ -143,6 +148,22 @@ func try_advance_play() -> bool:
 	if preview == null or _play_view_busy:
 		return false
 	return _run_play_verb(preview.try_advance_play)
+
+
+## 连续试玩开关（可玩性深化 轨 3）。
+##
+## 此前 Preview 只在点「Advance tick」时推进一拍：创作者摆完一段路，要走过去
+## 看看，得点几百下。对拿到链接的外人来说那不是试玩。打开后仿真按引擎 physics
+## 连续跑，与 Solo 同一节奏。
+##
+## 硬直随着一起换：手动单步时 1 拍就过（否则一次机关命中要多点 60 下），
+## 连续跑时用对局那 1.0 s（D5），否则「改完立刻试」试到的惩罚不是真的那一个。
+func set_auto_tick(on: bool) -> void:
+	play_auto_tick = on
+	play_respawn_stun_ticks = (
+		PlayStubs.RESPAWN_STUN_TICKS if on else PlayStubs.PREVIEW_RESPAWN_STUN_TICKS
+	)
+	play.copy_hazard_hit_stubs(self)
 
 
 static func move_payload_from_vector(move_x: float, move_z: float, step: int) -> Dictionary:
@@ -243,6 +264,15 @@ func _process(_delta: float) -> void:
 	_apply_play_anim()
 
 
+## 连续试玩跟 physics 走，与 Solo 同一时钟；输入仍在 `_process` 按帧采样。
+func _physics_process(_delta: float) -> void:
+	if not play_auto_tick or _play_view_busy:
+		return
+	if not _is_playing() or not chrome.is_visible():
+		return
+	try_advance_play()
+
+
 func _ensure_window() -> void:
 	if chrome.is_alive() and view.map_alive():
 		window = chrome.window
@@ -260,6 +290,7 @@ func _ensure_window() -> void:
 			"sprint": _on_sprint,
 			"jump": _on_jump,
 			"advance": _on_advance_tick,
+			"auto_tick": set_auto_tick,
 			"close": _on_close_requested,
 		})
 		add_child(window)

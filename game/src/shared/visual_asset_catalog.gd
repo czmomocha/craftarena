@@ -31,7 +31,7 @@ extends RefCounted
 ## | `finish` | 终点门 | 脚底对齐 |
 ## | `destructibles` | 箱子 | 脚底对齐 + 橙色 overlay |
 ## | `hazards` | 滚柱 | 脚底对齐 + 洋红 overlay |
-## | `portals` | 仍是占位盒 | 传送门专用模型还没生成 |
+## | `portals` | 传送门（底座 + 环 + 门芯 + 旋翼） | 脚底对齐；旋翼由 `MatchCourseMapFx` 按权威 tick 转 |
 ##
 ## 箱与滚柱**保留 D4 危险色薄膜**（人类 2026-09-02 拍板）：换真模型不能把
 ## "会打你的"画成和地板一个色。薄膜走 `material_overlay`，不改共享 Mesh。

@@ -85,6 +85,19 @@ static func try_place_mover(
 	return shell.try_edit(mover_payload(entity_id, x, y, z, cell / 2, cell))
 
 
+## 传送带：一块固体 + `conveyor` 标签 + `transform.yaw_bam` 方向。
+## 每按一次朝向顺时针转 90°，所以摆四块就能围出一圈；不另开方向面板。
+static func try_place_conveyor(
+	shell: AuthoringEditorShell, entity_id: int, cell_x: int, cell_y: int, cell_z: int, yaw_bam: int
+) -> bool:
+	if shell.session == null or shell.session.world == null or shell.session.world.grid == null:
+		return false
+	var cell: int = shell.session.world.grid.cell
+	return shell.try_edit(conveyor_payload(
+		entity_id, cell_x * cell, cell_y * cell, cell_z * cell, cell / 2, yaw_bam
+	))
+
+
 static func try_move_entity(
 	shell: AuthoringEditorShell, entity_id: int, cell_x: int, cell_y: int, cell_z: int
 ) -> bool:
@@ -183,6 +196,33 @@ static func zone_payload(entity_id: int, x: int, y: int, z: int, half: int, tag:
 						"hz": half,
 					},
 					"tags": [tag],
+				},
+			},
+		},
+	}
+
+
+static func conveyor_payload(
+	entity_id: int, x: int, y: int, z: int, half: int, yaw_bam: int
+) -> Dictionary:
+	return {
+		"op": "place",
+		"record": {
+			"schema_version": 1,
+			"entity_id": entity_id,
+			"components": {
+				"transform": {"x": x, "y": y, "z": z, "yaw_bam": yaw_bam},
+				"zone": {
+					"shape": {
+						"kind": SharedCollisionShapeKinds.BOX,
+						"hx": half,
+						"hy": half,
+						"hz": half,
+					},
+					"tags": [
+						TraprushTopologyCompiler.SOLID_ZONE_TAG,
+						TraprushTopologyCompiler.CONVEYOR_ZONE_TAG,
+					],
 				},
 			},
 		},
