@@ -119,7 +119,8 @@ static func build_view(
 		"rtt_p90_ms": play_view.get("rtt_p90_ms", -1),
 		"rtt_p95_ms": play_view.get("rtt_p95_ms", -1),
 		"rtt_lost": play_view.get("rtt_lost", 0),
-		"server_host": ServerEndpointGd.host_of(control_plane_base),
+		"server_host": ServerEndpointGd.host_port_of(control_plane_base),
+		"control_plane_host": ServerEndpointGd.host_of(control_plane_base),
 		"gateway_host": ServerEndpointGd.host_of(gateway_base),
 		"server_error": server_error,
 		"offline_state": offline_view.get("state", ""),
@@ -203,7 +204,8 @@ static func format_line(view: Dictionary) -> String:
 	if server_host != "":
 		parts.append("server=%s" % server_host)
 	var gateway_host: String = str(view.get("gateway_host", ""))
-	if gateway_host != "" and gateway_host != server_host:
+	var control_plane_host: String = str(view.get("control_plane_host", ""))
+	if gateway_host != "" and gateway_host != control_plane_host:
 		parts.append("gw=%s" % gateway_host)
 	var server_error: String = str(view.get("server_error", ""))
 	if server_error != "":

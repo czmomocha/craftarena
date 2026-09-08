@@ -522,13 +522,14 @@ func test_solo_play_maps_local_authority_without_http() -> void:
 	assert_false(_shell.allows_online_writes())
 
 
-func test_solo_refuses_web_and_online_busy() -> void:
+func test_solo_allows_web_and_refuses_online_busy() -> void:
 	_shell = _open_shell()
 	_shell.web_platform = true
-	assert_false(_shell.try_solo())
-	assert_eq(_shell.offline.last_error, "web_locked")
-	assert_eq(_shell.map.player_count(), 0)
-	_shell.web_platform = false
+	assert_true(_shell.try_solo())
+	assert_eq(_shell.offline.state, MatchOfflineSession.STATE_PLAYING)
+	assert_eq(_shell.offline.last_error, "")
+	assert_gt(_shell.map.player_count(), 0)
+	assert_true(_shell.try_cancel())
 	assert_true(_shell.try_quick())
 	assert_true(_shell.accept_http(201, _join("ABCD23", "ticket-solo")))
 	assert_eq(_shell.play.state, MatchPlaySession.STATE_CONNECTING)
@@ -1251,8 +1252,8 @@ func test_server_field_retargets_both_bases_while_idle() -> void:
 	_shell = _open_shell()
 	assert_eq(_shell.control_plane_base, ServerEndpointGd.DEFAULT_CONTROL_PLANE)
 	assert_eq(_shell.gateway_base, ServerEndpointGd.DEFAULT_GATEWAY)
-	assert_eq(_shell.server_host_text(), "127.0.0.1")
-	assert_true(_shell.status_label_text().contains("server=127.0.0.1"))
+	assert_eq(_shell.server_host_text(), "127.0.0.1:8080")
+	assert_true(_shell.status_label_text().contains("server=127.0.0.1:8080"))
 	assert_false(_shell.status_label_text().contains("gw="))
 	_shell.set_server_host_text("203.0.113.9")
 	assert_true(_shell.try_apply_server_host())
@@ -1264,16 +1265,18 @@ func test_server_field_retargets_both_bases_while_idle() -> void:
 
 func test_rejected_server_host_keeps_current_bases_and_shows_error() -> void:
 	_shell = _open_shell()
-	_shell.set_server_host_text("203.0.113.9:9000")
+	_shell.set_server_host_text("http://203.0.113.9")
 	assert_false(_shell.try_apply_server_host())
 	assert_eq(_shell.control_plane_base, ServerEndpointGd.DEFAULT_CONTROL_PLANE)
 	assert_eq(_shell.gateway_base, ServerEndpointGd.DEFAULT_GATEWAY)
-	assert_true(_shell.status_label_text().contains("server=127.0.0.1"))
+	assert_true(_shell.status_label_text().contains("server=127.0.0.1:8080"))
 	assert_true(_shell.status_label_text().contains("server_error="))
 	assert_true(_shell.status_label_text().contains("--control-plane"))
-	_shell.set_server_host_text("203.0.113.9")
+	_shell.set_server_host_text("203.0.113.9:9000")
 	assert_true(_shell.try_apply_server_host())
-	assert_eq(_shell.control_plane_base, "http://203.0.113.9:8080")
+	assert_eq(_shell.control_plane_base, "http://203.0.113.9:9000")
+	assert_eq(_shell.gateway_base, "ws://203.0.113.9:8090")
+	assert_eq(_shell.server_host_text(), "203.0.113.9:9000")
 	assert_false(_shell.status_label_text().contains("server_error="))
 
 
@@ -1307,7 +1310,7 @@ func test_apply_endpoint_syncs_bases_field_and_hud() -> void:
 	assert_true(_shell.apply_endpoint(resolved))
 	assert_eq(_shell.control_plane_base, "http://198.51.100.7:8080")
 	assert_eq(_shell.gateway_base, "ws://198.51.100.7:8090")
-	assert_eq(_shell.server_host_text(), "198.51.100.7")
+	assert_eq(_shell.server_host_text(), "198.51.100.7:8080")
 	assert_true(_shell.status_label_text().contains("server=198.51.100.7"))
 	assert_false(_shell.status_label_text().contains("gw="))
 	assert_false(_shell.apply_endpoint(null))

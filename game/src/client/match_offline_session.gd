@@ -6,8 +6,10 @@ extends RefCounted
 ## process. Commands use MatchFrameCodec; the command tick is 0 because
 ## the local session tick is authoritative. Snapshots feed
 ## MatchSnapshotFollow so the lobby can interpolate presentation poses.
-## The banner is `craft_arena.ui.offline_banner` (CD-13 §3). Web is refused.
-## play_jump_dy / play_support_dy / play_fall_dy are caller stubs copied
+## The banner is `craft_arena.ui.offline_banner` (CD-13 §3). Test-period Web
+## Solo uses this same local authority (CD-13 §3 / M-Export first knife).
+## `web_platform` stays on the signature so callers can still pass
+## `OS.has_feature("web")`; it no longer refuses. play_jump_dy / play_support_dy / play_fall_dy are caller stubs copied
 ## into the session; play_fall_dy is gravity accel. 0 keeps the session
 ## default (no accel; leftover vy still coasts). play_range_half is a
 ## caller stub copied into enable_play_range; 0 keeps the session default
@@ -59,10 +61,7 @@ static func move_axes(forward: bool, back: bool, left: bool, right: bool, step: 
 	return MatchMoveFacingGd.move_axes(forward, back, left, right, step)
 
 
-func try_begin(path: String, web_platform: bool = false) -> bool:
-	if web_platform:
-		last_error = "web_locked"
-		return false
+func try_begin(path: String, _web_platform: bool = false) -> bool:
 	if state == STATE_PLAYING:
 		last_error = "busy"
 		return false

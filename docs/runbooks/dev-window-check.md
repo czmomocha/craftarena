@@ -54,11 +54,37 @@ Worktree 端口偏移见 README「并行工作区」；本文件不复述端口�
 
 ---
 
-## 本刀：无待审章
+## 本刀：Web 游玩分发第一刀（浏览器 Solo + 主机:端口）
 
-F 线可读性已收口。下一刀按 [CD-61](../../Confirmed-docs/60-plan/61-milestones.md)：**Web 游玩分发**（浏览器能跑、测试期 Solo、链接+端口打 VPS）。开新章 PR 时**整节替换**本节。
+**需要三后端**（第 4 步联机）。第 1–3 步 Solo 可不启后端。
 
-本章无开发机可见行为：当前没有待审实现章。
+这刀验的是：已有 Web 预设导出后，浏览器能进大厅；测试期 **单人试玩** 不再被锁；大厅能填 `主机` 或 `主机:控制面端口` 打本机 / VPS。不是公开 TLS，不是每个 PR 的沙盒。命令以 [README.md](../../README.md) 为准。
+
+1. **导出 Web 包**（仓库根）。
+   - Windows：`& $env:GODOT4_CONSOLE --headless --path game --export-release "Web" "../export/web/index.html"`
+   - 预期：退出码 0，存在 `export/web/index.html`。失败：缺导出模板（见 [desktop-export-check.md](desktop-export-check.md) §1）或预设配置错误。
+2. **用控制面托管试玩页并打开浏览器**。先 `$env:CRAFTARENA_WEB_ROOT = (Resolve-Path export\web).Path`，再共用启动 0.1 `npm run dev`。浏览器打开 `http://127.0.0.1:8080/play/`（不要用 `file://`，不要用 `https://` 去打 `ws://`）。
+   - 预期：出现与桌面相同的大厅窗口；状态行 `join=idle`；服务器框默认接近 `127.0.0.1:8080`（从 `/play/` 页主机来）。失败：
+     - 页面是 `Error response` / `HTTPStatus.NOT_FOUND` ⇒ **8080 上不是控制面**（常见是本机其它 Python `http.server`）。先 `curl.exe -fsS http://127.0.0.1:8080/healthz`，应看到 `"service":"control-plane"`。对不上就停掉占端口的进程，再 `npm run dev`。
+     - JSON `web_root_unset` ⇒ 这一次没带 `CRAFTARENA_WEB_ROOT`（必须和 `npm run dev` 同一窗口先赋值）。
+     - 空白页、wasm 404、或控制台 CORS 报错（旧进程没带 `Access-Control-Allow-Origin`）。
+3. **点第四个按钮 单人试玩**（不要点最左边 快速游戏）。WASD 走两步，点取消。
+   - 预期：状态行 `offline=playing`，HUD 持续「离线试玩，成绩不上传」；能看见角色；取消后 `offline` 停。失败：`offline_error=web_locked` 或立刻退出。
+4. **联机：服务器框填 `127.0.0.1:8080`，点 应用服务器，再点 快速游戏**（人数保持 `2` 也可先改 `1` 若只想自己进；默认 2 人房会等第二人）。本机单人验收可建房：点 **创建房间**，状态行出现 `room=`。
+   - 预期：应用后状态行 `server=127.0.0.1:8080`、无 `server_error=`；建房后 `join` 不再是 idle，能画出赛道。失败：`server_error=` 仍写「must not carry a port」；或浏览器控制台 POST `/matchmaking/` 被 CORS 拦住。
+5. **（发给外人时）** 把 `http://<VPS>:8080/play/` 发给对方。对方若从别的静态页打开，让对方在服务器框填 `<VPS>` 或 `<VPS>:8080` 再点应用服务器。网关非 8090 时用查询串 `?gateway=ws://<VPS>:<网关端口>`。
+   - 预期：对方浏览器 Solo 能玩；填对主机后能进你的测试房。失败：HTTPS 页混 `ws://`；或只填了主机却把网关端口也改成了控制面端口（本刀**不会**从 8080 猜 8090）。
+
+### 本刀不测
+
+- 公开域名 / 受信证书 / `wss`；每个 PR 的 Web 沙盒；
+- Android / iOS 导出；字体入包；触控 UI；
+- Web 轻量 Edit（属可玩性深化）；Rule VM / M4a。
+
+### 诚实边界
+
+- 测试期明文 `http` / `ws` 与 CORS `*` 是已接受风险，不是产品能力；
+- `/play/` 要设 `CRAFTARENA_WEB_ROOT`；不设则控制面只提供 API，可用别的静态服务器发 Web 包，但跨源必须打到已带 CORS 的控制面。
 
 ---
 

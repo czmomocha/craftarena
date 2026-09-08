@@ -23,6 +23,8 @@ export interface ControlPlaneConfig {
 	readonly matchHostLaunchTimeoutMs: number;
 	readonly version: string;
 	readonly logLevel: string;
+	/** Godot Web 导出目录的绝对路径。空则不挂 `/play/`。 */
+	readonly webRoot: string | undefined;
 }
 
 const DEFAULT_PORT = 8080;
@@ -57,7 +59,15 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): ControlPlaneCo
 		),
 		version: env["CRAFTARENA_VERSION"] ?? "0.0.0-dev",
 		logLevel: env["CONTROL_PLANE_LOG_LEVEL"] ?? "info",
+		webRoot: parseOptionalPath(env["CRAFTARENA_WEB_ROOT"]),
 	};
+}
+
+function parseOptionalPath(raw: string | undefined): string | undefined {
+	if (raw === undefined || raw.trim() === "") {
+		return undefined;
+	}
+	return resolve(raw);
 }
 
 function parsePort(raw: string | undefined, fallback: number): number {

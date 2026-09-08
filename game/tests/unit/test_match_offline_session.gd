@@ -29,12 +29,13 @@ func test_begin_course_01_publishes_one_player_without_writes() -> void:
 	assert_false(offline.allows_online_writes())
 
 
-func test_web_and_bad_course_refuse() -> void:
+func test_web_is_allowed_and_bad_course_refuses() -> void:
 	var offline: MatchOfflineSession = MatchOfflineSession.new()
-	assert_false(offline.try_begin(COURSE_01, true))
-	assert_eq(offline.last_error, "web_locked")
-	assert_eq(offline.state, MatchOfflineSession.STATE_IDLE)
-	assert_false(offline.follow.has_snapshot)
+	assert_true(offline.try_begin(COURSE_01, true))
+	assert_eq(offline.state, MatchOfflineSession.STATE_PLAYING)
+	assert_eq(offline.last_error, "")
+	assert_false(offline.allows_online_writes())
+	assert_true(offline.try_stop())
 	assert_false(offline.try_begin(""))
 	assert_eq(offline.last_error, "missing_course")
 	assert_false(offline.try_begin("res://content/official/traprush/missing.json"))

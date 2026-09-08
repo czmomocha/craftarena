@@ -27,6 +27,7 @@ services:
       MATCH_HOST_URL: "http://match-host:8100"
       CONTROL_PLANE_LOG_LEVEL: "${CONTROL_PLANE_LOG_LEVEL:-info}"
       CRAFTARENA_VERSION: "${CRAFTARENA_VERSION:-0.0.0-dev}"
+      CRAFTARENA_WEB_ROOT: "${CRAFTARENA_WEB_ROOT:-}"
     volumes:
       - control-plane-data:/data
     ports:

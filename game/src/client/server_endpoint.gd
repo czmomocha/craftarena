@@ -11,10 +11,15 @@ extends RefCounted
 ## Resolution order, lowest priority first:
 ##
 ##   1. built-in defaults (a local `npm run dev`)
-##   2. host override: `--server=HOST` or CRAFTARENA_SERVER, which swaps the
-##      host of both defaults and keeps their scheme and port
+##   2. host override: `--server=HOST` or `HOST:CONTROL_PLANE_PORT`, or
+##      CRAFTARENA_SERVER, which swaps the host of both defaults. A port
+##      retargets the control plane only; the gateway keeps its own port.
+##      Guessing a gateway port from the control-plane port is still refused.
 ##   3. full override: `--control-plane=URL` / `--gateway=URL`, or
 ##      CRAFTARENA_CONTROL_PLANE / CRAFTARENA_GATEWAY
+##   Web: the same flags may arrive as `?server=` / `?control-plane=` /
+##   `?gateway=`. A page served at `/play/` can pin the host from the URL
+##   when nothing else named a server.
 ##
 ## Command line beats environment at the same level. A rejected value never
 ## silently degrades to something that merely looks right: the previous value
@@ -23,7 +28,7 @@ extends RefCounted
 ##
 ## Both plaintext and TLS schemes are accepted. Test-stage remote play runs on
 ## http / ws by human decision D11; https / wss keep the same entry point valid
-## once公开运营前的证书到位（宪法第二十二条）。
+## once public-ops certificates exist (constitution article 22).
 
 const DEFAULT_CONTROL_PLANE: String = "http://127.0.0.1:8080"
 const DEFAULT_GATEWAY: String = "ws://127.0.0.1:8090"
@@ -38,6 +43,7 @@ const GATEWAY_ENV: String = "CRAFTARENA_GATEWAY"
 
 const HTTP_SCHEMES: Array[String] = ["http", "https"]
 const WS_SCHEMES: Array[String] = ["ws", "wss"]
+const WebLaunchArgsGd := preload("res://src/client/web_launch_args.gd")
 
 const _MIN_PORT: int = 1
 const _MAX_PORT: int = 65535
@@ -47,13 +53,24 @@ var gateway: String = DEFAULT_GATEWAY
 var errors: PackedStringArray = PackedStringArray()
 
 
-static func from_os(user_args: PackedStringArray) -> ServerEndpoint:
+static func from_os(user_args: PackedStringArray, page: Dictionary = {}) -> ServerEndpoint:
 	var env: Dictionary = {}
 	for key: String in [SERVER_ENV, CONTROL_PLANE_ENV, GATEWAY_ENV]:
 		var value: String = OS.get_environment(key)
 		if value != "":
 			env[key] = value
-	return resolve(user_args, env)
+	var merged: PackedStringArray = WebLaunchArgsGd.merge(user_args, str(page.get("search", "")))
+	if (
+		not WebLaunchArgsGd.has_flag(merged, SERVER_FLAG)
+		and str(env.get(SERVER_ENV, "")).strip_edges() == ""
+	):
+		var page_flag: String = WebLaunchArgsGd.page_host_flag(
+			str(page.get("pathname", "")),
+			str(page.get("hostname", ""))
+		)
+		if page_flag != "":
+			merged.append(page_flag)
+	return resolve(merged, env)
 
 
 static func resolve(user_args: PackedStringArray, env: Dictionary = {}) -> ServerEndpoint:
@@ -70,21 +87,27 @@ static func resolve(user_args: PackedStringArray, env: Dictionary = {}) -> Serve
 	return endpoint
 
 
-## Retargets both bases at one machine, keeping whatever scheme and port they
-## already carry. This is what `--server=` and the lobby's server field do; a
-## different port still needs the explicit per-base override, because guessing
-## a gateway port from a control-plane port would be an invented rule.
+## Retargets both bases at one machine. `--server=` and the lobby field accept
+## a bare host or `host:control-plane-port`. The gateway keeps whatever port it
+## already has; a different gateway port still needs `--gateway=` / `?gateway=`.
 func try_apply_host(raw_host: String) -> bool:
-	var host: String = raw_host.strip_edges()
-	var reason: String = _host_rejection(host)
-	if reason != "":
+	var parsed: Dictionary = _parse_host_port(raw_host.strip_edges())
+	var reason: String = str(parsed.get("reason", ""))
+	if not parsed.get("ok", false):
 		errors.append("server host %s: %s" % [_quote(raw_host), reason])
 		return false
+	var host: String = str(parsed.get("host", ""))
+	var port: String = str(parsed.get("port", ""))
 	var next_control_plane: String = _with_host(control_plane, host)
 	var next_gateway: String = _with_host(gateway, host)
 	if next_control_plane == "" or next_gateway == "":
 		errors.append("server host %s: current base URL cannot be retargeted" % _quote(raw_host))
 		return false
+	if port != "":
+		next_control_plane = _with_port(next_control_plane, port)
+		if next_control_plane == "":
+			errors.append("server host %s: current base URL cannot be retargeted" % _quote(raw_host))
+			return false
 	control_plane = next_control_plane
 	gateway = next_gateway
 	return true
@@ -115,6 +138,19 @@ func try_apply_gateway(raw_url: String) -> bool:
 ## endpoint instance.
 static func host_of(url: String) -> String:
 	return str(_split_url(url).get("host", ""))
+
+
+## Host plus the URL's own port when present. The lobby field round-trips
+## `host:control-plane-port` through this instead of dropping the port.
+static func host_port_of(url: String) -> String:
+	var parts: Dictionary = _split_url(url)
+	if not parts.get("ok", false):
+		return ""
+	var host: String = str(parts.get("host", ""))
+	var port: String = str(parts.get("port", ""))
+	if host == "" or port == "":
+		return host
+	return "%s:%s" % [host, port]
 
 
 func control_plane_host() -> String:
@@ -158,23 +194,44 @@ static func _lookup(
 	return str(env.get(env_key, ""))
 
 
-static func _host_rejection(host: String) -> String:
+static func _parse_host_port(raw_host: String) -> Dictionary:
+	var host: String = raw_host
 	if host == "":
-		return "empty"
+		return _unparsable("empty")
 	if host.contains("://"):
-		return "looks like a URL, use --control-plane / --gateway instead"
+		return _unparsable("looks like a URL, use --control-plane / --gateway instead")
 	for forbidden: String in [" ", "\t", "/", "?", "#", "@"]:
 		if host.contains(forbidden):
-			return "must be a bare host name or IP"
+			return _unparsable("must be a bare host name or IP")
+	var port: String = ""
 	if host.begins_with("["):
-		if not host.ends_with("]"):
-			return "unbalanced IPv6 brackets"
+		var close_bracket: int = host.find("]")
+		if close_bracket < 0:
+			return _unparsable("unbalanced IPv6 brackets")
+		var tail: String = host.substr(close_bracket + 1)
+		host = host.substr(0, close_bracket + 1)
 		if host.length() <= 2:
-			return "empty IPv6 literal"
-		return ""
-	if host.contains(":"):
-		return "must not carry a port, set it with --control-plane / --gateway"
-	return ""
+			return _unparsable("empty IPv6 literal")
+		if tail != "":
+			if not tail.begins_with(":"):
+				return _unparsable("unexpected text after IPv6 literal")
+			port = tail.substr(1)
+	else:
+		var colon: int = host.rfind(":")
+		if colon >= 0:
+			port = host.substr(colon + 1)
+			host = host.substr(0, colon)
+	if host == "" or host == "[]":
+		return _unparsable("empty host")
+	if host.contains(":") and not host.begins_with("["):
+		return _unparsable("must be a bare host name or IP")
+	if port != "":
+		if not port.is_valid_int():
+			return _unparsable("port is not an integer")
+		var port_number: int = port.to_int()
+		if port_number < _MIN_PORT or port_number > _MAX_PORT:
+			return _unparsable("port must be within [%d, %d]" % [_MIN_PORT, _MAX_PORT])
+	return {"ok": true, "host": host, "port": port, "reason": ""}
 
 
 static func _url_rejection(url: String, allowed_schemes: Array[String]) -> String:
@@ -244,6 +301,17 @@ static func _with_host(url: String, host: String) -> String:
 	if not parsed:
 		return ""
 	var port: String = str(parts.get("port", ""))
+	var authority: String = host if port == "" else "%s:%s" % [host, port]
+	return "%s://%s%s" % [str(parts.get("scheme", "")), authority, str(parts.get("rest", ""))]
+
+
+static func _with_port(url: String, port: String) -> String:
+	var parts: Dictionary = _split_url(url)
+	if not parts.get("ok", false):
+		return ""
+	var host: String = str(parts.get("host", ""))
+	if host == "":
+		return ""
 	var authority: String = host if port == "" else "%s:%s" % [host, port]
 	return "%s://%s%s" % [str(parts.get("scheme", "")), authority, str(parts.get("rest", ""))]
 
