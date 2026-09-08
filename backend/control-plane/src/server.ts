@@ -20,6 +20,8 @@ import { type MatchLauncher } from "./match_host.ts";
 import { DEFAULT_QUEUE_SLOT_ESTIMATE_MS, DEFAULT_QUEUE_TTL_MS } from "./queue.ts";
 import { normalizeRoomCode } from "./rooms.ts";
 import { DEFAULT_TICKET_TTL_MS } from "./tickets.ts";
+import { registerBrowserAccess } from "./browser_access.ts";
+import { registerWebPlay } from "./web_play.ts";
 import {
 	admitToRoom,
 	databaseCheck,
@@ -46,6 +48,8 @@ export interface BuildServerOptions {
 	readonly queueSlotEstimateMs?: number;
 	/** 省略时匹配入口回 503。生产路径由 main 注入 HTTP 客户端。 */
 	readonly matchLauncher?: MatchLauncher;
+	/** Godot Web 导出目录。省略或 undefined 则不挂 `/play/`。 */
+	readonly webRoot?: string | undefined;
 }
 
 export interface MatchIdParams {
@@ -87,6 +91,8 @@ export function buildServer(options: BuildServerOptions): FastifyInstance {
 			},
 		},
 	});
+	registerBrowserAccess(app);
+	registerWebPlay(app, options.webRoot);
 
 	const uptimeSeconds = (): number =>
 		Math.max(0, Math.floor((now().getTime() - startedAt.getTime()) / 1000));

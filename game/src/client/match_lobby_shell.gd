@@ -143,7 +143,7 @@ func apply_endpoint(next: ServerEndpointGd) -> bool:
 	_refresh_status()
 	return true
 func server_host_text() -> String:
-	return chrome.server_host_text(ServerEndpointGd.host_of(control_plane_base))
+	return chrome.server_host_text(ServerEndpointGd.host_port_of(control_plane_base))
 func set_server_host_text(text: String) -> void:
 	chrome.set_server_host_text(text)
 func try_apply_server_host(raw_host: String = "") -> bool:

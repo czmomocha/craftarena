@@ -15,6 +15,7 @@ const app = buildServer({
 	queueTtlMs: config.queueTtlMs,
 	queueSlotEstimateMs: config.queueSlotEstimateMs,
 	matchLauncher: new MatchHostHttpLauncher(config.matchHostUrl, config.matchHostLaunchTimeoutMs),
+	webRoot: config.webRoot,
 });
 
 if (applied.length > 0) {
@@ -47,9 +48,17 @@ for (const signal of ["SIGINT", "SIGTERM"] as const) {
 
 try {
 	await app.listen({ host: config.host, port: config.port });
-	app.log.info({ databasePath: config.databasePath }, "control plane ready");
+	app.log.info({ databasePath: config.databasePath, webRoot: config.webRoot ?? null }, "control plane ready");
 } catch (error) {
-	app.log.error({ error }, "control plane failed to start");
+	const code = error !== null && typeof error === "object" && "code" in error ? String(error.code) : "";
+	if (code === "EADDRINUSE") {
+		app.log.error(
+			{ error, port: config.port },
+			`control plane port ${config.port} is in use. curl http://127.0.0.1:${config.port}/healthz — if that is not service=control-plane JSON, another process owns the port`,
+		);
+	} else {
+		app.log.error({ error }, "control plane failed to start");
+	}
 	database.close();
 	process.exit(1);
 }

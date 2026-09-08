@@ -189,7 +189,7 @@ func set_server_host_text(text: String) -> void:
 func sync_server_edit(control_plane_base: String) -> void:
 	if server_edit == null:
 		return
-	server_edit.text = ServerEndpointGd.host_of(control_plane_base)
+	server_edit.text = ServerEndpointGd.host_port_of(control_plane_base)
 
 
 func set_status_text(text: String) -> void:

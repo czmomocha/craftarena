@@ -100,17 +100,14 @@ func test_gateway_override_accepts_ws_and_wss_only() -> void:
 	assert_true(wrong.has_errors())
 
 
-func test_host_with_a_port_is_rejected_and_says_what_to_use_instead() -> void:
+func test_host_with_a_port_retargets_control_plane_only() -> void:
 	var endpoint: ServerEndpointGd = ServerEndpointGd.resolve(
 		PackedStringArray(["--server=%s:9000" % REMOTE_HOST])
 	)
-	assert_eq(endpoint.control_plane, ServerEndpointGd.DEFAULT_CONTROL_PLANE)
-	assert_eq(endpoint.gateway, ServerEndpointGd.DEFAULT_GATEWAY)
-	assert_true(endpoint.error_line().contains("--control-plane"), endpoint.error_line())
-	assert_true(
-		endpoint.error_line().contains("9000"),
-		"报错必须回显原值，否则看不出拒了什么"
-	)
+	assert_eq(endpoint.control_plane, "http://%s:9000" % REMOTE_HOST)
+	assert_eq(endpoint.gateway, "ws://%s:8090" % REMOTE_HOST)
+	assert_false(endpoint.has_errors(), str(endpoint.errors))
+	assert_eq(ServerEndpointGd.host_port_of(endpoint.control_plane), "%s:9000" % REMOTE_HOST)
 
 
 func test_host_that_is_actually_a_url_is_rejected() -> void:
@@ -139,6 +136,15 @@ func test_ipv6_literal_keeps_its_brackets() -> void:
 	assert_false(endpoint.has_errors(), str(endpoint.errors))
 
 
+func test_ipv6_literal_with_a_port_retargets_control_plane_only() -> void:
+	var endpoint: ServerEndpointGd = ServerEndpointGd.resolve(
+		PackedStringArray(["--server=[2001:db8::1]:9000"])
+	)
+	assert_eq(endpoint.control_plane, "http://[2001:db8::1]:9000")
+	assert_eq(endpoint.gateway, "ws://[2001:db8::1]:8090")
+	assert_false(endpoint.has_errors(), str(endpoint.errors))
+
+
 func test_trailing_slash_is_stripped_so_paths_do_not_double_up() -> void:
 	var endpoint: ServerEndpointGd = ServerEndpointGd.resolve(
 		PackedStringArray(["--control-plane=http://%s:8080/" % REMOTE_HOST])
@@ -146,7 +152,16 @@ func test_trailing_slash_is_stripped_so_paths_do_not_double_up() -> void:
 	assert_eq(endpoint.control_plane, "http://%s:8080" % REMOTE_HOST)
 
 
-func test_out_of_range_port_is_rejected() -> void:
+func test_out_of_range_host_port_is_rejected() -> void:
+	var host_port: ServerEndpointGd = ServerEndpointGd.resolve(
+		PackedStringArray(["--server=%s:99999" % REMOTE_HOST])
+	)
+	assert_eq(host_port.control_plane, ServerEndpointGd.DEFAULT_CONTROL_PLANE)
+	assert_true(host_port.has_errors())
+	assert_true(host_port.error_line().contains("99999"), host_port.error_line())
+
+
+func test_out_of_range_url_port_is_rejected() -> void:
 	var endpoint: ServerEndpointGd = ServerEndpointGd.resolve(
 		PackedStringArray(["--control-plane=http://%s:99999" % REMOTE_HOST])
 	)

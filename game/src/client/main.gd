@@ -12,15 +12,18 @@ extends Node
 ## package self report instead (course correction C1). `-- --bot-run` likewise
 ## short-circuits into the course-completion probe over the official courses
 ## (C2; C3 第 7 章可用 `--route=safe` 封掉 course_01 捷径传送门)。
-## `-- --server=HOST` (or --control-plane= / --gateway=, or the matching
-## CRAFTARENA_* variables) points the lobby at a deployed test server instead
-## of a local npm run dev.
+## `-- --server=HOST` or `HOST:CONTROL_PLANE_PORT` (or --control-plane= /
+## --gateway=, or the matching CRAFTARENA_* variables, or a Web query
+## `?server=` / `?control-plane=` / `?gateway=`) points the lobby at a
+## deployed test server instead of a local npm run dev. A page served at
+## `/play/` can pin the host from the URL.
 
 const BOOT_EVENT: String = "client_boot"
 const BotRunCliGd := preload("res://src/games/traprush/bot_run_cli.gd")
 const MatchLobbyShellGd := preload("res://src/client/match_lobby_shell.gd")
 const PackageCheckGd := preload("res://src/client/package_check.gd")
 const ServerEndpointGd := preload("res://src/client/server_endpoint.gd")
+const WebPageLocationGd := preload("res://src/client/web_page_location.gd")
 
 var lobby: MatchLobbyShellGd = null
 
@@ -45,7 +48,7 @@ func _ready() -> void:
 	if lobby == null:
 		return
 	lobby.live_io = DisplayServer.get_name() != "headless"
-	lobby.apply_endpoint(ServerEndpointGd.from_os(user_args))
+	lobby.apply_endpoint(ServerEndpointGd.from_os(user_args, WebPageLocationGd.read()))
 	add_child(lobby)
 	lobby.open()
 

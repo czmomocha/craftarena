@@ -4,7 +4,7 @@ Godot 4 + UGC 双玩法（TRAPRUSH / BASTION）项目 Monorepo。代码与仓库
 
 - 工程规则入口：[AGENTS.md](AGENTS.md)
 - 规范唯一事实源：[Confirmed-docs](Confirmed-docs/README.md)
-- 当前阶段：**纠偏冻结令已解除**（2026-09-03）。F 线已收口。下一刀：**Web 游玩分发**（浏览器能跑、测试期 Solo、链接+端口打 VPS）。随后可玩性深化。Android / iOS 烟测与字体入包排到 **一期收尾**。公开 TLS 与 PR Web 沙盒仍在 M5 之后。进度见 [CD-61](Confirmed-docs/60-plan/61-milestones.md)。`--bot-run` 默认三张官方课；示范课用 `--course=course_f_playable`（不计入 M5 官方课）。D-F10：跳跃接线后步数 / 回放哈希允许变。
+- 当前阶段：**纠偏冻结令已解除**（2026-09-03）。F 线已收口。**Web 游玩分发第一刀已交**。下一刀：**可玩性深化**。Android / iOS 烟测与字体入包排到 **一期收尾**。公开 TLS 与 PR Web 沙盒仍在 M5 之后。进度见 [CD-61](Confirmed-docs/60-plan/61-milestones.md)。`--bot-run` 默认三张官方课；示范课用 `--course=course_f_playable`（不计入 M5 官方课）。D-F10：跳跃接线后步数 / 回放哈希允许变。
 
 - M3 已落地摘要：M3 进行中（2026-08-24 启动）。已落地对局多人仿真循环、二进制协议 v1、对局进程仿真入口、实时回路、网关代理、控制面真票据、MatchHost 自动登记、等待 listen 后登记、停止后注销、真匹配/房间码、FIFO 等待队列、客户端匹配入场、权威快照与赛道几何 / 可破坏箱 / 传送连线 / 检查点顺序 / 直播名次表现映射、机关狂奔离线单人试玩、对局命令门禁、全员冲线单局结算写库、断线重连补票、官方赛道选择、人数按场下发、对局快照插值、对局本席移动预测、对局进程动作数值占位桩、对局大厅本席摄像机跟随、对局大厅本席移动朝向、对局大厅本席分色、对局大厅本席检查点占用高亮、对局大厅本席冲线闭环表现、对局大厅本席复位与楼层/箱子 HUD、大厅只读结算面板、对局大厅本席预测避开最新权威固体、真人命令才续租、网关进程内 TLS、权威 Move 位移门禁、对局基础推击（无线上目标 id，服务端推最近其它胶囊，大厅 F）、出界复位（Preview + 对局，开发桩 ±8 格，环境失败后无限复活到最近检查点）；周期机关已进 v1 拓扑（`hazards` 袋用已有 `cooldown_ticks` 切换固体）；对局大厅周期机关表现映射（洋红占位盒，显隐跟固体半周期，HUD `hazards=n/m`）；开发机运行体验（空格走 `jump` 而不是点 Solo play / Play；大厅窗仍最大化，Editor / Preview 左右并排窗口化；打开编辑器时若本机已安装 Godot AI 则自动启用）；固定固体占用（`zone.tags` 含 `solid` 编进 v1 可空 `solids` 袋；大厅/Preview 石色 1 米占位；HUD `solids=n/m`）；官方赛道占用（三张课各有洋红周期机关；沿路石色立足面由 C3 第 2 章铺上）；编辑器 Place finish（工具条用已有 `place` 摆金色终点占用；第二份终点仍写入、编译拒绝）；官方赛道立足固体与 Jump（出生点正下一格石色盒；空格在 Solo / Preview 真跳约四分之一格）。C3 第 1 章已把权威重力积分接到对局 / Solo / Preview（对局/Solo 占位加速度每 tick 十六分之一格；Preview Advance 才积分；同一拍 Jump 不被立刻落下；不锁产品重力）。C3 第 3 章把爆破球与冲刺接到权威仿真（官方课出生点叠放拾取；Q 打箱要有弹且服务端 reach 命中；Shift 沿 yaw 冲刺一格且不穿固体）。C3 第 4 章把周期机关命中接到权威仿真（固体半周期占用重叠才击退/复位；不读客户端命中断言）。C3 第 5 章把 `course_01` 做成有落差、有安全路与危险捷径的语义课（+X 五步捷径仍在；从检查点 1 向 +Z 走更长安全路）。C3 第 6 章给在线对局加上协议层 RTT 探针（状态行 `rtt=`）。C3 第 7 章让 BotRunner 能封掉捷径传送门、证明安全路可完成。本刀把环境失败硬直接到 1.0 s。进度见 [CD-61](Confirmed-docs/60-plan/61-milestones.md)。
 
@@ -125,6 +125,7 @@ C3 第 2 章沿路地板后（2026-08-27，Windows 开发机）：三张课均�
 | 导出 Windows 包 | `& $env:GODOT4_CONSOLE --headless --path game --export-release "Windows Desktop" "../export/windows/CraftArena.exe"` |
 | 导出 Linux Headless 包 | `& $env:GODOT4_CONSOLE --headless --path game --export-release "Linux Headless" "../export/linux-headless/craftarena-server.x86_64"` |
 | 导出 Web 包 | `& $env:GODOT4_CONSOLE --headless --path game --export-release "Web" "../export/web/index.html"` |
+| 本机用控制面托管 Web 试玩页 | 先导出 Web 包，再 `$env:CRAFTARENA_WEB_ROOT = (Resolve-Path export\web).Path; npm run dev`，浏览器打开 `http://127.0.0.1:8080/play/`。先确认 `curl.exe -fsS http://127.0.0.1:8080/healthz` 含 `control-plane`。若浏览器是 Python 的 `HTTPStatus.NOT_FOUND` 页，8080 被别的进程占用。 |
 | 包内自检（`ok=true` 才算成立） | `& "export\windows\CraftArena.exe" --headless -- --package-check` |
 
 macOS 把 `& $env:GODOT4_CONSOLE` 换成 `"$GODOT4"`。包内自检也能对源码工程跑：`& $env:GODOT4_CONSOLE --headless --path game -- --package-check`，此时 `addons` / `tests` 三条只报告不判定。
@@ -164,10 +165,11 @@ DevLauncher 只管本地开发编排，不做守护、重启和资源限制；�
 
 | 方式 | 写法 | 说明 |
 |---|---|---|
-| 命令行 | `-- --server=<主机>` | 只换主机，端口沿用默认；`--` 不能省 |
+| 命令行 | `-- --server=<主机>` 或 `-- --server=<主机>:<控制面端口>` | 端口只改控制面；网关端口另用 `--gateway=`；`--` 不能省 |
 | 命令行（分别指定） | `-- --control-plane=http://<主机>:8080 --gateway=ws://<主机>:8090` | 端口或协议也要换时用 |
 | 环境变量 | `CRAFTARENA_SERVER` / `CRAFTARENA_CONTROL_PLANE` / `CRAFTARENA_GATEWAY` | 双击 exe 时生效 |
-| 大厅输入框 | `Server host` 一行加 **Apply server** | 运行中改；对局进行中会被拒 |
+| 大厅输入框 | `Host[:port]` 一行加 **Apply server** | 运行中改；对局进行中会被拒 |
+| Web 查询串 | `index.html?server=<主机>` 或 `?server=<主机>:<控制面端口>` | 也可 `control-plane=` / `gateway=` 全 URL |
 
 地址被拒时状态行出现 `server_error=`，**当前生效值不变**。解析与校验在 `game/src/client/server_endpoint.gd`。
 

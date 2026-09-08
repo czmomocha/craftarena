@@ -16,6 +16,7 @@
 | 容量模型 | 50 CCU 仍是设计容量，不是某台 VPS 规格 |
 | 资源基线 | 见 [server-deploy.md §12](../../docs/runbooks/server-deploy.md)；**CPU 先于内存**。本文件不复述数字 |
 | 传输 | 测试机明文；正式公开运营前 TLS |
+| Web 试玩包 | 可选 `CRAFTARENA_WEB_ROOT` 挂控制面 `/play/`；浏览器 CORS `*` 是测试期入口 |
 | SQLite | 仅控制面直连 |
 
 ## 1. 部署形态
@@ -34,6 +35,8 @@
 ```
 
 测试开发阶段的操作手册是 `docs/runbooks/server-deploy.md`（C1 第 2 章落地）：通用步骤 + 占位符，不写死 IP、域名、规格或 SSH 落点。传输走明文 `http`/`ws`（[CD-43 §2](43-networking-and-replay.md#2-传输) 2026-08-27 落点）。香港区仍是一期目标机房（本文件标题与容量模型），但不是 C1 写入手册的必须库存。
+
+实现落点（2026-09-08）：控制面给浏览器预检回 CORS `Access-Control-Allow-Origin: *`（测试期，无新依赖）。设置 `CRAFTARENA_WEB_ROOT` 时在 `/play/` 提供已导出的 Godot Web 包，外人一条 `http://主机:控制面端口/play/` 即可打开；页路径以 `/play` 开头时客户端用页主机填默认 `--server=`。大厅仍可改 `主机[:控制面端口]`。网关端口不从控制面端口推算。不是公开 TLS，不是每个 PR 的沙盒。
 
 ## 2. 容量与排队
 

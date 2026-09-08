@@ -10,7 +10,7 @@ craft_arena.ui.cancel,Cancel,取消
 craft_arena.ui.poll,Poll,查询队列
 craft_arena.ui.sprint,Sprint,冲刺
 craft_arena.ui.apply_server,Apply server,应用服务器
-craft_arena.ui.server_host,Server host,服务器地址
+craft_arena.ui.server_host,Host[:port],主机[:端口]
 craft_arena.ui.room_code,Room code,房间码
 craft_arena.ui.offline_banner,"Offline play, scores are not uploaded",离线试玩，成绩不上传
 craft_arena.ui.undo,Undo,撤销

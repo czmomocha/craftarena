@@ -11,11 +11,18 @@ describe("control plane config", () => {
 		const config = loadConfig({});
 		assert.equal(config.host, "127.0.0.1");
 		assert.equal(config.port, 8080);
+		assert.equal(config.webRoot, undefined);
 	});
 
 	test("keeps :memory: verbatim instead of resolving it as a path", () => {
 		const config = loadConfig({ CONTROL_PLANE_DB_PATH: ":memory:" });
 		assert.equal(config.databasePath, ":memory:");
+	});
+
+	test("resolves CRAFTARENA_WEB_ROOT to an absolute path", () => {
+		const config = loadConfig({ CRAFTARENA_WEB_ROOT: "./export/web" });
+		assert.ok(config.webRoot?.endsWith("export/web") || config.webRoot?.endsWith("export\\web"));
+		assert.ok(config.webRoot !== "./export/web");
 	});
 
 	test("rejects a port outside the valid range instead of silently defaulting", () => {

@@ -6,6 +6,7 @@ import type { Readable } from "node:stream";
 
 import { probeReadyEndpoint, waitUntilReady } from "./readiness.ts";
 import { SERVICES, parseListeningUrl, type ServiceSpec } from "./services.ts";
+import { controlPlaneListenPort, probeOccupiedControlPlane } from "./listen_guard.ts";
 
 /**
  * DevLauncher：一条命令把控制面、网关和 MatchHost 一起拉起来，等三个都就绪再放行。
@@ -162,6 +163,10 @@ for (const signal of ["SIGINT", "SIGTERM"] as const) {
 }
 
 try {
+	const occupied = await probeOccupiedControlPlane(controlPlaneListenPort());
+	if (occupied !== undefined) {
+		throw new Error(occupied);
+	}
 	for (const spec of SERVICES) {
 		await bringUp(spec);
 	}

@@ -1,0 +1,71 @@
+class_name WebLaunchArgs
+extends RefCounted
+
+## Browser query string → the same `--server=` / `--control-plane=` /
+## `--gateway=` flags `ServerEndpoint` already understands. Godot Web can
+## also forward the query into `OS.get_cmdline_user_args()`; merging here
+## is idempotent. Command-line flags win over the query. Serving the export
+## from the control plane at `/play/` can pin the host from the page URL
+## when nothing else named a server.
+
+const SERVER_FLAG: String = "--server="
+const CONTROL_PLANE_FLAG: String = "--control-plane="
+const GATEWAY_FLAG: String = "--gateway="
+const QUERY_SERVER: String = "server"
+const QUERY_CONTROL_PLANE: String = "control-plane"
+const QUERY_GATEWAY: String = "gateway"
+const PLAY_PATH_PREFIX: String = "/play"
+
+
+static func merge(user_args: PackedStringArray, search: String) -> PackedStringArray:
+	var merged: PackedStringArray = user_args.duplicate()
+	var query: Dictionary = parse_search(search)
+	_append_absent(merged, SERVER_FLAG, str(query.get(QUERY_SERVER, "")))
+	_append_absent(merged, CONTROL_PLANE_FLAG, str(query.get(QUERY_CONTROL_PLANE, "")))
+	_append_absent(merged, GATEWAY_FLAG, str(query.get(QUERY_GATEWAY, "")))
+	return merged
+
+
+static func parse_search(search: String) -> Dictionary:
+	var text: String = search.strip_edges()
+	if text.begins_with("?"):
+		text = text.substr(1)
+	var parsed: Dictionary = {}
+	if text == "":
+		return parsed
+	var pairs: PackedStringArray = text.split("&")
+	for pair: String in pairs:
+		if pair == "":
+			continue
+		var eq: int = pair.find("=")
+		var raw_key: String = pair if eq < 0 else pair.substr(0, eq)
+		var raw_value: String = "" if eq < 0 else pair.substr(eq + 1)
+		var key: String = raw_key.uri_decode()
+		if key != QUERY_SERVER and key != QUERY_CONTROL_PLANE and key != QUERY_GATEWAY:
+			continue
+		parsed[key] = raw_value.uri_decode()
+	return parsed
+
+
+static func has_flag(args: PackedStringArray, flag: String) -> bool:
+	for arg: String in args:
+		if arg.begins_with(flag) and arg.substr(flag.length()).strip_edges() != "":
+			return true
+	return false
+
+
+static func page_host_flag(pathname: String, hostname: String) -> String:
+	var host: String = hostname.strip_edges()
+	if host == "":
+		return ""
+	var path: String = pathname.strip_edges()
+	if not path.begins_with(PLAY_PATH_PREFIX):
+		return ""
+	return SERVER_FLAG + host
+
+
+static func _append_absent(args: PackedStringArray, flag: String, raw_value: String) -> void:
+	var value: String = raw_value.strip_edges()
+	if value == "" or has_flag(args, flag):
+		return
+	args.append(flag + value)

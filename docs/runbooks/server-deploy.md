@@ -179,7 +179,7 @@ curl.exe -fsS http://<SERVER_HOST>:8080/readyz
 | 命令行 | `CraftArena.exe -- --server=<SERVER_HOST>` | 临时切换 |
 | 大厅输入框 | 填主机后点 **Apply server** | 不想重启，或想当场换机器 |
 
-端口非默认时用 `--control-plane=http://HOST:PORT` 与 `--gateway=ws://HOST:PORT` 分别指定。`--server=` **只接受主机名或 IP，不接受端口**——从控制面端口猜网关端口会是一条凭空发明的规则，所以它宁可拒绝并在 HUD 上说明。
+端口非默认时：大厅或 `--server=HOST:CONTROL_PLANE_PORT` 只改控制面端口，网关仍用当前值（默认 8090）。网关也要换时用 `--gateway=ws://HOST:PORT` 或 Web 查询串 `?gateway=`。不要从控制面端口去猜网关端口。
 
 启动后看状态行的 `server=`：
 

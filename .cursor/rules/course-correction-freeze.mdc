@@ -16,14 +16,14 @@ alwaysApply: true
 ```text
 创作者可测（已收口）
   → F 线（已收口）
-  → Web 游玩分发（第一刀：Web 运行与实现验证；Solo；链接+端口打 VPS）
+  → Web 游玩分发（第一刀已收口）
   → 可玩性深化（插入：游戏性 / TRAPRUSH 玩法与表现 / UGC / 编辑调试）
   → M-Art 剩余已拍板项（字体入包仍推迟）→ M4a → M4b → M5
   → 公开 TLS / PR Web 沙盒 → M6 / M7
   → 一期收尾：字体入包、Android / iOS 烟测、触控 UI
 ```
 
-- **现在可以开工**：Web 游玩分发（第一刀）；随后可玩性深化。F 线 FA–FH 已收口。
+- **现在可以开工**：可玩性深化。Web 游玩分发第一刀已交。F 线 FA–FH 已收口。
 - **现在不得开工**：Android / iOS 烟测（**一期收尾**；不是风险项）；公开 TLS / PR Web 沙盒（M5 之后）；M4a（Rule VM / gas，可玩性深化收口前）；M4b、M5 的第 4 张及以后官方课、M6 / M7（BASTION）。它们不是冻结，是 CD-61 还没轮到。F 线示范课 `course_f_playable` 不是 M5 官方第 4 张。
 - **推迟到一期收尾**：字体入包（思源黑体 / Noto Sans SC）；Android / iOS 导出烟测；触控 UI（D7）。接受玩家任意中文缺字。不挡 Web 分发 / M4a。
 
