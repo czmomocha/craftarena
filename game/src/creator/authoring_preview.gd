@@ -14,6 +14,7 @@ extends RefCounted
 
 const Gravity := preload("res://src/games/traprush/gravity.gd")
 const HazardCycle := preload("res://src/games/traprush/hazard_cycle.gd")
+const LaunchCycle := preload("res://src/games/traprush/launch_cycle.gd")
 const AuthoringPreviewBootstrapGd := preload("res://src/creator/authoring_preview_bootstrap.gd")
 const AuthoringPreviewIntentsGd := preload("res://src/creator/authoring_preview_intents.gd")
 const AuthoringPreviewScanGd := preload("res://src/creator/authoring_preview_scan.gd")
@@ -34,6 +35,7 @@ var play_hazard_ids: Dictionary = {}
 var play_hazard_cycle: Array[Dictionary] = []
 var play_mover_cycle: Array[Dictionary] = []
 var play_conveyor_cycle: Array[Dictionary] = []
+var play_launch_cycle: Array[Dictionary] = []
 var play_solid_ids: Dictionary = {}
 var play_pickup_ids: Dictionary = {}
 var play_pickup_kinds: Dictionary = {}
@@ -58,6 +60,8 @@ var play_item_cooldown_ticks: int = 1
 var play_hazard_knockback_step: int = 0
 ## 传送带每 tick 推的距离。调用方注入的占位桩，不是产品速度。
 var play_conveyor_step: int = 0
+var play_launch_dy: int = 0
+var play_launch_xz: int = 0
 var play_respawn_stun_ticks: int = 0
 var play_range_enabled: bool = false
 var play_range_min_x: int = 0
@@ -71,6 +75,7 @@ var _playing: bool = false
 var _portal_latch: Dictionary = {}
 var _play_finish_tick: int = -1
 var _play_stun_remaining: int = 0
+var _play_launch_supported: Dictionary = {}
 
 var intents: AuthoringPreviewIntentsGd = AuthoringPreviewIntentsGd.new()
 var scan: AuthoringPreviewScanGd = AuthoringPreviewScanGd.new()
@@ -135,6 +140,15 @@ func try_advance_play() -> bool:
 		PackedInt32Array([player_id]),
 		play_support_dy,
 		play_conveyor_step
+	)
+	_play_launch_supported = LaunchCycle.apply(
+		play_world,
+		play_launch_cycle,
+		PackedInt32Array([player_id]),
+		play_support_dy,
+		play_launch_dy,
+		play_launch_xz,
+		_play_launch_supported
 	)
 	HazardCycle.apply(play_world, play_hazard_cycle)
 	_resolve_play_hazards()

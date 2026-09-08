@@ -575,6 +575,31 @@ func test_place_mover_compiles_into_movers_bag() -> void:
 	assert_eq(bundle.solids.size(), 1)
 
 
+func test_place_lift_compiles_as_vertical_mover() -> void:
+	_shell = AuthoringEditorShell.create(AuthoringSurfaceNames.INTERNAL_DEV)
+	add_child(_shell)
+	assert_true(_shell.open())
+	assert_true(_shell.tools.place_next_lift())
+	var bundle: SimulationBundle = TraprushTopologyCompiler.compile(_shell.session.world)
+	assert_not_null(bundle)
+	assert_eq(bundle.movers.size(), 1)
+	assert_eq(bundle.launches.size(), 0)
+	var path: Array = bundle.movers[0]["path"]
+	assert_eq(path.size(), 2)
+
+
+func test_place_launch_compiles_into_launches_bag() -> void:
+	_shell = AuthoringEditorShell.create(AuthoringSurfaceNames.INTERNAL_DEV)
+	add_child(_shell)
+	assert_true(_shell.open())
+	assert_true(_shell.tools.place_next_launch())
+	var bundle: SimulationBundle = TraprushTopologyCompiler.compile(_shell.session.world)
+	assert_not_null(bundle)
+	assert_eq(bundle.launches.size(), 1)
+	assert_eq(bundle.movers.size(), 0)
+	assert_eq(bundle.solids.size(), 1)
+
+
 func test_param_spin_writes_set_component_cooldown() -> void:
 	_shell = AuthoringEditorShell.create(AuthoringSurfaceNames.INTERNAL_DEV)
 	add_child(_shell)

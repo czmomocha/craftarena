@@ -77,6 +77,7 @@ func reset_play_if_out_of_range(preview: AuthoringPreview) -> bool:
 	)
 	var reset: bool = result.get("reset", false)
 	if reset:
+		preview._play_launch_supported.erase(preview.player_id)
 		preview._portal_latch = {}
 		preview._play_stun_remaining = preview.play_respawn_stun_ticks
 	return reset
@@ -104,6 +105,7 @@ func reset_play_to_pad(preview: AuthoringPreview) -> bool:
 	if not preview.play_world.set_pose(preview.player_id, x, y, z, yaw_bam):
 		return false
 	preview.play_world.set_vy(preview.player_id, 0)
+	preview._play_launch_supported.erase(preview.player_id)
 	preview._portal_latch = {}
 	preview._play_stun_remaining = preview.play_respawn_stun_ticks
 	return true

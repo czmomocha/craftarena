@@ -8,6 +8,7 @@ extends RefCounted
 const CheckpointSpawn := preload("res://src/games/traprush/checkpoint_spawn.gd")
 const CheckpointTrack := preload("res://src/games/traprush/checkpoint_track.gd")
 const ConveyorCycleGd := preload("res://src/games/traprush/conveyor_cycle.gd")
+const LaunchCycleGd := preload("res://src/games/traprush/launch_cycle.gd")
 const HazardCycle := preload("res://src/games/traprush/hazard_cycle.gd")
 const MoverCycleGd := preload("res://src/games/traprush/mover_cycle.gd")
 const TopologyLoader := preload("res://src/games/traprush/traprush_topology_loader.gd")
@@ -75,6 +76,14 @@ static func try_create(
 	if conveyor_cycle.size() != conveyors.size():
 		return null
 	session._conveyor_cycle = conveyor_cycle
+	var launches: Array = []
+	if bundle.launches != null:
+		launches = bundle.launches
+	var launch_cycle: Array[Dictionary] = LaunchCycleGd.entries_from(launches, solid_ids)
+	if launch_cycle.size() != launches.size():
+		return null
+	session._launch_cycle = launch_cycle
+	session._launch_supported = {}
 	var pickups_raw: Variant = loaded.get("pickup_ids", {})
 	if typeof(pickups_raw) != TYPE_DICTIONARY:
 		return null

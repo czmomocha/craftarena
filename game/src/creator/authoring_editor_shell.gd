@@ -153,6 +153,16 @@ func try_place_conveyor(
 	return PlaceGd.try_place_conveyor(self, entity_id, cell_x, cell_y, cell_z, yaw_bam)
 
 
+func try_place_lift(entity_id: int, cell_x: int, cell_y: int, cell_z: int) -> bool:
+	return PlaceGd.try_place_lift(self, entity_id, cell_x, cell_y, cell_z)
+
+
+func try_place_launch(
+	entity_id: int, cell_x: int, cell_y: int, cell_z: int, yaw_bam: int
+) -> bool:
+	return PlaceGd.try_place_launch(self, entity_id, cell_x, cell_y, cell_z, yaw_bam)
+
+
 func try_move_entity(entity_id: int, cell_x: int, cell_y: int, cell_z: int) -> bool:
 	return PlaceGd.try_move_entity(self, entity_id, cell_x, cell_y, cell_z)
 

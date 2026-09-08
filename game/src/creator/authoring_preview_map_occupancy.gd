@@ -105,6 +105,18 @@ func apply_hazard_visibility(map: AuthoringPreviewMap, solid_by_entity: Dictiona
 		node.visible = solid
 
 
+func apply_pose(map: AuthoringPreviewMap, entity_id: int, x: int, y: int, z: int) -> bool:
+	var node: MeshInstance3D = map.placeholder_node(entity_id)
+	if node == null:
+		return false
+	node.position = Vector3(
+		ConvertGd.meters_from_fixed(x),
+		ConvertGd.meters_from_fixed(y),
+		ConvertGd.meters_from_fixed(z)
+	)
+	return true
+
+
 func _pickup_albedo(record: SharedComponentRecord) -> Color:
 	var raw: Variant = record.components[SharedComponentNames.INVENTORY]
 	if typeof(raw) != TYPE_DICTIONARY:

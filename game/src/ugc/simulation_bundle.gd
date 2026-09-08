@@ -35,9 +35,10 @@ const FIELD_SOLIDS: String = "solids"
 const FIELD_PICKUPS: String = "pickups"
 const FIELD_MOVERS: String = "movers"
 const FIELD_CONVEYORS: String = "conveyors"
+const FIELD_LAUNCHES: String = "launches"
 ## v2 里**可省略**的袋。省略与空数组等价，所以旧内容（三张官方课、任何已存的
 ## AuthoringDocument）不重新编译也照常解码。加袋因此不是 Schema 破坏性变更。
-const OPTIONAL_FIELDS: PackedStringArray = [FIELD_MOVERS, FIELD_CONVEYORS]
+const OPTIONAL_FIELDS: PackedStringArray = [FIELD_MOVERS, FIELD_CONVEYORS, FIELD_LAUNCHES]
 
 var cell: int = 0
 var source_revision: int = 0
@@ -52,6 +53,8 @@ var pickups: Array[Dictionary] = []
 var movers: Array[Dictionary] = []
 ## 传送带：几何在 `solids` 里，本袋只带方向。见 `TraprushConveyorCycle` 文件头。
 var conveyors: Array[Dictionary] = []
+## 弹射垫：几何在 `solids` 里，本袋只带方向。见 `TraprushLaunchCycle` 文件头。
+var launches: Array[Dictionary] = []
 
 
 static func from_dictionary(data: Dictionary) -> SimulationBundle:
@@ -89,6 +92,9 @@ func to_dictionary() -> Dictionary:
 	var conveyor_list: Array = []
 	for item: Dictionary in conveyors:
 		conveyor_list.append(item.duplicate(true))
+	var launch_list: Array = []
+	for item: Dictionary in launches:
+		launch_list.append(item.duplicate(true))
 	return {
 		FIELD_SCHEMA_VERSION: SCHEMA_VERSION,
 		FIELD_CELL: cell,
@@ -103,6 +109,7 @@ func to_dictionary() -> Dictionary:
 		FIELD_PICKUPS: pickup_list,
 		FIELD_MOVERS: mover_list,
 		FIELD_CONVEYORS: conveyor_list,
+		FIELD_LAUNCHES: launch_list,
 	}
 
 

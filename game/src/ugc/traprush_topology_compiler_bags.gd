@@ -18,6 +18,7 @@ static func collect_occupancy(
 	var pickup_list: Array[Dictionary] = []
 	var mover_list: Array[Dictionary] = []
 	var conveyor_list: Array[Dictionary] = []
+	var launch_list: Array[Dictionary] = []
 	var ids: Array[int] = world.entity_ids()
 	for entity_id: int in ids:
 		var record: SharedComponentRecord = world.get_record(entity_id)
@@ -36,7 +37,14 @@ static func collect_occupancy(
 			continue
 		if FieldsGd.has_solid_tag(record):
 			if not _append_solid(
-				entity_id, record, next_asset, used_assets, solid_list, mover_list, conveyor_list
+				entity_id,
+				record,
+				next_asset,
+				used_assets,
+				solid_list,
+				mover_list,
+				conveyor_list,
+				launch_list
 			):
 				return {"ok": false}
 			continue
@@ -62,6 +70,7 @@ static func collect_occupancy(
 		"pickups": pickup_list,
 		"movers": mover_list,
 		"conveyors": conveyor_list,
+		"launches": launch_list,
 	}
 
 
@@ -182,7 +191,8 @@ static func _append_solid(
 	used_assets: Dictionary[int, int],
 	solid_list: Array[Dictionary],
 	mover_list: Array[Dictionary],
-	conveyor_list: Array[Dictionary]
+	conveyor_list: Array[Dictionary],
+	launch_list: Array[Dictionary]
 ) -> bool:
 	if record.components.has(SharedComponentNames.CHECKPOINT):
 		return false
@@ -201,12 +211,31 @@ static func _append_solid(
 		"y": solid_pose["y"],
 		"z": solid_pose["z"],
 	}, next_asset, used_assets))
+	var mover_bag: Dictionary = {}
 	if record.components.has(SharedComponentNames.MOVER):
-		var mover_bag: Dictionary = _parse_mover(entity_id, record)
+		mover_bag = _parse_mover(entity_id, record)
 		if mover_bag.is_empty():
 			return false
 		mover_list.append(mover_bag)
-	if not FieldsGd.has_conveyor_tag(record):
+	if FieldsGd.has_lift_tag(record):
+		if mover_bag.is_empty():
+			return false
+		var lift_path: Array = mover_bag["path"]
+		if not SimulationBundleBags.path_is_vertical(lift_path):
+			return false
+	var has_conveyor: bool = FieldsGd.has_conveyor_tag(record)
+	var has_launch: bool = FieldsGd.has_launch_tag(record)
+	if has_conveyor and has_launch:
+		return false
+	if has_launch:
+		if record.components.has(SharedComponentNames.MOVER):
+			return false
+		var launch_yaw: int = FieldsGd.transform_yaw_bam(record)
+		if launch_yaw < 0:
+			return false
+		launch_list.append({"entity_id": entity_id, "yaw_bam": launch_yaw})
+		return true
+	if not has_conveyor:
 		return true
 	# 自己在走 + 又把人往别处推：两段位移的先后顺序没有可解释的答案，拒绝发布。
 	if record.components.has(SharedComponentNames.MOVER):

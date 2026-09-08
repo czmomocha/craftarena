@@ -135,7 +135,9 @@ func test_course_f_playable_compiles_with_f_line_features() -> void:
 	assert_eq(bundle.portals.size(), 2)
 	assert_eq(bundle.pickups.size(), 2)
 	assert_eq(bundle.hazards.size(), 1)
-	assert_eq(bundle.movers.size(), 1)
+	assert_eq(bundle.movers.size(), 2)
+	assert_eq(bundle.conveyors.size(), 3)
+	assert_eq(bundle.launches.size(), 1)
 	assert_gt(bundle.solids.size(), 6)
 	var high_solid: bool = false
 	var pad0: Dictionary = bundle.pads[0]

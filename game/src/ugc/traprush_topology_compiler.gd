@@ -53,6 +53,10 @@ const SOLID_ZONE_TAG: String = "solid"
 ## `TraprushConveyorCycle` 文件头。同时带 `mover` 的实体被拒——一块自己在走、
 ## 又把人往别处推的地板，两段位移的先后顺序没有可解释的答案。
 const CONVEYOR_ZONE_TAG: String = "conveyor"
+## 电梯：竖直 `mover` + 本标签。路径必须纯 Y，否则整份拒绝。
+const LIFT_ZONE_TAG: String = "lift"
+## 弹射垫：固体 + 本标签 + `transform.yaw_bam`。见 `TraprushLaunchCycle`。
+const LAUNCH_ZONE_TAG: String = "launch"
 
 
 static func compile(world: AuthoringWorld) -> SimulationBundle:
@@ -85,5 +89,6 @@ static func compile(world: AuthoringWorld) -> SimulationBundle:
 		SimulationBundle.FIELD_PICKUPS: occupancy["pickups"],
 		SimulationBundle.FIELD_MOVERS: occupancy["movers"],
 		SimulationBundle.FIELD_CONVEYORS: occupancy["conveyors"],
+		SimulationBundle.FIELD_LAUNCHES: occupancy["launches"],
 	}
 	return SimulationBundle.from_dictionary(body)

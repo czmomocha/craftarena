@@ -131,6 +131,7 @@ func reset_player_if_out_of_range(session: TraprushMatchSession, player: Diction
 	)
 	var reset: bool = result.get("reset", false)
 	if reset:
+		session._launch_supported.erase(capsule_id)
 		mark_setback(session, player, PlaySetback.OUT_OF_RANGE)
 	return reset
 
@@ -159,6 +160,7 @@ func reset_player_to_pad(session: TraprushMatchSession, player: Dictionary) -> b
 	if not session._world.set_pose(capsule_id, x, y, z, yaw_bam):
 		return false
 	session._world.set_vy(capsule_id, 0)
+	session._launch_supported.erase(capsule_id)
 	mark_setback(session, player, PlaySetback.CRUSHED)
 	return true
 

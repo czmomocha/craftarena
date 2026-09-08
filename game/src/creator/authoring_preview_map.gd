@@ -261,6 +261,10 @@ func placeholder_node(entity_id: int) -> MeshInstance3D:
 	return get_node_or_null(ConvertGd.placeholder_name(entity_id)) as MeshInstance3D
 
 
+func apply_solid_pose(entity_id: int, x: int, y: int, z: int) -> bool:
+	return occupancy.apply_pose(self, entity_id, x, y, z)
+
+
 func placeholder_visual_node(entity_id: int) -> Node3D:
 	var placeholder: MeshInstance3D = placeholder_node(entity_id)
 	if placeholder == null:
