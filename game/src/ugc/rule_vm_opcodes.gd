@@ -2,8 +2,8 @@ class_name RuleVmOpcodes
 extends RefCounted
 
 ## Rule VM v1 opcode table, fixed gas costs, and locatable error codes.
-## Owner: CD-42 §2. First chapter: versioned envelope + whitelist + per-graph gas.
-## Spatial queries, Event dispatch, graph JSON, and Preview wiring are later.
+## Owner: CD-42 §2. Envelope + whitelist interpreter + graph compiler.
+## Event dispatch, spatial queries, remaining nodes, and Preview wiring are later.
 
 const RULESET_VERSION: int = 1
 const SLOT_COUNT: int = 16
@@ -47,6 +47,31 @@ const REASON_DECODE_SLOT: String = "decode_slot"
 const REASON_DECODE_PREDICATE: String = "decode_predicate"
 const REASON_VARS_SIZE: String = "vars_size"
 const REASON_GAS_EXCEEDED: String = "gas_exceeded"
+const REASON_COMPILE_KEYS: String = "compile_keys"
+const REASON_COMPILE_VERSION: String = "compile_version"
+const REASON_COMPILE_GAS: String = "compile_gas"
+const REASON_COMPILE_EVENT: String = "compile_event"
+const REASON_COMPILE_UNKNOWN_NODE: String = "compile_unknown_node"
+const REASON_COMPILE_NODE_KEYS: String = "compile_node_keys"
+const REASON_COMPILE_SLOT: String = "compile_slot"
+const REASON_COMPILE_PREDICATE: String = "compile_predicate"
+const REASON_COMPILE_ENCODE: String = "compile_encode"
+
+const EVENT_ON_MATCH_STARTED: String = "OnMatchStarted"
+
+const KIND_LOAD_CONST: String = "LoadConst"
+const KIND_GET_VARIABLE: String = "GetVariable"
+const KIND_SET_VARIABLE: String = "SetVariable"
+const KIND_COMPARE: String = "Compare"
+const KIND_HALT: String = "Halt"
+const KIND_NOP: String = "Nop"
+
+const PRED_NAME_EQ: String = "eq"
+const PRED_NAME_NE: String = "ne"
+const PRED_NAME_LT: String = "lt"
+const PRED_NAME_LE: String = "le"
+const PRED_NAME_GT: String = "gt"
+const PRED_NAME_GE: String = "ge"
 
 const KEY_OK: String = "ok"
 const KEY_REASON: String = "reason"
@@ -62,6 +87,26 @@ const KEY_LHS: String = "lhs"
 const KEY_RHS: String = "rhs"
 const KEY_PRED: String = "pred"
 const KEY_VALUE: String = "value"
+const KEY_EVENT: String = "event"
+const KEY_NODES: String = "nodes"
+const KEY_KIND: String = "kind"
+const KEY_BYTES: String = "bytes"
+
+
+static func pred_from_name(name: String) -> int:
+	if name == PRED_NAME_EQ:
+		return PRED_EQ
+	if name == PRED_NAME_NE:
+		return PRED_NE
+	if name == PRED_NAME_LT:
+		return PRED_LT
+	if name == PRED_NAME_LE:
+		return PRED_LE
+	if name == PRED_NAME_GT:
+		return PRED_GT
+	if name == PRED_NAME_GE:
+		return PRED_GE
+	return -1
 
 
 static func cost(op: int) -> int:

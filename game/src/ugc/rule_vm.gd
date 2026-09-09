@@ -4,11 +4,12 @@ extends RefCounted
 ## Versioned bytecode interpreter for Rule VM v1 (CD-42 §2).
 ## Client and server run this same static-typed GDScript. Over-gas aborts this
 ## content logic with a locatable reason and does not commit variable writes.
-## Does not walk JSON, generate GDScript, or load scripts. Not wired to Preview
-## or the match loop in this chapter.
+## Graphs compile to bytecode first; run() never walks JSON, generates
+## GDScript, or loads scripts. Not wired to Preview or the match loop.
 
 const Opcodes := preload("res://src/ugc/rule_vm_opcodes.gd")
 const CodecGd := preload("res://src/ugc/rule_vm_codec.gd")
+const CompilerGd := preload("res://src/ugc/rule_vm_compiler.gd")
 
 
 static func encode(graph_gas: int, ops: Array) -> PackedByteArray:
@@ -17,6 +18,10 @@ static func encode(graph_gas: int, ops: Array) -> PackedByteArray:
 
 static func decode(bytes: PackedByteArray) -> Dictionary:
 	return CodecGd.decode(bytes)
+
+
+static func compile(graph: Dictionary) -> Dictionary:
+	return CompilerGd.compile(graph)
 
 
 static func empty_vars() -> PackedInt64Array:

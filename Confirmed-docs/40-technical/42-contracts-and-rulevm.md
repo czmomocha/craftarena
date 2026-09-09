@@ -18,7 +18,7 @@
 | PLAYER 意图 | Move / Jump / Reset / UseItem / Shove / **SprintIntent（id=6）** |
 | 扫掠预算 | 单次最多 **256** 样本；超限拒绝整段，不粗化密度。数字在 §1.1 |
 | 静态盒阔相 | 均匀格桶 = `SCALE`；单盒超 125 格或溢出走全量窄相。ID 顺序与全量扫描相同。胶囊仍线性 |
-| Rule VM | **首章已交**：`ruleset_version=1` 信封 + 白名单 `HALT` / `NOP` / `LOAD_I64` / `GET_VAR` / `COMPARE` / `SET_VAR` + 单图 / tick / chain gas。未知 opcode / 版本 / 保留字段拒绝。超 gas 中止该次解释、不提交槽位。未挂 Preview / 对局 / 规则图编译。P3 仍拒绝 |
+| Rule VM | **第 1–2 章已交**：v1 信封 + 白名单解释器 + gas；`OnMatchStarted` 图编成同一套字节码（`GetVariable` / `Compare` / `SetVariable` / `LoadConst` 字面量）。多余键 / 未知事件 / 未知节点拒绝。`run()` 不走 JSON。未挂 Preview / 对局 / Event 分发。P3 仍拒绝 |
 
 ## 1. Component Schema v1
 
@@ -134,7 +134,7 @@ Action     SetVariable / Spawn / Despawn / ApplyEffect / EmitGameEvent
 
 超预算时**中止该内容逻辑**并生成可定位错误，不允许拖垮对局进程。
 
-首章落点：`game/src/ugc/rule_vm.gd` + `rule_vm_opcodes.gd` / `rule_vm_codec.gd`。v1 信封是小端 PackedByteArray：`CRVM` + `ruleset_version:u16=1` + `reserved:u16=0` + `graph_gas:u32` + `code_size:u32` + 指令。槽位 0–15，值为 int64。每条白名单指令固定 1 gas。事件分发、空间查询、规则图编译与 Preview 接线仍待。
+落点：`game/src/ugc/rule_vm.gd` + opcodes / codec / compiler。v1 信封是小端 PackedByteArray：`CRVM` + `ruleset_version:u16=1` + `reserved:u16=0` + `graph_gas:u32` + `code_size:u32` + 指令。槽位 0–15，值为 int64。每条白名单指令固定 1 gas。图字段恰好四键：`ruleset_version` / `graph_gas` / `event` / `nodes`；本章 `event` 只认 `OnMatchStarted`。`LoadConst` 是编译期字面量，不是 §2.1 产品节点。事件分发、空间查询、其余 §2.1 节点与 Preview 接线仍待。
 
 ## 3. 命令模型
 
@@ -228,7 +228,7 @@ Undo / Redo 是会话内对成功命令派生的反向 payload（`place`↔`remo
 | 第三张官方 TRAPRUSH 赛道 | `game/content/official/traprush/course_03.json` |
 | F 线示范课 | `game/content/official/traprush/course_f_playable.json`（不计入 M5 官方课 3～5 张；HTTP 匹配仍只 01–03） |
 | SimulationBundle | `game/src/ugc/simulation_bundle.gd` + decode / bags / optional（v2：`assets` 袋 + 每袋 `asset_id`/`gameplay_version`；可选袋 `movers` / `conveyors` / `launches` / `switches` / `gates` / `energy_walls` / `portal_switches` / `spikes` / `flames` / `crushers` / `rollers` / `rubbles` / `obstacle_cores` / `pendulums` / `ices` 不进 required，省略与空数组等价，旧编译体仍可解码；`movers` / `conveyors` / `launches` / `switches` / `gates` / `spikes` / `crushers` / `pendulums` / `ices` 几何都住在 `solids`，本袋只带行为，`entity_id` 必须能在 `solids` 里找到；`energy_walls` / `rubbles` / `obstacle_cores` 几何和耐久住在 `destructibles`，本袋只带 `entity_id`；`portal_switches` 几何住在 `portals`，本袋只带 `link_group`；`flames` / `rollers` 几何住在 `hazards`，本袋只带 `entity_id`；v1 仍解码并迁移到内置"占满一格"资产） |
-| Rule VM 解释器 | `game/src/ugc/rule_vm.gd` + opcodes / codec（v1 信封；未挂 Preview / 对局） |
+| Rule VM 解释器 | `game/src/ugc/rule_vm.gd` + opcodes / codec / compiler（v1 信封；`OnMatchStarted` 图 → 字节码；未挂 Preview / 对局） |
 | TRAPRUSH 拓扑编译 | `game/src/ugc/traprush_topology_compiler.gd` + bags / fields / triggers（资产准入在这里；不读 `zone.shape`） |
 | TRAPRUSH 拓扑加载 | `game/src/games/traprush/traprush_topology_loader.gd`（半长来自 `assets`；只接受 `box`） |
 | 周期机关固体切换 | `game/src/games/traprush/hazard_cycle.gd` |
