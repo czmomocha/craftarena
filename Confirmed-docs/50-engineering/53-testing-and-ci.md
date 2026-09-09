@@ -13,7 +13,8 @@
 
 | 项 | 当前口径 |
 |---|---|
-| 每次推送 `main` / 每次 PR | tsc + GUT fast/slow 全量 + Schema + 红线 + 资产预算 |
+| 每次推送 `main` / 每次 PR | tsc + GUT fast/slow 全量 + Schema + 红线 + 资产预算（推送**之后**跑，不是直推前置） |
+| 合入 `main` | 人类授权后直推；GitHub **不**要求 PR；禁止 force push / 删除 `main` |
 | PR Web 预览 | **未实现**。Web 导出已有；人类 2026-09-03 拍板推迟到 M5 之后开工 |
 | 可玩性签署 | **E6 已签：好玩**（2026-09-02，非外部测试）。M5 / 发布候选清单仍未签 |
 | `--bot-run` | 不进 PR CI |
@@ -377,18 +378,25 @@ AI 生成代码必须比普通手写代码有**更强的自动化证据**，因�
 
 ### 4.5 合入 `main`
 
-默认路径是人类授权后直推 `main`（[CD-52 §1.1](52-ai-workflow.md)）。CI 在推送 `main` 与所有 PR 上跑。走 PR 的例外路径仍须 CI 全绿并至少获得一次人类批准；AI 审查不能替代人类。GitHub PR 侧 Bugbot 已跳过，不构成本条的「一次人类批准」。若日后恢复，其 check 默认仍为 `neutral`，勾选该 check **不会**因为发现问题而阻止合并。
+默认路径是人类授权后直推 `main`（[CD-52 §1.1](52-ai-workflow.md)）。CI 在推送 `main` 与所有 PR **之后**跑（`.github/workflows/ci.yml` 的 `on: push` / `pull_request`）。失败要修，但**不是** GitHub 拦直推的前置——新 commit 上还没有 check run，把 status check 设成必过会把普通 `git push origin main` 一并拒绝（2026-09-09 那次直推就是因此加上「必须走 PR」才走了管理员绕过）。
 
-[ADR-0004](../../docs/adr/0004-multi-agent-adoption-timing-and-architecture.md) 决策 4 曾把「禁止直推 `main`」定为隔离分支提交的硬前置。该句已被 `git_workflow = trunk_direct_after_auth`（2026-09-09）覆盖。目标配置改为：
+走 PR 的例外路径：人类仍应看 CI 是否全绿并自己批准；AI 审查不能替代人类。GitHub PR 侧 Bugbot 已跳过。若日后恢复，其 check 默认仍为 `neutral`，勾选该 check **不会**因为发现问题而阻止合并。
 
-- `main` **允许**人类授权后的普通直推；仍禁止 force push 与删除 `main`；
-- 推送 `main` 与 PR 都要求 CI 通过；
-- 走 PR 时要求一次人类批准；
-- `CODEOWNERS` 覆盖 `game/src/shared/`、`backend/contracts/`、`Confirmed-docs/`、`.github/`。
+[ADR-0004](../../docs/adr/0004-multi-agent-adoption-timing-and-architecture.md) 决策 4 曾把「禁止直推 `main`」定为隔离分支提交的硬前置。该句已被 `git_workflow = trunk_direct_after_auth` 与 `branch_protection = trunk_direct_no_required_pr`（2026-09-09）覆盖。GitHub `main` 保护的目标：
 
-**当前（2026-08-21 起 GitHub 侧）**：`main` 保护仍可能要求 PR（人类 2026-08-21 保存过「必须走 PR + CI + 一次批准」）。`enforce_admins` 仍关，仓库管理员可绕过。**与 2026-09-09 主干直推口径对齐，须由人类改 GitHub 保护规则**；Agent 不改。必过检查：`Backend typecheck and tests`、`Godot check-only and GUT`。
+- **允许**人类授权后的普通直推；**不**要求 Pull Request；
+- 仍禁止 force push 与删除 `main`；
+- **不要**勾「Require status checks to pass before merging」——那是推送前置，与直推不相容；
+- 文件 `.github/CODEOWNERS` 仍覆盖 `game/src/shared/`、`backend/contracts/`、`Confirmed-docs/`、`.github/`，只作路径所有者提示，不再作为合入门禁。
 
-> 2026-09-01 的 GUT 分层**没有改必过检查名单**：`godot` job 的 `name` 仍是 `Godot check-only and GUT`，它现在跑四个目录（fast + slow）。没有新增需要设为必过的 job。`.github/CODEOWNERS` 覆盖 `game/src/shared/`、`backend/contracts/`、`Confirmed-docs/`、`.github/`。A4 回路已走通一次： [PR #1](https://github.com/czmomocha/craftarena/pull/1)。此后 Agent 在人类授权下可向 `main` 提交（[CD-52 §1.1](52-ai-workflow.md)）。
+**GitHub 侧（2026-09-09 人类已保存）**：允许普通直推；不要求 PR；无必过 status check。仍禁止 force push 与删除 `main`。`enforce_admins` 仍关。仓库没有 Rulesets。Agent 不改仓库保护。若以后要再改，打开 [Branches 设置](https://github.com/czmomocha/craftarena/settings/branches)，编辑 `main` 规则：
+
+1. **Require a pull request before merging** 保持关（打开会连批准与 Code Owners 审查一起回来）；
+2. **Require status checks to pass before merging** 保持关（打开会把直推拦掉）；
+3. **Allow force pushes**、**Allow deletions** 保持关闭；
+4. 可选：打开 **Do not allow bypassing the above settings**（`enforce_admins`），让管理员也不能 force push / 删 `main`。
+
+> `godot` job 的 `name` 仍是 `Godot check-only and GUT`，跑四个目录（fast + slow）。A4 回路已走通一次：[PR #1](https://github.com/czmomocha/craftarena/pull/1)。此后 Agent 在人类授权下可向 `main` 提交并直推（[CD-52 §1.1](52-ai-workflow.md)）。
 
 每个 PR 的 Web 预览公开访问，但必须使用独立临时沙盒命名空间、测试数据和可销毁凭据，关闭 PR 后清理。合入 `main` 后更新稳定测试链接。
 

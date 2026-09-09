@@ -45,7 +45,7 @@
 - **PR 是例外**：只有人类主动说「开 PR」才拉分支、推非 `main` 远程、开 Pull Request。Agent 不得自行把默认路径改成「先开 PR」。走 PR 时仍须 CI 全绿并一次人类批准。
 - **仍然禁止、且属第十八条**：未经本回合人类确认的提交或推送；部署；发布；回滚线上内容；force push / 删除 `main`。
 - **机械化拦截**：项目级 `.cursor/hooks.json` 的 `beforeShellExecution` 拦 `git push --force`（含 `--force-with-lease` 与 `+refspec`）、删除受保护分支、`git worktree remove --force`，以及把本机 Godot AI 条目写进 `game/project.godot` 的提交。**不再**拦向 `main` 的普通 commit / 普通 push——人类授权是门禁，hook 看不见那句话。该 hook **必须** `failClosed: true`（Cursor 默认 fail-open，崩溃即放行）。判定逻辑在 `tools/shell-guard/`，由 `npm test` 覆盖。
-- **GitHub 保护**：若远程仍要求「必须走 PR」，由人类调整规则或使用管理员绕过（`enforce_admins` 仍关）。Agent **不**改仓库保护设置。现行配置见 [CD-53 §4.5](53-testing-and-ci.md)。
+- **GitHub 保护**：`main` 允许普通直推，**不**要求 PR；仍禁止 force push 与删除 `main`。不要把 CI status check 设成推送前置（新 commit 还没跑检查，直推会被拒）。人类 2026-09-09 已在仓库 Settings 保存；Agent **不**改 GitHub 保护。现行配置见 [CD-53 §4.5](53-testing-and-ci.md)。
 - Cloud Agent / worktree：仍可在隔离分支上工作；合回默认是人类验证后提交 `main`，不是自动开 PR。
 
 ### 1.2 人类负责
