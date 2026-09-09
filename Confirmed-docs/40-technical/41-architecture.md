@@ -13,11 +13,11 @@
 
 | 项 | 当前口径 |
 |---|---|
-| 分层 | L0–L9 见 §4。L1 World 门面 + query/move；L2 Bundle 门面 + decode/bags、拓扑编译门面 + bags/fields；L3 灰盒门面 + layout/assemble/play、探针门面 + heuristic/search；L4 大厅门面 + chrome/net/sampler/stage/hud/director；L5 Preview 会话/映射/壳均已拆门面；编辑门面 + chrome/place/follow |
+| 分层 | L0–L9 见 §4。L1 World 门面 + query/move；L2 Bundle 门面 + decode/bags、拓扑编译门面 + bags/fields、Rule VM 门面 + opcodes/codec；L3 灰盒门面 + layout/assemble/play、探针门面 + heuristic/search；L4 大厅门面 + chrome/net/sampler/stage/hud/director；L5 Preview 会话/映射/壳均已拆门面；编辑门面 + chrome/place/follow |
 | D4 数值落点 | `game/src/shared/placeholder_spec.gd`（唯一配置源） |
 | 资产目录 | `game/content/assets/`、`game/content/locale/` |
 | E9 | 生产路径全量 < 400 行（`game/src/**/*.gd` + `backend` 非测试 `*.ts`，C5 第 17 章门禁）。测试 / addons / GUT 不在本口径 |
-| 仍待 | OpenAPI、Rule VM 图、BASTION 面板、签名发布、账号页 |
+| 仍待 | OpenAPI、Rule VM 图 JSON、BASTION 面板、签名发布、账号页 |
 
 ## 1. 共享底座构成
 
