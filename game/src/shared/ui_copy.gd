@@ -64,6 +64,8 @@ const PLACE_BOMB: String = "craft_arena.ui.place_bomb"
 const PLACE_DASH: String = "craft_arena.ui.place_dash"
 const PLACE_MOVER: String = "craft_arena.ui.place_mover"
 const PLACE_CONVEYOR: String = "craft_arena.ui.place_conveyor"
+const PLACE_LIFT: String = "craft_arena.ui.place_lift"
+const PLACE_LAUNCH: String = "craft_arena.ui.place_launch"
 const MARK_CORNER: String = "craft_arena.ui.mark_corner"
 const FILL_SOLIDS: String = "craft_arena.ui.fill_solids"
 const COPY_ENTITY: String = "craft_arena.ui.copy_entity"
@@ -128,6 +130,8 @@ const ALL_KEYS: PackedStringArray = [
 	PLACE_DASH,
 	PLACE_MOVER,
 	PLACE_CONVEYOR,
+	PLACE_LIFT,
+	PLACE_LAUNCH,
 	MARK_CORNER,
 	FILL_SOLIDS,
 	COPY_ENTITY,

@@ -134,3 +134,17 @@ func test_keyboard_held_snapshot_has_play_actions() -> void:
 	assert_true(InputMap.has_action(PlayInputGd.ACTION_SHOVE))
 	assert_true(InputMap.has_action(PlayInputGd.ACTION_SPRINT))
 	assert_true(InputMap.has_action(PlayInputGd.ACTION_RESET))
+	assert_true(PlayInputGd.has_play_actions())
+
+
+func test_physical_held_is_the_editor_plugin_fallback_shape() -> void:
+	var held: Dictionary = PlayInputGd.read_physical_held()
+	assert_true(held.has("move_x"))
+	assert_true(held.has("move_z"))
+	assert_true(held.has("jump"))
+	assert_true(held.has("shove"))
+	assert_true(held.has("use_item"))
+	assert_true(held.has("sprint"))
+	assert_true(held.has("reset"))
+	assert_almost_eq(PlayInputGd.move_x_of(held), 0.0, EPS)
+	assert_almost_eq(PlayInputGd.move_z_of(held), 0.0, EPS)

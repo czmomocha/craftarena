@@ -16,9 +16,9 @@
 | 效力 | **本文件是现行口径**。人类 2026-09-02 接受草案 §8 后回写。批准记录见 [cd-61-rearrangement-draft.md](../../docs/plans/cd-61-rearrangement-draft.md) |
 | 已退出 | M0、M1、M2 |
 | 已收口插入 | 创作者可测；**F 线**（FA–FH + 可读性） |
-| 进行中 | M3（表现层增强不阻塞 M3 退出，归 M-Art / 可玩性深化） |
+| 进行中 | M3（表现层增强不阻塞 M3 退出，归 M-Art / 可玩性深化）；**可玩性深化**（第一批 / 第二批已交，人类宣布收口前不进 M4a） |
 | 部分交付 | M-Export（C1 三预设；**Web 游玩分发第一刀已交**；Android / iOS 排到一期收尾）；M-Art（C4 契约与第一批 `.glb`；与 F 线重叠项已交） |
-| 未开工（顺序，不是冻结） | **可玩性深化**（插入）；M4a、M4b、M6、M7；第 4 张及以后官方课属 M5；Android / iOS 烟测（一期收尾） |
+| 未开工（顺序，不是冻结） | M4a、M4b、M6、M7；第 4 张及以后官方课属 M5；Android / iOS 烟测（一期收尾） |
 | 纠偏闸门 | **已解除**（2026-09-03）。C0–C5 不是里程碑号。此后本文件进度顺序生效 |
 | 解冻后顺序 | 创作者可测（已收口）→ F 线（已收口）→ Web 游玩分发（第一刀已收口）→ **可玩性深化** → M-Art 剩余已拍板项 → M4a → M4b → M5 → 公开 TLS / PR Web 沙盒 → M6 / M7 → **一期收尾**（字体入包、Android / iOS 烟测、触控 UI） |
 
@@ -162,6 +162,15 @@
 | 表现性 | 传送门占位模型（底座 + 立环 + 门芯 + 旋翼）与课内动效（旋翼按 tick 转、当前目标垫与已开放终点呼吸） | 程序化网格，不是定稿美术、不是新 `.glb`；不改资产预算 |
 | 编辑调试 | **Web 轻量 Edit 入口**：玩家包大厅「创作课程」/ `--edit` / `?edit=1` 打开同一套编辑外壳并排 Preview；surface 能力分级第一次被真的执行（批量生成与验证器详情只留给 `internal_dev`）；草稿独立落 `user://creator_draft.json` | **浏览器上未实测**：开发机 `export_templates` 为空，Web 包导不出来 |
 | UGC | Preview 连续试玩（默认自动推进，可关回单步）；验证摘要给轻量 surface | — |
+
+已交第二批（2026-09-08，一次章节 PR）：
+
+| 轨 | 交付 | 诚实边界 |
+|---|---|---|
+| 游戏性 | 传送带接到示范课 `course_f_playable` revision 4（+Z 六格侧廊三块带子 + 连接固体） | 官方 01–03 仍无传送带；匹配 HTTP 仍只那三张 |
+| 游戏性 | 电梯：竖直 `mover` + `zone.tags` 的 `lift`。不另开袋、不改 Component Schema v1。路径必须纯 Y，否则编译拒绝。Place lift 默认沿 +Y 两格 | 水平往返仍走 Place mover |
+| 游戏性 | 弹射垫：固体 + `zone.tags` 的 `launch` + `transform.yaw_bam`。`SimulationBundle` 加可选 `launches` 袋（省略 ≡ 空）。支撑上升沿弹一次（`LAUNCH_DY = JUMP_DY * 2`，水平送出一格） | 与 conveyor / mover 同实体拒绝。不改协议帧 |
+| 编辑调试 | Place lift / Place launch（弹射垫与传送带一样每摆一块 yaw 顺时针 90°） | 占位仍是石色固体，没有专用模型 |
 
 退出：人类宣布本插入段收口后才进入 M4a。不设固定章数。
 

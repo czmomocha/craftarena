@@ -243,6 +243,16 @@ static func parse_mover(body: Dictionary) -> Dictionary:
 ## 传送带袋。几何不在这里——传送带同时写进 `solids`，本袋只带方向，
 ## 与 `movers` 同一条约定（见 `TraprushConveyorCycle` 文件头）。
 static func parse_conveyor(body: Dictionary) -> Dictionary:
+	return parse_yaw_bag(body)
+
+
+## 弹射垫袋。形状与传送带相同（entity_id + yaw_bam），语义不同：
+## 传送带每 tick 推，弹射垫是支撑上升沿弹一次。见 `TraprushLaunchCycle`。
+static func parse_launch(body: Dictionary) -> Dictionary:
+	return parse_yaw_bag(body)
+
+
+static func parse_yaw_bag(body: Dictionary) -> Dictionary:
 	if body.size() != 2:
 		return {}
 	if not int_at_least(body, "entity_id", 1):
@@ -283,6 +293,24 @@ static func path_is_axial(path: Array) -> bool:
 		if pz != cz:
 			diffs += 1
 		if diffs != 1:
+			return false
+		index += 1
+	return true
+
+
+## 电梯路径：每段只许改 Y。水平往返不是电梯，那是已有 `mover`。
+static func path_is_vertical(path: Array) -> bool:
+	if not path_is_axial(path):
+		return false
+	var index: int = 1
+	while index < path.size():
+		var prev: Dictionary = path[index - 1]
+		var cur: Dictionary = path[index]
+		if _int_at(prev, "x") != _int_at(cur, "x"):
+			return false
+		if _int_at(prev, "z") != _int_at(cur, "z"):
+			return false
+		if _int_at(prev, "y") == _int_at(cur, "y"):
 			return false
 		index += 1
 	return true

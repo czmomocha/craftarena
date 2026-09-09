@@ -17,6 +17,8 @@ const PLACE_BOMB_NAME: String = "PlaceBomb"
 const PLACE_DASH_NAME: String = "PlaceDash"
 const PLACE_MOVER_NAME: String = "PlaceMover"
 const PLACE_CONVEYOR_NAME: String = "PlaceConveyor"
+const PLACE_LIFT_NAME: String = "PlaceLift"
+const PLACE_LAUNCH_NAME: String = "PlaceLaunch"
 const REMOVE_LAST_NAME: String = "RemoveLast"
 const FLOOR_UP_NAME: String = "FloorUp"
 const FLOOR_DOWN_NAME: String = "FloorDown"
@@ -38,6 +40,7 @@ var _next_order: int = 0
 var _pending_portal_id: int = 0
 ## 下一块传送带的朝向。每摆一块顺时针转 90°，摆四块就围出一圈，不另开方向面板。
 var _next_conveyor_yaw: int = 0
+var _next_launch_yaw: int = 0
 
 var floor_index: int:
 	get:
@@ -70,6 +73,7 @@ var cell_z: int:
 func adopt_world(world: AuthoringWorld) -> void:
 	_pending_portal_id = 0
 	_next_conveyor_yaw = 0
+	_next_launch_yaw = 0
 	var state: Dictionary = IdsGd.adopt_state(world)
 	var next_entity_id: int = state["next_entity_id"]
 	var next_order: int = state["next_order"]
@@ -104,6 +108,8 @@ func mount(p_host: AuthoringEditorShell) -> void:
 	_add_button(occupancy_row, PLACE_FINISH_NAME, UiCopy.PLACE_FINISH, place_next_finish)
 	_add_button(occupancy_row, PLACE_MOVER_NAME, UiCopy.PLACE_MOVER, place_next_mover)
 	_add_button(occupancy_row, PLACE_CONVEYOR_NAME, UiCopy.PLACE_CONVEYOR, place_next_conveyor)
+	_add_button(occupancy_row, PLACE_LIFT_NAME, UiCopy.PLACE_LIFT, place_next_lift)
+	_add_button(occupancy_row, PLACE_LAUNCH_NAME, UiCopy.PLACE_LAUNCH, place_next_launch)
 	var pickup_row: HBoxContainer = HBoxContainer.new()
 	pickup_row.name = "PickupRow"
 	add_child(pickup_row)
@@ -226,6 +232,24 @@ func place_next_conveyor() -> bool:
 	):
 		return false
 	_next_conveyor_yaw = (yaw_bam + Fixed.BAM_TURN / 4) % Fixed.BAM_TURN
+	return true
+
+
+func place_next_lift() -> bool:
+	return _place_occupancy(func(entity_id: int) -> bool:
+		return host.try_place_lift(entity_id, cursor.cell_x, cursor.cell_y, cursor.cell_z)
+	)
+
+
+func place_next_launch() -> bool:
+	var yaw_bam: int = _next_launch_yaw
+	if not _place_occupancy(func(entity_id: int) -> bool:
+		return host.try_place_launch(
+			entity_id, cursor.cell_x, cursor.cell_y, cursor.cell_z, yaw_bam
+		)
+	):
+		return false
+	_next_launch_yaw = (yaw_bam + Fixed.BAM_TURN / 4) % Fixed.BAM_TURN
 	return true
 
 

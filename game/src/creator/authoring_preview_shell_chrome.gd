@@ -82,9 +82,15 @@ func raise_window() -> bool:
 		return false
 	LayoutGd.apply_preview(window, window.get_parent())
 	window.visible = true
+	focus_window()
+	return true
+
+
+func focus_window() -> void:
+	if not is_alive() or window == null:
+		return
 	if window.is_inside_tree():
 		window.grab_focus()
-	return true
 
 
 func hide_window() -> void:

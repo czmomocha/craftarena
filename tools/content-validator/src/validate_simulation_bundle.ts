@@ -14,11 +14,11 @@ const OCCUPANCY_BAGS = [
 ] as const;
 
 /**
- * 只带行为、几何住在 `solids` 里的可选袋。`SimulationBundleDecode` 对两者都要求
+ * 只带行为、几何住在 `solids` 里的可选袋。`SimulationBundleDecode` 对三者都要求
  * `entity_id` 能在 `solids` 里找到；JSON Schema 表达不了跨袋引用，所以这条规则
  * 必须在这里复核，否则 GDScript 拒了而 `npm test` 放行。
  */
-const SOLID_BACKED_BAGS = ["movers", "conveyors"] as const;
+const SOLID_BACKED_BAGS = ["movers", "conveyors", "launches"] as const;
 
 export function validateSimulationBundle(instance: unknown): JsonSchemaError[] {
 	const errors = validateJsonSchema(loadJsonFile(SIMULATION_BUNDLE_SCHEMA_PATH), instance, {

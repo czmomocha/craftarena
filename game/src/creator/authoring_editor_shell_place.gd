@@ -98,6 +98,29 @@ static func try_place_conveyor(
 	))
 
 
+static func try_place_lift(
+	shell: AuthoringEditorShell, entity_id: int, cell_x: int, cell_y: int, cell_z: int
+) -> bool:
+	if shell.session == null or shell.session.world == null or shell.session.world.grid == null:
+		return false
+	var cell: int = shell.session.world.grid.cell
+	var x: int = cell_x * cell
+	var y: int = cell_y * cell
+	var z: int = cell_z * cell
+	return shell.try_edit(lift_payload(entity_id, x, y, z, cell / 2, cell))
+
+
+static func try_place_launch(
+	shell: AuthoringEditorShell, entity_id: int, cell_x: int, cell_y: int, cell_z: int, yaw_bam: int
+) -> bool:
+	if shell.session == null or shell.session.world == null or shell.session.world.grid == null:
+		return false
+	var cell: int = shell.session.world.grid.cell
+	return shell.try_edit(launch_payload(
+		entity_id, cell_x * cell, cell_y * cell, cell_z * cell, cell / 2, yaw_bam
+	))
+
+
 static func try_move_entity(
 	shell: AuthoringEditorShell, entity_id: int, cell_x: int, cell_y: int, cell_z: int
 ) -> bool:
@@ -303,6 +326,67 @@ static func mover_payload(entity_id: int, x: int, y: int, z: int, half: int, cel
 					],
 					"speed": Fixed.SCALE / 16,
 					"loop": true,
+				},
+			},
+		},
+	}
+
+
+static func lift_payload(entity_id: int, x: int, y: int, z: int, half: int, cell: int) -> Dictionary:
+	var dest_y: int = y + cell * 2
+	return {
+		"op": "place",
+		"record": {
+			"schema_version": 1,
+			"entity_id": entity_id,
+			"components": {
+				"transform": {"x": x, "y": y, "z": z, "yaw_bam": 0},
+				"zone": {
+					"shape": {
+						"kind": SharedCollisionShapeKinds.BOX,
+						"hx": half,
+						"hy": half,
+						"hz": half,
+					},
+					"tags": [
+						TraprushTopologyCompiler.SOLID_ZONE_TAG,
+						TraprushTopologyCompiler.LIFT_ZONE_TAG,
+					],
+				},
+				"mover": {
+					"path": [
+						{"x": x, "y": y, "z": z},
+						{"x": x, "y": dest_y, "z": z},
+					],
+					"speed": Fixed.SCALE / 16,
+					"loop": true,
+				},
+			},
+		},
+	}
+
+
+static func launch_payload(
+	entity_id: int, x: int, y: int, z: int, half: int, yaw_bam: int
+) -> Dictionary:
+	return {
+		"op": "place",
+		"record": {
+			"schema_version": 1,
+			"entity_id": entity_id,
+			"components": {
+				"transform": {"x": x, "y": y, "z": z, "yaw_bam": yaw_bam},
+				"zone": {
+					"shape": {
+						"kind": SharedCollisionShapeKinds.BOX,
+						"hx": half,
+						"hy": half,
+						"hz": half,
+					},
+					"tags": [
+						TraprushTopologyCompiler.SOLID_ZONE_TAG,
+						TraprushTopologyCompiler.LAUNCH_ZONE_TAG,
+					],
 				},
 			},
 		},

@@ -235,6 +235,35 @@ func test_playing_drops_editor_follow_without_rolling_back_write() -> void:
 	assert_false(_editor_shell.allows_settlement())
 
 
+func test_preview_lift_occupancy_follows_the_sim() -> void:
+	_editor_shell = AuthoringEditorShell.create(AuthoringSurfaceNames.INTERNAL_DEV)
+	add_child(_editor_shell)
+	assert_true(_editor_shell.open())
+	_editor_shell.tools.cursor.set_cell(0, 0, 0)
+	assert_true(_editor_shell.tools.place_next_checkpoint())
+	_editor_shell.tools.cursor.set_cell(0, -1, 0)
+	assert_true(_editor_shell.tools.place_next_lift())
+	assert_true(_editor_shell.open_preview())
+	var preview_shell: AuthoringPreviewShell = _editor_shell.preview
+	assert_true(preview_shell.try_start_play(1, RADIUS, HEIGHT))
+	assert_eq(preview_shell.preview.play_mover_cycle.size(), 1)
+	var lift: MeshInstance3D = preview_shell.map.placeholder_node(2)
+	assert_not_null(lift)
+	var before_box_y: float = lift.position.y
+	var before_pose: Dictionary = preview_shell.preview.play_world.get_pose(
+		preview_shell.preview.player_id
+	)
+	var before_player_y: int = before_pose.get("y", 0)
+	for _tick: int in range(16):
+		assert_true(preview_shell.try_advance_play())
+	assert_gt(lift.position.y, before_box_y)
+	var after_pose: Dictionary = preview_shell.preview.play_world.get_pose(
+		preview_shell.preview.player_id
+	)
+	var after_player_y: int = after_pose.get("y", 0)
+	assert_gt(after_player_y, before_player_y)
+
+
 func _connected_empty() -> AuthoringPreview:
 	var preview: AuthoringPreview = AuthoringPreview.new()
 	assert_true(preview.connect_from(AuthoringSession.new()))

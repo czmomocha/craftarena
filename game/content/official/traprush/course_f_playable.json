@@ -1,7 +1,7 @@
 {
 	"schema_version": 1,
 	"cell": 65536,
-	"revision": 3,
+	"revision": 4,
 	"entities": [
 		{
 			"schema_version": 1,
@@ -973,6 +973,188 @@
 							"x": 393216,
 							"y": -65536,
 							"z": 327680
+						}
+					],
+					"speed": 4096,
+					"loop": true
+				}
+			}
+		},
+		{
+			"schema_version": 1,
+			"entity_id": 210,
+			"components": {
+				"transform": {
+					"x": 65536,
+					"y": -65536,
+					"z": 393216,
+					"yaw_bam": 0
+				},
+				"zone": {
+					"shape": {
+						"kind": "box",
+						"hx": 32768,
+						"hy": 32768,
+						"hz": 32768
+					},
+					"tags": [
+						"solid"
+					]
+				}
+			}
+		},
+		{
+			"schema_version": 1,
+			"entity_id": 211,
+			"components": {
+				"transform": {
+					"x": 131072,
+					"y": -65536,
+					"z": 393216,
+					"yaw_bam": 49152
+				},
+				"zone": {
+					"shape": {
+						"kind": "box",
+						"hx": 32768,
+						"hy": 32768,
+						"hz": 32768
+					},
+					"tags": [
+						"solid",
+						"conveyor"
+					]
+				}
+			}
+		},
+		{
+			"schema_version": 1,
+			"entity_id": 212,
+			"components": {
+				"transform": {
+					"x": 196608,
+					"y": -65536,
+					"z": 393216,
+					"yaw_bam": 49152
+				},
+				"zone": {
+					"shape": {
+						"kind": "box",
+						"hx": 32768,
+						"hy": 32768,
+						"hz": 32768
+					},
+					"tags": [
+						"solid",
+						"conveyor"
+					]
+				}
+			}
+		},
+		{
+			"schema_version": 1,
+			"entity_id": 213,
+			"components": {
+				"transform": {
+					"x": 262144,
+					"y": -65536,
+					"z": 393216,
+					"yaw_bam": 49152
+				},
+				"zone": {
+					"shape": {
+						"kind": "box",
+						"hx": 32768,
+						"hy": 32768,
+						"hz": 32768
+					},
+					"tags": [
+						"solid",
+						"conveyor"
+					]
+				}
+			}
+		},
+		{
+			"schema_version": 1,
+			"entity_id": 214,
+			"components": {
+				"transform": {
+					"x": 327680,
+					"y": -65536,
+					"z": 393216,
+					"yaw_bam": 49152
+				},
+				"zone": {
+					"shape": {
+						"kind": "box",
+						"hx": 32768,
+						"hy": 32768,
+						"hz": 32768
+					},
+					"tags": [
+						"solid",
+						"launch"
+					]
+				}
+			}
+		},
+		{
+			"schema_version": 1,
+			"entity_id": 215,
+			"components": {
+				"transform": {
+					"x": 393216,
+					"y": 65536,
+					"z": 393216,
+					"yaw_bam": 0
+				},
+				"zone": {
+					"shape": {
+						"kind": "box",
+						"hx": 32768,
+						"hy": 32768,
+						"hz": 32768
+					},
+					"tags": [
+						"solid"
+					]
+				}
+			}
+		},
+		{
+			"schema_version": 1,
+			"entity_id": 216,
+			"components": {
+				"transform": {
+					"x": 65536,
+					"y": -65536,
+					"z": 458752,
+					"yaw_bam": 0
+				},
+				"zone": {
+					"shape": {
+						"kind": "box",
+						"hx": 32768,
+						"hy": 32768,
+						"hz": 32768
+					},
+					"tags": [
+						"solid",
+						"lift"
+					]
+				},
+				"mover": {
+					"path": [
+						{
+							"x": 65536,
+							"y": -65536,
+							"z": 458752
+						},
+						{
+							"x": 65536,
+							"y": 65536,
+							"z": 458752
 						}
 					],
 					"speed": 4096,

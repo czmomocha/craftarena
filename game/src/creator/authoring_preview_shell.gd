@@ -50,6 +50,8 @@ var play_sprint_step: int = PlayStubs.SPRINT_STEP
 var play_item_cooldown_ticks: int = PlayStubs.ITEM_COOLDOWN_TICKS
 var play_hazard_knockback_step: int = PlayStubs.HAZARD_KNOCKBACK_STEP
 var play_conveyor_step: int = PlayStubs.CONVEYOR_STEP
+var play_launch_dy: int = PlayStubs.LAUNCH_DY
+var play_launch_xz: int = PlayStubs.LAUNCH_XZ
 ## 手动 Advance 时 1 拍就过（点 60 下不是调试）；自动推进时用对局那 1.0 s。
 ## `set_auto_tick` 在两者之间切换，见该函数注释。
 var play_respawn_stun_ticks: int = PlayStubs.RESPAWN_STUN_TICKS
@@ -133,7 +135,12 @@ func try_start_play(seed: int = 1, radius: int = 0, cylinder_height: int = 0) ->
 	sampler.play_moving = false
 	play_anim.reset()
 	play.copy_start_stubs(self)
-	return _run_play_verb(func() -> bool: return preview.try_start_play(seed, radius, cylinder_height))
+	var ok: bool = _run_play_verb(
+		func() -> bool: return preview.try_start_play(seed, radius, cylinder_height)
+	)
+	if ok:
+		chrome.focus_window()
+	return ok
 
 
 func try_stop_play() -> bool:

@@ -7,6 +7,7 @@ extends RefCounted
 ## the session file stays under E9.
 
 const HazardCycle := preload("res://src/games/traprush/hazard_cycle.gd")
+const LaunchCycle := preload("res://src/games/traprush/launch_cycle.gd")
 
 
 static func connect_from(preview: AuthoringPreview, session: AuthoringSession) -> bool:
@@ -118,6 +119,12 @@ static func try_start_play(
 	if conveyor_cycle.size() != bundle.conveyors.size():
 		return false
 	preview.play_conveyor_cycle = conveyor_cycle
+	var launch_cycle: Array[Dictionary] = LaunchCycle.entries_from(
+		bundle.launches, solid_ids
+	)
+	if launch_cycle.size() != bundle.launches.size():
+		return false
+	preview.play_launch_cycle = launch_cycle
 	preview.play_solid_ids = solid_ids
 	preview.play_pickup_ids = pickup_ids
 	preview.play_pickup_kinds = pickup_kinds_from_bundle(bundle)
@@ -163,6 +170,8 @@ static func clear_play(preview: AuthoringPreview) -> void:
 	preview.play_hazard_cycle = []
 	preview.play_mover_cycle = []
 	preview.play_conveyor_cycle = []
+	preview.play_launch_cycle = []
+	preview._play_launch_supported = {}
 	preview.play_solid_ids = {}
 	preview.play_pickup_ids = {}
 	preview.play_pickup_kinds = {}

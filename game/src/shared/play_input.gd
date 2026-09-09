@@ -3,10 +3,11 @@ extends RefCounted
 
 ## D7 输入抽象（纠偏方案：布尔改为方向向量 + 动作事件）。
 ##
-## 玩法壳消费这一份快照，不直接读四个 WASD 布尔或物理键码。键盘是适配器，
-## 以后的触控摇杆走 `vector_from_stick`，产出同一套字段。量化成 8 向 `dx/dz`
-## 与 `yaw_bam` 仍是 `MatchMoveFacing` 的事；本文件不发明转向、不读
-## `play_move_step`（那条是冻结占位，由调用方注入）。
+## 玩法壳消费这一份快照。游戏进程读 InputMap；从 Godot 编辑器 Tools 打开时
+## 编辑器进程没有 `move_left` 等动作，再调 `Input.get_axis` 会每帧报错且 WASD
+## 恒为 0。缺动作时回退到与 `project.godot` 同一套物理键。触控摇杆走
+## `vector_from_stick`。量化成 8 向 `dx/dz` 与 `yaw_bam` 仍是 `MatchMoveFacing`
+## 的事；本文件不发明转向、不读 `play_move_step`（那条是冻结占位，由调用方注入）。
 ##
 ## 放 `shared/` 的理由与 `PlaceholderSpec` 相同：大厅与 Preview 必须读同一份，
 ## 否则两边会各养一套布尔。`simulation/` 不引用本文件。
@@ -86,7 +87,46 @@ static func empty_held() -> Dictionary:
 	}
 
 
+## 游戏进程为 true。EditorPlugin 跑在编辑器 InputMap 上，这些动作不存在。
+static func has_play_actions() -> bool:
+	return (
+		InputMap.has_action(ACTION_MOVE_LEFT)
+		and InputMap.has_action(ACTION_MOVE_RIGHT)
+		and InputMap.has_action(ACTION_MOVE_FORWARD)
+		and InputMap.has_action(ACTION_MOVE_BACK)
+		and InputMap.has_action(ACTION_JUMP)
+		and InputMap.has_action(ACTION_SHOVE)
+		and InputMap.has_action(ACTION_USE_ITEM)
+		and InputMap.has_action(ACTION_SPRINT)
+		and InputMap.has_action(ACTION_RESET)
+	)
+
+
 static func read_keyboard_held() -> Dictionary:
+	if has_play_actions():
+		return _read_action_held()
+	return read_physical_held()
+
+
+static func read_physical_held() -> Dictionary:
+	var axes: Vector2 = vector_from_axes(
+		_key_down(KEY_W) or _key_down(KEY_UP),
+		_key_down(KEY_S) or _key_down(KEY_DOWN),
+		_key_down(KEY_A) or _key_down(KEY_LEFT),
+		_key_down(KEY_D) or _key_down(KEY_RIGHT)
+	)
+	return {
+		"move_x": axes.x,
+		"move_z": axes.y,
+		"jump": _key_down(KEY_SPACE),
+		"shove": _key_down(KEY_F),
+		"use_item": _key_down(KEY_Q),
+		"sprint": _key_down(KEY_SHIFT),
+		"reset": _key_down(KEY_R),
+	}
+
+
+static func _read_action_held() -> Dictionary:
 	return {
 		"move_x": Input.get_axis(ACTION_MOVE_LEFT, ACTION_MOVE_RIGHT),
 		"move_z": Input.get_axis(ACTION_MOVE_FORWARD, ACTION_MOVE_BACK),
@@ -96,6 +136,10 @@ static func read_keyboard_held() -> Dictionary:
 		"sprint": Input.is_action_pressed(ACTION_SPRINT),
 		"reset": Input.is_action_pressed(ACTION_RESET),
 	}
+
+
+static func _key_down(physical: Key) -> bool:
+	return Input.is_physical_key_pressed(physical)
 
 
 func reset_held() -> void:

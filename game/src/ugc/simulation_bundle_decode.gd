@@ -21,6 +21,7 @@ static func from_dictionary(data: Dictionary) -> SimulationBundle:
 	var carries_assets: bool = version == SimulationBundle.SCHEMA_VERSION
 	var has_movers: bool = body.has(SimulationBundle.FIELD_MOVERS)
 	var has_conveyors: bool = body.has(SimulationBundle.FIELD_CONVEYORS)
+	var has_launches: bool = body.has(SimulationBundle.FIELD_LAUNCHES)
 	var expected_size: int = 11 if carries_assets else 10
 	for optional: String in SimulationBundle.OPTIONAL_FIELDS:
 		if body.has(optional):
@@ -229,6 +230,24 @@ static func from_dictionary(data: Dictionary) -> SimulationBundle:
 				return null
 			conveyor_entity_ids[conveyor_id] = true
 			conveyor_list.append(parsed_conveyor)
+	var launch_list: Array[Dictionary] = []
+	if has_launches:
+		if typeof(body[SimulationBundle.FIELD_LAUNCHES]) != TYPE_ARRAY:
+			return null
+		var launch_entity_ids: Dictionary[int, bool] = {}
+		var raw_launches: Array = body[SimulationBundle.FIELD_LAUNCHES]
+		for item: Variant in raw_launches:
+			if typeof(item) != TYPE_DICTIONARY:
+				return null
+			var launch_item: Dictionary = item
+			var parsed_launch: Dictionary = BagsGd.parse_launch(launch_item)
+			if parsed_launch.is_empty():
+				return null
+			var launch_id: int = parsed_launch["entity_id"]
+			if not solid_ids.has(launch_id) or launch_entity_ids.has(launch_id):
+				return null
+			launch_entity_ids[launch_id] = true
+			launch_list.append(parsed_launch)
 	var occupancy: Array[Dictionary] = []
 	occupancy.append_array(pads)
 	occupancy.append_array(portals)
@@ -263,6 +282,7 @@ static func from_dictionary(data: Dictionary) -> SimulationBundle:
 	bundle.pickups = pickup_list
 	bundle.movers = mover_list
 	bundle.conveyors = conveyor_list
+	bundle.launches = launch_list
 	return bundle
 
 

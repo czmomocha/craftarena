@@ -151,6 +151,14 @@ static func has_conveyor_tag(record: SharedComponentRecord) -> bool:
 	return has_zone_tag(record, TraprushTopologyCompiler.CONVEYOR_ZONE_TAG)
 
 
+static func has_lift_tag(record: SharedComponentRecord) -> bool:
+	return has_zone_tag(record, TraprushTopologyCompiler.LIFT_ZONE_TAG)
+
+
+static func has_launch_tag(record: SharedComponentRecord) -> bool:
+	return has_zone_tag(record, TraprushTopologyCompiler.LAUNCH_ZONE_TAG)
+
+
 ## 传送带的推送方向。缺 `yaw_bam` 或不是 int 返回 -1（整个编译失败）：
 ## 一块方向不明的传送带在权威里没有确定行为，宁可拒绝发布。
 static func transform_yaw_bam(record: SharedComponentRecord) -> int:

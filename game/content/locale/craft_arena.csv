@@ -33,6 +33,8 @@ craft_arena.ui.place_bomb,Place bomb,放置爆破球
 craft_arena.ui.place_dash,Place dash,放置冲刺
 craft_arena.ui.place_mover,Place mover,放置移动平台
 craft_arena.ui.place_conveyor,Place conveyor,放置传送带
+craft_arena.ui.place_lift,Place lift,放置电梯
+craft_arena.ui.place_launch,Place launch,放置弹射垫
 craft_arena.ui.mark_corner,Mark corner,标记角点
 craft_arena.ui.fill_solids,Fill solids,矩形填充
 craft_arena.ui.copy_entity,Copy,复制

@@ -11,6 +11,7 @@ extends RefCounted
 
 const Gravity := preload("res://src/games/traprush/gravity.gd")
 const ConveyorCycle := preload("res://src/games/traprush/conveyor_cycle.gd")
+const LaunchCycle := preload("res://src/games/traprush/launch_cycle.gd")
 const HazardCycle := preload("res://src/games/traprush/hazard_cycle.gd")
 const MoverCycle := preload("res://src/games/traprush/mover_cycle.gd")
 const TraprushMatchBootstrapGd := preload("res://src/games/traprush/match_session_bootstrap.gd")
@@ -40,6 +41,9 @@ var item_cooldown_ticks: int = 1
 var hazard_knockback_step: int = 0
 ## 传送带每 tick 推的距离。调用方注入的占位桩，不是产品速度。0 ⇒ 传送带不推人。
 var conveyor_step: int = 0
+## 弹射垫竖直冲量 / 水平送出。调用方注入的占位桩。都为 0 ⇒ 垫不弹。
+var launch_dy: int = 0
+var launch_xz: int = 0
 var respawn_stun_ticks: int = 0
 var range_enabled: bool = false
 var range_min_x: int = 0
@@ -64,6 +68,8 @@ var _hazard_ids: Dictionary = {}
 var _hazard_cycle: Array[Dictionary] = []
 var _mover_cycle: Array[Dictionary] = []
 var _conveyor_cycle: Array[Dictionary] = []
+var _launch_cycle: Array[Dictionary] = []
+var _launch_supported: Dictionary = {}
 var _pickup_ids: Dictionary = {}
 var _pickup_kinds: Dictionary = {}
 var _spawn: TraprushCheckpointSpawn = null
@@ -205,6 +211,7 @@ func advance_sim_tick() -> void:
 	_world.tick()
 	_apply_movers()
 	_apply_conveyors()
+	_apply_launches()
 	HazardCycle.apply(_world, _hazard_cycle)
 	for player: Dictionary in _players:
 		_resolve_player_hazards(player)
@@ -314,6 +321,31 @@ func _apply_conveyors() -> void:
 
 func conveyor_count() -> int:
 	return _conveyor_cycle.size()
+
+
+func launch_count() -> int:
+	return _launch_cycle.size()
+
+
+## 弹射垫在传送带之后：带子可能把人送上垫，这一拍就该弹，而不是再等一拍。
+func _apply_launches() -> void:
+	if _launch_cycle.is_empty():
+		return
+	if launch_dy <= 0 and launch_xz <= 0:
+		return
+	var capsule_ids: PackedInt32Array = PackedInt32Array()
+	for player: Dictionary in _players:
+		var capsule_id: int = player["capsule_id"]
+		capsule_ids.append(capsule_id)
+	_launch_supported = LaunchCycle.apply(
+		_world,
+		_launch_cycle,
+		capsule_ids,
+		support_dy,
+		launch_dy,
+		launch_xz,
+		_launch_supported
+	)
 
 
 func _resolve_player_hazards(player: Dictionary) -> bool:
