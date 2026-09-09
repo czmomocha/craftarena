@@ -47,7 +47,7 @@ Web 用模板和表单编辑规则；桌面端开放受限规则图。两者生�
 
 当前落点是 `CreatorEntry`（[CD-42 §3.4](../40-technical/42-contracts-and-rulevm.md#34-实现落点)）：玩家包大厅多一颗「创作课程」按钮，浏览器另可用 `?edit=1`（创作链接是 `http://host:8080/play/?edit=1`；`/play?edit=1` 会 302 并保留查询串）、桌面另可用 `-- --edit` 直接落在创作上。打开时收起大厅窗并**并排开出 Preview**——本入口服务的人没有第二块屏也没有引擎，摆完一格却不知道能不能走过去等于没得编。关编辑窗或点 **返回大厅** 必须把大厅拉回来（Web 画布上关掉嵌入窗却不恢复大厅，人会卡在空白页）。写路径仍是 `AuthoringSession` + 三个已有 EDIT `op`，数据仍是同一份 `AuthoringDocument`（[§1.4](#14-共同数据模型)）。草稿落 `user://creator_draft.json`，与内部插件的 `authoring_draft.json` **分开**；Web 上每次落盘后 `JavaScriptBridge.force_fs_sync()`，否则刷新会丢掉 MEMFS 里还没进 IndexedDB 的写入。
 
-surface 的能力差从本刀起真的被执行：`web_light` / `desktop_full` 不挂批量生成面板（`allows_batch_generate` 仅 `internal_dev`），验证器只留一行摘要而不是问题码清单（`allows_validator_details` 仅 `internal_dev`）。**摘要仍照常求值**：轻量创作者读不懂 `unreachable_checkpoint`，但必须知道这张课现在能不能发；把整块面板藏掉才是真的少了一条信息。云端草稿、签名发布仍属 M4b。
+surface 的能力差从本刀起真的被执行：`web_light` / `desktop_full` 不挂批量生成面板（`allows_batch_generate` 仅 `internal_dev`），验证器只留一行摘要而不是问题码清单（`allows_validator_details` 仅 `internal_dev`）。**摘要仍照常求值**：轻量创作者读不懂 `unreachable_checkpoint`，但必须知道这张课现在能不能发；把整块面板藏掉才是真的少了一条信息。签名信封第 1 章已交（sidecar，不入库）；云端草稿、`latest` 发布仍属 M4b。
 
 ### 1.3 对局准备编辑
 

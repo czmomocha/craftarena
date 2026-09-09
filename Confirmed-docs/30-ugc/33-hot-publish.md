@@ -14,7 +14,7 @@
 | 项 | 当前口径 |
 |---|---|
 | 等级定义 | P0–P4 见 §1。Bundle v2 因 `GameplayAsset` 已发生一次 P4 |
-| 运行时管线 | **未建**。无签名发布、无 `latest` 指针、无进程内回滚。Preview P3 安全点重编译已交（sidecar，不入库）；公开对局拒绝规则补丁 |
+| 运行时管线 | **第 1 章已交**：ContentHash + HMAC 信封（`game/src/ugc/content_sign.gd`）；对局开局锁定哈希。无 `latest`、无发布 HTTP、无进程内回滚。Preview P3 安全点重编译已交（sidecar，不入库）；公开对局拒绝规则补丁 |
 | 代码热更新 | 禁止 |
 
 ## 1. 热修改等级

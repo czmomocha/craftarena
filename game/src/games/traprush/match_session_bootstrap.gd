@@ -1,9 +1,7 @@
 class_name TraprushMatchBootstrap
 extends RefCounted
 
-## Assembles a TraprushMatchSession from a compiled bundle.
-## The facade keeps create(); this type owns topology load, spawn
-## offsets, and destructible ledgers so the session file stays under E9.
+## Assembles a TraprushMatchSession from a compiled bundle. Facade keeps create().
 
 const CheckpointSpawn := preload("res://src/games/traprush/checkpoint_spawn.gd")
 const CheckpointTrack := preload("res://src/games/traprush/checkpoint_track.gd")
@@ -14,6 +12,7 @@ const HazardCycle := preload("res://src/games/traprush/hazard_cycle.gd")
 const MoverCycleGd := preload("res://src/games/traprush/mover_cycle.gd")
 const TopologyLoader := preload("res://src/games/traprush/traprush_topology_loader.gd")
 const TraprushDestructible := preload("res://src/games/traprush/destructible.gd")
+const ContentSignGd := preload("res://src/ugc/content_sign.gd")
 
 
 static func try_create(
@@ -164,6 +163,9 @@ static func try_create(
 		session._resolve_player_portals(player)
 		session._accept_player_finish(player)
 		session._grant_player_pickups(player)
+	session.content_hash = ContentSignGd.hash_hex(bundle)
+	if session.content_hash.is_empty():
+		return null
 	session.rule_vm.notify_match_started()
 	return session
 

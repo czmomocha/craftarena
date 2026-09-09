@@ -55,7 +55,7 @@ var intents: TraprushMatchIntentsGd = TraprushMatchIntentsGd.new()
 var scan: TraprushMatchScanGd = TraprushMatchScanGd.new()
 var view: TraprushMatchViewGd = TraprushMatchViewGd.new()
 var rule_vm: RuleVmDispatchGd = RuleVmDispatchGd.new()
-
+var content_hash: String = ""
 var _world: SimulationWorld = null
 var _graph: TraprushPortalGraph = null
 var _pad_ids: Dictionary = {}

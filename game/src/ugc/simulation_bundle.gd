@@ -15,7 +15,7 @@ extends RefCounted
 ## migrates to the built-in lattice-cell asset. `to_dictionary` always emits v2.
 ## `from_dictionary` rejects a bag whose pair is missing from `assets`. Assets
 ## must be strictly ascending by `asset_id` and every entry must be referenced.
-## Not a signed binary. Not a Rule VM graph.
+## Unsigned v2 wire. Platform signatures are the ContentSign sidecar. Not Rule VM.
 
 const DecodeGd := preload("res://src/ugc/simulation_bundle_decode.gd")
 
