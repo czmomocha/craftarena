@@ -3,12 +3,12 @@ extends RefCounted
 
 ## Assembles AuthoringPreview play from a compiled Preview world.
 ## The facade keeps connect_from / try_start_play / try_stop_play;
-## this type owns topology load, spawn, and destructible ledgers so
-## the session file stays under E9.
+## this type owns topology load, spawn, and destructible ledgers so the
+## session file stays under E9.
 
 const HazardCycle := preload("res://src/games/traprush/hazard_cycle.gd")
 const LaunchCycle := preload("res://src/games/traprush/launch_cycle.gd")
-
+const GateCycle := preload("res://src/games/traprush/gate_cycle.gd")
 
 static func connect_from(preview: AuthoringPreview, session: AuthoringSession) -> bool:
 	if session == null or session.world == null:
@@ -125,6 +125,14 @@ static func try_start_play(
 	if launch_cycle.size() != bundle.launches.size():
 		return false
 	preview.play_launch_cycle = launch_cycle
+	var switch_cycle: Array[Dictionary] = GateCycle.entries_from(bundle.switches, solid_ids)
+	if switch_cycle.size() != bundle.switches.size():
+		return false
+	preview.play_switch_cycle = switch_cycle
+	var gate_cycle: Array[Dictionary] = GateCycle.entries_from(bundle.gates, solid_ids)
+	if gate_cycle.size() != bundle.gates.size():
+		return false
+	preview.play_gate_cycle = gate_cycle
 	preview.play_solid_ids = solid_ids
 	preview.play_pickup_ids = pickup_ids
 	preview.play_pickup_kinds = pickup_kinds_from_bundle(bundle)
@@ -171,6 +179,8 @@ static func clear_play(preview: AuthoringPreview) -> void:
 	preview.play_mover_cycle = []
 	preview.play_conveyor_cycle = []
 	preview.play_launch_cycle = []
+	preview.play_switch_cycle = []
+	preview.play_gate_cycle = []
 	preview._play_launch_supported = {}
 	preview.play_solid_ids = {}
 	preview.play_pickup_ids = {}

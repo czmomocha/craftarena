@@ -212,6 +212,12 @@ func apply_snapshot(
 		hazards.apply_follow(follow)
 	if solids != null:
 		solids.apply_tick(follow.tick)
+		var open_ids: PackedInt32Array = PackedInt32Array()
+		if offline_playing and offline_session != null:
+			open_ids = offline_session.open_gate_entity_ids()
+		else:
+			open_ids = solids.open_ids_from_players(players)
+		solids.apply_gate_visibility(open_ids)
 	if course != null:
 		course.apply_tick(follow.tick)
 	if play != null and play.state == MatchPlaySessionGd.STATE_IN_MATCH:

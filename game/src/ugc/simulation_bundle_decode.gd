@@ -22,6 +22,8 @@ static func from_dictionary(data: Dictionary) -> SimulationBundle:
 	var has_movers: bool = body.has(SimulationBundle.FIELD_MOVERS)
 	var has_conveyors: bool = body.has(SimulationBundle.FIELD_CONVEYORS)
 	var has_launches: bool = body.has(SimulationBundle.FIELD_LAUNCHES)
+	var has_switches: bool = body.has(SimulationBundle.FIELD_SWITCHES)
+	var has_gates: bool = body.has(SimulationBundle.FIELD_GATES)
 	var expected_size: int = 11 if carries_assets else 10
 	for optional: String in SimulationBundle.OPTIONAL_FIELDS:
 		if body.has(optional):
@@ -213,41 +215,52 @@ static func from_dictionary(data: Dictionary) -> SimulationBundle:
 			mover_list.append(parsed_mover)
 	var conveyor_list: Array[Dictionary] = []
 	if has_conveyors:
-		if typeof(body[SimulationBundle.FIELD_CONVEYORS]) != TYPE_ARRAY:
+		var conveyor_raw: Variant = body[SimulationBundle.FIELD_CONVEYORS]
+		if typeof(conveyor_raw) != TYPE_ARRAY:
 			return null
-		var conveyor_entity_ids: Dictionary[int, bool] = {}
-		var raw_conveyors: Array = body[SimulationBundle.FIELD_CONVEYORS]
-		for item: Variant in raw_conveyors:
-			if typeof(item) != TYPE_DICTIONARY:
-				return null
-			var conveyor_item: Dictionary = item
-			var parsed_conveyor: Dictionary = BagsGd.parse_conveyor(conveyor_item)
-			if parsed_conveyor.is_empty():
-				return null
-			var conveyor_id: int = parsed_conveyor["entity_id"]
-			# 传送带的几何住在 `solids` 里，本袋只带方向。指不到固体就是坏内容。
-			if not solid_ids.has(conveyor_id) or conveyor_entity_ids.has(conveyor_id):
-				return null
-			conveyor_entity_ids[conveyor_id] = true
-			conveyor_list.append(parsed_conveyor)
+		var conveyor_items: Array = conveyor_raw
+		var parsed_conveyors: Dictionary = BagsGd.parse_optional_solid_refs(
+			conveyor_items, solid_ids, "yaw"
+		)
+		if not parsed_conveyors.get("ok", false):
+			return null
+		conveyor_list = parsed_conveyors["items"]
 	var launch_list: Array[Dictionary] = []
 	if has_launches:
-		if typeof(body[SimulationBundle.FIELD_LAUNCHES]) != TYPE_ARRAY:
+		var launch_raw: Variant = body[SimulationBundle.FIELD_LAUNCHES]
+		if typeof(launch_raw) != TYPE_ARRAY:
 			return null
-		var launch_entity_ids: Dictionary[int, bool] = {}
-		var raw_launches: Array = body[SimulationBundle.FIELD_LAUNCHES]
-		for item: Variant in raw_launches:
-			if typeof(item) != TYPE_DICTIONARY:
-				return null
-			var launch_item: Dictionary = item
-			var parsed_launch: Dictionary = BagsGd.parse_launch(launch_item)
-			if parsed_launch.is_empty():
-				return null
-			var launch_id: int = parsed_launch["entity_id"]
-			if not solid_ids.has(launch_id) or launch_entity_ids.has(launch_id):
-				return null
-			launch_entity_ids[launch_id] = true
-			launch_list.append(parsed_launch)
+		var launch_items: Array = launch_raw
+		var parsed_launches: Dictionary = BagsGd.parse_optional_solid_refs(
+			launch_items, solid_ids, "yaw"
+		)
+		if not parsed_launches.get("ok", false):
+			return null
+		launch_list = parsed_launches["items"]
+	var switch_list: Array[Dictionary] = []
+	if has_switches:
+		var switch_raw: Variant = body[SimulationBundle.FIELD_SWITCHES]
+		if typeof(switch_raw) != TYPE_ARRAY:
+			return null
+		var switch_items: Array = switch_raw
+		var parsed_switches: Dictionary = BagsGd.parse_optional_solid_refs(
+			switch_items, solid_ids, "link"
+		)
+		if not parsed_switches.get("ok", false):
+			return null
+		switch_list = parsed_switches["items"]
+	var gate_list: Array[Dictionary] = []
+	if has_gates:
+		var gate_raw: Variant = body[SimulationBundle.FIELD_GATES]
+		if typeof(gate_raw) != TYPE_ARRAY:
+			return null
+		var gate_items: Array = gate_raw
+		var parsed_gates: Dictionary = BagsGd.parse_optional_solid_refs(
+			gate_items, solid_ids, "link"
+		)
+		if not parsed_gates.get("ok", false):
+			return null
+		gate_list = parsed_gates["items"]
 	var occupancy: Array[Dictionary] = []
 	occupancy.append_array(pads)
 	occupancy.append_array(portals)
@@ -283,6 +296,8 @@ static func from_dictionary(data: Dictionary) -> SimulationBundle:
 	bundle.movers = mover_list
 	bundle.conveyors = conveyor_list
 	bundle.launches = launch_list
+	bundle.switches = switch_list
+	bundle.gates = gate_list
 	return bundle
 
 

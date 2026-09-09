@@ -9,6 +9,7 @@ const CheckpointSpawn := preload("res://src/games/traprush/checkpoint_spawn.gd")
 const CheckpointTrack := preload("res://src/games/traprush/checkpoint_track.gd")
 const ConveyorCycleGd := preload("res://src/games/traprush/conveyor_cycle.gd")
 const LaunchCycleGd := preload("res://src/games/traprush/launch_cycle.gd")
+const GateCycleGd := preload("res://src/games/traprush/gate_cycle.gd")
 const HazardCycle := preload("res://src/games/traprush/hazard_cycle.gd")
 const MoverCycleGd := preload("res://src/games/traprush/mover_cycle.gd")
 const TopologyLoader := preload("res://src/games/traprush/traprush_topology_loader.gd")
@@ -84,6 +85,20 @@ static func try_create(
 		return null
 	session._launch_cycle = launch_cycle
 	session._launch_supported = {}
+	var switches: Array = []
+	if bundle.switches != null:
+		switches = bundle.switches
+	var switch_cycle: Array[Dictionary] = GateCycleGd.entries_from(switches, solid_ids)
+	if switch_cycle.size() != switches.size():
+		return null
+	session._switch_cycle = switch_cycle
+	var gates: Array = []
+	if bundle.gates != null:
+		gates = bundle.gates
+	var gate_cycle: Array[Dictionary] = GateCycleGd.entries_from(gates, solid_ids)
+	if gate_cycle.size() != gates.size():
+		return null
+	session._gate_cycle = gate_cycle
 	var pickups_raw: Variant = loaded.get("pickup_ids", {})
 	if typeof(pickups_raw) != TYPE_DICTIONARY:
 		return null

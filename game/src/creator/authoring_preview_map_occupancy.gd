@@ -19,6 +19,10 @@ func spawn_placeholder(
 	if record != null and record.components.has(SharedComponentNames.HAZARD):
 		albedo = AuthoringPreviewMap.HAZARD_ALBEDO
 		kind = "hazard"
+	elif record != null and _record_has_zone_tag(record, "switch"):
+		albedo = PlaceholderSpec.SWITCH_ALBEDO
+	elif record != null and _record_has_zone_tag(record, "gate"):
+		albedo = PlaceholderSpec.GATE_ALBEDO
 	elif record != null and _record_has_solid_tag(record):
 		albedo = AuthoringPreviewMap.SOLID_ALBEDO
 		kind = "tile"

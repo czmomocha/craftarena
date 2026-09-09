@@ -252,6 +252,43 @@ static func parse_launch(body: Dictionary) -> Dictionary:
 	return parse_yaw_bag(body)
 
 
+static func parse_link_bag(body: Dictionary) -> Dictionary:
+	if body.size() != 2:
+		return {}
+	if not int_at_least(body, "entity_id", 1):
+		return {}
+	if not int_at_least(body, "link_group", 0):
+		return {}
+	return {
+		"entity_id": body["entity_id"],
+		"link_group": body["link_group"],
+	}
+
+
+static func parse_optional_solid_refs(
+	raw: Array, solid_ids: Dictionary, mode: String
+) -> Dictionary:
+	var items: Array[Dictionary] = []
+	var seen: Dictionary[int, bool] = {}
+	for item: Variant in raw:
+		if typeof(item) != TYPE_DICTIONARY:
+			return {"ok": false, "items": items}
+		var bag: Dictionary = item
+		var parsed: Dictionary = {}
+		if mode == "link":
+			parsed = parse_link_bag(bag)
+		else:
+			parsed = parse_yaw_bag(bag)
+		if parsed.is_empty():
+			return {"ok": false, "items": items}
+		var entity_id: int = parsed["entity_id"]
+		if not solid_ids.has(entity_id) or seen.has(entity_id):
+			return {"ok": false, "items": items}
+		seen[entity_id] = true
+		items.append(parsed)
+	return {"ok": true, "items": items}
+
+
 static func parse_yaw_bag(body: Dictionary) -> Dictionary:
 	if body.size() != 2:
 		return {}

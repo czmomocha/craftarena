@@ -179,6 +179,18 @@ func is_hazard_solid(session: TraprushMatchSession, entity_id: int) -> bool:
 	return session._world.is_static_box_solid(box_id)
 
 
+func is_gate_solid(session: TraprushMatchSession, entity_id: int) -> bool:
+	if session._world == null:
+		return false
+	for item: Dictionary in session._gate_cycle:
+		var gate_id: int = item["entity_id"]
+		if gate_id != entity_id:
+			continue
+		var box_id: int = item["box_id"]
+		return session._world.is_static_box_solid(box_id)
+	return false
+
+
 func destructible_states(session: TraprushMatchSession) -> Array[Dictionary]:
 	var ids: Array[int] = []
 	for key: Variant in session._crate_health.keys():

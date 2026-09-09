@@ -2,18 +2,22 @@ class_name MatchSolidMap
 extends Node3D
 
 ## Presentation mapping for compiled TRAPRUSH always-solid occupancy (CD-43).
-## Topology bags supply Q48.16 poses. Boxes stay visible; they never toggle.
+## Topology bags supply Q48.16 poses. Ordinary floors stay visible; compiled
+## gates hide while their `link_group` is occupied (踩区开关门).
 ## Float conversion happens only here. Placeholders are not hitboxes.
 ## live_solid_boxes() returns compiled Q48.16 centers plus cell/2 half-extents
-## (authoring lattice, not the 1 m placeholder). Snapshots never move a solid;
-## v1 frames have no solid bag. Official courses compile path floors.
-## No interpolation or prediction API. Box size and colour come from
-## PlaceholderSpec; this file keeps the names but no longer owns the values.
+## (authoring lattice, not the 1 m placeholder), skipping currently open gates.
+## `_live_solids` stays 1:1 with `_poses`; open gates are omitted at query time.
+## Snapshots never move a solid; v1 frames have no solid bag. Official courses
+## compile path floors. No interpolation or prediction API. Box size and colour
+## come from PlaceholderSpec; this file keeps the names but no longer owns
+## the values.
 ##
 ## 当 `tile_scene_path` 能解析出地块视觉（SharedVisualAssetCatalog）时，每个固体
 ## 节点多挂一个 `visual` 子节点，占位盒自身退出渲染（`layers = 0`）但网格与石色
 ## 原样保留——`live_solid_boxes()` 给的是编译拓扑的权威半长，与视觉无关，本席预测
-## 读的还是同一份。视觉解析失败就是今天的行为，一个石色 1 米盒。
+## 读的还是同一份。视觉解析失败就是今天的行为，一个石色 1 米盒。开关 / 门不铺
+## 地块，只留占位色，否则贴图会盖住青绿踏板和紫墙。
 ##
 ## 只有**始终固体**铺地块。周期机关走 MatchHazardMap（洋红）、可破坏箱走
 ## MatchCrateMap（橙），两者都不铺：D4 已把危险色定成可读性的一部分。
@@ -21,11 +25,15 @@ extends Node3D
 const AuthoringDocumentGd := preload("res://src/creator/authoring_document.gd")
 const TraprushTopologyCompilerGd := preload("res://src/ugc/traprush_topology_compiler.gd")
 const MoverCycleGd := preload("res://src/games/traprush/mover_cycle.gd")
+const GateCycleGd := preload("res://src/games/traprush/gate_cycle.gd")
+const PlayStubsGd := preload("res://src/games/traprush/play_stubs.gd")
 
 const SOLID_PREFIX: String = "solid_"
 const VISUAL_NAME: String = "visual"
 const PLACEHOLDER_SIZE: Vector3 = PlaceholderSpec.BOX_SIZE
 const SOLID_ALBEDO: Color = PlaceholderSpec.SOLID_ALBEDO
+const SWITCH_ALBEDO: Color = PlaceholderSpec.SWITCH_ALBEDO
+const GATE_ALBEDO: Color = PlaceholderSpec.GATE_ALBEDO
 
 ## 空字符串或解析失败 ⇒ 回退占位盒。是变量而不是常量，好让测试两条分支都能跑。
 var tile_scene_path: String = SharedVisualAssetCatalog.TERRAIN_TILE_SCENE_PATH
@@ -33,6 +41,11 @@ var _has_course: bool = false
 var _cell: int = 0
 var _poses: Array[Dictionary] = []
 var _movers: Array[Dictionary] = []
+var _switches: Array[Dictionary] = []
+var _gates: Array[Dictionary] = []
+var _switch_ids: Dictionary = {}
+var _gate_ids: Dictionary = {}
+var _open_gate_ids: Dictionary = {}
 var _live_solids: Array[Dictionary] = []
 var _solid_count: int = 0
 var _visual_count: int = 0
@@ -70,6 +83,9 @@ func apply_bundle(bundle: SimulationBundle) -> bool:
 	_movers = []
 	for item: Dictionary in bundle.movers:
 		_movers.append(item.duplicate(true))
+	_copy_link_bags(bundle.switches, _switches, _switch_ids)
+	_copy_link_bags(bundle.gates, _gates, _gate_ids)
+	_open_gate_ids = {}
 	_rebuild()
 	return true
 
@@ -103,6 +119,30 @@ func apply_tick(tick_index: int) -> bool:
 	return true
 
 
+func apply_gate_visibility(open_ids: PackedInt32Array) -> void:
+	_open_gate_ids = {}
+	for entity_id: int in open_ids:
+		_open_gate_ids[entity_id] = true
+	for item: Dictionary in _gates:
+		var gate_id: int = PlayClock.dict_int(item, "entity_id", 0)
+		var node: MeshInstance3D = solid_node(gate_id)
+		if node != null:
+			node.visible = not _open_gate_ids.has(gate_id)
+
+
+## 线上无开合字段：用快照位姿近似。Solo 读会话 open_gate_entity_ids。
+func open_ids_from_players(players: Array) -> PackedInt32Array:
+	return GateCycleGd.presentation_open_entity_ids(
+		_posed_link_bags(_switches),
+		_posed_link_bags(_gates),
+		players,
+		_cell,
+		PlayStubsGd.CAPSULE_RADIUS,
+		PlayStubsGd.CAPSULE_HEIGHT,
+		PlayStubsGd.SUPPORT_DY
+	)
+
+
 func solid_count() -> int:
 	return _solid_count
 
@@ -133,6 +173,9 @@ func live_solid_boxes() -> Array:
 		return boxes
 	var half: int = _cell / 2
 	for pose: Dictionary in _live_solids:
+		var entity_id: int = PlayClock.dict_int(pose, "entity_id", 0)
+		if _open_gate_ids.has(entity_id):
+			continue
 		boxes.append({
 			"x": pose["x"],
 			"y": pose["y"],
@@ -215,6 +258,44 @@ func _copy_poses(bags: Array[Dictionary]) -> Array[Dictionary]:
 	return poses
 
 
+func _copy_link_bags(
+	bags: Array, dest: Array[Dictionary], lookup: Dictionary
+) -> void:
+	dest.clear()
+	lookup.clear()
+	if bags == null:
+		return
+	for item: Dictionary in bags:
+		dest.append(item.duplicate(true))
+		var entity_id: int = PlayClock.dict_int(item, "entity_id", 0)
+		if entity_id > 0:
+			lookup[entity_id] = true
+
+
+func _posed_link_bags(bags: Array[Dictionary]) -> Array[Dictionary]:
+	var posed: Array[Dictionary] = []
+	for item: Dictionary in bags:
+		var entity_id: int = PlayClock.dict_int(item, "entity_id", 0)
+		var pose: Dictionary = _pose_of(entity_id)
+		if pose.is_empty():
+			continue
+		posed.append({
+			"entity_id": entity_id,
+			"link_group": PlayClock.dict_int(item, "link_group", 0),
+			"x": pose["x"],
+			"y": pose["y"],
+			"z": pose["z"],
+		})
+	return posed
+
+
+func _pose_of(entity_id: int) -> Dictionary:
+	for pose: Dictionary in _poses:
+		if PlayClock.dict_int(pose, "entity_id", 0) == entity_id:
+			return pose
+	return {}
+
+
 func _set_pose(entity_id: int, x: int, y: int, z: int) -> void:
 	var index: int = 0
 	while index < _poses.size():
@@ -238,6 +319,7 @@ func _rebuild() -> void:
 	_live_solids = []
 	for pose: Dictionary in _poses:
 		_live_solids.append({
+			"entity_id": pose["entity_id"],
 			"x": pose["x"],
 			"y": pose["y"],
 			"z": pose["z"],
@@ -259,15 +341,22 @@ func _spawn_box(node_name: String, pose: Dictionary) -> void:
 	var x: int = pose["x"]
 	var y: int = pose["y"]
 	var z: int = pose["z"]
+	var entity_id: int = pose["entity_id"]
+	var albedo: Color = SOLID_ALBEDO
+	if _switch_ids.has(entity_id):
+		albedo = SWITCH_ALBEDO
+	elif _gate_ids.has(entity_id):
+		albedo = GATE_ALBEDO
 	var mesh: BoxMesh = BoxMesh.new()
 	mesh.size = PLACEHOLDER_SIZE
-	mesh.material = _unshaded(SOLID_ALBEDO)
+	mesh.material = _unshaded(albedo)
 	var node: MeshInstance3D = MeshInstance3D.new()
 	node.name = node_name
 	node.mesh = mesh
 	node.position = Vector3(meters_from_fixed(x), meters_from_fixed(y), meters_from_fixed(z))
 	add_child(node)
-	_attach_visual(node)
+	if not _switch_ids.has(entity_id) and not _gate_ids.has(entity_id):
+		_attach_visual(node)
 
 
 ## 地块在时：挂 `visual` 子节点并让占位盒本体退出渲染层。用 `layers = 0` 而不是

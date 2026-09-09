@@ -12,6 +12,7 @@ extends RefCounted
 const Gravity := preload("res://src/games/traprush/gravity.gd")
 const ConveyorCycle := preload("res://src/games/traprush/conveyor_cycle.gd")
 const LaunchCycle := preload("res://src/games/traprush/launch_cycle.gd")
+const GateCycle := preload("res://src/games/traprush/gate_cycle.gd")
 const HazardCycle := preload("res://src/games/traprush/hazard_cycle.gd")
 const MoverCycle := preload("res://src/games/traprush/mover_cycle.gd")
 const TraprushMatchBootstrapGd := preload("res://src/games/traprush/match_session_bootstrap.gd")
@@ -70,6 +71,8 @@ var _mover_cycle: Array[Dictionary] = []
 var _conveyor_cycle: Array[Dictionary] = []
 var _launch_cycle: Array[Dictionary] = []
 var _launch_supported: Dictionary = {}
+var _switch_cycle: Array[Dictionary] = []
+var _gate_cycle: Array[Dictionary] = []
 var _pickup_ids: Dictionary = {}
 var _pickup_kinds: Dictionary = {}
 var _spawn: TraprushCheckpointSpawn = null
@@ -186,6 +189,18 @@ func is_hazard_solid(entity_id: int) -> bool:
 	return view.is_hazard_solid(self, entity_id)
 
 
+func gate_count() -> int:
+	return _gate_cycle.size()
+
+
+func is_gate_solid(entity_id: int) -> bool:
+	return view.is_gate_solid(self, entity_id)
+
+
+func open_gate_entity_ids() -> PackedInt32Array:
+	return GateCycle.open_entity_ids(_world, _gate_cycle)
+
+
 func destructible_states() -> Array[Dictionary]:
 	return view.destructible_states(self)
 
@@ -212,6 +227,7 @@ func advance_sim_tick() -> void:
 	_apply_movers()
 	_apply_conveyors()
 	_apply_launches()
+	_apply_gates()
 	HazardCycle.apply(_world, _hazard_cycle)
 	for player: Dictionary in _players:
 		_resolve_player_hazards(player)
@@ -346,6 +362,23 @@ func _apply_launches() -> void:
 		launch_xz,
 		_launch_supported
 	)
+
+
+func _apply_gates() -> void:
+	if _gate_cycle.is_empty():
+		return
+	var capsule_ids: PackedInt32Array = PackedInt32Array()
+	for player: Dictionary in _players:
+		var capsule_id: int = player["capsule_id"]
+		capsule_ids.append(capsule_id)
+	var crushed: PackedInt32Array = GateCycle.apply(
+		_world, _switch_cycle, _gate_cycle, capsule_ids, support_dy
+	)
+	for capsule_id: int in crushed:
+		for player: Dictionary in _players:
+			if player["capsule_id"] == capsule_id:
+				scan.reset_player_to_pad(self, player)
+				break
 
 
 func _resolve_player_hazards(player: Dictionary) -> bool:

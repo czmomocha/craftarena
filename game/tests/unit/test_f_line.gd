@@ -138,7 +138,25 @@ func test_course_f_playable_compiles_with_f_line_features() -> void:
 	assert_eq(bundle.movers.size(), 2)
 	assert_eq(bundle.conveyors.size(), 3)
 	assert_eq(bundle.launches.size(), 1)
+	assert_eq(bundle.switches.size(), 1)
+	assert_eq(bundle.gates.size(), 1)
+	assert_eq(PlayClockGd.dict_int(bundle.switches[0], "entity_id", 0), 85)
+	assert_eq(PlayClockGd.dict_int(bundle.gates[0], "entity_id", 0), 223)
 	assert_gt(bundle.solids.size(), 6)
+	var switch_solid: Dictionary = {}
+	var gate_solid: Dictionary = {}
+	for bag: Dictionary in bundle.solids:
+		var solid_id: int = PlayClockGd.dict_int(bag, "entity_id", 0)
+		if solid_id == 85:
+			switch_solid = bag
+		elif solid_id == 223:
+			gate_solid = bag
+	assert_eq(PlayClockGd.dict_int(switch_solid, "x", -1), CELL)
+	assert_eq(PlayClockGd.dict_int(switch_solid, "y", 1), -CELL)
+	assert_eq(PlayClockGd.dict_int(switch_solid, "z", -1), 0)
+	assert_eq(PlayClockGd.dict_int(gate_solid, "x", -1), CELL)
+	assert_eq(PlayClockGd.dict_int(gate_solid, "y", -1), 0)
+	assert_eq(PlayClockGd.dict_int(gate_solid, "z", -1), CELL)
 	var high_solid: bool = false
 	var pad0: Dictionary = bundle.pads[0]
 	var pad1: Dictionary = bundle.pads[1]
@@ -158,9 +176,13 @@ func test_course_f_playable_compiles_with_f_line_features() -> void:
 	assert_eq(pickups.pickup_count(), 2)
 	var solids: MatchSolidMapGd = MatchSolidMapGd.new()
 	add_child_autofree(solids)
-	solids.tile_scene_path = ""
 	assert_true(solids.apply_bundle(bundle))
 	assert_true(solids.apply_tick(8))
+	assert_not_null(solids.solid_node(85))
+	assert_not_null(solids.solid_node(223))
+	if solids.visual_count() > 0:
+		assert_eq(solids.visual_node(85), null, "switch must stay a coloured box, not a terrain tile")
+		assert_eq(solids.visual_node(223), null, "gate must stay a coloured box, not a terrain tile")
 
 
 func test_solo_shell_opens_course_f_playable() -> void:

@@ -36,9 +36,17 @@ const FIELD_PICKUPS: String = "pickups"
 const FIELD_MOVERS: String = "movers"
 const FIELD_CONVEYORS: String = "conveyors"
 const FIELD_LAUNCHES: String = "launches"
+const FIELD_SWITCHES: String = "switches"
+const FIELD_GATES: String = "gates"
 ## v2 里**可省略**的袋。省略与空数组等价，所以旧内容（三张官方课、任何已存的
 ## AuthoringDocument）不重新编译也照常解码。加袋因此不是 Schema 破坏性变更。
-const OPTIONAL_FIELDS: PackedStringArray = [FIELD_MOVERS, FIELD_CONVEYORS, FIELD_LAUNCHES]
+const OPTIONAL_FIELDS: PackedStringArray = [
+	FIELD_MOVERS,
+	FIELD_CONVEYORS,
+	FIELD_LAUNCHES,
+	FIELD_SWITCHES,
+	FIELD_GATES,
+]
 
 var cell: int = 0
 var source_revision: int = 0
@@ -55,6 +63,9 @@ var movers: Array[Dictionary] = []
 var conveyors: Array[Dictionary] = []
 ## 弹射垫：几何在 `solids` 里，本袋只带方向。见 `TraprushLaunchCycle` 文件头。
 var launches: Array[Dictionary] = []
+## 踩区开关 / 门：几何在 `solids` 里，本袋只带 `link_group`。见 `TraprushGateCycle`。
+var switches: Array[Dictionary] = []
+var gates: Array[Dictionary] = []
 
 
 static func from_dictionary(data: Dictionary) -> SimulationBundle:
@@ -95,6 +106,12 @@ func to_dictionary() -> Dictionary:
 	var launch_list: Array = []
 	for item: Dictionary in launches:
 		launch_list.append(item.duplicate(true))
+	var switch_list: Array = []
+	for item: Dictionary in switches:
+		switch_list.append(item.duplicate(true))
+	var gate_list: Array = []
+	for item: Dictionary in gates:
+		gate_list.append(item.duplicate(true))
 	return {
 		FIELD_SCHEMA_VERSION: SCHEMA_VERSION,
 		FIELD_CELL: cell,
@@ -110,6 +127,8 @@ func to_dictionary() -> Dictionary:
 		FIELD_MOVERS: mover_list,
 		FIELD_CONVEYORS: conveyor_list,
 		FIELD_LAUNCHES: launch_list,
+		FIELD_SWITCHES: switch_list,
+		FIELD_GATES: gate_list,
 	}
 
 
