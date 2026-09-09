@@ -1,7 +1,7 @@
 extends GutTest
 
-## AuthoringPreview：编辑会话保持打开；安全点应用 P0–P2；失败整份回滚；永不结算。
-## P3 等 Rule VM；P4 只置 needs_restart。不建窗口。试玩见 test_authoring_preview_play。
+## AuthoringPreview：编辑会话保持打开；安全点应用 P0–P3；失败整份回滚；永不结算。
+## P3 可声明上提；P4 只置 needs_restart。不建窗口。试玩见 test_authoring_preview_play。
 
 const AuthoringPreview := preload("res://src/creator/authoring_preview.gd")
 const AuthoringSession := preload("res://src/creator/authoring_session.gd")
@@ -107,15 +107,15 @@ func test_unsafe_tick_rejects_then_applies_at_safe_point() -> void:
 	assert_true(preview.world.has_entity(1))
 
 
-func test_p3_is_refused_and_p4_requires_restart() -> void:
+func test_p3_declare_up_at_safe_point_and_p4_requires_restart() -> void:
 	var preview: AuthoringPreview = _connected_empty()
-	assert_false(preview.try_apply_patch(Levels.P3, _edit(1, 0, _place_health(1, 1))))
+	assert_true(preview.try_apply_patch(Levels.P3, _edit(1, 0, _place_health(1, 1))))
 	assert_false(preview.needs_restart)
-	assert_false(preview.world.has_entity(1))
-	assert_false(preview.try_apply_patch(Levels.P4, _edit(1, 0, _place_health(1, 1))))
+	assert_true(preview.world.has_entity(1))
+	assert_false(preview.try_apply_patch(Levels.P4, _edit(2, 1, _place_health(2, 1))))
 	assert_true(preview.needs_restart)
 	assert_false(preview.is_safe_point())
-	assert_false(preview.try_apply_patch(Levels.P2, _edit(1, 0, _place_health(1, 1))))
+	assert_false(preview.try_apply_patch(Levels.P2, _edit(2, 1, _place_health(2, 1))))
 	var session: AuthoringSession = AuthoringSession.new()
 	assert_true(preview.connect_from(session))
 	assert_false(preview.needs_restart)

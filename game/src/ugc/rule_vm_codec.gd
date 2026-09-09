@@ -111,20 +111,86 @@ static func _append_op(code: PackedByteArray, bag: Dictionary) -> bool:
 		code.append(dest2)
 		code.append(src)
 		return true
-	if op == Opcodes.OP_COMPARE:
+	if op == Opcodes.OP_COMPARE or op == Opcodes.OP_LOGIC:
 		var dest3: int = _int_field(bag, Opcodes.KEY_DEST)
 		var lhs: int = _int_field(bag, Opcodes.KEY_LHS)
 		var rhs: int = _int_field(bag, Opcodes.KEY_RHS)
 		var pred: int = _int_field(bag, Opcodes.KEY_PRED)
 		if not Opcodes.slot_ok(dest3) or not Opcodes.slot_ok(lhs) or not Opcodes.slot_ok(rhs):
 			return false
-		if not Opcodes.pred_ok(pred):
+		if op == Opcodes.OP_COMPARE and not Opcodes.pred_ok(pred):
+			return false
+		if op == Opcodes.OP_LOGIC and not Opcodes.logic_ok(pred):
 			return false
 		code.append(op)
 		code.append(dest3)
 		code.append(lhs)
 		code.append(rhs)
 		code.append(pred)
+		return true
+	if op == Opcodes.OP_GET_FIELD or op == Opcodes.OP_COUNT_IN_ZONE:
+		var dest_f: int = _int_field(bag, Opcodes.KEY_DEST)
+		var src_f: int = _int_field(bag, Opcodes.KEY_SRC)
+		var extra_key: String = Opcodes.KEY_FIELD
+		if op == Opcodes.OP_COUNT_IN_ZONE:
+			extra_key = Opcodes.KEY_TAG
+		var extra: int = _int_field(bag, extra_key)
+		if not Opcodes.slot_ok(dest_f) or not Opcodes.slot_ok(src_f):
+			return false
+		if op == Opcodes.OP_GET_FIELD and not Opcodes.field_ok(extra):
+			return false
+		if op == Opcodes.OP_COUNT_IN_ZONE and not Opcodes.tag_ok(extra):
+			return false
+		code.append(op)
+		code.append(dest_f)
+		code.append(src_f)
+		code.append(extra)
+		return true
+	if op == Opcodes.OP_SPAWN:
+		var dest4: int = _int_field(bag, Opcodes.KEY_DEST)
+		var src2: int = _int_field(bag, Opcodes.KEY_SRC)
+		var count_slot: int = _int_field(bag, Opcodes.KEY_COUNT)
+		var archetype: int = _int_field(bag, Opcodes.KEY_ARCHETYPE)
+		if not Opcodes.slot_ok(dest4) or not Opcodes.slot_ok(src2) or not Opcodes.slot_ok(count_slot):
+			return false
+		if not Opcodes.archetype_ok(archetype):
+			return false
+		code.append(op)
+		code.append(dest4)
+		code.append(archetype)
+		code.append(src2)
+		code.append(count_slot)
+		return true
+	if op == Opcodes.OP_DESPAWN:
+		var src3: int = _int_field(bag, Opcodes.KEY_SRC)
+		if not Opcodes.slot_ok(src3):
+			return false
+		code.append(op)
+		code.append(src3)
+		return true
+	if op == Opcodes.OP_APPLY_EFFECT:
+		var src4: int = _int_field(bag, Opcodes.KEY_SRC)
+		var mag: int = _int_field(bag, Opcodes.KEY_MAGNITUDE)
+		var effect: int = _int_field(bag, Opcodes.KEY_EFFECT)
+		if not Opcodes.slot_ok(src4) or not Opcodes.slot_ok(mag):
+			return false
+		if not Opcodes.effect_ok(effect):
+			return false
+		code.append(op)
+		code.append(src4)
+		code.append(effect)
+		code.append(mag)
+		return true
+	if op == Opcodes.OP_EMIT_EVENT:
+		var src5: int = _int_field(bag, Opcodes.KEY_SRC)
+		var event_id: int = _int_field(bag, Opcodes.KEY_NAME)
+		if not Opcodes.slot_ok(src5):
+			return false
+		if not Opcodes.event_name_ok(event_id):
+			return false
+		code.append(op)
+		code.append(event_id)
+		code.append(src5)
 		return true
 	return false
 
@@ -160,23 +226,101 @@ static func _read_op(bytes: PackedByteArray, offset: int, remaining: int) -> Dic
 			Opcodes.KEY_DEST: dest2,
 			Opcodes.KEY_SRC: src,
 		}, 3)
-	if remaining < 5:
+	if op == Opcodes.OP_COMPARE or op == Opcodes.OP_LOGIC:
+		if remaining < 5:
+			return _fail(Opcodes.REASON_DECODE_TRUNCATED)
+		var dest3: int = bytes.decode_u8(offset + 1)
+		var lhs: int = bytes.decode_u8(offset + 2)
+		var rhs: int = bytes.decode_u8(offset + 3)
+		var pred: int = bytes.decode_u8(offset + 4)
+		if not Opcodes.slot_ok(dest3) or not Opcodes.slot_ok(lhs) or not Opcodes.slot_ok(rhs):
+			return _fail(Opcodes.REASON_DECODE_SLOT)
+		if op == Opcodes.OP_COMPARE and not Opcodes.pred_ok(pred):
+			return _fail(Opcodes.REASON_DECODE_PREDICATE)
+		if op == Opcodes.OP_LOGIC and not Opcodes.logic_ok(pred):
+			return _fail(Opcodes.REASON_DECODE_PREDICATE)
+		return _op_ok({
+			Opcodes.KEY_OP: op,
+			Opcodes.KEY_DEST: dest3,
+			Opcodes.KEY_LHS: lhs,
+			Opcodes.KEY_RHS: rhs,
+			Opcodes.KEY_PRED: pred,
+		}, 5)
+	if op == Opcodes.OP_GET_FIELD or op == Opcodes.OP_COUNT_IN_ZONE:
+		if remaining < 4:
+			return _fail(Opcodes.REASON_DECODE_TRUNCATED)
+		var dest4: int = bytes.decode_u8(offset + 1)
+		var src2: int = bytes.decode_u8(offset + 2)
+		var extra: int = bytes.decode_u8(offset + 3)
+		if not Opcodes.slot_ok(dest4) or not Opcodes.slot_ok(src2):
+			return _fail(Opcodes.REASON_DECODE_SLOT)
+		if op == Opcodes.OP_GET_FIELD and not Opcodes.field_ok(extra):
+			return _fail(Opcodes.REASON_DECODE_SLOT)
+		if op == Opcodes.OP_COUNT_IN_ZONE and not Opcodes.tag_ok(extra):
+			return _fail(Opcodes.REASON_DECODE_SLOT)
+		var extra_key: String = Opcodes.KEY_FIELD
+		if op == Opcodes.OP_COUNT_IN_ZONE:
+			extra_key = Opcodes.KEY_TAG
+		return _op_ok({
+			Opcodes.KEY_OP: op,
+			Opcodes.KEY_DEST: dest4,
+			Opcodes.KEY_SRC: src2,
+			extra_key: extra,
+		}, 4)
+	if op == Opcodes.OP_SPAWN:
+		if remaining < 5:
+			return _fail(Opcodes.REASON_DECODE_TRUNCATED)
+		var dest5: int = bytes.decode_u8(offset + 1)
+		var archetype: int = bytes.decode_u8(offset + 2)
+		var src3: int = bytes.decode_u8(offset + 3)
+		var count_slot: int = bytes.decode_u8(offset + 4)
+		if not Opcodes.slot_ok(dest5) or not Opcodes.slot_ok(src3) or not Opcodes.slot_ok(count_slot):
+			return _fail(Opcodes.REASON_DECODE_SLOT)
+		if not Opcodes.archetype_ok(archetype):
+			return _fail(Opcodes.REASON_DECODE_SLOT)
+		return _op_ok({
+			Opcodes.KEY_OP: op,
+			Opcodes.KEY_DEST: dest5,
+			Opcodes.KEY_ARCHETYPE: archetype,
+			Opcodes.KEY_SRC: src3,
+			Opcodes.KEY_COUNT: count_slot,
+		}, 5)
+	if op == Opcodes.OP_DESPAWN:
+		if remaining < 2:
+			return _fail(Opcodes.REASON_DECODE_TRUNCATED)
+		var src4: int = bytes.decode_u8(offset + 1)
+		if not Opcodes.slot_ok(src4):
+			return _fail(Opcodes.REASON_DECODE_SLOT)
+		return _op_ok({Opcodes.KEY_OP: op, Opcodes.KEY_SRC: src4}, 2)
+	if op == Opcodes.OP_APPLY_EFFECT:
+		if remaining < 4:
+			return _fail(Opcodes.REASON_DECODE_TRUNCATED)
+		var src5: int = bytes.decode_u8(offset + 1)
+		var effect: int = bytes.decode_u8(offset + 2)
+		var mag: int = bytes.decode_u8(offset + 3)
+		if not Opcodes.slot_ok(src5) or not Opcodes.slot_ok(mag):
+			return _fail(Opcodes.REASON_DECODE_SLOT)
+		if not Opcodes.effect_ok(effect):
+			return _fail(Opcodes.REASON_DECODE_SLOT)
+		return _op_ok({
+			Opcodes.KEY_OP: op,
+			Opcodes.KEY_SRC: src5,
+			Opcodes.KEY_EFFECT: effect,
+			Opcodes.KEY_MAGNITUDE: mag,
+		}, 4)
+	if remaining < 3:
 		return _fail(Opcodes.REASON_DECODE_TRUNCATED)
-	var dest3: int = bytes.decode_u8(offset + 1)
-	var lhs: int = bytes.decode_u8(offset + 2)
-	var rhs: int = bytes.decode_u8(offset + 3)
-	var pred: int = bytes.decode_u8(offset + 4)
-	if not Opcodes.slot_ok(dest3) or not Opcodes.slot_ok(lhs) or not Opcodes.slot_ok(rhs):
+	var event_id: int = bytes.decode_u8(offset + 1)
+	var src6: int = bytes.decode_u8(offset + 2)
+	if not Opcodes.slot_ok(src6):
 		return _fail(Opcodes.REASON_DECODE_SLOT)
-	if not Opcodes.pred_ok(pred):
-		return _fail(Opcodes.REASON_DECODE_PREDICATE)
+	if not Opcodes.event_name_ok(event_id):
+		return _fail(Opcodes.REASON_DECODE_SLOT)
 	return _op_ok({
 		Opcodes.KEY_OP: op,
-		Opcodes.KEY_DEST: dest3,
-		Opcodes.KEY_LHS: lhs,
-		Opcodes.KEY_RHS: rhs,
-		Opcodes.KEY_PRED: pred,
-	}, 5)
+		Opcodes.KEY_NAME: event_id,
+		Opcodes.KEY_SRC: src6,
+	}, 3)
 
 
 static func _int_field(bag: Dictionary, key: String) -> int:

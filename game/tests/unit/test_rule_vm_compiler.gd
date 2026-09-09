@@ -101,7 +101,7 @@ func test_rejects_extra_keys_unknown_event_and_kind() -> void:
 	_assert_compile_reason(_graph(1, 4, Opcodes.EVENT_ON_ENTITY_DIED, []), Opcodes.REASON_COMPILE_EVENT)
 	_assert_compile_reason(_graph(1, 4, Opcodes.EVENT_ON_VARIABLE_THRESHOLD, []), Opcodes.REASON_COMPILE_EVENT)
 	_assert_compile_reason(_started_graph(4, [
-		{Opcodes.KEY_KIND: "Spawn", Opcodes.KEY_DEST: 0, Opcodes.KEY_SRC: 1},
+		{Opcodes.KEY_KIND: "FooBar", Opcodes.KEY_DEST: 0, Opcodes.KEY_SRC: 1},
 	]), Opcodes.REASON_COMPILE_UNKNOWN_NODE)
 	_assert_compile_reason(_graph(2, 4, Opcodes.EVENT_ON_MATCH_STARTED, []), Opcodes.REASON_COMPILE_VERSION)
 	var negative: Dictionary = _started_graph(4, [])

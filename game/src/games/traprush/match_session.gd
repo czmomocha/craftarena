@@ -4,7 +4,6 @@ extends RefCounted
 ## TRAPRUSH 对局会话门面：一份编译拓扑装进共享权威 SimulationWorld，1~8 名玩家。
 ## 协作者是 TraprushMatchBootstrap / Intents / Scan / View，使本文件低于 E9 400 行。
 ## commit_tick 先积分再 world.tick；MatchRealtime 在积分与 tick 之间应用意图。占用扫描：垫→门→垫→终点。
-## 空默认 RuleVmDispatch：开局 OnMatchStarted、tick 后 OnEveryTicks；未 bind 为 no-op。
 
 const Gravity := preload("res://src/games/traprush/gravity.gd")
 const ConveyorCycle := preload("res://src/games/traprush/conveyor_cycle.gd")
@@ -217,6 +216,9 @@ func open_portal_entity_ids() -> PackedInt32Array:
 func destructible_states() -> Array[Dictionary]:
 	return view.destructible_states(self)
 
+
+func try_replace_rule_graphs(_graphs: Array) -> bool:
+	return false
 
 func apply_player_intent(slot: int, payload: Dictionary) -> bool:
 	return intents.apply(self, slot, payload)

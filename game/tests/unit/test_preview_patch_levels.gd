@@ -16,6 +16,11 @@ func test_level_whitelist_and_rank() -> void:
 	assert_eq(Levels.rank(Levels.P0), 0)
 	assert_eq(Levels.rank(Levels.P2), 2)
 	assert_eq(Levels.rank("nope"), -1)
+	assert_true(Levels.public_match_allows(Levels.P0))
+	assert_true(Levels.public_match_allows(Levels.P1))
+	assert_false(Levels.public_match_allows(Levels.P2))
+	assert_false(Levels.public_match_allows(Levels.P3))
+	assert_false(Levels.public_match_allows(Levels.P4))
 
 
 func test_place_and_remove_classify_as_p2() -> void:

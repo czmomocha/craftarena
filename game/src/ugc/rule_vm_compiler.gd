@@ -3,10 +3,10 @@ extends RefCounted
 
 ## Compiles a typed Rule VM graph to v1 bytecode (CD-42 §2).
 ## The interpreter still only runs PackedByteArray — this file is compile-time.
-## It does not generate GDScript or load scripts. Chapter 3 accepts
-## OnMatchStarted and OnEveryTicks plus the chapter-1 whitelist (LoadConst is
-## a literal helper, not a §2.1 product node). Extra keys and unknown
-## kinds/events are rejected.
+## It does not generate GDScript or load scripts. Chapter 4 accepts
+## OnMatchStarted / OnEveryTicks plus the §2.1 Query / Logic / Action subset.
+## LoadConst is a literal helper, not a §2.1 product node. Extra keys and
+## unknown kinds/events are rejected.
 
 const Opcodes := preload("res://src/ugc/rule_vm_opcodes.gd")
 const CodecGd := preload("res://src/ugc/rule_vm_codec.gd")
@@ -101,7 +101,7 @@ static func _compile_node(node: Dictionary) -> Dictionary:
 			Opcodes.KEY_DEST: dest2,
 			Opcodes.KEY_SRC: src,
 		})
-	if kind == Opcodes.KIND_COMPARE:
+	if kind == Opcodes.KIND_COMPARE or kind == Opcodes.KIND_LOGIC:
 		if node.size() != 5:
 			return _fail(Opcodes.REASON_COMPILE_NODE_KEYS)
 		var dest3: int = _int_field(node, Opcodes.KEY_DEST)
@@ -111,16 +111,119 @@ static func _compile_node(node: Dictionary) -> Dictionary:
 			return _fail(Opcodes.REASON_COMPILE_NODE_KEYS)
 		var pred_name: String = node[Opcodes.KEY_PRED]
 		var pred: int = Opcodes.pred_from_name(pred_name)
+		if kind == Opcodes.KIND_LOGIC:
+			pred = Opcodes.logic_from_name(pred_name)
 		if not Opcodes.slot_ok(dest3) or not Opcodes.slot_ok(lhs) or not Opcodes.slot_ok(rhs):
 			return _fail(Opcodes.REASON_COMPILE_SLOT)
-		if not Opcodes.pred_ok(pred):
+		if kind == Opcodes.KIND_COMPARE and not Opcodes.pred_ok(pred):
 			return _fail(Opcodes.REASON_COMPILE_PREDICATE)
+		if kind == Opcodes.KIND_LOGIC and not Opcodes.logic_ok(pred):
+			return _fail(Opcodes.REASON_COMPILE_LOGIC)
+		var cond_op: int = Opcodes.OP_COMPARE
+		if kind == Opcodes.KIND_LOGIC:
+			cond_op = Opcodes.OP_LOGIC
 		return _op_ok({
-			Opcodes.KEY_OP: Opcodes.OP_COMPARE,
+			Opcodes.KEY_OP: cond_op,
 			Opcodes.KEY_DEST: dest3,
 			Opcodes.KEY_LHS: lhs,
 			Opcodes.KEY_RHS: rhs,
 			Opcodes.KEY_PRED: pred,
+		})
+	if kind == Opcodes.KIND_GET_FIELD or kind == Opcodes.KIND_COUNT_IN_ZONE:
+		if node.size() != 4:
+			return _fail(Opcodes.REASON_COMPILE_NODE_KEYS)
+		var dest4: int = _int_field(node, Opcodes.KEY_DEST)
+		var src2: int = _int_field(node, Opcodes.KEY_SRC)
+		if not Opcodes.slot_ok(dest4) or not Opcodes.slot_ok(src2):
+			return _fail(Opcodes.REASON_COMPILE_SLOT)
+		if kind == Opcodes.KIND_GET_FIELD:
+			if not node.has(Opcodes.KEY_FIELD) or typeof(node[Opcodes.KEY_FIELD]) != TYPE_STRING:
+				return _fail(Opcodes.REASON_COMPILE_NODE_KEYS)
+			var field_name: String = node[Opcodes.KEY_FIELD]
+			var field_id: int = Opcodes.field_from_name(field_name)
+			if not Opcodes.field_ok(field_id):
+				return _fail(Opcodes.REASON_COMPILE_FIELD)
+			return _op_ok({
+				Opcodes.KEY_OP: Opcodes.OP_GET_FIELD,
+				Opcodes.KEY_DEST: dest4,
+				Opcodes.KEY_SRC: src2,
+				Opcodes.KEY_FIELD: field_id,
+			})
+		if not node.has(Opcodes.KEY_TAG) or typeof(node[Opcodes.KEY_TAG]) != TYPE_STRING:
+			return _fail(Opcodes.REASON_COMPILE_NODE_KEYS)
+		var tag_name: String = node[Opcodes.KEY_TAG]
+		var tag_id: int = Opcodes.tag_from_name(tag_name)
+		if not Opcodes.tag_ok(tag_id):
+			return _fail(Opcodes.REASON_COMPILE_TAG)
+		return _op_ok({
+			Opcodes.KEY_OP: Opcodes.OP_COUNT_IN_ZONE,
+			Opcodes.KEY_DEST: dest4,
+			Opcodes.KEY_SRC: src2,
+			Opcodes.KEY_TAG: tag_id,
+		})
+	if kind == Opcodes.KIND_SPAWN:
+		if node.size() != 5:
+			return _fail(Opcodes.REASON_COMPILE_NODE_KEYS)
+		var dest5: int = _int_field(node, Opcodes.KEY_DEST)
+		var marker: int = _int_field(node, Opcodes.KEY_SRC)
+		var count_slot: int = _int_field(node, Opcodes.KEY_COUNT)
+		if not node.has(Opcodes.KEY_ARCHETYPE) or typeof(node[Opcodes.KEY_ARCHETYPE]) != TYPE_STRING:
+			return _fail(Opcodes.REASON_COMPILE_NODE_KEYS)
+		var arch_name: String = node[Opcodes.KEY_ARCHETYPE]
+		var archetype: int = Opcodes.archetype_from_name(arch_name)
+		if not Opcodes.slot_ok(dest5) or not Opcodes.slot_ok(marker) or not Opcodes.slot_ok(count_slot):
+			return _fail(Opcodes.REASON_COMPILE_SLOT)
+		if not Opcodes.archetype_ok(archetype):
+			return _fail(Opcodes.REASON_COMPILE_ARCHETYPE)
+		return _op_ok({
+			Opcodes.KEY_OP: Opcodes.OP_SPAWN,
+			Opcodes.KEY_DEST: dest5,
+			Opcodes.KEY_ARCHETYPE: archetype,
+			Opcodes.KEY_SRC: marker,
+			Opcodes.KEY_COUNT: count_slot,
+		})
+	if kind == Opcodes.KIND_DESPAWN:
+		if node.size() != 2:
+			return _fail(Opcodes.REASON_COMPILE_NODE_KEYS)
+		var src3: int = _int_field(node, Opcodes.KEY_SRC)
+		if not Opcodes.slot_ok(src3):
+			return _fail(Opcodes.REASON_COMPILE_SLOT)
+		return _op_ok({Opcodes.KEY_OP: Opcodes.OP_DESPAWN, Opcodes.KEY_SRC: src3})
+	if kind == Opcodes.KIND_APPLY_EFFECT:
+		if node.size() != 4:
+			return _fail(Opcodes.REASON_COMPILE_NODE_KEYS)
+		var src4: int = _int_field(node, Opcodes.KEY_SRC)
+		var mag: int = _int_field(node, Opcodes.KEY_MAGNITUDE)
+		if not node.has(Opcodes.KEY_EFFECT) or typeof(node[Opcodes.KEY_EFFECT]) != TYPE_STRING:
+			return _fail(Opcodes.REASON_COMPILE_NODE_KEYS)
+		var effect_name: String = node[Opcodes.KEY_EFFECT]
+		var effect: int = Opcodes.effect_from_name(effect_name)
+		if not Opcodes.slot_ok(src4) or not Opcodes.slot_ok(mag):
+			return _fail(Opcodes.REASON_COMPILE_SLOT)
+		if not Opcodes.effect_ok(effect):
+			return _fail(Opcodes.REASON_COMPILE_EFFECT)
+		return _op_ok({
+			Opcodes.KEY_OP: Opcodes.OP_APPLY_EFFECT,
+			Opcodes.KEY_SRC: src4,
+			Opcodes.KEY_EFFECT: effect,
+			Opcodes.KEY_MAGNITUDE: mag,
+		})
+	if kind == Opcodes.KIND_EMIT_GAME_EVENT:
+		if node.size() != 3:
+			return _fail(Opcodes.REASON_COMPILE_NODE_KEYS)
+		var src5: int = _int_field(node, Opcodes.KEY_SRC)
+		if not node.has(Opcodes.KEY_NAME) or typeof(node[Opcodes.KEY_NAME]) != TYPE_STRING:
+			return _fail(Opcodes.REASON_COMPILE_NODE_KEYS)
+		var emit_name: String = node[Opcodes.KEY_NAME]
+		var event_id: int = Opcodes.event_from_name(emit_name)
+		if not Opcodes.slot_ok(src5):
+			return _fail(Opcodes.REASON_COMPILE_SLOT)
+		if not Opcodes.event_name_ok(event_id):
+			return _fail(Opcodes.REASON_COMPILE_NAME)
+		return _op_ok({
+			Opcodes.KEY_OP: Opcodes.OP_EMIT_EVENT,
+			Opcodes.KEY_NAME: event_id,
+			Opcodes.KEY_SRC: src5,
 		})
 	return _fail(Opcodes.REASON_COMPILE_UNKNOWN_NODE)
 

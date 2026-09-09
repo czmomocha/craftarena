@@ -3,7 +3,8 @@ extends RefCounted
 
 ## CD-33 P0–P4 names as apply grades for AuthoringPreview.
 ## Mapping from v1 bags to a grade is CD-32; grade definitions stay on CD-33.
-## P3 has no Rule VM yet. mover is whole-bag P2 (path is topology).
+## P3 is Preview-only (safe-point recompile). Public matches refuse P2–P4.
+## mover is whole-bag P2 (path is topology).
 
 const P0: String = "p0"
 const P1: String = "p1"
@@ -33,6 +34,11 @@ const _P1_COMPONENTS: PackedStringArray = [
 	SharedComponentNames.VELOCITY,
 	SharedComponentNames.TOWER,
 ]
+
+
+static func public_match_allows(level: String) -> bool:
+	var n: int = rank(level)
+	return n == 0 or n == 1
 
 
 static func contains(level: String) -> bool:

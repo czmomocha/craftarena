@@ -13,7 +13,7 @@
 
 | 项 | 当前口径 |
 |---|---|
-| 分层 | L0–L9 见 §4。L1 World 门面 + query/move；L2 Bundle 门面 + decode/bags、拓扑编译门面 + bags/fields、Rule VM 门面 + opcodes/codec/compiler/dispatch；L3 灰盒门面 + layout/assemble/play、探针门面 + heuristic/search；L4 大厅门面 + chrome/net/sampler/stage/hud/director；L5 Preview 会话/映射/壳均已拆门面；编辑门面 + chrome/place/follow |
+| 分层 | L0–L9 见 §4。L1 World 门面 + query/move；L2 Bundle 门面 + decode/bags、拓扑编译门面 + bags/fields、Rule VM 门面 + opcodes/codec/compiler/dispatch/host/apply；L3 灰盒门面 + layout/assemble/play、探针门面 + heuristic/search；L4 大厅门面 + chrome/net/sampler/stage/hud/director；L5 Preview 会话/映射/壳均已拆门面；编辑门面 + chrome/place/follow |
 | D4 数值落点 | `game/src/shared/placeholder_spec.gd`（唯一配置源） |
 | 资产目录 | `game/content/assets/`、`game/content/locale/` |
 | E9 | 生产路径全量 < 400 行（`game/src/**/*.gd` + `backend` 非测试 `*.ts`，C5 第 17 章门禁）。测试 / addons / GUT 不在本口径 |
@@ -112,7 +112,7 @@ repo/
 │  ├─ src/
 │  │  ├─ shared/                 # ids/schema/commands/events/protocol；D4 数值唯一落点 `placeholder_spec.gd`
 │  │  ├─ simulation/             # fixed-point world/systems/rng/spatial/replay；World 门面 `simulation_world.gd` + query/move
-│  │  ├─ ugc/                    # compiler/validator/bytecode_vm/migration；Bundle 门面 `simulation_bundle.gd` + decode/bags；拓扑编译门面 `traprush_topology_compiler.gd` + bags/fields；Rule VM 门面 `rule_vm.gd` + opcodes/codec/compiler/dispatch
+│  │  ├─ ugc/                    # compiler/validator/bytecode_vm/migration；Bundle 门面 `simulation_bundle.gd` + decode/bags；拓扑编译门面 `traprush_topology_compiler.gd` + bags/fields；Rule VM 门面 `rule_vm.gd` + opcodes/codec/compiler/dispatch/host/apply
 │  │  ├─ server/                 # Godot Headless match/replication/result
 │  │  ├─ client/                 # platform/input/prediction/presentation；大厅门面 `match_lobby_shell.gd` + chrome/net/sampler/stage/hud/director；匹配门面 `match_join_session.gd` + codec/accept
 │  │  ├─ creator/                # shared shell/edit_commands/preview；Preview 门面 `authoring_preview.gd` + bootstrap/intents/scan/view；Preview 映射门面 `authoring_preview_map.gd` + convert/occupancy/gizmos/overlay/player；Preview 窗口门面 `authoring_preview_shell.gd` + chrome/sampler/hud/play/view；编辑门面 `authoring_editor_shell.gd` + chrome/place/follow

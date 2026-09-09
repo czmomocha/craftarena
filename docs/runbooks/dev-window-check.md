@@ -54,7 +54,21 @@ Worktree 端口偏移见 README「并行工作区」；本文件不复述端口�
 
 ---
 
-## 本刀：M4a 第 3 章（Event 分发）
+## 本刀：M4a 第 4–5 章（Query/Action 子集 + Preview P3）
+
+本章无开发机可见行为。新节点走内存 host，规则图仍不入库；官方课 / 未 bind 的 Preview 窗口看不到新控件。P3 是安全点 API，不是新按钮。
+
+### 本刀不测
+
+- 规则图编辑器 UI / 规则模板；
+- `OnEnteredZone` / `OnEntityDied` / `OnVariableThreshold`；
+- 对局或 Solo 里出现可见规则效果（官方课仍无图）；
+- 匹配 HTTP 课表（仍只 01–03）；
+- M4b 签名发布。
+
+---
+
+## 上一刀（已合入）：M4a 第 3 章（Event 分发）
 
 本章无开发机可见行为。分发器在开局 / tick 调已有解释器，但官方课与未 bind 的 Preview 没有规则图，大厅 / Solo / Preview 窗口看不到新控件。
 

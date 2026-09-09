@@ -4,15 +4,10 @@ extends RefCounted
 ## Independent Preview session facade (CD-32 §4). AuthoringSession stays open.
 ## Collaborators are AuthoringPreviewBootstrap / Intents / Scan / View so
 ## this file stays under E9 400 lines. Public API stays on this type.
-## Applies P0–P2 EditCommand patches at a safe point; failure restores the
-## pre-patch world. P3 waits for Rule VM. P4 sets needs_restart.
-## try_start_play compiles the Preview world into a v1 TRAPRUSH topology
-## bundle, loads SimulationWorld, and spawns on the lowest-order pad.
-## try_advance_play integrates caller play_fall_dy then ticks; occupancy
-## order is pad→portal→pad→finish. try_apply_play_intent does not tick.
-## Never settlement or online writes. Empty RuleVmDispatch fires OnMatchStarted
-## on start and OnEveryTicks after a play tick; unbound is a no-op. P3 still
-## waits for the Preview safety chapter. Window host is AuthoringPreviewShell.
+## Applies P0–P3 EditCommand patches at a safe point; failure restores the
+## pre-patch world. P3 may declare-up; rule graphs rebind via
+## try_replace_rule_graphs. P4 sets needs_restart. Empty RuleVmDispatch fires
+## OnMatchStarted / OnEveryTicks. Never settlement or online writes.
 
 const Gravity := preload("res://src/games/traprush/gravity.gd")
 const HazardCycle := preload("res://src/games/traprush/hazard_cycle.gd")
@@ -141,6 +136,14 @@ func try_stop_play() -> bool:
 		return false
 	rule_vm.reset_run_state()
 	return true
+
+
+func try_replace_rule_graphs(graphs: Array) -> bool:
+	if not is_safe_point():
+		return false
+	var done: Dictionary = rule_vm.rebind_graphs(graphs)
+	var ok: bool = done.get("ok", false)
+	return ok
 
 
 func try_advance_play() -> bool:
@@ -272,8 +275,6 @@ func try_apply_patch(level: String, command: SharedCommand) -> bool:
 		return false
 	if level == PreviewPatchLevels.P4:
 		needs_restart = true
-		return false
-	if level == PreviewPatchLevels.P3:
 		return false
 	if command == null or command.kind != SharedCommand.Kind.EDIT:
 		return false

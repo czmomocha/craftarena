@@ -10,6 +10,8 @@ extends RefCounted
 const Opcodes := preload("res://src/ugc/rule_vm_opcodes.gd")
 const CodecGd := preload("res://src/ugc/rule_vm_codec.gd")
 const CompilerGd := preload("res://src/ugc/rule_vm_compiler.gd")
+const ApplyGd := preload("res://src/ugc/rule_vm_apply.gd")
+const HostGd := preload("res://src/ugc/rule_vm_host.gd")
 
 
 static func encode(graph_gas: int, ops: Array) -> PackedByteArray:
@@ -34,7 +36,8 @@ static func run(
 	bytes: PackedByteArray,
 	vars: PackedInt64Array,
 	tick_gas: int = -1,
-	chain_gas: int = -1
+	chain_gas: int = -1,
+	host: HostGd = null
 ) -> Dictionary:
 	var decoded: Dictionary = CodecGd.decode(bytes)
 	var decode_ok: bool = decoded.get(Opcodes.KEY_OK, false)
@@ -53,76 +56,54 @@ static func run(
 		budget = tick_gas
 	if chain_gas >= 0 and chain_gas < budget:
 		budget = chain_gas
+	if host != null:
+		host.begin()
 	var work: PackedInt64Array = vars.duplicate()
 	var gas_used: int = 0
 	var raw_ops: Variant = decoded.get(Opcodes.KEY_OPS, [])
 	if typeof(raw_ops) != TYPE_ARRAY:
-		return _finish(false, Opcodes.REASON_DECODE_UNKNOWN_OPCODE, 0, vars)
+		return _abort(host, false, Opcodes.REASON_DECODE_UNKNOWN_OPCODE, 0, vars)
 	var ops: Array = raw_ops
 	for item: Variant in ops:
 		if typeof(item) != TYPE_DICTIONARY:
-			return _finish(false, Opcodes.REASON_DECODE_UNKNOWN_OPCODE, gas_used, vars)
+			return _abort(host, false, Opcodes.REASON_DECODE_UNKNOWN_OPCODE, gas_used, vars)
 		var bag: Dictionary = item
 		var op: int = bag.get(Opcodes.KEY_OP, -1)
 		var cost: int = Opcodes.cost(op)
 		if cost < 1 or gas_used > budget - cost:
-			return _finish(false, Opcodes.REASON_GAS_EXCEEDED, gas_used, vars)
+			return _abort(host, false, Opcodes.REASON_GAS_EXCEEDED, gas_used, vars)
 		gas_used += cost
-		if not _apply(work, bag):
-			return _finish(false, Opcodes.REASON_DECODE_UNKNOWN_OPCODE, gas_used, vars)
+		var step: Dictionary = ApplyGd.apply(work, bag, host)
+		var step_ok: bool = step.get(Opcodes.KEY_OK, false)
+		if not step_ok:
+			return _abort(
+				host,
+				false,
+				str(step.get(Opcodes.KEY_REASON, Opcodes.REASON_DECODE_UNKNOWN_OPCODE)),
+				gas_used,
+				vars
+			)
+		var extra: int = step.get(Opcodes.KEY_EXTRA_GAS, 0)
+		if extra < 0 or gas_used > budget - extra:
+			return _abort(host, false, Opcodes.REASON_GAS_EXCEEDED, gas_used, vars)
+		gas_used += extra
 		if op == Opcodes.OP_HALT:
 			break
+	if host != null:
+		host.commit()
 	return _finish(true, Opcodes.REASON_OK, gas_used, work)
 
 
-static func _apply(work: PackedInt64Array, bag: Dictionary) -> bool:
-	var op: int = bag.get(Opcodes.KEY_OP, -1)
-	if op == Opcodes.OP_HALT or op == Opcodes.OP_NOP:
-		return true
-	if op == Opcodes.OP_LOAD_I64:
-		var dest: int = bag.get(Opcodes.KEY_DEST, -1)
-		if not Opcodes.slot_ok(dest):
-			return false
-		work[dest] = bag.get(Opcodes.KEY_VALUE, 0)
-		return true
-	if op == Opcodes.OP_GET_VAR or op == Opcodes.OP_SET_VAR:
-		var dest2: int = bag.get(Opcodes.KEY_DEST, -1)
-		var src: int = bag.get(Opcodes.KEY_SRC, -1)
-		if not Opcodes.slot_ok(dest2) or not Opcodes.slot_ok(src):
-			return false
-		work[dest2] = work[src]
-		return true
-	if op == Opcodes.OP_COMPARE:
-		var dest3: int = bag.get(Opcodes.KEY_DEST, -1)
-		var lhs: int = bag.get(Opcodes.KEY_LHS, -1)
-		var rhs: int = bag.get(Opcodes.KEY_RHS, -1)
-		var pred: int = bag.get(Opcodes.KEY_PRED, -1)
-		if not Opcodes.slot_ok(dest3) or not Opcodes.slot_ok(lhs) or not Opcodes.slot_ok(rhs):
-			return false
-		if not Opcodes.pred_ok(pred):
-			return false
-		work[dest3] = _compare(work[lhs], work[rhs], pred)
-		return true
-	return false
-
-
-static func _compare(lhs: int, rhs: int, pred: int) -> int:
-	var hit: bool = false
-	if pred == Opcodes.PRED_EQ:
-		hit = lhs == rhs
-	elif pred == Opcodes.PRED_NE:
-		hit = lhs != rhs
-	elif pred == Opcodes.PRED_LT:
-		hit = lhs < rhs
-	elif pred == Opcodes.PRED_LE:
-		hit = lhs <= rhs
-	elif pred == Opcodes.PRED_GT:
-		hit = lhs > rhs
-	elif pred == Opcodes.PRED_GE:
-		hit = lhs >= rhs
-	if hit:
-		return 1
-	return 0
+static func _abort(
+	host: HostGd,
+	ok: bool,
+	reason: String,
+	gas_used: int,
+	vars: PackedInt64Array
+) -> Dictionary:
+	if host != null:
+		host.rollback()
+	return _finish(ok, reason, gas_used, vars)
 
 
 static func _finish(ok: bool, reason: String, gas_used: int, vars: PackedInt64Array) -> Dictionary:

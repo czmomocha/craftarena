@@ -4,13 +4,15 @@ extends RefCounted
 ## Binds compiled Rule VM programs by event and fires them from match / Preview.
 ## OnMatchStarted runs once; OnEveryTicks runs each notify. Shared int64 slots.
 ## Over-gas records a locatable reason and does not take down the match.
-## run() still only consumes bytes. Other §2.1 events stay compile-rejected.
+## run() still only consumes bytes. Host Query / Action go through RuleVmHost.
 
 const Opcodes := preload("res://src/ugc/rule_vm_opcodes.gd")
 const RuleVmGd := preload("res://src/ugc/rule_vm.gd")
+const HostGd := preload("res://src/ugc/rule_vm_host.gd")
 
 var tick_gas: int = -1
 var chain_gas: int = -1
+var host: HostGd = HostGd.new()
 var started_count: int = 0
 var tick_count: int = 0
 var last_ok: bool = true
@@ -36,6 +38,36 @@ func reset_run_state() -> void:
 	tick_count = 0
 	last_ok = true
 	last_reason = Opcodes.REASON_OK
+
+
+func rebind_graphs(graphs: Array) -> Dictionary:
+	var next: Dictionary = {}
+	for item: Variant in graphs:
+		if typeof(item) != TYPE_DICTIONARY:
+			return _bind_fail(Opcodes.REASON_COMPILE_KEYS)
+		var body: Dictionary = item
+		var compiled: Dictionary = RuleVmGd.compile(body)
+		var compile_ok: bool = compiled.get(Opcodes.KEY_OK, false)
+		if not compile_ok:
+			return _bind_fail(str(compiled.get(Opcodes.KEY_REASON, Opcodes.REASON_COMPILE_KEYS)))
+		var event_name: String = compiled.get(Opcodes.KEY_EVENT, "")
+		if not Opcodes.is_compile_event(event_name):
+			return _bind_fail(Opcodes.REASON_COMPILE_EVENT)
+		if next.has(event_name):
+			return _bind_fail(Opcodes.REASON_BIND_DUPLICATE)
+		var bytes_raw: Variant = compiled.get(Opcodes.KEY_BYTES, PackedByteArray())
+		if typeof(bytes_raw) != TYPE_PACKED_BYTE_ARRAY:
+			return _bind_fail(Opcodes.REASON_COMPILE_ENCODE)
+		var bytes: PackedByteArray = bytes_raw
+		if bytes.size() < Opcodes.HEADER_SIZE:
+			return _bind_fail(Opcodes.REASON_COMPILE_ENCODE)
+		next[event_name] = bytes
+	_programs = next
+	return {
+		Opcodes.KEY_OK: true,
+		Opcodes.KEY_REASON: Opcodes.REASON_OK,
+		Opcodes.KEY_EVENT: "",
+	}
 
 
 func bind_graph(graph: Dictionary) -> Dictionary:
@@ -80,7 +112,7 @@ func _fire(event_name: String, is_start: bool) -> Dictionary:
 	if not _programs.has(event_name):
 		return _remember(true, Opcodes.REASON_OK, 0)
 	var bytes: PackedByteArray = _programs[event_name]
-	var ran: Dictionary = RuleVmGd.run(bytes, _vars, tick_gas, chain_gas)
+	var ran: Dictionary = RuleVmGd.run(bytes, _vars, tick_gas, chain_gas, host)
 	if is_start:
 		started_count += 1
 	else:
