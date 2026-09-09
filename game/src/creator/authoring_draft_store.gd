@@ -132,7 +132,10 @@ func _flush() -> bool:
 	if not FileAccess.file_exists(abs_path):
 		return false
 	var written: String = FileAccess.get_file_as_string(abs_path)
-	return written == text
+	if written != text:
+		return false
+	_sync_web_fs()
+	return true
 
 
 func _read_file() -> bool:
@@ -224,3 +227,11 @@ func _as_int(value: Variant) -> int:
 			return -1
 		return as_int
 	return -1
+
+
+## Web `user://` is MEMFS until IndexedDB catches up. Refresh before that
+## sync is the shortest path to "I placed for half an hour and it's gone".
+func _sync_web_fs() -> void:
+	if not OS.has_feature("web"):
+		return
+	JavaScriptBridge.force_fs_sync()

@@ -20,24 +20,33 @@ const UNSET_PAYLOAD = {
 	hint: "Set CRAFTARENA_WEB_ROOT to the Godot Web export directory (export/web) and restart.",
 };
 
+function playIndexPath(request: FastifyRequest): string {
+	const raw = request.url;
+	const queryAt = raw.indexOf("?");
+	return queryAt >= 0 ? `/play/${raw.slice(queryAt)}` : "/play/";
+}
+
 /**
  * Serves a Godot Web export at `/play/` so testers get one `http://host:port/play/`
  * link on the same control-plane process. Unset `webRoot` keeps API-only behaviour
  * but answers `/play/` with 503 instead of Fastify's generic 404. Path traversal
  * is rejected rather than resolved outside the root.
+ *
+ * `/play?edit=1` must keep the query on the slash redirect, otherwise
+ * `?edit=1` never reaches Godot and Web 轻量 Edit 的直达链接是空的。
  */
 export function registerWebPlay(app: FastifyInstance, webRoot?: string): void {
 	if (webRoot === undefined || webRoot.trim() === "") {
 		const missing = async (_request: FastifyRequest, reply: FastifyReply) =>
 			reply.code(503).send(UNSET_PAYLOAD);
-		app.get("/play", async (_request, reply) => reply.redirect("/play/"));
+		app.get("/play", async (request, reply) => reply.redirect(playIndexPath(request)));
 		app.get("/play/", missing);
 		app.get("/play/*", missing);
 		return;
 	}
 	const root = resolve(webRoot);
 
-	app.get("/play", async (_request, reply) => reply.redirect("/play/"));
+	app.get("/play", async (request, reply) => reply.redirect(playIndexPath(request)));
 	app.get("/play/", async (_request, reply) => sendPlayFile(reply, root, "index.html"));
 	app.get("/play/*", async (request, reply) => {
 		const suffix = String((request.params as { "*": string })["*"] ?? "");

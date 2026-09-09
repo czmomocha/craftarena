@@ -81,6 +81,30 @@ func test_opening_the_creator_brings_preview_along_and_hides_the_lobby() -> void
 	assert_false(lobby_window.visible, "并排两块面板下面不该再压一个最大化大厅窗")
 
 
+func test_closing_the_editor_window_returns_to_the_lobby() -> void:
+	_shell = _open_shell(true)
+	assert_true(_shell.try_open_creator())
+	assert_false(_shell.window.visible)
+	_shell.creator.editor.window.close_requested.emit()
+	assert_true(_shell.window.visible, "关编辑窗必须把大厅拉回来，否则 Web 画布是空的")
+	assert_false(_shell.creator.is_open())
+	assert_false(
+		_shell.creator.editor.preview.is_window_visible(),
+		"Preview 并排窗也要一起收"
+	)
+
+
+func test_web_light_shows_back_to_lobby() -> void:
+	_shell = _open_shell(true)
+	assert_true(_shell.try_open_creator())
+	var back: Button = _shell.creator.editor.window.get_node_or_null(
+		"VBoxContainer/SharedActions/%s" % AuthoringEditorShellChrome.BACK_NAME
+	) as Button
+	assert_not_null(back, "玩家包必须有返回大厅，不能只靠嵌入 Window 的标题栏 X")
+	if back != null:
+		assert_eq(back.text, UiCopy.text(UiCopy.BACK_TO_LOBBY))
+
+
 func test_closing_the_creator_returns_to_the_lobby() -> void:
 	_shell = _open_shell(true)
 	assert_true(_shell.try_open_creator())
@@ -128,6 +152,8 @@ func test_edit_query_and_flag_open_the_creator_directly() -> void:
 	assert_true(WebLaunchArgsGd.wants_edit(none, "?edit"))
 	assert_true(WebLaunchArgsGd.wants_edit(none, "?server=example.test&edit=true"))
 	assert_true(WebLaunchArgsGd.wants_edit(PackedStringArray(["--edit"]), ""))
+	# `/play/?edit=1` 的 search 仍是 `?edit=1`，与路径无关。
+	assert_true(WebLaunchArgsGd.wants_edit(none, "?edit=1&server=127.0.0.1"))
 
 
 func test_edit_is_off_by_default_and_can_be_turned_off_explicitly() -> void:

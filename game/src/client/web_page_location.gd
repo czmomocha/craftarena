@@ -9,15 +9,20 @@ extends RefCounted
 static func read() -> Dictionary:
 	if not OS.has_feature("web"):
 		return {}
+	# Official templates ship JavaScriptBridge. Prefer get_interface over eval:
+	# eval can be compiled out; location is a host object.
+	var location: JavaScriptObject = JavaScriptBridge.get_interface("location")
+	if location == null:
+		return {}
 	return {
-		"search": _js_string("window.location.search"),
-		"pathname": _js_string("window.location.pathname"),
-		"hostname": _js_string("window.location.hostname"),
+		"search": _js_prop(location, "search"),
+		"pathname": _js_prop(location, "pathname"),
+		"hostname": _js_prop(location, "hostname"),
 	}
 
 
-static func _js_string(expression: String) -> String:
-	var value: Variant = JavaScriptBridge.eval(expression)
+static func _js_prop(object: JavaScriptObject, key: String) -> String:
+	var value: Variant = object.get(key)
 	if typeof(value) != TYPE_STRING:
 		return ""
 	return str(value)

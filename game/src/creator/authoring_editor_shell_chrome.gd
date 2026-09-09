@@ -11,6 +11,7 @@ const VALIDATOR_NAME: String = "ValidatorDetails"
 const UNDO_NAME: String = "Undo"
 const REDO_NAME: String = "Redo"
 const PREVIEW_NAME: String = "Preview"
+const BACK_NAME: String = "BackToLobby"
 const TraprushEditorPanelGd := preload("res://src/creator/traprush_editor_panel.gd")
 const AuthoringValidatorPanelGd := preload("res://src/creator/authoring_validator_panel.gd")
 const LayoutGd := preload("res://src/creator/authoring_window_layout.gd")
@@ -54,6 +55,7 @@ func ensure(shell: AuthoringEditorShell, handlers: Dictionary) -> void:
 	if on_close.is_valid():
 		window.close_requested.connect(on_close)
 	var root: VBoxContainer = VBoxContainer.new()
+	root.name = "VBoxContainer"
 	root.set_anchors_preset(Control.PRESET_TOP_WIDE)
 	root.offset_left = 8
 	root.offset_top = 8
@@ -79,6 +81,14 @@ func ensure(shell: AuthoringEditorShell, handlers: Dictionary) -> void:
 	_add_button(action_row, UNDO_NAME, UiCopy.UNDO, _handler(handlers, "undo"))
 	_add_button(action_row, REDO_NAME, UiCopy.REDO, _handler(handlers, "redo"))
 	_add_button(action_row, PREVIEW_NAME, UiCopy.PREVIEW, _handler(handlers, "preview"))
+	# 玩家包（web_light / desktop_full）没有引擎标题栏可依赖：Web 画布上的
+	# 嵌入 Window 关了却不把大厅拉回来，人会卡在空白画布里。
+	if shell.surface != AuthoringSurfaceNames.INTERNAL_DEV:
+		var back: Button = _add_button(
+			action_row, BACK_NAME, UiCopy.BACK_TO_LOBBY, _handler(handlers, "close")
+		)
+		if back != null:
+			back.focus_mode = Control.FOCUS_NONE
 	map = AuthoringPreviewMap.new()
 	map.name = MAP_NAME
 	window.add_child(map)
@@ -170,7 +180,7 @@ func _handler(handlers: Dictionary, key: String) -> Callable:
 	return handler
 
 
-func _add_button(row: BoxContainer, node_name: String, copy_key: String, handler: Callable) -> void:
+func _add_button(row: BoxContainer, node_name: String, copy_key: String, handler: Callable) -> Button:
 	var button: Button = Button.new()
 	button.name = node_name
 	button.text = UiCopy.text(copy_key)
@@ -178,6 +188,7 @@ func _add_button(row: BoxContainer, node_name: String, copy_key: String, handler
 	if handler.is_valid():
 		button.pressed.connect(handler)
 	row.add_child(button)
+	return button
 
 
 func sync_guides() -> void:

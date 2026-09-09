@@ -16,6 +16,7 @@ extends Node
 ## lines. Public API stays on this type.
 
 signal world_committed
+signal window_closed
 
 const TITLE: String = UiCopy.WINDOW_EDITOR
 const ACTOR_ID: int = 2
@@ -357,6 +358,7 @@ func _ensure_window() -> void:
 
 func _on_close_requested() -> void:
 	hide_window()
+	window_closed.emit()
 
 
 func _on_undo() -> void:

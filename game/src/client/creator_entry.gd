@@ -80,6 +80,7 @@ func try_open() -> bool:
 		if editor.draft_store == null:
 			editor.draft_store = AuthoringDraftStoreGd.new(draft_path)
 		add_child(editor)
+	_bind_editor_closed()
 	var opened: bool = editor.open() if not editor.is_window_visible() else editor.show_window()
 	if not opened:
 		return false
@@ -89,7 +90,12 @@ func try_open() -> bool:
 
 
 func try_close() -> bool:
-	if editor == null or not editor.is_window_visible():
+	if editor == null:
+		return false
+	var lobby_hidden: bool = (
+		lobby_window != null and is_instance_valid(lobby_window) and not lobby_window.visible
+	)
+	if not editor.is_window_visible() and not lobby_hidden:
 		return false
 	if editor.preview != null:
 		editor.preview.hide_window()
@@ -110,3 +116,16 @@ func _set_lobby_visible(visible: bool) -> void:
 	if lobby_window == null or not is_instance_valid(lobby_window):
 		return
 	lobby_window.visible = visible
+
+
+func _bind_editor_closed() -> void:
+	if editor == null:
+		return
+	if not editor.window_closed.is_connected(_on_editor_window_closed):
+		editor.window_closed.connect(_on_editor_window_closed)
+
+
+func _on_editor_window_closed() -> void:
+	if editor != null and editor.preview != null:
+		editor.preview.hide_window()
+	_set_lobby_visible(true)

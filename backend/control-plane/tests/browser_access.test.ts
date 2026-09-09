@@ -58,6 +58,18 @@ describe("control plane browser access", () => {
 		assert.match(String(response.headers["access-control-allow-headers"]), /content-type/i);
 	});
 
+	test("GET /play?edit=1 keeps the query on the slash redirect", async () => {
+		const response = await app.inject({ method: "GET", url: "/play?edit=1" });
+		assert.equal(response.statusCode, 302);
+		assert.equal(response.headers.location, "/play/?edit=1");
+	});
+
+	test("GET /play/?edit=1 still serves the exported index", async () => {
+		const response = await app.inject({ method: "GET", url: "/play/?edit=1" });
+		assert.equal(response.statusCode, 200);
+		assert.match(response.body, /play/);
+	});
+
 	test("GET /play/ serves the exported index", async () => {
 		const response = await app.inject({ method: "GET", url: "/play/" });
 		assert.equal(response.statusCode, 200);
