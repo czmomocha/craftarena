@@ -2,9 +2,6 @@ class_name AuthoringPreviewBootstrap
 extends RefCounted
 
 ## Assembles AuthoringPreview play from a compiled Preview world.
-## The facade keeps connect_from / try_start_play / try_stop_play;
-## this type owns topology load, spawn, and destructible ledgers so the
-## session file stays under E9.
 
 const HazardCycle := preload("res://src/games/traprush/hazard_cycle.gd")
 const LaunchCycle := preload("res://src/games/traprush/launch_cycle.gd")
@@ -133,6 +130,10 @@ static func try_start_play(
 	if gate_cycle.size() != bundle.gates.size():
 		return false
 	preview.play_gate_cycle = gate_cycle
+	var portal_switch_cycle: Array[Dictionary] = GateCycle.entries_from(bundle.portal_switches, portal_ids)
+	if portal_switch_cycle.size() != bundle.portal_switches.size():
+		return false
+	preview.play_portal_switch_cycle = portal_switch_cycle
 	preview.play_solid_ids = solid_ids
 	preview.play_pickup_ids = pickup_ids
 	preview.play_pickup_kinds = pickup_kinds_from_bundle(bundle)
@@ -181,6 +182,7 @@ static func clear_play(preview: AuthoringPreview) -> void:
 	preview.play_launch_cycle = []
 	preview.play_switch_cycle = []
 	preview.play_gate_cycle = []
+	preview.play_portal_switch_cycle = []
 	preview._play_launch_supported = {}
 	preview.play_solid_ids = {}
 	preview.play_pickup_ids = {}
@@ -204,9 +206,7 @@ static func pickup_kinds_from_bundle(bundle: SimulationBundle) -> Dictionary:
 	if bundle == null:
 		return kinds
 	for item: Dictionary in bundle.pickups:
-		var entity_id: int = item["entity_id"]
-		var kind: String = item["kind"]
-		kinds[entity_id] = kind
+		kinds[item["entity_id"]] = item["kind"]
 	return kinds
 
 
@@ -233,8 +233,7 @@ static func durable_crate_count(bundle: SimulationBundle) -> int:
 		return 0
 	var count: int = 0
 	for item: Dictionary in bundle.destructibles:
-		var durability: int = item["durability"]
-		if durability >= 1:
+		if item["durability"] >= 1:
 			count += 1
 	return count
 

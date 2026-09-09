@@ -26,6 +26,7 @@
 | 电梯 | 可玩性深化已接：竖直 `mover` + `zone.tags` 含 `lift`。**不另开袋、不新增组件**。路径必须纯 Y，否则编译拒绝。水平往返仍走已有 mover。占位速度 `SCALE/16` |
 | 弹射垫 | 可玩性深化已接：固体 + `zone.tags` 含 `launch` + `transform.yaw_bam`（四向）。支撑**上升沿**弹一次：竖直 `LAUNCH_DY = JUMP_DY * 2`，水平送出一格。与 conveyor / mover 同实体则编译拒绝。数值仍属 [CD-63 §1.3](../60-plan/63-open-decisions.md) |
 | 开关门 | 可玩性深化已接**踩区**：固体 + `zone.tags` 含 `switch` / `gate` + 已有 `interactable.link_group`。开合是当前占用的纯函数，不写 `state`、不进快照。走开同一拍关上。`InteractIntent` 仍未接线 |
+| 开关传送 | 可玩性深化已接**踩区**：传送占用 + `zone.tags` 含 `portal_switch` + 已有 `interactable.link_group`。未列入可选 `portal_switches` 袋的门永远可传。关上时不落地。走开同一拍关上。`InteractIntent` 仍未接线 |
 | 能量墙 | 可玩性深化已接：可破坏占用 + `zone.tags` 含 `energy_wall`。`SimulationBundle` 加可选 `energy_walls` 袋（省略 ≡ 空）。打碎走已有 UseItem。权威碰撞仍是一格盒 |
 | 失败原因读数 | 可玩性深化已接：服务端记 `hazard` / `out_of_range` / `crushed` 与发生 tick。**不进快照帧、不进 `hash_state`**，所以只有 Solo / Preview 读得到；线上要读须先做协议不兼容变更（宪法第十八条） |
 | 寻路指示 | 可玩性深化已接：下一个目标 = `order == accepted_count` 的垫，全验收后是终点。方向按**屏幕**八向给（相机 D4 斜 45°），不按世界轴。纯表现读出 |
@@ -155,9 +156,9 @@ UGC 权威碰撞形状约束见 [CD-42](../40-technical/42-contracts-and-rulevm.
 | 可破坏障碍 | 木箱、能量墙、碎石、障碍核心 | 普通攻击机制或道具削减耐久 |
 | 触发型障碍 | 门、移动平台、开关链 | 交互、踩区或规则图触发 |
 
-当前实现：`hazards` 袋按 `cooldown_ticks` 半周期切固体；`solids` 袋始终固体（编译进 `gates` 的门在占用打开时非固体）；官方三张课各 1 个机关、出生点 −X 一格固体、出生点正下一格立足固体。编辑器 Place solid / hazard / crate / finish / mover / conveyor / lift / launch / switch / gate / energy wall 走已有 `place`。形状见 [CD-32 §3](../30-ugc/32-editor-and-preview.md) 与 [CD-42 §3.4](../40-technical/42-contracts-and-rulevm.md)。口径见文首。
+当前实现：`hazards` 袋按 `cooldown_ticks` 半周期切固体；`solids` 袋始终固体（编译进 `gates` 的门在占用打开时非固体）；官方三张课各 1 个机关、出生点 −X 一格固体、出生点正下一格立足固体。编辑器 Place solid / hazard / crate / finish / mover / conveyor / lift / launch / switch / gate / energy wall / gated portal 走已有 `place`。形状见 [CD-32 §3](../30-ugc/32-editor-and-preview.md) 与 [CD-42 §3.4](../40-technical/42-contracts-and-rulevm.md)。口径见文首。
 
-「触发型障碍」这一行已交付移动平台、传送带、电梯、弹射垫与踩区开关门：
+「触发型障碍」这一行已交付移动平台、传送带、电梯、弹射垫、踩区开关门与开关传送：
 
 - **移动平台**（`mover`）：位姿是 tick 的纯函数，载客跟随；
 - **传送带**（可玩性深化）：一块固体 + `zone.tags` 的 `conveyor` 标签 + `transform.yaw_bam`。判据是**支撑**而非重叠（传送带是固体，胶囊只会站在它上面）；同时被多块支撑时只认 `entity_id` 最小的一块，否则合力取决于遍历顺序、回放会分叉。方向量化到四向：斜推会让「我会被带到哪一格」在定点网格上不可预读。
@@ -165,6 +166,7 @@ UGC 权威碰撞形状约束见 [CD-42](../40-technical/42-contracts-and-rulevm.
 - **弹射垫**（可玩性深化）：一块固体 + `zone.tags` 的 `launch` 标签 + `transform.yaw_bam`。支撑上升沿弹一次（竖直走已有 `apply_jump`，水平沿四向送出一格）；站着不连弹，走开再踩才再弹。与 conveyor / mover 同实体拒绝。
 - **踩区开关门**（可玩性深化）：开关与门都是固体 + `switch` / `gate` 标签 + 已有 `interactable.link_group`。一组打开当且仅当有胶囊被该组开关支撑，或有胶囊与该组门盒相交（含当前非固体的门）。走开同一拍关上；关在身上按 crush 复位。与 conveyor / launch / mover 同实体拒绝。不新增组件。
 - **能量墙**（可玩性深化）：可破坏占用 + `zone.tags` 的 `energy_wall`。几何和耐久在 `destructibles`，可选 `energy_walls` 袋只带 `entity_id`。打碎走已有 UseItemIntent，不改爆破半径。权威碰撞仍是一格盒；程序化半透板只是表现。与 solid / conveyor / launch / switch / gate / lift 同实体拒绝。
+- **开关传送**（可玩性深化）：传送占用 + `zone.tags` 的 `portal_switch` + 已有 `interactable.link_group`。几何在 `portals`，可选 `portal_switches` 袋只带 `link_group`。未列入袋的传送门行为不变。关上时重叠也不落地。占用规则与开关门同一套：被该组开关支撑，或与该组**门**盒相交。传送门自己的占用**不会**把组打开——否则走进去永远能传。与 solid / conveyor / launch / switch / gate / energy_wall / lift 同实体拒绝；悬空带 tag 整份拒绝。
 
 **`InteractIntent` 仍未接线。** 命令帧新增 intent id、快照帧新增开合状态都是协议不兼容变更（宪法第十八条）。本刀开合不进快照；线上表现用快照位姿重算，可能与权威差一拍。锁存 / 延时关门未做。
 

@@ -16,6 +16,7 @@ const MatchSnapshotInterpGd := preload("res://src/client/match_snapshot_interp.g
 const MatchSnapshotMapGd := preload("res://src/client/match_snapshot_map.gd")
 const MatchSolidMapGd := preload("res://src/client/match_solid_map.gd")
 const MatchStandingMapGd := preload("res://src/client/match_standing_map.gd")
+const GateCycleGd := preload("res://src/games/traprush/gate_cycle.gd")
 
 const MAP_NAME: String = "SnapshotMap"
 const COURSE_NAME: String = "CourseMap"
@@ -219,6 +220,14 @@ func apply_snapshot(
 			open_ids = solids.open_ids_from_players(players)
 		solids.apply_gate_visibility(open_ids)
 	if course != null:
+		var enabled_portals: PackedInt32Array = PackedInt32Array()
+		if offline_playing and offline_session != null:
+			enabled_portals = offline_session.open_portal_entity_ids()
+		elif solids != null:
+			enabled_portals = GateCycleGd.open_portal_ids(
+				course.portal_switch_bags(), solids.occupied_groups_from_players(players)
+			)
+		MatchCourseMapFx.apply_portal_enabled(course, enabled_portals)
 		course.apply_tick(follow.tick)
 	if play != null and play.state == MatchPlaySessionGd.STATE_IN_MATCH:
 		var predicted: Dictionary = play.predict.try_apply(

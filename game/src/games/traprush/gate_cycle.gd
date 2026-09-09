@@ -1,7 +1,7 @@
 class_name TraprushGateCycle
 extends RefCounted
 
-## 踩区开关门（可玩性深化第四批）。
+## 踩区开关门与开关传送（可玩性深化第四 / 六批）。
 ##
 ## CD-21 §5.1 触发型障碍写的是「交互、踩区或规则图」。InteractIntent 要新增
 ## 命令帧 id，快照要带开合状态，两处都是协议不兼容（宪法第十八条）。本刀只做
@@ -111,6 +111,30 @@ static func apply(
 	return crushed
 
 
+static func portal_is_open(
+	entity_id: int, portal_switches: Array[Dictionary], occupied: Dictionary
+) -> bool:
+	for entry: Dictionary in portal_switches:
+		var switch_id: int = entry["entity_id"]
+		if switch_id != entity_id:
+			continue
+		var link_group: int = entry["link_group"]
+		return occupied.get(link_group, false)
+	return true
+
+
+static func open_portal_ids(
+	portal_switches: Array[Dictionary], occupied: Dictionary
+) -> PackedInt32Array:
+	var open_ids: PackedInt32Array = PackedInt32Array()
+	for entry: Dictionary in portal_switches:
+		var link_group: int = entry["link_group"]
+		if occupied.get(link_group, false):
+			var entity_id: int = entry["entity_id"]
+			open_ids.append(entity_id)
+	return open_ids
+
+
 static func open_entity_ids(world: SimulationWorld, gates: Array[Dictionary]) -> PackedInt32Array:
 	var open_ids: PackedInt32Array = PackedInt32Array()
 	if world == null:
@@ -126,7 +150,7 @@ static func open_entity_ids(world: SimulationWorld, gates: Array[Dictionary]) ->
 
 ## 表现层重算：没有 SimulationWorld 时（线上快照）用胶囊 AABB + 向下探针
 ## 近似权威占用。Solo 应读会话的 `open_entity_ids`，不要走这条。
-static func presentation_open_entity_ids(
+static func presentation_occupied_groups(
 	switches: Array[Dictionary],
 	gates: Array[Dictionary],
 	players: Array,
@@ -134,11 +158,10 @@ static func presentation_open_entity_ids(
 	radius: int,
 	height: int,
 	support_dy: int
-) -> PackedInt32Array:
-	var open_ids: PackedInt32Array = PackedInt32Array()
-	if cell < 1 or radius < 1 or height < 1:
-		return open_ids
+) -> Dictionary:
 	var occupied: Dictionary = {}
+	if cell < 1 or radius < 1 or height < 1:
+		return occupied
 	var half: int = cell / 2
 	var cap_hy: int = height / 2 + radius
 	for player_raw: Variant in players:
@@ -161,6 +184,22 @@ static func presentation_open_entity_ids(
 		for gate_entry: Dictionary in gates:
 			if _presentation_overlaps(px, py, pz, radius, cap_hy, gate_entry, half):
 				occupied[gate_entry["link_group"]] = true
+	return occupied
+
+
+static func presentation_open_entity_ids(
+	switches: Array[Dictionary],
+	gates: Array[Dictionary],
+	players: Array,
+	cell: int,
+	radius: int,
+	height: int,
+	support_dy: int
+) -> PackedInt32Array:
+	var open_ids: PackedInt32Array = PackedInt32Array()
+	var occupied: Dictionary = presentation_occupied_groups(
+		switches, gates, players, cell, radius, height, support_dy
+	)
 	for gate_entry: Dictionary in gates:
 		var link_group: int = gate_entry["link_group"]
 		if occupied.get(link_group, false):

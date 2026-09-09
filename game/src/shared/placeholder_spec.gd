@@ -232,6 +232,8 @@ const FX_PORTAL_SPIN_TICKS: int = 120
 ## 当前目标垫 / 已开放终点的呼吸周期与幅度。
 const FX_PULSE_TICKS: int = 48
 const FX_PULSE_AMPLITUDE: float = 0.12
+## 未开的开关传送：旋翼停、亮度压到这个系数。占位表现值。
+const FX_PORTAL_LOCKED_MODULATE: float = 0.4
 
 ## Preview 走路可达性问题 gizmos。
 const REACH_ALBEDO: Color = Color(1.0, 0.82, 0.2)

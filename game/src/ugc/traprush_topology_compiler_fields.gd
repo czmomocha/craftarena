@@ -171,6 +171,10 @@ static func has_energy_wall_tag(record: SharedComponentRecord) -> bool:
 	return has_zone_tag(record, TraprushTopologyCompiler.ENERGY_WALL_ZONE_TAG)
 
 
+static func has_portal_switch_tag(record: SharedComponentRecord) -> bool:
+	return has_zone_tag(record, TraprushTopologyCompiler.PORTAL_SWITCH_ZONE_TAG)
+
+
 ## 已有 `interactable.link_group`。缺组件 / 不是非负整数 → -1（整份编译失败）。
 static func interactable_link_group(record: SharedComponentRecord) -> int:
 	if not record.components.has(SharedComponentNames.INTERACTABLE):

@@ -46,6 +46,7 @@ extends RefCounted
 
 const BagsGd := preload("res://src/ugc/traprush_topology_compiler_bags.gd")
 const FieldsGd := preload("res://src/ugc/traprush_topology_compiler_fields.gd")
+const TriggersGd := preload("res://src/ugc/traprush_topology_compiler_triggers.gd")
 
 const FINISH_ZONE_TAG: String = "finish"
 const SOLID_ZONE_TAG: String = "solid"
@@ -62,6 +63,8 @@ const SWITCH_ZONE_TAG: String = "switch"
 const GATE_ZONE_TAG: String = "gate"
 ## 能量墙：可破坏占用 + 本标签。几何在 `destructibles`，本袋只带 `entity_id`。
 const ENERGY_WALL_ZONE_TAG: String = "energy_wall"
+## 开关传送：传送门 + 本标签 + 已有 `interactable.link_group`。见 `TraprushGateCycle`。
+const PORTAL_SWITCH_ZONE_TAG: String = "portal_switch"
 
 
 static func compile(world: AuthoringWorld) -> SimulationBundle:
@@ -71,7 +74,7 @@ static func compile(world: AuthoringWorld) -> SimulationBundle:
 	var occupancy: Dictionary = BagsGd.collect_occupancy(world, used_assets)
 	if not occupancy.get("ok", false):
 		return null
-	var portal_result: Dictionary = BagsGd.collect_portals(world, used_assets)
+	var portal_result: Dictionary = TriggersGd.collect_portals(world, used_assets)
 	if not portal_result.get("ok", false):
 		return null
 	var finish_list: Array = occupancy["finish"]
@@ -98,5 +101,6 @@ static func compile(world: AuthoringWorld) -> SimulationBundle:
 		SimulationBundle.FIELD_SWITCHES: occupancy["switches"],
 		SimulationBundle.FIELD_GATES: occupancy["gates"],
 		SimulationBundle.FIELD_ENERGY_WALLS: occupancy["energy_walls"],
+		SimulationBundle.FIELD_PORTAL_SWITCHES: portal_result["portal_switches"],
 	}
 	return SimulationBundle.from_dictionary(body)

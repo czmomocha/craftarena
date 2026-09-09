@@ -5,6 +5,7 @@ extends RefCounted
 ## Does not apply intents or occupancy.
 
 const CheckpointTrack := preload("res://src/games/traprush/checkpoint_track.gd")
+const GateCycle := preload("res://src/games/traprush/gate_cycle.gd")
 const StateHasher := preload("res://src/shared/protocol/state_hasher.gd")
 const TraprushDestructible := preload("res://src/games/traprush/destructible.gd")
 
@@ -177,6 +178,21 @@ func is_hazard_solid(session: TraprushMatchSession, entity_id: int) -> bool:
 		return false
 	var box_id: int = box_raw
 	return session._world.is_static_box_solid(box_id)
+
+
+func open_portal_entity_ids(session: TraprushMatchSession) -> PackedInt32Array:
+	var capsule_ids: PackedInt32Array = PackedInt32Array()
+	for player: Dictionary in session._players:
+		var capsule_id: int = player["capsule_id"]
+		capsule_ids.append(capsule_id)
+	var occupied: Dictionary = GateCycle.occupied_groups(
+		session._world,
+		session._switch_cycle,
+		session._gate_cycle,
+		capsule_ids,
+		session.support_dy
+	)
+	return GateCycle.open_portal_ids(session._portal_switch_cycle, occupied)
 
 
 func is_gate_solid(session: TraprushMatchSession, entity_id: int) -> bool:

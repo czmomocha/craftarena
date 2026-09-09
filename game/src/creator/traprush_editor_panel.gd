@@ -22,6 +22,7 @@ const PLACE_LAUNCH_NAME: String = "PlaceLaunch"
 const PLACE_SWITCH_NAME: String = "PlaceSwitch"
 const PLACE_GATE_NAME: String = "PlaceGate"
 const PLACE_ENERGY_WALL_NAME: String = "PlaceEnergyWall"
+const PLACE_GATED_PORTAL_NAME: String = "PlaceGatedPortal"
 const REMOVE_LAST_NAME: String = "RemoveLast"
 const FLOOR_UP_NAME: String = "FloorUp"
 const FLOOR_DOWN_NAME: String = "FloorDown"
@@ -116,6 +117,7 @@ func mount(p_host: AuthoringEditorShell) -> void:
 	_add_button(occupancy_row, PLACE_SWITCH_NAME, UiCopy.PLACE_SWITCH, place_next_switch)
 	_add_button(occupancy_row, PLACE_GATE_NAME, UiCopy.PLACE_GATE, place_next_gate)
 	_add_button(occupancy_row, PLACE_ENERGY_WALL_NAME, UiCopy.PLACE_ENERGY_WALL, place_next_energy_wall)
+	_add_button(occupancy_row, PLACE_GATED_PORTAL_NAME, UiCopy.PLACE_GATED_PORTAL, place_next_gated_portal)
 	var pickup_row: HBoxContainer = HBoxContainer.new()
 	pickup_row.name = "PickupRow"
 	add_child(pickup_row)
@@ -153,30 +155,11 @@ func place_next_checkpoint() -> bool:
 
 
 func place_next_portal() -> bool:
-	if host == null or cursor == null:
-		return false
-	var entity_id: int = 0
-	var target_id: int = 0
-	if _pending_portal_id > 0:
-		entity_id = _pending_pair_entity_id()
-		if entity_id <= 0:
-			entity_id = _peek_entity_id()
-		target_id = _pending_portal_id
-	else:
-		entity_id = _peek_entity_id()
-		target_id = entity_id + 1
-		while _world_has(target_id):
-			target_id += 1
-	if not host.try_place_portal(entity_id, target_id, cursor.cell_x, cursor.cell_y, cursor.cell_z):
-		return false
-	_commit_entity_id(entity_id)
-	if _pending_portal_id > 0:
-		_pending_portal_id = 0
-	else:
-		_pending_portal_id = entity_id
-	cursor.bump_x()
-	_select_placed(entity_id)
-	return true
+	return IdsGd.place_next_portal(self, false)
+
+
+func place_next_gated_portal() -> bool:
+	return IdsGd.place_next_portal(self, true)
 
 
 func place_next_solid() -> bool:

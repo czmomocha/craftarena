@@ -138,6 +138,18 @@ func apply_gate_visibility(open_ids: PackedInt32Array) -> void:
 			node.visible = not _open_gate_ids.has(gate_id)
 
 
+func occupied_groups_from_players(players: Array) -> Dictionary:
+	return GateCycleGd.presentation_occupied_groups(
+		_posed_link_bags(_switches),
+		_posed_link_bags(_gates),
+		players,
+		_cell,
+		PlayStubsGd.CAPSULE_RADIUS,
+		PlayStubsGd.CAPSULE_HEIGHT,
+		PlayStubsGd.SUPPORT_DY
+	)
+
+
 ## 线上无开合字段：用快照位姿近似。Solo 读会话 open_gate_entity_ids。
 func open_ids_from_players(players: Array) -> PackedInt32Array:
 	return GateCycleGd.presentation_open_entity_ids(

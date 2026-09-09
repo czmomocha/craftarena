@@ -69,6 +69,7 @@ const PLACE_LAUNCH: String = "craft_arena.ui.place_launch"
 const PLACE_SWITCH: String = "craft_arena.ui.place_switch"
 const PLACE_GATE: String = "craft_arena.ui.place_gate"
 const PLACE_ENERGY_WALL: String = "craft_arena.ui.place_energy_wall"
+const PLACE_GATED_PORTAL: String = "craft_arena.ui.place_gated_portal"
 const MARK_CORNER: String = "craft_arena.ui.mark_corner"
 const FILL_SOLIDS: String = "craft_arena.ui.fill_solids"
 const COPY_ENTITY: String = "craft_arena.ui.copy_entity"
@@ -138,6 +139,7 @@ const ALL_KEYS: PackedStringArray = [
 	PLACE_SWITCH,
 	PLACE_GATE,
 	PLACE_ENERGY_WALL,
+	PLACE_GATED_PORTAL,
 	MARK_CORNER,
 	FILL_SOLIDS,
 	COPY_ENTITY,

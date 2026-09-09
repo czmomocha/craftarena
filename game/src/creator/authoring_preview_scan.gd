@@ -7,6 +7,7 @@ extends RefCounted
 const HazardHit := preload("res://src/games/traprush/hazard_hit.gd")
 const OutOfRangeReset := preload("res://src/games/traprush/out_of_range_reset.gd")
 const PickupAccept := preload("res://src/games/traprush/pickup_accept.gd")
+const GateCycle := preload("res://src/games/traprush/gate_cycle.gd")
 
 
 func try_accept_play_checkpoint(preview: AuthoringPreview, checkpoint_id: int) -> bool:
@@ -170,8 +171,17 @@ func resolve_play_portals(preview: AuthoringPreview) -> bool:
 		if preview._portal_latch.has(entity_id):
 			next_latch[entity_id] = true
 	preview._portal_latch = next_latch
+	var occupied: Dictionary = GateCycle.occupied_groups(
+		preview.play_world,
+		preview.play_switch_cycle,
+		preview.play_gate_cycle,
+		PackedInt32Array([preview.player_id]),
+		preview.play_support_dy
+	)
 	for entity_id: int in overlapping:
 		if preview._portal_latch.has(entity_id):
+			continue
+		if not GateCycle.portal_is_open(entity_id, preview.play_portal_switch_cycle, occupied):
 			continue
 		var landed: Dictionary = TraprushPortalLanding.try_land_exit(
 			preview.play_world,

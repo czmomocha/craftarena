@@ -39,6 +39,7 @@ var play_conveyor_cycle: Array[Dictionary] = []
 var play_launch_cycle: Array[Dictionary] = []
 var play_switch_cycle: Array[Dictionary] = []
 var play_gate_cycle: Array[Dictionary] = []
+var play_portal_switch_cycle: Array[Dictionary] = []
 var play_solid_ids: Dictionary = {}
 var play_pickup_ids: Dictionary = {}
 var play_pickup_kinds: Dictionary = {}

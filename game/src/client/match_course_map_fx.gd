@@ -9,7 +9,7 @@ extends RefCounted
 ##
 ## **由权威 tick 驱动，不读墙钟。** 与 `MatchSolidMap.apply_tick` 同一条约定：
 ## 同一个 tick 必须画出同一帧，否则两台机器看同一局会看到不同的门。表现层从不
-## 写回裁决数据，动效只改 `rotation` 与 `scale`。
+## 写回裁决数据，动效只改 `rotation`、`scale` 与未开开关传送的 `transparency`。
 ##
 ## 相位按 `entity_id` 错开。三扇门整齐划一地转会读成机械装置，而不是三个各自
 ## 独立的传送口——这是可读性，不是审美偏好。
@@ -26,7 +26,8 @@ const BASE_SCALE_META: String = "fx_base_scale"
 static func apply_tick(map: MatchCourseMap, tick: int) -> int:
 	var animated: int = 0
 	for portal_id: int in map._portal_ids:
-		if spin_portal(map.portal_node(portal_id), portal_id, tick):
+		var enabled: bool = portal_is_enabled(map, portal_id)
+		if spin_portal(map.portal_node(portal_id), portal_id, tick, enabled):
 			animated += 1
 	for bag: Dictionary in map.wayfind_pads():
 		var pad_id: int = bag["entity_id"]
@@ -42,6 +43,26 @@ static func apply_tick(map: MatchCourseMap, tick: int) -> int:
 		if breathe(map.finish_node(finish_id), finish_id, tick, finish_open):
 			animated += 1
 	return animated
+
+
+static func remember_portal_switches(map: MatchCourseMap, bundle: SimulationBundle) -> void:
+	map._portal_switches.clear()
+	map._portal_switch_groups.clear()
+	for item: Dictionary in bundle.portal_switches:
+		map._portal_switches.append(item.duplicate(true))
+		map._portal_switch_groups[item["entity_id"]] = item["link_group"]
+
+
+static func apply_portal_enabled(map: MatchCourseMap, open_ids: PackedInt32Array) -> void:
+	map._open_portal_ids.clear()
+	for entity_id: int in open_ids:
+		map._open_portal_ids[entity_id] = true
+
+
+static func portal_is_enabled(map: MatchCourseMap, entity_id: int) -> bool:
+	if not map._portal_switch_groups.has(entity_id):
+		return true
+	return map._open_portal_ids.has(entity_id)
 
 
 static func spin_radians(tick: int, entity_id: int) -> float:
@@ -74,12 +95,36 @@ static func pulse_scale(tick: int, entity_id: int) -> float:
 
 
 ## 让传送门旋翼转起来。没有 `Swirl` 子节点（视觉回退到占位盒）就什么也不做。
-static func spin_portal(node: MeshInstance3D, entity_id: int, tick: int) -> bool:
+static func spin_portal(node: MeshInstance3D, entity_id: int, tick: int, enabled: bool) -> bool:
 	var swirl: Node3D = _find_swirl(node)
 	if swirl == null:
 		return false
-	swirl.rotation.z = spin_radians(tick, entity_id)
+	if enabled:
+		swirl.rotation.z = spin_radians(tick, entity_id)
+	else:
+		swirl.rotation.z = 0.0
+	_apply_lock_modulate(node, enabled)
 	return true
+
+
+static func _apply_lock_modulate(node: MeshInstance3D, enabled: bool) -> void:
+	var factor: float = 1.0
+	if not enabled:
+		factor = PlaceholderSpec.FX_PORTAL_LOCKED_MODULATE
+	var fade: float = 1.0 - factor
+	var visual: Node = node.get_node_or_null(MatchCourseMap.VISUAL_NAME)
+	if visual != null:
+		_set_geometry_fade(visual, fade)
+		return
+	node.transparency = fade
+
+
+static func _set_geometry_fade(root: Node, transparency: float) -> void:
+	var geometry: GeometryInstance3D = root as GeometryInstance3D
+	if geometry != null:
+		geometry.transparency = transparency
+	for child: Node in root.get_children():
+		_set_geometry_fade(child, transparency)
 
 
 ## 给一格加/去掉呼吸缩放。`active = false` 必须能把缩放放回基准——当前目标垫

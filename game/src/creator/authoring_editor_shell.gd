@@ -122,6 +122,14 @@ func try_place_portal(entity_id: int, target_id: int, cell_x: int, cell_y: int, 
 	return PlaceGd.try_place_portal(self, entity_id, target_id, cell_x, cell_y, cell_z)
 
 
+func try_place_gated_portal(
+	entity_id: int, target_id: int, cell_x: int, cell_y: int, cell_z: int
+) -> bool:
+	return PlaceTriggersGd.try_place_gated_portal(
+		self, entity_id, target_id, cell_x, cell_y, cell_z
+	)
+
+
 func try_place_solid(entity_id: int, cell_x: int, cell_y: int, cell_z: int) -> bool:
 	return PlaceGd.try_place_solid(self, entity_id, cell_x, cell_y, cell_z)
 

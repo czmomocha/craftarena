@@ -99,6 +99,15 @@ static func try_create(
 	if gate_cycle.size() != gates.size():
 		return null
 	session._gate_cycle = gate_cycle
+	var portal_switches: Array = []
+	if bundle.portal_switches != null:
+		portal_switches = bundle.portal_switches
+	var portal_switch_cycle: Array[Dictionary] = GateCycleGd.entries_from(
+		portal_switches, session._portal_ids
+	)
+	if portal_switch_cycle.size() != portal_switches.size():
+		return null
+	session._portal_switch_cycle = portal_switch_cycle
 	var pickups_raw: Variant = loaded.get("pickup_ids", {})
 	if typeof(pickups_raw) != TYPE_DICTIONARY:
 		return null
