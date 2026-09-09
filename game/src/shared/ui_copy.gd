@@ -70,6 +70,14 @@ const PLACE_SWITCH: String = "craft_arena.ui.place_switch"
 const PLACE_GATE: String = "craft_arena.ui.place_gate"
 const PLACE_ENERGY_WALL: String = "craft_arena.ui.place_energy_wall"
 const PLACE_GATED_PORTAL: String = "craft_arena.ui.place_gated_portal"
+const PLACE_SPIKE: String = "craft_arena.ui.place_spike"
+const PLACE_FLAME: String = "craft_arena.ui.place_flame"
+const PLACE_CRUSHER: String = "craft_arena.ui.place_crusher"
+const PLACE_ROLLER: String = "craft_arena.ui.place_roller"
+const PLACE_RUBBLE: String = "craft_arena.ui.place_rubble"
+const PLACE_OBSTACLE_CORE: String = "craft_arena.ui.place_obstacle_core"
+const PLACE_PENDULUM: String = "craft_arena.ui.place_pendulum"
+const PLACE_ICE: String = "craft_arena.ui.place_ice"
 const MARK_CORNER: String = "craft_arena.ui.mark_corner"
 const FILL_SOLIDS: String = "craft_arena.ui.fill_solids"
 const COPY_ENTITY: String = "craft_arena.ui.copy_entity"
@@ -98,6 +106,9 @@ const BACK_TO_LOBBY: String = "craft_arena.ui.back_to_lobby"
 const VALIDATOR_OK: String = "craft_arena.ui.validator_ok"
 const VALIDATOR_ISSUES: String = "craft_arena.ui.validator_issues"
 const AUTO_TICK: String = "craft_arena.ui.auto_tick"
+const HUD_BOMB: String = "craft_arena.ui.hud_bomb"
+const HUD_DASH: String = "craft_arena.ui.hud_dash"
+const HUD_FAILS: String = "craft_arena.ui.hud_fails"
 
 const ALL_KEYS: PackedStringArray = [
 	WINDOW_TRAPRUSH,
@@ -140,6 +151,14 @@ const ALL_KEYS: PackedStringArray = [
 	PLACE_GATE,
 	PLACE_ENERGY_WALL,
 	PLACE_GATED_PORTAL,
+	PLACE_SPIKE,
+	PLACE_FLAME,
+	PLACE_CRUSHER,
+	PLACE_ROLLER,
+	PLACE_RUBBLE,
+	PLACE_OBSTACLE_CORE,
+	PLACE_PENDULUM,
+	PLACE_ICE,
 	MARK_CORNER,
 	FILL_SOLIDS,
 	COPY_ENTITY,
@@ -168,6 +187,9 @@ const ALL_KEYS: PackedStringArray = [
 	VALIDATOR_OK,
 	VALIDATOR_ISSUES,
 	AUTO_TICK,
+	HUD_BOMB,
+	HUD_DASH,
+	HUD_FAILS,
 ]
 
 static var _loaded: bool = false

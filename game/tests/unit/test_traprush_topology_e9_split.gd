@@ -12,6 +12,8 @@ const COMPILER_PATHS: PackedStringArray = [
 	"res://src/ugc/traprush_topology_compiler.gd",
 	"res://src/ugc/traprush_topology_compiler_bags.gd",
 	"res://src/ugc/traprush_topology_compiler_fields.gd",
+	"res://src/ugc/traprush_topology_compiler_triggers.gd",
+	"res://src/ugc/traprush_topology_compiler_obstacles.gd",
 ]
 
 

@@ -8,6 +8,7 @@ const HazardHit := preload("res://src/games/traprush/hazard_hit.gd")
 const OutOfRangeReset := preload("res://src/games/traprush/out_of_range_reset.gd")
 const PickupAccept := preload("res://src/games/traprush/pickup_accept.gd")
 const GateCycle := preload("res://src/games/traprush/gate_cycle.gd")
+const TrapCycle := preload("res://src/games/traprush/trap_cycle.gd")
 
 
 func try_accept_play_checkpoint(preview: AuthoringPreview, checkpoint_id: int) -> bool:
@@ -109,6 +110,7 @@ func reset_play_to_pad(preview: AuthoringPreview) -> bool:
 	preview._play_launch_supported.erase(preview.player_id)
 	preview._portal_latch = {}
 	preview._play_stun_remaining = preview.play_respawn_stun_ticks
+	preview.play_setback_count += 1
 	return true
 
 
@@ -130,7 +132,54 @@ func resolve_play_hazards(preview: AuthoringPreview) -> bool:
 	if reset:
 		preview._portal_latch = {}
 		preview._play_stun_remaining = preview.play_respawn_stun_ticks
-	return reset
+		return true
+	return apply_play_spikes_and_flames(preview)
+
+
+func keep_play_flames_nonsolid(preview: AuthoringPreview) -> void:
+	TrapCycle.keep_flames_nonsolid(preview.play_world, preview.play_flame_cycle)
+
+
+func apply_play_crushers(preview: AuthoringPreview) -> void:
+	if not preview.is_playing():
+		return
+	var crushed: PackedInt32Array = TrapCycle.crusher_hits(
+		preview.play_world,
+		preview.play_crusher_cycle,
+		PackedInt32Array([preview.player_id]),
+		preview.play_support_dy
+	)
+	if crushed.size() > 0:
+		reset_play_to_pad(preview)
+		return
+	var swung: PackedInt32Array = TrapCycle.crusher_hits(
+		preview.play_world,
+		preview.play_pendulum_cycle,
+		PackedInt32Array([preview.player_id]),
+		preview.play_support_dy
+	)
+	if swung.size() > 0:
+		reset_play_to_pad(preview)
+
+
+func apply_play_spikes_and_flames(preview: AuthoringPreview) -> bool:
+	if not preview.is_playing():
+		return false
+	var spikes: PackedInt32Array = TrapCycle.spike_hits(
+		preview.play_world,
+		preview.play_spike_cycle,
+		PackedInt32Array([preview.player_id]),
+		preview.play_support_dy
+	)
+	var flames: PackedInt32Array = TrapCycle.flame_hits(
+		preview.play_world,
+		preview.play_flame_cycle,
+		PackedInt32Array([preview.player_id])
+	)
+	if spikes.is_empty() and flames.is_empty():
+		return false
+	reset_play_to_pad(preview)
+	return true
 
 
 func play_stunned(preview: AuthoringPreview) -> bool:
@@ -236,3 +285,45 @@ func grant_play_pickups(preview: AuthoringPreview) -> void:
 	var next_taken_raw: Variant = granted.get("taken", preview.play_taken)
 	if typeof(next_taken_raw) == TYPE_DICTIONARY:
 		preview.play_taken = next_taken_raw
+
+
+func load_play_traps(
+	preview: AuthoringPreview, bundle: SimulationBundle, solid_ids: Dictionary
+) -> bool:
+	var spike_cycle: Array[Dictionary] = TrapCycle.id_entries_from(bundle.spikes, solid_ids)
+	if spike_cycle.size() != bundle.spikes.size():
+		preview.leave_tick()
+		return false
+	preview.play_spike_cycle = spike_cycle
+	var flame_cycle: Array[Dictionary] = TrapCycle.flame_entries_from(
+		bundle.flames, preview.play_hazard_cycle
+	)
+	if flame_cycle.size() != bundle.flames.size():
+		preview.leave_tick()
+		return false
+	preview.play_flame_cycle = flame_cycle
+	var crusher_cycle: Array[Dictionary] = TrapCycle.id_entries_from(
+		bundle.crushers, solid_ids
+	)
+	if crusher_cycle.size() != bundle.crushers.size():
+		preview.leave_tick()
+		return false
+	preview.play_crusher_cycle = crusher_cycle
+	var pendulum_cycle: Array[Dictionary] = TrapCycle.id_entries_from(
+		bundle.pendulums, solid_ids
+	)
+	if pendulum_cycle.size() != bundle.pendulums.size():
+		preview.leave_tick()
+		return false
+	preview.play_pendulum_cycle = pendulum_cycle
+	var ice_cycle: Array[Dictionary] = TraprushConveyorCycle.entries_from(
+		bundle.ices, solid_ids
+	)
+	if ice_cycle.size() != bundle.ices.size():
+		preview.leave_tick()
+		return false
+	preview.play_ice_cycle = ice_cycle
+	if not TrapCycle.keep_flames_nonsolid(preview.play_world, flame_cycle):
+		preview.leave_tick()
+		return false
+	return true

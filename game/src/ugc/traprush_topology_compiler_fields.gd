@@ -175,6 +175,128 @@ static func has_portal_switch_tag(record: SharedComponentRecord) -> bool:
 	return has_zone_tag(record, TraprushTopologyCompiler.PORTAL_SWITCH_ZONE_TAG)
 
 
+static func has_spike_tag(record: SharedComponentRecord) -> bool:
+	return has_zone_tag(record, TraprushTopologyCompiler.SPIKE_ZONE_TAG)
+
+
+static func has_flame_tag(record: SharedComponentRecord) -> bool:
+	return has_zone_tag(record, TraprushTopologyCompiler.FLAME_ZONE_TAG)
+
+
+static func has_crusher_tag(record: SharedComponentRecord) -> bool:
+	return has_zone_tag(record, TraprushTopologyCompiler.CRUSHER_ZONE_TAG)
+
+
+static func has_roller_tag(record: SharedComponentRecord) -> bool:
+	return has_zone_tag(record, TraprushTopologyCompiler.ROLLER_ZONE_TAG)
+
+
+static func has_rubble_tag(record: SharedComponentRecord) -> bool:
+	return has_zone_tag(record, TraprushTopologyCompiler.RUBBLE_ZONE_TAG)
+
+
+static func has_obstacle_core_tag(record: SharedComponentRecord) -> bool:
+	return has_zone_tag(record, TraprushTopologyCompiler.OBSTACLE_CORE_ZONE_TAG)
+
+
+static func has_pendulum_tag(record: SharedComponentRecord) -> bool:
+	return has_zone_tag(record, TraprushTopologyCompiler.PENDULUM_ZONE_TAG)
+
+
+static func has_ice_tag(record: SharedComponentRecord) -> bool:
+	return has_zone_tag(record, TraprushTopologyCompiler.ICE_ZONE_TAG)
+
+
+static func append_pad(
+	entity_id: int,
+	record: SharedComponentRecord,
+	next_asset: Dictionary,
+	used_assets: Dictionary[int, int],
+	pads: Array[Dictionary]
+) -> bool:
+	var pose: Dictionary = transform_xyz(record)
+	if pose.is_empty():
+		return false
+	var checkpoint: Dictionary = checkpoint_body(record)
+	if checkpoint.is_empty():
+		return false
+	pads.append(with_asset({
+		"entity_id": entity_id,
+		"x": pose["x"],
+		"y": pose["y"],
+		"z": pose["z"],
+		"order": checkpoint["order"],
+		"respawn_dx": checkpoint["respawn_dx"],
+		"respawn_dy": checkpoint["respawn_dy"],
+		"respawn_dz": checkpoint["respawn_dz"],
+	}, next_asset, used_assets))
+	return true
+
+
+static func append_pickup(
+	entity_id: int,
+	record: SharedComponentRecord,
+	next_asset: Dictionary,
+	used_assets: Dictionary[int, int],
+	pickup_list: Array[Dictionary]
+) -> bool:
+	if has_finish_tag(record):
+		return false
+	if has_solid_tag(record):
+		return false
+	if record.components.has(SharedComponentNames.CHECKPOINT):
+		return false
+	if record.components.has(SharedComponentNames.PORTAL):
+		return false
+	if record.components.has(SharedComponentNames.DESTRUCTIBLE):
+		return false
+	if record.components.has(SharedComponentNames.HAZARD):
+		return false
+	var pickup_pose: Dictionary = transform_xyz(record)
+	if pickup_pose.is_empty():
+		return false
+	var pickup_kind: String = inventory_kind(record)
+	if pickup_kind.is_empty():
+		return false
+	pickup_list.append(with_asset({
+		"entity_id": entity_id,
+		"x": pickup_pose["x"],
+		"y": pickup_pose["y"],
+		"z": pickup_pose["z"],
+		"kind": pickup_kind,
+	}, next_asset, used_assets))
+	return true
+
+
+static func append_finish(
+	entity_id: int,
+	record: SharedComponentRecord,
+	next_asset: Dictionary,
+	used_assets: Dictionary[int, int],
+	finish_list: Array[Dictionary]
+) -> bool:
+	if has_solid_tag(record):
+		return false
+	if record.components.has(SharedComponentNames.CHECKPOINT):
+		return false
+	if record.components.has(SharedComponentNames.PORTAL):
+		return false
+	if record.components.has(SharedComponentNames.DESTRUCTIBLE):
+		return false
+	if record.components.has(SharedComponentNames.HAZARD):
+		return false
+	var finish_pose: Dictionary = transform_xyz(record)
+	if finish_pose.is_empty():
+		return false
+	finish_list.append(with_asset({
+		"entity_id": entity_id,
+		"x": finish_pose["x"],
+		"y": finish_pose["y"],
+		"z": finish_pose["z"],
+	}, next_asset, used_assets))
+	return true
+
+
 ## 已有 `interactable.link_group`。缺组件 / 不是非负整数 → -1（整份编译失败）。
 static func interactable_link_group(record: SharedComponentRecord) -> int:
 	if not record.components.has(SharedComponentNames.INTERACTABLE):

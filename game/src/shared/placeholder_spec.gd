@@ -164,6 +164,11 @@ const PREVIEW_PLAYER_ALBEDO: Color = REMOTE_ALBEDO
 
 ## 表现预警提前量（D-F7 桩）。0.25 s @ 60 Hz。不进权威、不进快照。
 const HAZARD_WARN_TICKS: int = 15
+## 打碎碎裂反馈时长。纯表现，不进权威。
+const BREAK_FX_SECONDS: float = 0.35
+const BREAK_FX_SIZE: Vector3 = Vector3(0.22, 0.18, 0.22)
+## 楼层着色：上层偏绿、下层偏品红。不是产品材质。
+const FLOOR_TINT: float = 0.35
 
 ## 洋红周期机关（D4 危险色）、石色固定固体、橙色可破坏箱。
 const HAZARD_ALBEDO: Color = Color(0.82, 0.18, 0.48)
@@ -180,6 +185,22 @@ const LAUNCH_MARK_ALBEDO: Color = Color(1.0, 0.82, 0.28)
 const LIFT_ALBEDO: Color = Color(0.42, 0.52, 0.62)
 const LIFT_MARK_ALBEDO: Color = Color(0.72, 0.82, 0.9)
 const ENERGY_WALL_ALBEDO: Color = Color(0.13, 0.75, 0.95, 0.55)
+const SPIKE_ALBEDO: Color = Color(0.62, 0.18, 0.22)
+const SPIKE_MARK_ALBEDO: Color = Color(0.92, 0.42, 0.38)
+const FLAME_ALBEDO: Color = Color(0.42, 0.16, 0.12)
+const FLAME_MARK_ALBEDO: Color = Color(1.0, 0.48, 0.12, 0.7)
+const CRUSHER_ALBEDO: Color = Color(0.38, 0.34, 0.4)
+const CRUSHER_MARK_ALBEDO: Color = Color(0.72, 0.28, 0.32)
+const ROLLER_ALBEDO: Color = Color(0.55, 0.42, 0.28)
+const ROLLER_MARK_ALBEDO: Color = Color(0.82, 0.62, 0.32)
+const RUBBLE_ALBEDO: Color = Color(0.48, 0.4, 0.34)
+const RUBBLE_MARK_ALBEDO: Color = Color(0.7, 0.58, 0.42)
+const OBSTACLE_CORE_ALBEDO: Color = Color(0.72, 0.22, 0.55, 0.55)
+const OBSTACLE_CORE_MARK_ALBEDO: Color = Color(0.95, 0.45, 0.78)
+const PENDULUM_ALBEDO: Color = Color(0.42, 0.28, 0.22)
+const PENDULUM_MARK_ALBEDO: Color = Color(0.72, 0.38, 0.22)
+const ICE_ALBEDO: Color = Color(0.55, 0.82, 0.95, 0.7)
+const ICE_MARK_ALBEDO: Color = Color(0.82, 0.94, 1.0)
 ## Preview 里没被上面任何一类认领的实体占位色。
 const ENTITY_STUB_ALBEDO: Color = Color(0.85, 0.7, 0.25)
 
@@ -245,6 +266,17 @@ const EDIT_GUIDE_FLOOR_FILL_ALBEDO: Color = Color(0.14, 0.16, 0.18, 0.2)
 const EDIT_GUIDE_GRID_LINE_ALBEDO: Color = Color(0.38, 0.42, 0.48, 0.9)
 const EDIT_GUIDE_CURSOR_ALBEDO: Color = Color(0.95, 0.85, 0.25, 0.45)
 const EDIT_GUIDE_SELECT_ALBEDO: Color = Color(1.0, 1.0, 1.0, 0.35)
+
+
+static func floor_albedo(y: int, cell: int) -> Color:
+	if cell < 1:
+		return SOLID_ALBEDO
+	var floor_index: int = y / cell
+	if floor_index > 0:
+		return SOLID_ALBEDO.lerp(GUIDE_UP_ALBEDO, FLOOR_TINT)
+	if floor_index < 0:
+		return SOLID_ALBEDO.lerp(GUIDE_DOWN_ALBEDO, FLOOR_TINT)
+	return SOLID_ALBEDO
 
 # 表现步长（占位桩，不是产品数值；锁定见文件头）
 

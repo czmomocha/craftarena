@@ -177,6 +177,9 @@ static func build_view(
 		"setback_reason": offline_view.get("setback_reason", PlaySetback.NONE),
 		"setback_tick": offline_view.get("setback_tick", -1),
 		"stun_remaining": offline_view.get("stun_remaining", 0),
+		"bomb_count": offline_view.get("bomb_count", -1),
+		"dash_count": offline_view.get("dash_count", -1),
+		"fails_count": offline_view.get("fails_count", -1),
 		"wayfind": wayfind,
 		"guide_token": PlayWayfinder.token(wayfind),
 	}

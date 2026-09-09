@@ -16,6 +16,15 @@ const KIND_LIFT: String = "lift"
 const KIND_SWITCH: String = "switch"
 const KIND_GATE: String = "gate"
 const KIND_ENERGY_WALL: String = "energy_wall"
+const KIND_SPIKE: String = "spike"
+const KIND_FLAME: String = "flame"
+const KIND_CRUSHER: String = "crusher"
+const KIND_ROLLER: String = "roller"
+const KIND_RUBBLE: String = "rubble"
+const KIND_OBSTACLE_CORE: String = "obstacle_core"
+const KIND_PENDULUM: String = "pendulum"
+const KIND_ICE: String = "ice"
+const TrapsGd := preload("res://src/shared/occupancy_gadget_traps.gd")
 
 
 static func attach(parent: Node3D, kind: String, yaw_bam: int) -> bool:
@@ -36,10 +45,27 @@ static func attach(parent: Node3D, kind: String, yaw_bam: int) -> bool:
 			_fill_gate(gadget)
 		KIND_ENERGY_WALL:
 			_fill_energy_wall(gadget)
+		KIND_SPIKE:
+			TrapsGd.fill_spike(gadget)
+		KIND_FLAME:
+			TrapsGd.fill_flame(gadget)
+		KIND_CRUSHER:
+			TrapsGd.fill_crusher(gadget)
+		KIND_ROLLER:
+			TrapsGd.fill_roller(gadget)
+		KIND_RUBBLE:
+			TrapsGd.fill_rubble(gadget)
+		KIND_OBSTACLE_CORE:
+			TrapsGd.fill_obstacle_core(gadget)
+		KIND_PENDULUM:
+			TrapsGd.fill_pendulum(gadget)
+		KIND_ICE:
+			TrapsGd.fill_ice(gadget)
 		_:
 			gadget.free()
 			return false
 	gadget.rotation.y = yaw_radians(yaw_bam)
+	gadget.set_meta("kind", kind)
 	parent.add_child(gadget)
 	return true
 
@@ -48,6 +74,18 @@ static func gadget_node(parent: Node3D) -> Node3D:
 	if parent == null:
 		return null
 	return parent.get_node_or_null(NODE_NAME) as Node3D
+
+
+static func pulse_danger(parent: Node3D, tick_index: int) -> void:
+	var gadget: Node3D = gadget_node(parent)
+	if gadget == null:
+		return
+	var kind: String = str(gadget.get_meta("kind", ""))
+	if kind != KIND_CRUSHER and kind != KIND_PENDULUM:
+		return
+	var hot: bool = (tick_index % 8) < 4
+	var scale: float = 1.08 if hot else 1.0
+	gadget.scale = Vector3(scale, scale, scale)
 
 
 static func yaw_radians(yaw_bam: int) -> float:
@@ -110,12 +148,24 @@ static func solid_kind(
 	launch_yaw: Dictionary,
 	lift_ids: Dictionary,
 	switch_ids: Dictionary,
-	gate_ids: Dictionary
+	gate_ids: Dictionary,
+	spike_ids: Dictionary = {},
+	crusher_ids: Dictionary = {},
+	ice_yaw: Dictionary = {},
+	pendulum_ids: Dictionary = {}
 ) -> String:
 	if conveyor_yaw.has(entity_id):
 		return KIND_CONVEYOR
+	if ice_yaw.has(entity_id):
+		return KIND_ICE
 	if launch_yaw.has(entity_id):
 		return KIND_LAUNCH
+	if spike_ids.has(entity_id):
+		return KIND_SPIKE
+	if crusher_ids.has(entity_id):
+		return KIND_CRUSHER
+	if pendulum_ids.has(entity_id):
+		return KIND_PENDULUM
 	if lift_ids.has(entity_id):
 		return KIND_LIFT
 	if switch_ids.has(entity_id):

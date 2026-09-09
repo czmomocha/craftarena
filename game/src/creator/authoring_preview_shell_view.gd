@@ -6,6 +6,7 @@ extends RefCounted
 ## start/stop must force a rebuild, and paints pose / hazards / anim.
 
 const MAP_NAME: String = "PreviewMap"
+const OccupancyGadget := preload("res://src/shared/occupancy_gadget.gd")
 
 var map: AuthoringPreviewMap = null
 var map_playing: bool = false
@@ -45,6 +46,7 @@ func rebuild(shell: AuthoringPreviewShell) -> void:
 		map.mark_accepted_checkpoints(shell.preview.play_accepted_ids())
 		apply_play_hazard_visibility(shell)
 		apply_play_gate_visibility(shell)
+		apply_play_crate_visibility(shell)
 		apply_play_movers(shell)
 		apply_play_anim(shell)
 	else:
@@ -90,6 +92,23 @@ func apply_play_gate_visibility(shell: AuthoringPreviewShell) -> void:
 	map.apply_hazard_visibility(lookup)
 
 
+func apply_play_crate_visibility(shell: AuthoringPreviewShell) -> void:
+	if not map_alive() or shell.preview == null or not shell.preview.is_playing():
+		return
+	var lookup: Dictionary = {}
+	for key: Variant in shell.preview.play_destructible_ids.keys():
+		if typeof(key) != TYPE_INT:
+			continue
+		var entity_id: int = key
+		var crate_raw: Variant = shell.preview.play_destructible_health.get(entity_id, null)
+		var alive: bool = crate_raw is TraprushDestructible
+		if alive:
+			var crate: TraprushDestructible = crate_raw
+			alive = not crate.is_destroyed()
+		lookup[entity_id] = alive
+	map.apply_hazard_visibility(lookup)
+
+
 ## 开玩后 AuthoringWorld 指纹不变，脏检查会跳过 rebuild。大厅用
 ## MatchSolidMap.apply_tick 跟 tick 走；Preview 没有快照，直接读 play_world
 ## 里已经搬过的固体盒，否则电梯 / 往返平台看起来原地不动。
@@ -119,3 +138,6 @@ func apply_play_movers(shell: AuthoringPreviewShell) -> void:
 		var y: int = y_raw
 		var z: int = z_raw
 		map.apply_solid_pose(entity_id, x, y, z)
+		OccupancyGadget.pulse_danger(
+			map.placeholder_node(entity_id), shell.preview.play_world.tick_index
+		)

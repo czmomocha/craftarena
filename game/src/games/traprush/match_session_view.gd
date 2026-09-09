@@ -112,14 +112,20 @@ func player_setback_reason(session: TraprushMatchSession, slot: int) -> String:
 
 
 func player_tick_field(session: TraprushMatchSession, slot: int, key: String) -> int:
+	return player_int_field(session, slot, key, -1)
+
+
+func player_int_field(
+	session: TraprushMatchSession, slot: int, key: String, fallback: int
+) -> int:
 	var player: Dictionary = session._player_at(slot)
 	if player.is_empty():
-		return -1
-	var raw: Variant = player.get(key, -1)
+		return fallback
+	var raw: Variant = player.get(key, fallback)
 	if typeof(raw) != TYPE_INT:
-		return -1
-	var tick: int = raw
-	return tick
+		return fallback
+	var value: int = raw
+	return value
 
 
 func player_portal_latched(session: TraprushMatchSession, slot: int) -> bool:

@@ -48,6 +48,7 @@ func copy_hazard_hit_stubs(shell: AuthoringPreviewShell) -> void:
 		return
 	shell.preview.play_hazard_knockback_step = shell.play_hazard_knockback_step
 	shell.preview.play_conveyor_step = shell.play_conveyor_step
+	shell.preview.play_ice_step = shell.play_ice_step
 	shell.preview.play_launch_dy = shell.play_launch_dy
 	shell.preview.play_launch_xz = shell.play_launch_xz
 	shell.preview.play_respawn_stun_ticks = shell.play_respawn_stun_ticks

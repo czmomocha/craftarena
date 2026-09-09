@@ -54,6 +54,8 @@ const HAZARD_KNOCKBACK_STEP: int = Fixed.SCALE / 4
 ## 仍会被带着往前一倍步长——**走不回去**，只能绕开或从旁边跳上去。
 ## 占位桩，不是产品速度（CD-63 §1.3 仍延期）。
 const CONVEYOR_STEP: int = Fixed.SCALE / 8
+## 冰面每 tick 滑走路占位步长。可逆走相消、可侧向走下。占位桩。
+const ICE_STEP: int = PlaceholderSpec.MOVE_STEP
 ## 弹射垫竖直冲量：跳跃冲量的两倍。同一套加速度下峰值约 4 格，够落到高两格的落点。
 ## 水平送出一整格，落点可读。占位桩，不是产品弹射表。
 const LAUNCH_DY: int = JUMP_DY * 2
@@ -99,6 +101,7 @@ static func apply_match(session: TraprushMatchSession) -> void:
 	session.item_cooldown_ticks = ITEM_COOLDOWN_TICKS
 	session.hazard_knockback_step = HAZARD_KNOCKBACK_STEP
 	session.conveyor_step = CONVEYOR_STEP
+	session.ice_step = ICE_STEP
 	session.launch_dy = LAUNCH_DY
 	session.launch_xz = LAUNCH_XZ
 	session.respawn_stun_ticks = RESPAWN_STUN_TICKS

@@ -225,10 +225,12 @@ Undo / Redo 是会话内对成功命令派生的反向 payload（`place`↔`remo
 | 第二张官方 TRAPRUSH 赛道 | `game/content/official/traprush/course_02.json` |
 | 第三张官方 TRAPRUSH 赛道 | `game/content/official/traprush/course_03.json` |
 | F 线示范课 | `game/content/official/traprush/course_f_playable.json`（不计入 M5 官方课 3～5 张；HTTP 匹配仍只 01–03） |
-| SimulationBundle | `game/src/ugc/simulation_bundle.gd` + decode / bags / optional（v2：`assets` 袋 + 每袋 `asset_id`/`gameplay_version`；可选袋 `movers` / `conveyors` / `launches` / `switches` / `gates` / `energy_walls` / `portal_switches` 不进 required，省略与空数组等价，旧编译体仍可解码；`movers` / `conveyors` / `launches` / `switches` / `gates` 几何都住在 `solids`，本袋只带行为，`entity_id` 必须能在 `solids` 里找到；`energy_walls` 几何和耐久住在 `destructibles`，本袋只带 `entity_id`；`portal_switches` 几何住在 `portals`，本袋只带 `link_group`；v1 仍解码并迁移到内置"占满一格"资产） |
+| SimulationBundle | `game/src/ugc/simulation_bundle.gd` + decode / bags / optional（v2：`assets` 袋 + 每袋 `asset_id`/`gameplay_version`；可选袋 `movers` / `conveyors` / `launches` / `switches` / `gates` / `energy_walls` / `portal_switches` / `spikes` / `flames` / `crushers` / `rollers` / `rubbles` / `obstacle_cores` / `pendulums` / `ices` 不进 required，省略与空数组等价，旧编译体仍可解码；`movers` / `conveyors` / `launches` / `switches` / `gates` / `spikes` / `crushers` / `pendulums` / `ices` 几何都住在 `solids`，本袋只带行为，`entity_id` 必须能在 `solids` 里找到；`energy_walls` / `rubbles` / `obstacle_cores` 几何和耐久住在 `destructibles`，本袋只带 `entity_id`；`portal_switches` 几何住在 `portals`，本袋只带 `link_group`；`flames` / `rollers` 几何住在 `hazards`，本袋只带 `entity_id`；v1 仍解码并迁移到内置"占满一格"资产） |
 | TRAPRUSH 拓扑编译 | `game/src/ugc/traprush_topology_compiler.gd` + bags / fields / triggers（资产准入在这里；不读 `zone.shape`） |
 | TRAPRUSH 拓扑加载 | `game/src/games/traprush/traprush_topology_loader.gd`（半长来自 `assets`；只接受 `box`） |
 | 周期机关固体切换 | `game/src/games/traprush/hazard_cycle.gd` |
+| 地刺 / 喷火 / 压板 | `game/src/games/traprush/trap_cycle.gd`（`spike` 被支撑才烫；`flame` 永远非固体、半周期开时重叠才烫；`crusher` 重叠且非乘客才 crush。可选袋只带 `entity_id`，不进快照） |
+| 滚柱 / 碎石 / 障碍核心 | `game/src/ugc/traprush_topology_compiler_obstacles.gd`（`roller` 走已有 hazard 半周期固体；`rubble` / `obstacle_core` 打碎走已有 UseItem。可选袋只带 `entity_id`） |
 | 移动平台周期 | `game/src/games/traprush/mover_cycle.gd`（位姿 = f(tick, path, speed, loop)；`SimulationWorld.try_set_static_box_pose` 更新 AABB 并重挂索引；载客跟 delta，跟不上则出界复位） |
 | 传送带周期 | `game/src/games/traprush/conveyor_cycle.gd`（几何不动，被**支撑**的胶囊每 tick 推一步；四向量化；多块支撑只认最小 `entity_id`；`zone.tags` 的 `conveyor` 标签不改 Component Schema v1） |
 | 弹射垫周期 | `game/src/games/traprush/launch_cycle.gd`（支撑**上升沿**弹一次：竖直走已有 `apply_jump`，水平沿四向送出一格；`zone.tags` 的 `launch` 标签不改 Component Schema v1） |
@@ -240,7 +242,7 @@ Undo / Redo 是会话内对成功命令派生的反向 payload（`place`↔`remo
 | 对局大厅周期机关表现映射 | `game/src/client/match_hazard_map.gd` |
 | 对局大厅固定固体表现映射 | `game/src/client/match_solid_map.gd` |
 | 对局大厅可破坏占用表现映射 | `game/src/client/match_crate_map.gd`（箱子模型；`energy_wall` 挂 OccupancyGadget，不铺箱子 glb） |
-| OccupancyGadget | `game/src/shared/occupancy_gadget.gd`（传送带 / 电梯 / 弹射垫 / 开关 / 门 / 能量墙的程序化占位。不是 `.glb`。色板从 PlaceholderSpec 读。权威仍是一格盒） |
+| OccupancyGadget | `game/src/shared/occupancy_gadget.gd`（传送带 / 电梯 / 弹射垫 / 开关 / 门 / 能量墙 / 地刺 / 喷火 / 压板 / 滚柱 / 碎石 / 障碍核心的程序化占位。不是 `.glb`。色板从 PlaceholderSpec 读。权威仍是一格盒） |
 | 对局大厅固定固体视觉接线 | `game/src/client/match_solid_map_visual.gd` |
 | 对局大厅离线单人试玩 | `game/src/client/match_offline_session.gd` |
 | 对局进程入口 | `game/src/server/match_server.gd` |
@@ -284,4 +286,4 @@ JSON Schema 落点：
 | SimulationBundle | `backend/contracts/schemas/simulation_bundle.schema.json` |
 | 正反例与校验 | `tools/content-validator/`（由根目录 `npm test` 收集） |
 
-`payload` 只允许 nil / bool / int / String / Array / Dictionary（字符串键）；禁止 float、Object、Callable。PLAYER 命令必须带白名单 `intent` 字符串。EDIT 命令必须带白名单 `op` 字符串，payload 形状见 [§3.3](#33-服务端处理管线)。SYSTEM 命令允许 `actor_id = 0`。Component Schema v1 字段见 [§1.2](#12-字段标识符v1)。AuthoringDocument 字段见 [CD-32 §1.4](../30-ugc/32-editor-and-preview.md#14-共同数据模型)。SimulationBundle **v2** 字段见本表与 [CD-32 §3](../30-ugc/32-editor-and-preview.md#3-从编辑到预览)「TRAPRUSH 拓扑编译」（含可空 `hazards` 与可空 `solids` 袋、可选 `movers` / `conveyors` / `launches` / `switches` / `gates` / `energy_walls` / `portal_switches` 袋，以及 v2 的 `assets` 袋与每袋资产引用，见 [§1.3](#13-权威碰撞的载体v2-起)）。Preview 试玩、MoveIntent、检查点占用验收、传送占用落地、冲线占用、重置到检查点、UseItemIntent 可破坏占用、JumpIntent 接地跳跃与周期机关固体切换见 [CD-32 §3](../30-ugc/32-editor-and-preview.md#3-从编辑到预览)「Preview 试玩」。对局票据 HTTP JSON Schema 在 `backend/contracts/src/match_ticket.ts`，由控制面 Fastify 路由挂载（含 `POST /match-sessions/:matchId/tickets/reconnect`）。单局结算 HTTP JSON Schema 在 `backend/contracts/src/match_settlement.ts`。Rule VM 图的 JSON Schema 仍未落地。OpenAPI 仍未落地。签名二进制包仍待——所以 `GameplayAssetVersion` 的"不可变"目前靠字段与编译期准入，不是密码学不可变。
+`payload` 只允许 nil / bool / int / String / Array / Dictionary（字符串键）；禁止 float、Object、Callable。PLAYER 命令必须带白名单 `intent` 字符串。EDIT 命令必须带白名单 `op` 字符串，payload 形状见 [§3.3](#33-服务端处理管线)。SYSTEM 命令允许 `actor_id = 0`。Component Schema v1 字段见 [§1.2](#12-字段标识符v1)。AuthoringDocument 字段见 [CD-32 §1.4](../30-ugc/32-editor-and-preview.md#14-共同数据模型)。SimulationBundle **v2** 字段见本表与 [CD-32 §3](../30-ugc/32-editor-and-preview.md#3-从编辑到预览)「TRAPRUSH 拓扑编译」（含可空 `hazards` 与可空 `solids` 袋、可选 `movers` / `conveyors` / `launches` / `switches` / `gates` / `energy_walls` / `portal_switches` / `spikes` / `flames` / `crushers` 袋，以及 v2 的 `assets` 袋与每袋资产引用，见 [§1.3](#13-权威碰撞的载体v2-起)）。Preview 试玩、MoveIntent、检查点占用验收、传送占用落地、冲线占用、重置到检查点、UseItemIntent 可破坏占用、JumpIntent 接地跳跃与周期机关固体切换见 [CD-32 §3](../30-ugc/32-editor-and-preview.md#3-从编辑到预览)「Preview 试玩」。对局票据 HTTP JSON Schema 在 `backend/contracts/src/match_ticket.ts`，由控制面 Fastify 路由挂载（含 `POST /match-sessions/:matchId/tickets/reconnect`）。单局结算 HTTP JSON Schema 在 `backend/contracts/src/match_settlement.ts`。Rule VM 图的 JSON Schema 仍未落地。OpenAPI 仍未落地。签名二进制包仍待——所以 `GameplayAssetVersion` 的"不可变"目前靠字段与编译期准入，不是密码学不可变。

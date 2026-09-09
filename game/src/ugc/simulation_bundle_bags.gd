@@ -270,6 +270,22 @@ static func path_is_axial(path: Array) -> bool:
 	return true
 
 
+## 摆锤路径：每段只许改 X 或 Z，Y 全程不变。竖直砸是压板。
+static func path_is_horizontal(path: Array) -> bool:
+	if not path_is_axial(path):
+		return false
+	if path_is_vertical(path):
+		return false
+	var index: int = 1
+	while index < path.size():
+		var prev: Dictionary = path[index - 1]
+		var cur: Dictionary = path[index]
+		if _int_at(prev, "y") != _int_at(cur, "y"):
+			return false
+		index += 1
+	return true
+
+
 ## 电梯路径：每段只许改 Y。水平往返不是电梯，那是已有 `mover`。
 static func path_is_vertical(path: Array) -> bool:
 	if not path_is_axial(path):

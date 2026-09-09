@@ -34,11 +34,13 @@ const PickupKindsGd := preload("res://src/ugc/traprush_pickup_kinds.gd")
 const ParamsGd := preload("res://src/creator/traprush_editor_panel_params.gd")
 const BatchGd := preload("res://src/creator/traprush_editor_panel_batch.gd")
 const IdsGd := preload("res://src/creator/traprush_editor_panel_ids.gd")
+const TrapsGd := preload("res://src/creator/traprush_editor_panel_traps.gd")
 
 var host: AuthoringEditorShell = null
 var cursor: CursorGd = null
 var params: ParamsGd = null
 var batch: BatchGd = null
+var traps: TrapsGd = null
 var _next_entity_id: int = 1
 var _next_order: int = 0
 var _pending_portal_id: int = 0
@@ -118,6 +120,9 @@ func mount(p_host: AuthoringEditorShell) -> void:
 	_add_button(occupancy_row, PLACE_GATE_NAME, UiCopy.PLACE_GATE, place_next_gate)
 	_add_button(occupancy_row, PLACE_ENERGY_WALL_NAME, UiCopy.PLACE_ENERGY_WALL, place_next_energy_wall)
 	_add_button(occupancy_row, PLACE_GATED_PORTAL_NAME, UiCopy.PLACE_GATED_PORTAL, place_next_gated_portal)
+	traps = TrapsGd.new()
+	add_child(traps)
+	traps.mount(self)
 	var pickup_row: HBoxContainer = HBoxContainer.new()
 	pickup_row.name = "PickupRow"
 	add_child(pickup_row)
@@ -128,9 +133,7 @@ func mount(p_host: AuthoringEditorShell) -> void:
 	add_child(floor_row)
 	_add_button(floor_row, FLOOR_UP_NAME, UiCopy.FLOOR_UP, floor_up)
 	_add_button(floor_row, FLOOR_DOWN_NAME, UiCopy.FLOOR_DOWN, floor_down)
-	# 批量生成按 CD-32 只给 internal_dev。Web 轻量拿到「矩形填充 / 框选删除」
-	# 等于把内部产线工具当产品发；那也是 `allows_batch_generate` 一直没被执行的
-	# 那条能力差（可玩性深化 轨 3）。
+	# 批量生成只给 internal_dev（CD-32）。
 	if host != null and AuthoringSurfaceNames.allows_batch_generate(host.surface):
 		batch = BatchGd.new()
 		add_child(batch)
@@ -258,6 +261,24 @@ func place_next_energy_wall() -> bool:
 	return _place_occupancy(func(entity_id: int) -> bool:
 		return host.try_place_energy_wall(entity_id, cursor.cell_x, cursor.cell_y, cursor.cell_z)
 	)
+
+
+func place_next_spike() -> bool:
+	return traps != null and traps.place_next_spike()
+func place_next_flame() -> bool:
+	return traps != null and traps.place_next_flame()
+func place_next_crusher() -> bool:
+	return traps != null and traps.place_next_crusher()
+func place_next_roller() -> bool:
+	return traps != null and traps.place_next_roller()
+func place_next_rubble() -> bool:
+	return traps != null and traps.place_next_rubble()
+func place_next_obstacle_core() -> bool:
+	return traps != null and traps.place_next_obstacle_core()
+func place_next_pendulum() -> bool:
+	return traps != null and traps.place_next_pendulum()
+func place_next_ice() -> bool:
+	return traps != null and traps.place_next_ice()
 
 
 func next_conveyor_yaw_bam() -> int:

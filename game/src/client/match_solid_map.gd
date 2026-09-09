@@ -51,6 +51,10 @@ var _open_gate_ids: Dictionary = {}
 var _conveyor_yaw: Dictionary = {}
 var _launch_yaw: Dictionary = {}
 var _lift_ids: Dictionary = {}
+var _spike_ids: Dictionary = {}
+var _crusher_ids: Dictionary = {}
+var _pendulum_ids: Dictionary = {}
+var _ice_yaw: Dictionary = {}
 var _live_solids: Array[Dictionary] = []
 var _solid_count: int = 0
 var _visual_count: int = 0
@@ -92,7 +96,15 @@ func apply_bundle(bundle: SimulationBundle) -> bool:
 	_copy_link_bags(bundle.gates, _gates, _gate_ids)
 	_conveyor_yaw = OccupancyGadgetGd.yaw_lookup(bundle.conveyors)
 	_launch_yaw = OccupancyGadgetGd.yaw_lookup(bundle.launches)
+	_spike_ids = OccupancyGadgetGd.id_lookup(bundle.spikes)
+	_crusher_ids = OccupancyGadgetGd.id_lookup(bundle.crushers)
+	_pendulum_ids = OccupancyGadgetGd.id_lookup(bundle.pendulums)
+	_ice_yaw = OccupancyGadgetGd.yaw_lookup(bundle.ices)
 	_lift_ids = OccupancyGadgetGd.lift_ids_from_movers(_movers)
+	for crusher_id: Variant in _crusher_ids.keys():
+		_lift_ids.erase(crusher_id)
+	for pendulum_id: Variant in _pendulum_ids.keys():
+		_lift_ids.erase(pendulum_id)
 	_open_gate_ids = {}
 	_rebuild()
 	return true
@@ -124,6 +136,7 @@ func apply_tick(tick_index: int) -> bool:
 			PlayClock.dict_int(next, "y", 0),
 			PlayClock.dict_int(next, "z", 0)
 		)
+		OccupancyGadgetGd.pulse_danger(solid_node(entity_id), tick_index)
 	return true
 
 
@@ -236,46 +249,15 @@ func allows_online_writes() -> bool:
 
 
 func _bags_are_mappable(bags: Array[Dictionary]) -> bool:
-	var seen: Dictionary = {}
-	for bag: Dictionary in bags:
-		var pose: Dictionary = _xyz_from_bag(bag)
-		if pose.is_empty():
-			return false
-		var entity_id: int = pose["entity_id"]
-		if seen.has(entity_id):
-			return false
-		seen[entity_id] = true
-	return true
+	return VisualGd.bags_are_mappable(bags)
 
 
 func _xyz_from_bag(bag: Dictionary) -> Dictionary:
-	if not bag.has("entity_id") or typeof(bag["entity_id"]) != TYPE_INT:
-		return {}
-	var entity_id: int = bag["entity_id"]
-	if entity_id < 1:
-		return {}
-	if not bag.has("x") or typeof(bag["x"]) != TYPE_INT:
-		return {}
-	if not bag.has("y") or typeof(bag["y"]) != TYPE_INT:
-		return {}
-	if not bag.has("z") or typeof(bag["z"]) != TYPE_INT:
-		return {}
-	var x: int = bag["x"]
-	var y: int = bag["y"]
-	var z: int = bag["z"]
-	return {
-		"entity_id": entity_id,
-		"x": x,
-		"y": y,
-		"z": z,
-	}
+	return VisualGd.xyz_from_bag(bag)
 
 
 func _copy_poses(bags: Array[Dictionary]) -> Array[Dictionary]:
-	var poses: Array[Dictionary] = []
-	for bag: Dictionary in bags:
-		poses.append(_xyz_from_bag(bag))
-	return poses
+	return VisualGd.copy_poses(bags)
 
 
 func _copy_link_bags(
@@ -350,14 +332,28 @@ func _rebuild() -> void:
 			albedo = SWITCH_ALBEDO
 		elif _gate_ids.has(entity_id):
 			albedo = GATE_ALBEDO
+		elif _spike_ids.has(entity_id):
+			albedo = PlaceholderSpec.SPIKE_ALBEDO
+		elif _crusher_ids.has(entity_id):
+			albedo = PlaceholderSpec.CRUSHER_ALBEDO
+		elif _pendulum_ids.has(entity_id):
+			albedo = PlaceholderSpec.PENDULUM_ALBEDO
+		elif _ice_yaw.has(entity_id):
+			albedo = PlaceholderSpec.ICE_ALBEDO
 		var kind: String = OccupancyGadgetGd.solid_kind(
-			entity_id, _conveyor_yaw, _launch_yaw, _lift_ids, _switch_ids, _gate_ids
+			entity_id, _conveyor_yaw, _launch_yaw, _lift_ids, _switch_ids, _gate_ids,
+			_spike_ids, _crusher_ids, _ice_yaw, _pendulum_ids
 		)
+		if kind.is_empty():
+			var y: int = pose["y"]
+			albedo = PlaceholderSpec.floor_albedo(y, _cell)
 		var yaw_bam: int = 0
 		if _conveyor_yaw.has(entity_id):
 			yaw_bam = _conveyor_yaw[entity_id]
 		elif _launch_yaw.has(entity_id):
 			yaw_bam = _launch_yaw[entity_id]
+		elif _ice_yaw.has(entity_id):
+			yaw_bam = _ice_yaw[entity_id]
 		if VisualGd.spawn_box(
 			self, solid_name(entity_id), pose, albedo, kind, yaw_bam, tile_scene_path
 		):

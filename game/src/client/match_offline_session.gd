@@ -50,6 +50,7 @@ var play_sprint_step: int = 0
 var play_item_cooldown_ticks: int = 1
 var play_hazard_knockback_step: int = 0
 var play_conveyor_step: int = 0
+var play_ice_step: int = 0
 var play_launch_dy: int = 0
 var play_launch_xz: int = 0
 var play_respawn_stun_ticks: int = 0
@@ -97,6 +98,7 @@ func try_begin(path: String, _web_platform: bool = false) -> bool:
 	created.item_cooldown_ticks = play_item_cooldown_ticks
 	created.hazard_knockback_step = play_hazard_knockback_step
 	created.conveyor_step = play_conveyor_step
+	created.ice_step = play_ice_step
 	created.launch_dy = play_launch_dy
 	created.launch_xz = play_launch_xz
 	created.respawn_stun_ticks = play_respawn_stun_ticks
@@ -203,6 +205,9 @@ func status_view() -> Dictionary:
 		"setback_reason": setback_reason,
 		"setback_tick": setback_tick,
 		"stun_remaining": stun_remaining,
+		"bomb_count": session.player_bomb_count(0) if session != null else -1,
+		"dash_count": session.player_dash_count(0) if session != null else -1,
+		"fails_count": session.player_setback_count(0) if session != null else -1,
 	}
 
 
@@ -220,6 +225,7 @@ func apply_play_stubs() -> void:
 	play_item_cooldown_ticks = PlayStubsGd.ITEM_COOLDOWN_TICKS
 	play_hazard_knockback_step = PlayStubsGd.HAZARD_KNOCKBACK_STEP
 	play_conveyor_step = PlayStubsGd.CONVEYOR_STEP
+	play_ice_step = PlayStubsGd.ICE_STEP
 	play_launch_dy = PlayStubsGd.LAUNCH_DY
 	play_launch_xz = PlayStubsGd.LAUNCH_XZ
 	play_respawn_stun_ticks = PlayStubsGd.RESPAWN_STUN_TICKS

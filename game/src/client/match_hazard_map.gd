@@ -20,6 +20,7 @@ const MatchSnapshotFollowGd := preload("res://src/client/match_snapshot_follow.g
 const TraprushTopologyCompilerGd := preload("res://src/ugc/traprush_topology_compiler.gd")
 const WarnGd := preload("res://src/client/match_hazard_warn.gd")
 const PlaySfxGd := preload("res://src/client/play_sfx.gd")
+const OccupancyGadgetGd := preload("res://src/shared/occupancy_gadget.gd")
 
 const HAZARD_PREFIX: String = "hazard_"
 const VISUAL_NAME: String = "visual"
@@ -35,6 +36,8 @@ var _poses: Array[Dictionary] = []
 var _live_solids: Array[Dictionary] = []
 var _hazard_count: int = 0
 var _warned: Dictionary = {}
+var _flame_ids: Dictionary = {}
+var _roller_ids: Dictionary = {}
 
 
 static func meters_from_fixed(value: int) -> float:
@@ -66,6 +69,8 @@ func apply_bundle(bundle: SimulationBundle) -> bool:
 	_has_course = true
 	_cell = bundle.cell
 	_poses = _copy_poses(bundle.hazards)
+	_flame_ids = OccupancyGadgetGd.id_lookup(bundle.flames)
+	_roller_ids = OccupancyGadgetGd.id_lookup(bundle.rollers)
 	_tick = 0
 	_rebuild()
 	return true
@@ -217,11 +222,12 @@ func _rebuild() -> void:
 		var cooldown_ticks: int = cooldown_raw
 		var entity_id: int = pose["entity_id"]
 		if HazardCycleGd.is_solid(_tick, cooldown_ticks):
-			_live_solids.append({
-				"x": pose["x"],
-				"y": pose["y"],
-				"z": pose["z"],
-			})
+			if not _flame_ids.has(entity_id):
+				_live_solids.append({
+					"x": pose["x"],
+					"y": pose["y"],
+					"z": pose["z"],
+				})
 			wanted[hazard_name(entity_id)] = true
 			_ensure_box(hazard_name(entity_id), pose)
 			continue
@@ -319,6 +325,15 @@ func _spawn_box(node_name: String, pose: Dictionary) -> void:
 	node.mesh = mesh
 	node.position = Vector3(meters_from_fixed(x), meters_from_fixed(y), meters_from_fixed(z))
 	add_child(node)
+	var entity_id: int = pose["entity_id"]
+	if _flame_ids.has(entity_id):
+		if OccupancyGadgetGd.attach(node, OccupancyGadgetGd.KIND_FLAME, 0):
+			node.layers = 0
+		return
+	if _roller_ids.has(entity_id):
+		if OccupancyGadgetGd.attach(node, OccupancyGadgetGd.KIND_ROLLER, 0):
+			node.layers = 0
+		return
 	_attach_visual(node)
 
 

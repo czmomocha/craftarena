@@ -1,7 +1,7 @@
 {
 	"schema_version": 1,
 	"cell": 65536,
-	"revision": 7,
+	"revision": 10,
 	"entities": [
 		{
 			"schema_version": 1,
@@ -1318,6 +1318,313 @@
 					},
 					"tags": [
 						"solid"
+					]
+				}
+			}
+		},
+		{
+			"schema_version": 1,
+			"entity_id": 229,
+			"components": {
+				"transform": {
+					"x": 393216,
+					"y": -65536,
+					"z": 65536,
+					"yaw_bam": 0
+				},
+				"zone": {
+					"shape": {
+						"kind": "box",
+						"hx": 32768,
+						"hy": 32768,
+						"hz": 32768
+					},
+					"tags": [
+						"solid",
+						"spike"
+					]
+				}
+			}
+		},
+		{
+			"schema_version": 1,
+			"entity_id": 230,
+			"components": {
+				"transform": {
+					"x": 196608,
+					"y": 0,
+					"z": 65536,
+					"yaw_bam": 0
+				},
+				"hazard": {
+					"damage": 0,
+					"knockback": 0,
+					"cooldown_ticks": 30
+				},
+				"zone": {
+					"shape": {
+						"kind": "box",
+						"hx": 32768,
+						"hy": 32768,
+						"hz": 32768
+					},
+					"tags": [
+						"flame"
+					]
+				}
+			}
+		},
+		{
+			"schema_version": 1,
+			"entity_id": 231,
+			"components": {
+				"transform": {
+					"x": 131072,
+					"y": -65536,
+					"z": 65536,
+					"yaw_bam": 0
+				},
+				"zone": {
+					"shape": {
+						"kind": "box",
+						"hx": 32768,
+						"hy": 32768,
+						"hz": 32768
+					},
+					"tags": [
+						"solid"
+					]
+				}
+			}
+		},
+		{
+			"schema_version": 1,
+			"entity_id": 232,
+			"components": {
+				"transform": {
+					"x": 131072,
+					"y": 0,
+					"z": 65536,
+					"yaw_bam": 0
+				},
+				"zone": {
+					"shape": {
+						"kind": "box",
+						"hx": 32768,
+						"hy": 32768,
+						"hz": 32768
+					},
+					"tags": [
+						"solid",
+						"crusher"
+					]
+				},
+				"mover": {
+					"path": [
+						{
+							"x": 131072,
+							"y": 65536,
+							"z": 65536
+						},
+						{
+							"x": 131072,
+							"y": 0,
+							"z": 65536
+						}
+					],
+					"speed": 4096,
+					"loop": true
+				}
+			}
+		},
+		{
+			"schema_version": 1,
+			"entity_id": 233,
+			"components": {
+				"transform": {
+					"x": 196608,
+					"y": -65536,
+					"z": 65536,
+					"yaw_bam": 0
+				},
+				"zone": {
+					"shape": {
+						"kind": "box",
+						"hx": 32768,
+						"hy": 32768,
+						"hz": 32768
+					},
+					"tags": [
+						"solid"
+					]
+				}
+			}
+		},
+		{
+			"schema_version": 1,
+			"entity_id": 234,
+			"components": {
+				"transform": {
+					"x": 458752,
+					"y": 0,
+					"z": 65536,
+					"yaw_bam": 0
+				},
+				"hazard": {
+					"damage": 0,
+					"knockback": 0,
+					"cooldown_ticks": 30
+				},
+				"zone": {
+					"shape": {
+						"kind": "box",
+						"hx": 32768,
+						"hy": 32768,
+						"hz": 32768
+					},
+					"tags": [
+						"roller"
+					]
+				}
+			}
+		},
+		{
+			"schema_version": 1,
+			"entity_id": 235,
+			"components": {
+				"transform": {
+					"x": 458752,
+					"y": -65536,
+					"z": 65536,
+					"yaw_bam": 0
+				},
+				"zone": {
+					"shape": {
+						"kind": "box",
+						"hx": 32768,
+						"hy": 32768,
+						"hz": 32768
+					},
+					"tags": [
+						"solid"
+					]
+				}
+			}
+		},
+		{
+			"schema_version": 1,
+			"entity_id": 236,
+			"components": {
+				"transform": {
+					"x": 393216,
+					"y": 0,
+					"z": 131072,
+					"yaw_bam": 0
+				},
+				"destructible": {
+					"durability": 1,
+					"regen_policy_id": 0
+				},
+				"zone": {
+					"shape": {
+						"kind": "box",
+						"hx": 32768,
+						"hy": 32768,
+						"hz": 32768
+					},
+					"tags": [
+						"rubble"
+					]
+				}
+			}
+		},
+		{
+			"schema_version": 1,
+			"entity_id": 237,
+			"components": {
+				"transform": {
+					"x": 327680,
+					"y": 0,
+					"z": 131072,
+					"yaw_bam": 0
+				},
+				"destructible": {
+					"durability": 1,
+					"regen_policy_id": 0
+				},
+				"zone": {
+					"shape": {
+						"kind": "box",
+						"hx": 32768,
+						"hy": 32768,
+						"hz": 32768
+					},
+					"tags": [
+						"obstacle_core"
+					]
+				}
+			}
+		},
+		{
+			"schema_version": 1,
+			"entity_id": 238,
+			"components": {
+				"transform": {
+					"x": 0,
+					"y": 0,
+					"z": 131072,
+					"yaw_bam": 0
+				},
+				"zone": {
+					"shape": {
+						"kind": "box",
+						"hx": 32768,
+						"hy": 32768,
+						"hz": 32768
+					},
+					"tags": [
+						"solid",
+						"pendulum"
+					]
+				},
+				"mover": {
+					"path": [
+						{
+							"x": 0,
+							"y": 0,
+							"z": 262144
+						},
+						{
+							"x": 0,
+							"y": 0,
+							"z": 131072
+						}
+					],
+					"speed": 4096,
+					"loop": true
+				}
+			}
+		},
+		{
+			"schema_version": 1,
+			"entity_id": 239,
+			"components": {
+				"transform": {
+					"x": 65536,
+					"y": -65536,
+					"z": 131072,
+					"yaw_bam": 0
+				},
+				"zone": {
+					"shape": {
+						"kind": "box",
+						"hx": 32768,
+						"hy": 32768,
+						"hz": 32768
+					},
+					"tags": [
+						"solid",
+						"ice"
 					]
 				}
 			}

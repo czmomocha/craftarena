@@ -95,3 +95,61 @@ static func parse_yaw_bag(body: Dictionary) -> Dictionary:
 		"entity_id": body["entity_id"],
 		"yaw_bam": yaw_bam,
 	}
+
+
+static func assign_trap_bags(
+	bundle: SimulationBundle,
+	body: Dictionary,
+	solid_ids: Dictionary,
+	hazard_ids: Dictionary,
+	destructible_ids: Dictionary
+) -> bool:
+	var parsed_spikes: Dictionary = parse_optional_field(
+		body, SimulationBundle.FIELD_SPIKES, solid_ids, "id"
+	)
+	if not parsed_spikes.get("ok", false):
+		return false
+	var parsed_flames: Dictionary = parse_optional_field(
+		body, SimulationBundle.FIELD_FLAMES, hazard_ids, "id"
+	)
+	if not parsed_flames.get("ok", false):
+		return false
+	var parsed_crushers: Dictionary = parse_optional_field(
+		body, SimulationBundle.FIELD_CRUSHERS, solid_ids, "id"
+	)
+	if not parsed_crushers.get("ok", false):
+		return false
+	bundle.spikes = parsed_spikes["items"]
+	bundle.flames = parsed_flames["items"]
+	bundle.crushers = parsed_crushers["items"]
+	var parsed_rollers: Dictionary = parse_optional_field(
+		body, SimulationBundle.FIELD_ROLLERS, hazard_ids, "id"
+	)
+	if not parsed_rollers.get("ok", false):
+		return false
+	var parsed_rubbles: Dictionary = parse_optional_field(
+		body, SimulationBundle.FIELD_RUBBLES, destructible_ids, "id"
+	)
+	if not parsed_rubbles.get("ok", false):
+		return false
+	var parsed_cores: Dictionary = parse_optional_field(
+		body, SimulationBundle.FIELD_OBSTACLE_CORES, destructible_ids, "id"
+	)
+	if not parsed_cores.get("ok", false):
+		return false
+	bundle.rollers = parsed_rollers["items"]
+	bundle.rubbles = parsed_rubbles["items"]
+	bundle.obstacle_cores = parsed_cores["items"]
+	var parsed_pendulums: Dictionary = parse_optional_field(
+		body, SimulationBundle.FIELD_PENDULUMS, solid_ids, "id"
+	)
+	if not parsed_pendulums.get("ok", false):
+		return false
+	var parsed_ices: Dictionary = parse_optional_field(
+		body, SimulationBundle.FIELD_ICES, solid_ids, "yaw"
+	)
+	if not parsed_ices.get("ok", false):
+		return false
+	bundle.pendulums = parsed_pendulums["items"]
+	bundle.ices = parsed_ices["items"]
+	return true

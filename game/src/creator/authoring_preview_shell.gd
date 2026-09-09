@@ -50,6 +50,7 @@ var play_sprint_step: int = PlayStubs.SPRINT_STEP
 var play_item_cooldown_ticks: int = PlayStubs.ITEM_COOLDOWN_TICKS
 var play_hazard_knockback_step: int = PlayStubs.HAZARD_KNOCKBACK_STEP
 var play_conveyor_step: int = PlayStubs.CONVEYOR_STEP
+var play_ice_step: int = PlayStubs.ICE_STEP
 var play_launch_dy: int = PlayStubs.LAUNCH_DY
 var play_launch_xz: int = PlayStubs.LAUNCH_XZ
 ## 手动 Advance 时 1 拍就过（点 60 下不是调试）；自动推进时用对局那 1.0 s。

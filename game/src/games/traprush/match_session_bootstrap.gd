@@ -70,13 +70,16 @@ static func try_create(
 	if mover_cycle.size() != movers.size():
 		return null
 	session._mover_cycle = mover_cycle
-	var conveyors: Array = []
-	if bundle.conveyors != null:
-		conveyors = bundle.conveyors
+	var conveyors: Array = bundle.conveyors if bundle.conveyors != null else []
 	var conveyor_cycle: Array[Dictionary] = ConveyorCycleGd.entries_from(conveyors, solid_ids)
 	if conveyor_cycle.size() != conveyors.size():
 		return null
 	session._conveyor_cycle = conveyor_cycle
+	var ices: Array = bundle.ices if bundle.ices != null else []
+	var ice_cycle: Array[Dictionary] = ConveyorCycleGd.entries_from(ices, solid_ids)
+	if ice_cycle.size() != ices.size():
+		return null
+	session._ice_cycle = ice_cycle
 	var launches: Array = []
 	if bundle.launches != null:
 		launches = bundle.launches
@@ -108,6 +111,8 @@ static func try_create(
 	if portal_switch_cycle.size() != portal_switches.size():
 		return null
 	session._portal_switch_cycle = portal_switch_cycle
+	if not load_traps(session, bundle, solid_ids):
+		return null
 	var pickups_raw: Variant = loaded.get("pickup_ids", {})
 	if typeof(pickups_raw) != TYPE_DICTIONARY:
 		return null
@@ -152,6 +157,7 @@ static func try_create(
 			# 把它入 hash 只会让全部已录制的回放哈希失效而不增加任何检测力。
 			"setback_tick": -1,
 			"setback_reason": PlaySetback.NONE,
+			"setback_count": 0,
 		})
 	for player: Dictionary in session._players:
 		session._accept_player_pads(player)
@@ -354,3 +360,36 @@ static func destructible_ledgers(bundle: SimulationBundle) -> Dictionary:
 			return {}
 		ledgers[crate_id] = crate
 	return ledgers
+
+
+static func load_traps(
+	session: TraprushMatchSession, bundle: SimulationBundle, solid_ids: Dictionary
+) -> bool:
+	var TrapCycle := preload("res://src/games/traprush/trap_cycle.gd")
+	var spikes: Array = []
+	if bundle.spikes != null:
+		spikes = bundle.spikes
+	var spike_cycle: Array[Dictionary] = TrapCycle.id_entries_from(spikes, solid_ids)
+	if spike_cycle.size() != spikes.size():
+		return false
+	session._spike_cycle = spike_cycle
+	var flames: Array = []
+	if bundle.flames != null:
+		flames = bundle.flames
+	var flame_cycle: Array[Dictionary] = TrapCycle.flame_entries_from(
+		flames, session._hazard_cycle
+	)
+	if flame_cycle.size() != flames.size():
+		return false
+	session._flame_cycle = flame_cycle
+	var crushers: Array = bundle.crushers if bundle.crushers != null else []
+	var crusher_cycle: Array[Dictionary] = TrapCycle.id_entries_from(crushers, solid_ids)
+	if crusher_cycle.size() != crushers.size():
+		return false
+	session._crusher_cycle = crusher_cycle
+	var pendulums: Array = bundle.pendulums if bundle.pendulums != null else []
+	var pendulum_cycle: Array[Dictionary] = TrapCycle.id_entries_from(pendulums, solid_ids)
+	if pendulum_cycle.size() != pendulums.size():
+		return false
+	session._pendulum_cycle = pendulum_cycle
+	return TrapCycle.keep_flames_nonsolid(session._world, flame_cycle)

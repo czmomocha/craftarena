@@ -6,7 +6,7 @@ extends RefCounted
 
 const FieldsGd := preload("res://src/ugc/traprush_topology_compiler_fields.gd")
 const TriggersGd := preload("res://src/ugc/traprush_topology_compiler_triggers.gd")
-
+const ObstaclesGd := preload("res://src/ugc/traprush_topology_compiler_obstacles.gd")
 
 static func collect_occupancy(
 	world: AuthoringWorld, used_assets: Dictionary[int, int]
@@ -23,6 +23,14 @@ static func collect_occupancy(
 	var switch_list: Array[Dictionary] = []
 	var gate_list: Array[Dictionary] = []
 	var energy_wall_list: Array[Dictionary] = []
+	var spike_list: Array[Dictionary] = []
+	var flame_list: Array[Dictionary] = []
+	var crusher_list: Array[Dictionary] = []
+	var roller_list: Array[Dictionary] = []
+	var rubble_list: Array[Dictionary] = []
+	var core_list: Array[Dictionary] = []
+	var pendulum_list: Array[Dictionary] = []
+	var ice_list: Array[Dictionary] = []
 	var ids: Array[int] = world.entity_ids()
 	for entity_id: int in ids:
 		var record: SharedComponentRecord = world.get_record(entity_id)
@@ -34,6 +42,20 @@ static func collect_occupancy(
 		if FieldsGd.has_energy_wall_tag(record) and not record.components.has(
 			SharedComponentNames.DESTRUCTIBLE
 		):
+			return {"ok": false}
+		if FieldsGd.has_flame_tag(record) or FieldsGd.has_roller_tag(record):
+			if not record.components.has(SharedComponentNames.HAZARD):
+				return {"ok": false}
+		if FieldsGd.has_rubble_tag(record) or FieldsGd.has_obstacle_core_tag(record):
+			if not record.components.has(SharedComponentNames.DESTRUCTIBLE):
+				return {"ok": false}
+		if FieldsGd.has_spike_tag(record) and not FieldsGd.has_solid_tag(record):
+			return {"ok": false}
+		if FieldsGd.has_crusher_tag(record) and not FieldsGd.has_solid_tag(record):
+			return {"ok": false}
+		if FieldsGd.has_pendulum_tag(record) and not FieldsGd.has_solid_tag(record):
+			return {"ok": false}
+		if FieldsGd.has_ice_tag(record) and not FieldsGd.has_solid_tag(record):
 			return {"ok": false}
 		if FieldsGd.has_portal_switch_tag(record):
 			if FieldsGd.has_solid_tag(record):
@@ -47,11 +69,11 @@ static func collect_occupancy(
 			if not record.components.has(SharedComponentNames.PORTAL):
 				return {"ok": false}
 		if record.components.has(SharedComponentNames.INVENTORY):
-			if not _append_pickup(entity_id, record, next_asset, used_assets, pickup_list):
+			if not FieldsGd.append_pickup(entity_id, record, next_asset, used_assets, pickup_list):
 				return {"ok": false}
 			continue
 		if FieldsGd.has_finish_tag(record):
-			if not _append_finish(entity_id, record, next_asset, used_assets, finish_list):
+			if not FieldsGd.append_finish(entity_id, record, next_asset, used_assets, finish_list):
 				return {"ok": false}
 			continue
 		if FieldsGd.has_solid_tag(record):
@@ -65,23 +87,30 @@ static func collect_occupancy(
 				conveyor_list,
 				launch_list,
 				switch_list,
-				gate_list
+				gate_list,
+				spike_list,
+				crusher_list,
+				pendulum_list,
+				ice_list
 			):
 				return {"ok": false}
 			continue
 		if record.components.has(SharedComponentNames.DESTRUCTIBLE):
 			if not _append_destructible(
-				entity_id, record, next_asset, used_assets, destructible_list, energy_wall_list
+				entity_id, record, next_asset, used_assets, destructible_list,
+				energy_wall_list, rubble_list, core_list
 			):
 				return {"ok": false}
 			continue
 		if record.components.has(SharedComponentNames.HAZARD):
-			if not _append_hazard(entity_id, record, next_asset, used_assets, hazard_list):
+			if not _append_hazard(
+				entity_id, record, next_asset, used_assets, hazard_list, flame_list, roller_list
+			):
 				return {"ok": false}
 			continue
 		if not record.components.has(SharedComponentNames.CHECKPOINT):
 			continue
-		if not _append_pad(entity_id, record, next_asset, used_assets, pads):
+		if not FieldsGd.append_pad(entity_id, record, next_asset, used_assets, pads):
 			return {"ok": false}
 	return {
 		"ok": true,
@@ -97,71 +126,15 @@ static func collect_occupancy(
 		"switches": switch_list,
 		"gates": gate_list,
 		"energy_walls": energy_wall_list,
+		"spikes": spike_list,
+		"flames": flame_list,
+		"crushers": crusher_list,
+		"rollers": roller_list,
+		"rubbles": rubble_list,
+		"obstacle_cores": core_list,
+		"pendulums": pendulum_list,
+		"ices": ice_list,
 	}
-
-
-static func _append_pickup(
-	entity_id: int,
-	record: SharedComponentRecord,
-	next_asset: Dictionary,
-	used_assets: Dictionary[int, int],
-	pickup_list: Array[Dictionary]
-) -> bool:
-	if FieldsGd.has_finish_tag(record):
-		return false
-	if FieldsGd.has_solid_tag(record):
-		return false
-	if record.components.has(SharedComponentNames.CHECKPOINT):
-		return false
-	if record.components.has(SharedComponentNames.PORTAL):
-		return false
-	if record.components.has(SharedComponentNames.DESTRUCTIBLE):
-		return false
-	if record.components.has(SharedComponentNames.HAZARD):
-		return false
-	var pickup_pose: Dictionary = FieldsGd.transform_xyz(record)
-	if pickup_pose.is_empty():
-		return false
-	var pickup_kind: String = FieldsGd.inventory_kind(record)
-	if pickup_kind.is_empty():
-		return false
-	pickup_list.append(FieldsGd.with_asset({
-		"entity_id": entity_id,
-		"x": pickup_pose["x"],
-		"y": pickup_pose["y"],
-		"z": pickup_pose["z"],
-		"kind": pickup_kind,
-	}, next_asset, used_assets))
-	return true
-
-
-static func _append_finish(
-	entity_id: int,
-	record: SharedComponentRecord,
-	next_asset: Dictionary,
-	used_assets: Dictionary[int, int],
-	finish_list: Array[Dictionary]
-) -> bool:
-	if FieldsGd.has_solid_tag(record):
-		return false
-	if record.components.has(SharedComponentNames.CHECKPOINT):
-		return false
-	if record.components.has(SharedComponentNames.PORTAL):
-		return false
-	if record.components.has(SharedComponentNames.DESTRUCTIBLE):
-		return false
-	if record.components.has(SharedComponentNames.HAZARD):
-		return false
-	var finish_pose: Dictionary = FieldsGd.transform_xyz(record)
-	if finish_pose.is_empty():
-		return false
-	finish_list.append(FieldsGd.with_asset({
-		"entity_id": entity_id,
-		"x": finish_pose["x"],
-		"y": finish_pose["y"],
-		"z": finish_pose["z"],
-	}, next_asset, used_assets))
-	return true
 
 
 static func _append_solid(
@@ -174,7 +147,11 @@ static func _append_solid(
 	conveyor_list: Array[Dictionary],
 	launch_list: Array[Dictionary],
 	switch_list: Array[Dictionary],
-	gate_list: Array[Dictionary]
+	gate_list: Array[Dictionary],
+	spike_list: Array[Dictionary],
+	crusher_list: Array[Dictionary],
+	pendulum_list: Array[Dictionary],
+	ice_list: Array[Dictionary]
 ) -> bool:
 	if record.components.has(SharedComponentNames.CHECKPOINT):
 		return false
@@ -218,12 +195,14 @@ static func _append_solid(
 		if launch_yaw < 0:
 			return false
 		launch_list.append({"entity_id": entity_id, "yaw_bam": launch_yaw})
-		return TriggersGd.try_append(
-			entity_id, record, mover_bag, has_conveyor, has_launch, switch_list, gate_list
+		return _append_solid_triggers(
+			entity_id, record, mover_bag, has_conveyor, has_launch,
+			switch_list, gate_list, spike_list, crusher_list, pendulum_list, ice_list
 		)
 	if not has_conveyor:
-		return TriggersGd.try_append(
-			entity_id, record, mover_bag, has_conveyor, has_launch, switch_list, gate_list
+		return _append_solid_triggers(
+			entity_id, record, mover_bag, has_conveyor, has_launch,
+			switch_list, gate_list, spike_list, crusher_list, pendulum_list, ice_list
 		)
 	# 自己在走 + 又把人往别处推：两段位移的先后顺序没有可解释的答案，拒绝发布。
 	if record.components.has(SharedComponentNames.MOVER):
@@ -232,9 +211,36 @@ static func _append_solid(
 	if yaw_bam < 0:
 		return false
 	conveyor_list.append({"entity_id": entity_id, "yaw_bam": yaw_bam})
-	return TriggersGd.try_append(
-		entity_id, record, mover_bag, has_conveyor, has_launch, switch_list, gate_list
+	return _append_solid_triggers(
+		entity_id, record, mover_bag, has_conveyor, has_launch,
+		switch_list, gate_list, spike_list, crusher_list, pendulum_list, ice_list
 	)
+
+
+static func _append_solid_triggers(
+	entity_id: int,
+	record: SharedComponentRecord,
+	mover_bag: Dictionary,
+	has_conveyor: bool,
+	has_launch: bool,
+	switch_list: Array[Dictionary],
+	gate_list: Array[Dictionary],
+	spike_list: Array[Dictionary],
+	crusher_list: Array[Dictionary],
+	pendulum_list: Array[Dictionary],
+	ice_list: Array[Dictionary]
+) -> bool:
+	if not TriggersGd.try_append(
+		entity_id, record, mover_bag, has_conveyor, has_launch, switch_list, gate_list
+	):
+		return false
+	if not TriggersGd.try_append_traps(
+		entity_id, record, mover_bag, has_conveyor, has_launch, spike_list, crusher_list
+	):
+		return false
+	if not ObstaclesGd.try_append_pendulum(entity_id, record, mover_bag, pendulum_list):
+		return false
+	return ObstaclesGd.try_append_ice(entity_id, record, ice_list)
 
 
 static func _append_destructible(
@@ -243,7 +249,9 @@ static func _append_destructible(
 	next_asset: Dictionary,
 	used_assets: Dictionary[int, int],
 	destructible_list: Array[Dictionary],
-	energy_wall_list: Array[Dictionary]
+	energy_wall_list: Array[Dictionary],
+	rubble_list: Array[Dictionary],
+	core_list: Array[Dictionary]
 ) -> bool:
 	if record.components.has(SharedComponentNames.CHECKPOINT):
 		return false
@@ -258,6 +266,10 @@ static func _append_destructible(
 	if crate_body.is_empty():
 		return false
 	if not TriggersGd.try_append_energy_wall(entity_id, record, energy_wall_list):
+		return false
+	if not ObstaclesGd.try_append_rubble(entity_id, record, rubble_list):
+		return false
+	if not ObstaclesGd.try_append_obstacle_core(entity_id, record, core_list):
 		return false
 	destructible_list.append(FieldsGd.with_asset({
 		"entity_id": entity_id,
@@ -274,7 +286,9 @@ static func _append_hazard(
 	record: SharedComponentRecord,
 	next_asset: Dictionary,
 	used_assets: Dictionary[int, int],
-	hazard_list: Array[Dictionary]
+	hazard_list: Array[Dictionary],
+	flame_list: Array[Dictionary],
+	roller_list: Array[Dictionary]
 ) -> bool:
 	if record.components.has(SharedComponentNames.CHECKPOINT):
 		return false
@@ -286,6 +300,10 @@ static func _append_hazard(
 	var hazard_body: Dictionary = FieldsGd.hazard_body(record)
 	if hazard_body.is_empty():
 		return false
+	if not TriggersGd.try_append_flame(entity_id, record, flame_list):
+		return false
+	if not ObstaclesGd.try_append_roller(entity_id, record, roller_list):
+		return false
 	hazard_list.append(FieldsGd.with_asset({
 		"entity_id": entity_id,
 		"x": hazard_pose["x"],
@@ -294,33 +312,6 @@ static func _append_hazard(
 		"cooldown_ticks": hazard_body["cooldown_ticks"],
 	}, next_asset, used_assets))
 	return true
-
-
-static func _append_pad(
-	entity_id: int,
-	record: SharedComponentRecord,
-	next_asset: Dictionary,
-	used_assets: Dictionary[int, int],
-	pads: Array[Dictionary]
-) -> bool:
-	var pose: Dictionary = FieldsGd.transform_xyz(record)
-	if pose.is_empty():
-		return false
-	var checkpoint: Dictionary = FieldsGd.checkpoint_body(record)
-	if checkpoint.is_empty():
-		return false
-	pads.append(FieldsGd.with_asset({
-		"entity_id": entity_id,
-		"x": pose["x"],
-		"y": pose["y"],
-		"z": pose["z"],
-		"order": checkpoint["order"],
-		"respawn_dx": checkpoint["respawn_dx"],
-		"respawn_dy": checkpoint["respawn_dy"],
-		"respawn_dz": checkpoint["respawn_dz"],
-	}, next_asset, used_assets))
-	return true
-
 
 static func _parse_mover(entity_id: int, record: SharedComponentRecord) -> Dictionary:
 	var raw: Variant = record.components[SharedComponentNames.MOVER]
