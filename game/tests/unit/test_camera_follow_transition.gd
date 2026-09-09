@@ -30,6 +30,18 @@ func test_small_steps_track_exactly() -> void:
 	assert_eq(transition.anchor, Vector3(2.0, 0.0, 0.0))
 
 
+func test_airborne_hold_y_keeps_xz_follow() -> void:
+	var transition: CameraFollowTransition = TransitionGd.new()
+	transition.snap_to(Vector3(1.0, 2.0, 3.0))
+	assert_false(transition.track_pose(Vector3(2.0, 3.25, 3.0), false))
+	assert_false(transition.active)
+	assert_eq(transition.anchor, Vector3(2.0, 2.0, 3.0))
+	assert_false(transition.track_pose(Vector3(2.0, 2.0, 3.0), true))
+	assert_eq(transition.anchor, Vector3(2.0, 2.0, 3.0))
+	assert_false(transition.track_pose(Vector3(2.0, 4.0, 3.0), true))
+	assert_eq(transition.anchor, Vector3(2.0, 4.0, 3.0))
+
+
 func test_teleport_opens_a_glide_and_lands_on_target() -> void:
 	var transition: CameraFollowTransition = TransitionGd.new()
 	transition.snap_to(Vector3.ZERO)

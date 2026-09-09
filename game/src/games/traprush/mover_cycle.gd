@@ -5,6 +5,8 @@ extends RefCounted
 ## v1 snapshots do not carry platform fields. hash_state still omits AABB;
 ## only passenger capsules change the hash. Failure mode: the platform always
 ## moves; a blocked passenger is returned so the session can out-of-range reset.
+## Rising capsules (vy > 0) are not riders — jumping off must not count as a crush.
+## Falling (vy < 0) can still ride: gravity on a standing passenger is negative.
 
 
 static func pose_at(tick_index: int, path: Array, speed: int, loop: bool) -> Dictionary:
@@ -97,6 +99,8 @@ static func apply(
 			continue
 		var riders: PackedInt32Array = PackedInt32Array()
 		for capsule_id: int in capsule_ids:
+			if world.get_vy(capsule_id) > 0:
+				continue
 			var supports: PackedInt32Array = world.supporting_solid_static_boxes(
 				capsule_id, support_dy
 			)

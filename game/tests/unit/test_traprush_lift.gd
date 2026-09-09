@@ -11,6 +11,7 @@ const TraprushTopologyCompilerGd := preload("res://src/ugc/traprush_topology_com
 const TraprushPlayStubsGd := preload("res://src/games/traprush/play_stubs.gd")
 const SimulationBundleGd := preload("res://src/ugc/simulation_bundle.gd")
 const SimulationBundleBagsGd := preload("res://src/ugc/simulation_bundle_bags.gd")
+const PlayerIntentNamesGd := preload("res://src/shared/commands/player_intent_names.gd")
 
 const CELL: int = 65536
 const PLAY_RADIUS: int = CELL / 8
@@ -101,6 +102,22 @@ func test_riding_a_lift_raises_the_player() -> void:
 	for _index: int in range(16):
 		session.commit_tick()
 	assert_eq(_pose_y(session) - before_y, CELL, "速度 SCALE/16、16 tick 走完一格")
+
+
+func test_jumping_on_a_lift_does_not_reset_to_spawn() -> void:
+	var session: TraprushMatchSessionGd = _lift_session()
+	session.fall_dy = TraprushPlayStubsGd.FALL_DY
+	session.jump_dy = TraprushPlayStubsGd.JUMP_DY
+	for _index: int in range(16):
+		session.commit_tick()
+	var ridden_y: int = _pose_y(session)
+	assert_gt(ridden_y, 0)
+	assert_true(session.apply_player_intent(0, {"intent": PlayerIntentNamesGd.JUMP}))
+	var hopped_y: int = _pose_y(session)
+	assert_eq(hopped_y, ridden_y + TraprushPlayStubsGd.JUMP_DY)
+	for _index: int in range(4):
+		session.commit_tick()
+	assert_gt(_pose_y(session), ridden_y - CELL / 2)
 
 
 func test_two_lift_sessions_match_state_hash() -> void:

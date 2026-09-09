@@ -74,7 +74,7 @@ static func aim_camera(map: MatchSnapshotMap) -> void:
 		map.follow_transition.reset()
 	elif not map.follow_transition.has_anchor():
 		map.follow_transition.snap_to(followed.position)
-	elif map.follow_transition.track(followed.position):
+	elif map.follow_transition.track_pose(followed.position, map.follow_grounded):
 		# 被传送之后还挂着上一处的中键平移量，等于把人跟丢。
 		map.camera_pan = Vector3.ZERO
 	var camera: Camera3D = map.camera_node()
