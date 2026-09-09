@@ -148,7 +148,7 @@
 - `ai_asset_sources = no_traceability`。
 - `ai_asset_takedown = manual_case_review`。
 - `repository_hosting = github_private`。
-- `git_workflow = trunk_short_pr`。该句被 `git_workflow = trunk_direct_after_auth`（2026-09-09）覆盖：默认提交 `main`；只有人类主动说「开 PR」才拉分支开 PR。大改动先做完、人类验证、授权后才提交。`pr_scope = complete_chapter` 与章粒度 5× 仍有效，对象从「PR」改成「提交」。shell-guard 不再拦向 `main` 的普通 commit/push，仍拦 force push、删除 `main`、`worktree remove --force`、以及把 Godot AI 本机条目写进 `project.godot`。该句再被 `branch_protection = trunk_direct_no_required_pr`（2026-09-09）覆盖：GitHub `main` 保护已改为允许普通直推、不要求 PR；仍禁 force push / 删除 `main`。必过 status check 不再作为 push 前置。CI 仍在推送后跑。Agent 不改 GitHub。口径见 [CD-52 §1.1](../50-engineering/52-ai-workflow.md) 与 [CD-53 §4.5](../50-engineering/53-testing-and-ci.md)。
+- `git_workflow = trunk_short_pr`。该句被 `git_workflow = trunk_direct_after_auth`（2026-09-09）覆盖：默认提交 `main`；只有人类主动说「开 PR」才拉分支开 PR。大改动先做完、人类验证、授权后才提交。`pr_scope = complete_chapter` 与章粒度 5× 仍有效，对象从「PR」改成「提交」。shell-guard 不再拦向 `main` 的普通 commit/push，仍拦 force push、删除 `main`、`worktree remove --force`、以及把 Godot AI 本机条目写进 `project.godot`。该句再被 `branch_protection = trunk_direct_no_required_pr`（2026-09-09）覆盖：GitHub `main` 保护已改为允许普通直推、不要求 PR；仍禁 force push / 删除 `main`。必过 status check 不再作为 push 前置。CI 仍在推送后跑。Agent 不改 GitHub。该句再被 `submit_includes_push = unless_human_says_no`（2026-09-09）覆盖：人类说「提交」= `git commit` 并 `git push`；只有明确说不要 push 才只落本地。口径见 [CD-52 §1.1](../50-engineering/52-ai-workflow.md) 与 [CD-53 §4.5](../50-engineering/53-testing-and-ci.md)。
 - `ci_environment = github_plus_selfhosted`。
 - `pr_merge_gate = required_ci_one_human`。
 - `web_preview_frequency = per_pr_preview`。

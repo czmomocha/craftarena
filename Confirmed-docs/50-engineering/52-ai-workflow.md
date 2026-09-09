@@ -13,7 +13,7 @@
 
 | 项 | 当前口径 |
 |---|---|
-| 提交边界 | **默认提交 `main`**：人类验证并授权后 commit / push。只有人类主动说「开 PR」才拉分支。仍禁止未经授权的提交、force push `main`、部署、发布 |
+| 提交边界 | **默认提交 `main`**：人类说「提交」= commit **并** push。只有明确说不要 push 才只落本地。只有人类主动说「开 PR」才拉分支。仍禁止未经授权的提交、force push `main`、部署、发布 |
 | 章粒度 | 完整一章才提交；约 5× 纠偏前（D9，解冻后仍有效），禁止单字段成章 |
 | 审查分级 | 深审 / 常审 / 轻审，见 §3 |
 | 开发机窗口 | [dev-window-check.md](../../docs/runbooks/dev-window-check.md)；「真机」留给导出包 |
@@ -40,7 +40,7 @@
 
 提交与推送按 [CD-91 D.6](../90-reference/91-decision-log.md) `git_workflow = trunk_direct_after_auth` 执行（覆盖 `isolated_branch_commit_ok` / `trunk_short_pr`）。宪法第十八条不变：未经人类确认，不得提交、推送、部署、发布或回滚。
 
-- **默认**：在当前 checkout（通常是 `main`）上做完整一章。人类验证后明确说「提交」才 `git commit`；得到推送授权才 `git push` 到 `main`。CI 在推送 `main` 上跑，见 [CD-53](53-testing-and-ci.md)。
+- **默认**：在当前 checkout（通常是 `main`）上做完整一章。人类验证后明确说「提交」即 `git commit` **并** `git push` 到 `main`。只有人类明确说「不要 push」才只 commit、不推远程。CI 在推送 `main` 上跑，见 [CD-53](53-testing-and-ci.md)。
 - **大改动**：先做完、停在工作树里让人类验证，**得到授权才提交**。禁止为了占历史把半成品推上主线。
 - **PR 是例外**：只有人类主动说「开 PR」才拉分支、推非 `main` 远程、开 Pull Request。Agent 不得自行把默认路径改成「先开 PR」。走 PR 时仍须 CI 全绿并一次人类批准。
 - **仍然禁止、且属第十八条**：未经本回合人类确认的提交或推送；部署；发布；回滚线上内容；force push / 删除 `main`。
@@ -75,8 +75,8 @@
 → 将本章开发机窗口步骤写入 docs/runbooks/dev-window-check.md 本刀（见 §3.2）
 → 检查日志与性能
 → 人类审查 / 真机验证
-→ 人类授权后提交 main（仅当人类说开 PR 才拉分支）
-→ 人类决定是否推送 / 部署 / 发布
+→ 人类说「提交」后 commit 并 push main（明确说不要 push 才不推；仅当人类说开 PR 才拉分支）
+→ 人类决定是否部署 / 发布
 → 更新文档和任务状态
 ```
 
