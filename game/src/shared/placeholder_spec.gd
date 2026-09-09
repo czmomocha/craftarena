@@ -169,6 +169,9 @@ const HAZARD_WARN_TICKS: int = 15
 const HAZARD_ALBEDO: Color = Color(0.82, 0.18, 0.48)
 const SOLID_ALBEDO: Color = Color(0.52, 0.48, 0.42)
 const CRATE_ALBEDO: Color = Color(0.85, 0.4, 0.25)
+## 踩区开关（青绿踏板）与门（紫墙）。不是产品材质，只为和石色固体分开。
+const SWITCH_ALBEDO: Color = Color(0.28, 0.78, 0.48)
+const GATE_ALBEDO: Color = Color(0.58, 0.32, 0.82)
 ## Preview 里没被上面任何一类认领的实体占位色。
 const ENTITY_STUB_ALBEDO: Color = Color(0.85, 0.7, 0.25)
 

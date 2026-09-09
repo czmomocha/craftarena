@@ -15,6 +15,7 @@ extends RefCounted
 const Gravity := preload("res://src/games/traprush/gravity.gd")
 const HazardCycle := preload("res://src/games/traprush/hazard_cycle.gd")
 const LaunchCycle := preload("res://src/games/traprush/launch_cycle.gd")
+const GateCycle := preload("res://src/games/traprush/gate_cycle.gd")
 const AuthoringPreviewBootstrapGd := preload("res://src/creator/authoring_preview_bootstrap.gd")
 const AuthoringPreviewIntentsGd := preload("res://src/creator/authoring_preview_intents.gd")
 const AuthoringPreviewScanGd := preload("res://src/creator/authoring_preview_scan.gd")
@@ -36,6 +37,8 @@ var play_hazard_cycle: Array[Dictionary] = []
 var play_mover_cycle: Array[Dictionary] = []
 var play_conveyor_cycle: Array[Dictionary] = []
 var play_launch_cycle: Array[Dictionary] = []
+var play_switch_cycle: Array[Dictionary] = []
+var play_gate_cycle: Array[Dictionary] = []
 var play_solid_ids: Dictionary = {}
 var play_pickup_ids: Dictionary = {}
 var play_pickup_kinds: Dictionary = {}
@@ -150,6 +153,15 @@ func try_advance_play() -> bool:
 		play_launch_xz,
 		_play_launch_supported
 	)
+	var crushed: PackedInt32Array = GateCycle.apply(
+		play_world,
+		play_switch_cycle,
+		play_gate_cycle,
+		PackedInt32Array([player_id]),
+		play_support_dy
+	)
+	if crushed.size() > 0:
+		_reset_play_to_pad()
 	HazardCycle.apply(play_world, play_hazard_cycle)
 	_resolve_play_hazards()
 	_reset_play_if_out_of_range()
@@ -224,6 +236,10 @@ func play_solid_count() -> int:
 
 func play_is_hazard_solid(entity_id: int) -> bool:
 	return view.play_is_hazard_solid(self, entity_id)
+
+
+func play_is_gate_solid(entity_id: int) -> bool:
+	return view.play_is_gate_solid(self, entity_id)
 
 
 func play_destructible_alive_count() -> int:

@@ -5,6 +5,7 @@ extends RefCounted
 ## Public compile() stays on TraprushTopologyCompiler so this file stays under E9.
 
 const FieldsGd := preload("res://src/ugc/traprush_topology_compiler_fields.gd")
+const TriggersGd := preload("res://src/ugc/traprush_topology_compiler_triggers.gd")
 
 
 static func collect_occupancy(
@@ -19,6 +20,8 @@ static func collect_occupancy(
 	var mover_list: Array[Dictionary] = []
 	var conveyor_list: Array[Dictionary] = []
 	var launch_list: Array[Dictionary] = []
+	var switch_list: Array[Dictionary] = []
+	var gate_list: Array[Dictionary] = []
 	var ids: Array[int] = world.entity_ids()
 	for entity_id: int in ids:
 		var record: SharedComponentRecord = world.get_record(entity_id)
@@ -44,7 +47,9 @@ static func collect_occupancy(
 				solid_list,
 				mover_list,
 				conveyor_list,
-				launch_list
+				launch_list,
+				switch_list,
+				gate_list
 			):
 				return {"ok": false}
 			continue
@@ -71,6 +76,8 @@ static func collect_occupancy(
 		"movers": mover_list,
 		"conveyors": conveyor_list,
 		"launches": launch_list,
+		"switches": switch_list,
+		"gates": gate_list,
 	}
 
 
@@ -192,7 +199,9 @@ static func _append_solid(
 	solid_list: Array[Dictionary],
 	mover_list: Array[Dictionary],
 	conveyor_list: Array[Dictionary],
-	launch_list: Array[Dictionary]
+	launch_list: Array[Dictionary],
+	switch_list: Array[Dictionary],
+	gate_list: Array[Dictionary]
 ) -> bool:
 	if record.components.has(SharedComponentNames.CHECKPOINT):
 		return false
@@ -234,9 +243,13 @@ static func _append_solid(
 		if launch_yaw < 0:
 			return false
 		launch_list.append({"entity_id": entity_id, "yaw_bam": launch_yaw})
-		return true
+		return TriggersGd.try_append(
+			entity_id, record, mover_bag, has_conveyor, has_launch, switch_list, gate_list
+		)
 	if not has_conveyor:
-		return true
+		return TriggersGd.try_append(
+			entity_id, record, mover_bag, has_conveyor, has_launch, switch_list, gate_list
+		)
 	# 自己在走 + 又把人往别处推：两段位移的先后顺序没有可解释的答案，拒绝发布。
 	if record.components.has(SharedComponentNames.MOVER):
 		return false
@@ -244,7 +257,9 @@ static func _append_solid(
 	if yaw_bam < 0:
 		return false
 	conveyor_list.append({"entity_id": entity_id, "yaw_bam": yaw_bam})
-	return true
+	return TriggersGd.try_append(
+		entity_id, record, mover_bag, has_conveyor, has_launch, switch_list, gate_list
+	)
 
 
 static func _append_destructible(

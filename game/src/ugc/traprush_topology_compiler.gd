@@ -57,6 +57,9 @@ const CONVEYOR_ZONE_TAG: String = "conveyor"
 const LIFT_ZONE_TAG: String = "lift"
 ## 弹射垫：固体 + 本标签 + `transform.yaw_bam`。见 `TraprushLaunchCycle`。
 const LAUNCH_ZONE_TAG: String = "launch"
+## 踩区开关 / 门：固体 + 本标签 + 已有 `interactable.link_group`。见 `TraprushGateCycle`。
+const SWITCH_ZONE_TAG: String = "switch"
+const GATE_ZONE_TAG: String = "gate"
 
 
 static func compile(world: AuthoringWorld) -> SimulationBundle:
@@ -90,5 +93,7 @@ static func compile(world: AuthoringWorld) -> SimulationBundle:
 		SimulationBundle.FIELD_MOVERS: occupancy["movers"],
 		SimulationBundle.FIELD_CONVEYORS: occupancy["conveyors"],
 		SimulationBundle.FIELD_LAUNCHES: occupancy["launches"],
+		SimulationBundle.FIELD_SWITCHES: occupancy["switches"],
+		SimulationBundle.FIELD_GATES: occupancy["gates"],
 	}
 	return SimulationBundle.from_dictionary(body)

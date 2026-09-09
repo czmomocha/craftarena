@@ -23,6 +23,8 @@ const ANGLE_EPSILON: float = 0.0001
 func test_visual_maps_read_the_spec() -> void:
 	assert_eq(MatchSolidMap.PLACEHOLDER_SIZE, PlaceholderSpec.BOX_SIZE)
 	assert_eq(MatchSolidMap.SOLID_ALBEDO, PlaceholderSpec.SOLID_ALBEDO)
+	assert_eq(MatchSolidMap.SWITCH_ALBEDO, PlaceholderSpec.SWITCH_ALBEDO)
+	assert_eq(MatchSolidMap.GATE_ALBEDO, PlaceholderSpec.GATE_ALBEDO)
 	assert_eq(MatchHazardMap.PLACEHOLDER_SIZE, PlaceholderSpec.BOX_SIZE)
 	assert_eq(MatchHazardMap.HAZARD_ALBEDO, PlaceholderSpec.HAZARD_ALBEDO)
 	assert_eq(MatchCrateMap.PLACEHOLDER_SIZE, PlaceholderSpec.BOX_SIZE)
@@ -89,6 +91,8 @@ func test_preview_map_reads_the_same_spec_as_the_match_maps() -> void:
 	assert_eq(AuthoringPreviewMap.PLACEHOLDER_SIZE, MatchSolidMap.PLACEHOLDER_SIZE)
 	assert_eq(AuthoringPreviewMap.HAZARD_ALBEDO, MatchHazardMap.HAZARD_ALBEDO)
 	assert_eq(AuthoringPreviewMap.SOLID_ALBEDO, MatchSolidMap.SOLID_ALBEDO)
+	assert_eq(PlaceholderSpec.SWITCH_ALBEDO, MatchSolidMap.SWITCH_ALBEDO)
+	assert_eq(PlaceholderSpec.GATE_ALBEDO, MatchSolidMap.GATE_ALBEDO)
 	assert_eq(AuthoringPreviewMap.FINISH_ALBEDO, MatchCourseMap.FINISH_PENDING_ALBEDO)
 	assert_eq(AuthoringPreviewMap.CRATE_ALBEDO, PlaceholderSpec.CRATE_ALBEDO)
 

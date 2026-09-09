@@ -44,6 +44,7 @@ func rebuild(shell: AuthoringPreviewShell) -> void:
 		map.show_player_pose(shell.preview.play_world.get_pose(shell.preview.player_id))
 		map.mark_accepted_checkpoints(shell.preview.play_accepted_ids())
 		apply_play_hazard_visibility(shell)
+		apply_play_gate_visibility(shell)
 		apply_play_movers(shell)
 		apply_play_anim(shell)
 	else:
@@ -73,6 +74,19 @@ func apply_play_hazard_visibility(shell: AuthoringPreviewShell) -> void:
 			continue
 		var entity_id: int = key
 		lookup[entity_id] = shell.preview.play_is_hazard_solid(entity_id)
+	map.apply_hazard_visibility(lookup)
+
+
+func apply_play_gate_visibility(shell: AuthoringPreviewShell) -> void:
+	if not map_alive() or shell.preview == null or not shell.preview.is_playing():
+		return
+	var lookup: Dictionary = {}
+	for item: Dictionary in shell.preview.play_gate_cycle:
+		var entity_raw: Variant = item.get("entity_id", 0)
+		if typeof(entity_raw) != TYPE_INT:
+			continue
+		var entity_id: int = entity_raw
+		lookup[entity_id] = shell.preview.play_is_gate_solid(entity_id)
 	map.apply_hazard_visibility(lookup)
 
 

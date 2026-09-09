@@ -88,6 +88,18 @@ func play_is_hazard_solid(preview: AuthoringPreview, entity_id: int) -> bool:
 	return preview.play_world.is_static_box_solid(box_id)
 
 
+func play_is_gate_solid(preview: AuthoringPreview, entity_id: int) -> bool:
+	if not preview.is_playing() or preview.play_world == null:
+		return false
+	for item: Dictionary in preview.play_gate_cycle:
+		var gate_id: int = item["entity_id"]
+		if gate_id != entity_id:
+			continue
+		var box_id: int = item["box_id"]
+		return preview.play_world.is_static_box_solid(box_id)
+	return false
+
+
 func play_destructible_alive_count(preview: AuthoringPreview) -> int:
 	if not preview.is_playing():
 		return 0

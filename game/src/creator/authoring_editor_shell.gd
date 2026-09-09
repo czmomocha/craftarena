@@ -24,6 +24,7 @@ const TRACE_ID: String = "trace-authoring-editor"
 const ChromeGd := preload("res://src/creator/authoring_editor_shell_chrome.gd")
 const FollowGd := preload("res://src/creator/authoring_editor_shell_follow.gd")
 const PlaceGd := preload("res://src/creator/authoring_editor_shell_place.gd")
+const PlaceTriggersGd := preload("res://src/creator/authoring_editor_shell_place_triggers.gd")
 const TraprushEditorPanelGd := preload("res://src/creator/traprush_editor_panel.gd")
 const AuthoringValidatorPanelGd := preload("res://src/creator/authoring_validator_panel.gd")
 
@@ -161,6 +162,14 @@ func try_place_launch(
 	entity_id: int, cell_x: int, cell_y: int, cell_z: int, yaw_bam: int
 ) -> bool:
 	return PlaceGd.try_place_launch(self, entity_id, cell_x, cell_y, cell_z, yaw_bam)
+
+
+func try_place_switch(entity_id: int, cell_x: int, cell_y: int, cell_z: int) -> bool:
+	return PlaceTriggersGd.try_place_switch(self, entity_id, cell_x, cell_y, cell_z)
+
+
+func try_place_gate(entity_id: int, cell_x: int, cell_y: int, cell_z: int) -> bool:
+	return PlaceTriggersGd.try_place_gate(self, entity_id, cell_x, cell_y, cell_z)
 
 
 func try_move_entity(entity_id: int, cell_x: int, cell_y: int, cell_z: int) -> bool:
