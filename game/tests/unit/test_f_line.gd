@@ -176,12 +176,12 @@ func test_course_f_playable_compiles_with_f_line_features() -> void:
 			switch_solid = bag
 		elif solid_id == 223:
 			gate_solid = bag
-	assert_eq(PlayClockGd.dict_int(switch_solid, "x", -1), CELL)
+	assert_eq(PlayClockGd.dict_int(switch_solid, "x", -1), 4 * CELL)
 	assert_eq(PlayClockGd.dict_int(switch_solid, "y", 1), -CELL)
-	assert_eq(PlayClockGd.dict_int(switch_solid, "z", -1), 0)
-	assert_eq(PlayClockGd.dict_int(gate_solid, "x", -1), CELL)
+	assert_eq(PlayClockGd.dict_int(switch_solid, "z", -1), 2 * CELL)
+	assert_eq(PlayClockGd.dict_int(gate_solid, "x", -1), 5 * CELL)
 	assert_eq(PlayClockGd.dict_int(gate_solid, "y", -1), 0)
-	assert_eq(PlayClockGd.dict_int(gate_solid, "z", -1), CELL)
+	assert_eq(PlayClockGd.dict_int(gate_solid, "z", -1), 2 * CELL)
 	var high_solid: bool = false
 	var pad0: Dictionary = bundle.pads[0]
 	var pad1: Dictionary = bundle.pads[1]
@@ -192,7 +192,7 @@ func test_course_f_playable_compiles_with_f_line_features() -> void:
 	assert_eq(PlayClockGd.dict_int(pad1, "x", -1), 3 * CELL)
 	assert_eq(PlayClockGd.dict_int(bundle.finish[0], "x", -1), 7 * CELL)
 	for bag: Dictionary in bundle.solids:
-		if PlayClockGd.dict_int(bag, "y", 0) == 0 and PlayClockGd.dict_int(bag, "z", 0) == -5 * CELL:
+		if PlayClockGd.dict_int(bag, "y", 0) == 0 and PlayClockGd.dict_int(bag, "z", 0) == -2 * CELL:
 			high_solid = true
 	assert_true(high_solid)
 	var pickups: MatchPickupMapGd = MatchPickupMapGd.new()

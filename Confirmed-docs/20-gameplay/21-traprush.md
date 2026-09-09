@@ -20,9 +20,9 @@
 | 出界 | 开发桩 ±8 格，不是产品场地 |
 | 输入 | 壳消费 `PlayInput`。当前键：WASD / Space / F 推击 / Q 使用 / Shift 冲刺 / R 复位（上升沿，不是产品长按）。触控 UI 未做（D7） |
 | Tick / 快照 / 插值 | **未锁**（[CD-43 §4](../40-technical/43-networking-and-replay.md)）。不得用 ICMP 锁定 |
-| 官方课 | 3 张。第 4 张及以后属 M5。F 线示范课 `course_f_playable` **不计入**该计数 |
+| 官方课 | 3 张。第 4 张及以后属 M5。F 线示范课 `course_f_playable` **不计入**该计数。revision 11 起是有路线选择的一局（危险捷径 +X，安全路 +Z），不是侧廊展览 |
 | 描边 | 不做（D8） |
-| 传送带 | 可玩性深化已接：固体 + `zone.tags` 含 `conveyor` + `transform.yaw_bam`（四向）。**不新增组件**。占位步长是走路占位步长的两倍 ⇒ 逆行走不回去。示范课 `course_f_playable` revision 4 在 +Z 六格侧廊有三块。数值仍属 [CD-63 §1.3](../60-plan/63-open-decisions.md) |
+| 传送带 | 可玩性深化已接：固体 + `zone.tags` 含 `conveyor` + `transform.yaw_bam`（四向）。**不新增组件**。占位步长是走路占位步长的两倍 ⇒ 逆行走不回去。示范课 revision 11 安全路外侧 z=+3 有三块。数值仍属 [CD-63 §1.3](../60-plan/63-open-decisions.md) |
 | 电梯 | 可玩性深化已接：竖直 `mover` + `zone.tags` 含 `lift`。**不另开袋、不新增组件**。路径必须纯 Y，否则编译拒绝。水平往返仍走已有 mover。占位速度 `SCALE/16` |
 | 弹射垫 | 可玩性深化已接：固体 + `zone.tags` 含 `launch` + `transform.yaw_bam`（四向）。支撑**上升沿**弹一次：竖直 `LAUNCH_DY = JUMP_DY * 2`，水平送出一格。与 conveyor / mover 同实体则编译拒绝。数值仍属 [CD-63 §1.3](../60-plan/63-open-decisions.md) |
 | 开关门 | 可玩性深化已接**踩区**：固体 + `zone.tags` 含 `switch` / `gate` + 已有 `interactable.link_group`。开合是当前占用的纯函数，不写 `state`、不进快照。走开同一拍关上。`InteractIntent` 仍未接线 |

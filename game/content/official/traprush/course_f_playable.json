@@ -1,7 +1,7 @@
 {
 	"schema_version": 1,
 	"cell": 65536,
-	"revision": 10,
+	"revision": 11,
 	"entities": [
 		{
 			"schema_version": 1,
@@ -67,9 +67,9 @@
 			"entity_id": 10,
 			"components": {
 				"transform": {
-					"x": 0,
+					"x": 262144,
 					"y": 0,
-					"z": -327680,
+					"z": 65536,
 					"yaw_bam": 0
 				},
 				"portal": {
@@ -84,9 +84,9 @@
 			"entity_id": 11,
 			"components": {
 				"transform": {
-					"x": 458752,
+					"x": 393216,
 					"y": 0,
-					"z": -327680,
+					"z": 65536,
 					"yaw_bam": 0
 				},
 				"portal": {
@@ -101,9 +101,9 @@
 			"entity_id": 40,
 			"components": {
 				"transform": {
-					"x": 327680,
+					"x": 131072,
 					"y": 0,
-					"z": 131072,
+					"z": 65536,
 					"yaw_bam": 0
 				},
 				"destructible": {
@@ -117,9 +117,9 @@
 			"entity_id": 50,
 			"components": {
 				"transform": {
-					"x": 393216,
+					"x": 196608,
 					"y": 0,
-					"z": -196608,
+					"z": -65536,
 					"yaw_bam": 0
 				},
 				"hazard": {
@@ -134,9 +134,9 @@
 			"entity_id": 60,
 			"components": {
 				"transform": {
-					"x": 65536,
+					"x": 0,
 					"y": 0,
-					"z": -196608,
+					"z": 0,
 					"yaw_bam": 0
 				},
 				"inventory": {
@@ -149,9 +149,9 @@
 			"entity_id": 61,
 			"components": {
 				"transform": {
-					"x": 262144,
+					"x": 196608,
 					"y": 0,
-					"z": -196608,
+					"z": 0,
 					"yaw_bam": 0
 				},
 				"inventory": {
@@ -165,8 +165,8 @@
 			"components": {
 				"transform": {
 					"x": 0,
-					"y": -65536,
-					"z": -327680,
+					"y": 0,
+					"z": -131072,
 					"yaw_bam": 0
 				},
 				"zone": {
@@ -210,9 +210,9 @@
 			"entity_id": 82,
 			"components": {
 				"transform": {
-					"x": 65536,
+					"x": 0,
 					"y": -65536,
-					"z": -327680,
+					"z": -131072,
 					"yaw_bam": 0
 				},
 				"zone": {
@@ -235,7 +235,7 @@
 				"transform": {
 					"x": 65536,
 					"y": -65536,
-					"z": -262144,
+					"z": -65536,
 					"yaw_bam": 0
 				},
 				"zone": {
@@ -256,9 +256,9 @@
 			"entity_id": 84,
 			"components": {
 				"transform": {
-					"x": 65536,
+					"x": -65536,
 					"y": -65536,
-					"z": -196608,
+					"z": 0,
 					"yaw_bam": 0
 				},
 				"zone": {
@@ -279,9 +279,9 @@
 			"entity_id": 85,
 			"components": {
 				"transform": {
-					"x": 65536,
+					"x": 262144,
 					"y": -65536,
-					"z": 0,
+					"z": 131072,
 					"yaw_bam": 0
 				},
 				"zone": {
@@ -307,7 +307,7 @@
 			"entity_id": 86,
 			"components": {
 				"transform": {
-					"x": 65536,
+					"x": 0,
 					"y": -65536,
 					"z": 65536,
 					"yaw_bam": 0
@@ -330,9 +330,9 @@
 			"entity_id": 87,
 			"components": {
 				"transform": {
-					"x": 65536,
+					"x": 0,
 					"y": -65536,
-					"z": 131072,
+					"z": -65536,
 					"yaw_bam": 0
 				},
 				"zone": {
@@ -350,13 +350,17 @@
 		},
 		{
 			"schema_version": 1,
-			"entity_id": 88,
+			"entity_id": 224,
 			"components": {
 				"transform": {
 					"x": 65536,
-					"y": -65536,
-					"z": 196608,
+					"y": 0,
+					"z": 0,
 					"yaw_bam": 0
+				},
+				"destructible": {
+					"durability": 1,
+					"regen_policy_id": 0
 				},
 				"zone": {
 					"shape": {
@@ -366,7 +370,7 @@
 						"hz": 32768
 					},
 					"tags": [
-						"solid"
+						"energy_wall"
 					]
 				}
 			}
@@ -378,7 +382,7 @@
 				"transform": {
 					"x": 65536,
 					"y": -65536,
-					"z": 262144,
+					"z": 0,
 					"yaw_bam": 0
 				},
 				"zone": {
@@ -396,12 +400,40 @@
 		},
 		{
 			"schema_version": 1,
-			"entity_id": 90,
+			"entity_id": 230,
 			"components": {
 				"transform": {
-					"x": 65536,
+					"x": 131072,
+					"y": 0,
+					"z": 0,
+					"yaw_bam": 0
+				},
+				"hazard": {
+					"damage": 0,
+					"knockback": 0,
+					"cooldown_ticks": 30
+				},
+				"zone": {
+					"shape": {
+						"kind": "box",
+						"hx": 32768,
+						"hy": 32768,
+						"hz": 32768
+					},
+					"tags": [
+						"flame"
+					]
+				}
+			}
+		},
+		{
+			"schema_version": 1,
+			"entity_id": 233,
+			"components": {
+				"transform": {
+					"x": 131072,
 					"y": -65536,
-					"z": 327680,
+					"z": 0,
 					"yaw_bam": 0
 				},
 				"zone": {
@@ -422,9 +454,9 @@
 			"entity_id": 91,
 			"components": {
 				"transform": {
-					"x": 131072,
+					"x": 196608,
 					"y": -65536,
-					"z": -327680,
+					"z": 0,
 					"yaw_bam": 0
 				},
 				"zone": {
@@ -442,12 +474,40 @@
 		},
 		{
 			"schema_version": 1,
-			"entity_id": 92,
+			"entity_id": 234,
 			"components": {
 				"transform": {
-					"x": 131072,
+					"x": 262144,
+					"y": 0,
+					"z": 0,
+					"yaw_bam": 0
+				},
+				"hazard": {
+					"damage": 0,
+					"knockback": 0,
+					"cooldown_ticks": 30
+				},
+				"zone": {
+					"shape": {
+						"kind": "box",
+						"hx": 32768,
+						"hy": 32768,
+						"hz": 32768
+					},
+					"tags": [
+						"roller"
+					]
+				}
+			}
+		},
+		{
+			"schema_version": 1,
+			"entity_id": 235,
+			"components": {
+				"transform": {
+					"x": 262144,
 					"y": -65536,
-					"z": -262144,
+					"z": 0,
 					"yaw_bam": 0
 				},
 				"zone": {
@@ -460,6 +520,46 @@
 					"tags": [
 						"solid"
 					]
+				}
+			}
+		},
+		{
+			"schema_version": 1,
+			"entity_id": 238,
+			"components": {
+				"transform": {
+					"x": 327680,
+					"y": 0,
+					"z": 0,
+					"yaw_bam": 0
+				},
+				"zone": {
+					"shape": {
+						"kind": "box",
+						"hx": 32768,
+						"hy": 32768,
+						"hz": 32768
+					},
+					"tags": [
+						"solid",
+						"pendulum"
+					]
+				},
+				"mover": {
+					"path": [
+						{
+							"x": 327680,
+							"y": 0,
+							"z": -65536
+						},
+						{
+							"x": 327680,
+							"y": 0,
+							"z": 0
+						}
+					],
+					"speed": 4096,
+					"loop": true
 				}
 			}
 		},
@@ -468,9 +568,9 @@
 			"entity_id": 93,
 			"components": {
 				"transform": {
-					"x": 131072,
+					"x": 327680,
 					"y": -65536,
-					"z": -196608,
+					"z": 0,
 					"yaw_bam": 0
 				},
 				"zone": {
@@ -488,12 +588,52 @@
 		},
 		{
 			"schema_version": 1,
-			"entity_id": 94,
+			"entity_id": 232,
 			"components": {
 				"transform": {
-					"x": 131072,
+					"x": 393216,
+					"y": 0,
+					"z": 0,
+					"yaw_bam": 0
+				},
+				"zone": {
+					"shape": {
+						"kind": "box",
+						"hx": 32768,
+						"hy": 32768,
+						"hz": 32768
+					},
+					"tags": [
+						"solid",
+						"crusher"
+					]
+				},
+				"mover": {
+					"path": [
+						{
+							"x": 393216,
+							"y": 65536,
+							"z": 0
+						},
+						{
+							"x": 393216,
+							"y": 0,
+							"z": 0
+						}
+					],
+					"speed": 4096,
+					"loop": true
+				}
+			}
+		},
+		{
+			"schema_version": 1,
+			"entity_id": 231,
+			"components": {
+				"transform": {
+					"x": 393216,
 					"y": -65536,
-					"z": -131072,
+					"z": 0,
 					"yaw_bam": 0
 				},
 				"zone": {
@@ -514,7 +654,81 @@
 			"entity_id": 95,
 			"components": {
 				"transform": {
+					"x": 458752,
+					"y": -65536,
+					"z": 0,
+					"yaw_bam": 0
+				},
+				"zone": {
+					"shape": {
+						"kind": "box",
+						"hx": 32768,
+						"hy": 32768,
+						"hz": 32768
+					},
+					"tags": [
+						"solid"
+					]
+				}
+			}
+		},
+		{
+			"schema_version": 1,
+			"entity_id": 229,
+			"components": {
+				"transform": {
 					"x": 131072,
+					"y": -65536,
+					"z": -65536,
+					"yaw_bam": 0
+				},
+				"zone": {
+					"shape": {
+						"kind": "box",
+						"hx": 32768,
+						"hy": 32768,
+						"hz": 32768
+					},
+					"tags": [
+						"solid",
+						"spike"
+					]
+				}
+			}
+		},
+		{
+			"schema_version": 1,
+			"entity_id": 236,
+			"components": {
+				"transform": {
+					"x": 262144,
+					"y": 0,
+					"z": -65536,
+					"yaw_bam": 0
+				},
+				"destructible": {
+					"durability": 1,
+					"regen_policy_id": 0
+				},
+				"zone": {
+					"shape": {
+						"kind": "box",
+						"hx": 32768,
+						"hy": 32768,
+						"hz": 32768
+					},
+					"tags": [
+						"rubble"
+					]
+				}
+			}
+		},
+		{
+			"schema_version": 1,
+			"entity_id": 99,
+			"components": {
+				"transform": {
+					"x": 262144,
 					"y": -65536,
 					"z": -65536,
 					"yaw_bam": 0
@@ -534,36 +748,17 @@
 		},
 		{
 			"schema_version": 1,
-			"entity_id": 96,
+			"entity_id": 237,
 			"components": {
 				"transform": {
-					"x": 131072,
-					"y": -65536,
-					"z": 0,
-					"yaw_bam": 0
-				},
-				"zone": {
-					"shape": {
-						"kind": "box",
-						"hx": 32768,
-						"hy": 32768,
-						"hz": 32768
-					},
-					"tags": [
-						"solid"
-					]
-				}
-			}
-		},
-		{
-			"schema_version": 1,
-			"entity_id": 97,
-			"components": {
-				"transform": {
-					"x": 131072,
+					"x": 393216,
 					"y": 0,
-					"z": -327680,
+					"z": -65536,
 					"yaw_bam": 0
+				},
+				"destructible": {
+					"durability": 1,
+					"regen_policy_id": 0
 				},
 				"zone": {
 					"shape": {
@@ -573,7 +768,7 @@
 						"hz": 32768
 					},
 					"tags": [
-						"solid"
+						"obstacle_core"
 					]
 				}
 			}
@@ -583,354 +778,9 @@
 			"entity_id": 98,
 			"components": {
 				"transform": {
-					"x": 196608,
-					"y": -65536,
-					"z": -327680,
-					"yaw_bam": 0
-				},
-				"zone": {
-					"shape": {
-						"kind": "box",
-						"hx": 32768,
-						"hy": 32768,
-						"hz": 32768
-					},
-					"tags": [
-						"solid"
-					]
-				}
-			}
-		},
-		{
-			"schema_version": 1,
-			"entity_id": 99,
-			"components": {
-				"transform": {
-					"x": 196608,
-					"y": -65536,
-					"z": -196608,
-					"yaw_bam": 0
-				},
-				"zone": {
-					"shape": {
-						"kind": "box",
-						"hx": 32768,
-						"hy": 32768,
-						"hz": 32768
-					},
-					"tags": [
-						"solid"
-					]
-				}
-			}
-		},
-		{
-			"schema_version": 1,
-			"entity_id": 100,
-			"components": {
-				"transform": {
-					"x": 196608,
-					"y": -65536,
-					"z": 0,
-					"yaw_bam": 0
-				},
-				"zone": {
-					"shape": {
-						"kind": "box",
-						"hx": 32768,
-						"hy": 32768,
-						"hz": 32768
-					},
-					"tags": [
-						"solid"
-					]
-				}
-			}
-		},
-		{
-			"schema_version": 1,
-			"entity_id": 101,
-			"components": {
-				"transform": {
-					"x": 262144,
-					"y": -65536,
-					"z": -327680,
-					"yaw_bam": 0
-				},
-				"zone": {
-					"shape": {
-						"kind": "box",
-						"hx": 32768,
-						"hy": 32768,
-						"hz": 32768
-					},
-					"tags": [
-						"solid"
-					]
-				}
-			}
-		},
-		{
-			"schema_version": 1,
-			"entity_id": 102,
-			"components": {
-				"transform": {
-					"x": 262144,
-					"y": -65536,
-					"z": -196608,
-					"yaw_bam": 0
-				},
-				"zone": {
-					"shape": {
-						"kind": "box",
-						"hx": 32768,
-						"hy": 32768,
-						"hz": 32768
-					},
-					"tags": [
-						"solid"
-					]
-				}
-			}
-		},
-		{
-			"schema_version": 1,
-			"entity_id": 103,
-			"components": {
-				"transform": {
-					"x": 262144,
-					"y": -65536,
-					"z": 0,
-					"yaw_bam": 0
-				},
-				"zone": {
-					"shape": {
-						"kind": "box",
-						"hx": 32768,
-						"hy": 32768,
-						"hz": 32768
-					},
-					"tags": [
-						"solid"
-					]
-				}
-			}
-		},
-		{
-			"schema_version": 1,
-			"entity_id": 104,
-			"components": {
-				"transform": {
-					"x": 327680,
-					"y": -65536,
-					"z": -327680,
-					"yaw_bam": 0
-				},
-				"zone": {
-					"shape": {
-						"kind": "box",
-						"hx": 32768,
-						"hy": 32768,
-						"hz": 32768
-					},
-					"tags": [
-						"solid"
-					]
-				}
-			}
-		},
-		{
-			"schema_version": 1,
-			"entity_id": 105,
-			"components": {
-				"transform": {
-					"x": 327680,
-					"y": -65536,
-					"z": -196608,
-					"yaw_bam": 0
-				},
-				"zone": {
-					"shape": {
-						"kind": "box",
-						"hx": 32768,
-						"hy": 32768,
-						"hz": 32768
-					},
-					"tags": [
-						"solid"
-					]
-				}
-			}
-		},
-		{
-			"schema_version": 1,
-			"entity_id": 106,
-			"components": {
-				"transform": {
-					"x": 327680,
-					"y": -65536,
-					"z": 0,
-					"yaw_bam": 0
-				},
-				"zone": {
-					"shape": {
-						"kind": "box",
-						"hx": 32768,
-						"hy": 32768,
-						"hz": 32768
-					},
-					"tags": [
-						"solid"
-					]
-				}
-			}
-		},
-		{
-			"schema_version": 1,
-			"entity_id": 107,
-			"components": {
-				"transform": {
-					"x": 327680,
-					"y": -65536,
-					"z": 65536,
-					"yaw_bam": 0
-				},
-				"zone": {
-					"shape": {
-						"kind": "box",
-						"hx": 32768,
-						"hy": 32768,
-						"hz": 32768
-					},
-					"tags": [
-						"solid"
-					]
-				}
-			}
-		},
-		{
-			"schema_version": 1,
-			"entity_id": 108,
-			"components": {
-				"transform": {
-					"x": 327680,
-					"y": -65536,
-					"z": 131072,
-					"yaw_bam": 0
-				},
-				"zone": {
-					"shape": {
-						"kind": "box",
-						"hx": 32768,
-						"hy": 32768,
-						"hz": 32768
-					},
-					"tags": [
-						"solid"
-					]
-				}
-			}
-		},
-		{
-			"schema_version": 1,
-			"entity_id": 109,
-			"components": {
-				"transform": {
 					"x": 393216,
 					"y": -65536,
-					"z": -327680,
-					"yaw_bam": 0
-				},
-				"zone": {
-					"shape": {
-						"kind": "box",
-						"hx": 32768,
-						"hy": 32768,
-						"hz": 32768
-					},
-					"tags": [
-						"solid"
-					]
-				}
-			}
-		},
-		{
-			"schema_version": 1,
-			"entity_id": 110,
-			"components": {
-				"transform": {
-					"x": 393216,
-					"y": -65536,
-					"z": -196608,
-					"yaw_bam": 0
-				},
-				"zone": {
-					"shape": {
-						"kind": "box",
-						"hx": 32768,
-						"hy": 32768,
-						"hz": 32768
-					},
-					"tags": [
-						"solid"
-					]
-				}
-			}
-		},
-		{
-			"schema_version": 1,
-			"entity_id": 111,
-			"components": {
-				"transform": {
-					"x": 393216,
-					"y": -65536,
-					"z": 0,
-					"yaw_bam": 0
-				},
-				"zone": {
-					"shape": {
-						"kind": "box",
-						"hx": 32768,
-						"hy": 32768,
-						"hz": 32768
-					},
-					"tags": [
-						"solid"
-					]
-				}
-			}
-		},
-		{
-			"schema_version": 1,
-			"entity_id": 112,
-			"components": {
-				"transform": {
-					"x": 458752,
-					"y": -65536,
-					"z": -327680,
-					"yaw_bam": 0
-				},
-				"zone": {
-					"shape": {
-						"kind": "box",
-						"hx": 32768,
-						"hy": 32768,
-						"hz": 32768
-					},
-					"tags": [
-						"solid"
-					]
-				}
-			}
-		},
-		{
-			"schema_version": 1,
-			"entity_id": 113,
-			"components": {
-				"transform": {
-					"x": 458752,
-					"y": -65536,
-					"z": 0,
+					"z": -65536,
 					"yaw_bam": 0
 				},
 				"zone": {
@@ -951,9 +801,9 @@
 			"entity_id": 200,
 			"components": {
 				"transform": {
-					"x": 131072,
+					"x": 458752,
 					"y": -65536,
-					"z": 327680,
+					"z": 196608,
 					"yaw_bam": 0
 				},
 				"zone": {
@@ -970,14 +820,14 @@
 				"mover": {
 					"path": [
 						{
-							"x": 131072,
+							"x": 458752,
 							"y": -65536,
-							"z": 327680
+							"z": 196608
 						},
 						{
-							"x": 393216,
+							"x": 327680,
 							"y": -65536,
-							"z": 327680
+							"z": 196608
 						}
 					],
 					"speed": 4096,
@@ -987,12 +837,12 @@
 		},
 		{
 			"schema_version": 1,
-			"entity_id": 210,
+			"entity_id": 109,
 			"components": {
 				"transform": {
-					"x": 65536,
+					"x": 458752,
 					"y": -65536,
-					"z": 393216,
+					"z": 65536,
 					"yaw_bam": 0
 				},
 				"zone": {
@@ -1010,12 +860,59 @@
 		},
 		{
 			"schema_version": 1,
-			"entity_id": 211,
+			"entity_id": 110,
+			"components": {
+				"transform": {
+					"x": 458752,
+					"y": -65536,
+					"z": 131072,
+					"yaw_bam": 0
+				},
+				"zone": {
+					"shape": {
+						"kind": "box",
+						"hx": 32768,
+						"hy": 32768,
+						"hz": 32768
+					},
+					"tags": [
+						"solid"
+					]
+				}
+			}
+		},
+		{
+			"schema_version": 1,
+			"entity_id": 201,
+			"components": {
+				"transform": {
+					"x": 65536,
+					"y": -65536,
+					"z": 196608,
+					"yaw_bam": 49152
+				},
+				"zone": {
+					"shape": {
+						"kind": "box",
+						"hx": 32768,
+						"hy": 32768,
+						"hz": 32768
+					},
+					"tags": [
+						"solid",
+						"conveyor"
+					]
+				}
+			}
+		},
+		{
+			"schema_version": 1,
+			"entity_id": 202,
 			"components": {
 				"transform": {
 					"x": 131072,
 					"y": -65536,
-					"z": 393216,
+					"z": 196608,
 					"yaw_bam": 49152
 				},
 				"zone": {
@@ -1034,12 +931,12 @@
 		},
 		{
 			"schema_version": 1,
-			"entity_id": 212,
+			"entity_id": 203,
 			"components": {
 				"transform": {
 					"x": 196608,
 					"y": -65536,
-					"z": 393216,
+					"z": 196608,
 					"yaw_bam": 49152
 				},
 				"zone": {
@@ -1058,12 +955,144 @@
 		},
 		{
 			"schema_version": 1,
-			"entity_id": 213,
+			"entity_id": 111,
 			"components": {
 				"transform": {
-					"x": 262144,
+					"x": 65536,
 					"y": -65536,
-					"z": 393216,
+					"z": 131072,
+					"yaw_bam": 0
+				},
+				"zone": {
+					"shape": {
+						"kind": "box",
+						"hx": 32768,
+						"hy": 32768,
+						"hz": 32768
+					},
+					"tags": [
+						"solid"
+					]
+				}
+			}
+		},
+		{
+			"schema_version": 1,
+			"entity_id": 112,
+			"components": {
+				"transform": {
+					"x": 131072,
+					"y": -65536,
+					"z": 131072,
+					"yaw_bam": 0
+				},
+				"zone": {
+					"shape": {
+						"kind": "box",
+						"hx": 32768,
+						"hy": 32768,
+						"hz": 32768
+					},
+					"tags": [
+						"solid"
+					]
+				}
+			}
+		},
+		{
+			"schema_version": 1,
+			"entity_id": 113,
+			"components": {
+				"transform": {
+					"x": 196608,
+					"y": -65536,
+					"z": 131072,
+					"yaw_bam": 0
+				},
+				"zone": {
+					"shape": {
+						"kind": "box",
+						"hx": 32768,
+						"hy": 32768,
+						"hz": 32768
+					},
+					"tags": [
+						"solid"
+					]
+				}
+			}
+		},
+		{
+			"schema_version": 1,
+			"entity_id": 210,
+			"components": {
+				"transform": {
+					"x": 0,
+					"y": 0,
+					"z": 131072,
+					"yaw_bam": 0
+				},
+				"zone": {
+					"shape": {
+						"kind": "box",
+						"hx": 32768,
+						"hy": 32768,
+						"hz": 32768
+					},
+					"tags": [
+						"solid",
+						"lift"
+					]
+				},
+				"mover": {
+					"path": [
+						{
+							"x": 0,
+							"y": 131072,
+							"z": 131072
+						},
+						{
+							"x": 0,
+							"y": 0,
+							"z": 131072
+						}
+					],
+					"speed": 4096,
+					"loop": true
+				}
+			}
+		},
+		{
+			"schema_version": 1,
+			"entity_id": 211,
+			"components": {
+				"transform": {
+					"x": 0,
+					"y": -65536,
+					"z": 131072,
+					"yaw_bam": 0
+				},
+				"zone": {
+					"shape": {
+						"kind": "box",
+						"hx": 32768,
+						"hy": 32768,
+						"hz": 32768
+					},
+					"tags": [
+						"solid"
+					]
+				}
+			}
+		},
+		{
+			"schema_version": 1,
+			"entity_id": 239,
+			"components": {
+				"transform": {
+					"x": 393216,
+					"y": -65536,
+					"z": 131072,
 					"yaw_bam": 49152
 				},
 				"zone": {
@@ -1075,19 +1104,19 @@
 					},
 					"tags": [
 						"solid",
-						"conveyor"
+						"ice"
 					]
 				}
 			}
 		},
 		{
 			"schema_version": 1,
-			"entity_id": 214,
+			"entity_id": 221,
 			"components": {
 				"transform": {
-					"x": 327680,
-					"y": -65536,
-					"z": 393216,
+					"x": 65536,
+					"y": 0,
+					"z": 65536,
 					"yaw_bam": 49152
 				},
 				"zone": {
@@ -1106,75 +1135,12 @@
 		},
 		{
 			"schema_version": 1,
-			"entity_id": 215,
-			"components": {
-				"transform": {
-					"x": 393216,
-					"y": 65536,
-					"z": 393216,
-					"yaw_bam": 0
-				},
-				"zone": {
-					"shape": {
-						"kind": "box",
-						"hx": 32768,
-						"hy": 32768,
-						"hz": 32768
-					},
-					"tags": [
-						"solid"
-					]
-				}
-			}
-		},
-		{
-			"schema_version": 1,
-			"entity_id": 216,
-			"components": {
-				"transform": {
-					"x": 65536,
-					"y": -65536,
-					"z": 458752,
-					"yaw_bam": 0
-				},
-				"zone": {
-					"shape": {
-						"kind": "box",
-						"hx": 32768,
-						"hy": 32768,
-						"hz": 32768
-					},
-					"tags": [
-						"solid",
-						"lift"
-					]
-				},
-				"mover": {
-					"path": [
-						{
-							"x": 65536,
-							"y": -65536,
-							"z": 458752
-						},
-						{
-							"x": 65536,
-							"y": 65536,
-							"z": 458752
-						}
-					],
-					"speed": 4096,
-					"loop": true
-				}
-			}
-		},
-		{
-			"schema_version": 1,
 			"entity_id": 223,
 			"components": {
 				"transform": {
-					"x": 65536,
+					"x": 327680,
 					"y": 0,
-					"z": 65536,
+					"z": 131072,
 					"yaw_bam": 0
 				},
 				"zone": {
@@ -1197,17 +1163,13 @@
 		},
 		{
 			"schema_version": 1,
-			"entity_id": 224,
+			"entity_id": 96,
 			"components": {
 				"transform": {
 					"x": 327680,
-					"y": 0,
-					"z": 65536,
+					"y": -65536,
+					"z": 131072,
 					"yaw_bam": 0
-				},
-				"destructible": {
-					"durability": 1,
-					"regen_policy_id": 0
 				},
 				"zone": {
 					"shape": {
@@ -1217,7 +1179,7 @@
 						"hz": 32768
 					},
 					"tags": [
-						"energy_wall"
+						"solid"
 					]
 				}
 			}
@@ -1227,7 +1189,7 @@
 			"entity_id": 225,
 			"components": {
 				"transform": {
-					"x": 262144,
+					"x": 327680,
 					"y": 0,
 					"z": 65536,
 					"yaw_bam": 0
@@ -1259,9 +1221,9 @@
 			"entity_id": 226,
 			"components": {
 				"transform": {
-					"x": 262144,
+					"x": 458752,
 					"y": 0,
-					"z": -327680,
+					"z": -65536,
 					"yaw_bam": 0
 				},
 				"portal": {
@@ -1276,7 +1238,7 @@
 			"entity_id": 227,
 			"components": {
 				"transform": {
-					"x": 262144,
+					"x": 327680,
 					"y": -65536,
 					"z": 65536,
 					"yaw_bam": 0
@@ -1301,12 +1263,12 @@
 		},
 		{
 			"schema_version": 1,
-			"entity_id": 228,
+			"entity_id": 101,
 			"components": {
 				"transform": {
 					"x": 262144,
 					"y": -65536,
-					"z": -327680,
+					"z": 65536,
 					"yaw_bam": 0
 				},
 				"zone": {
@@ -1324,7 +1286,7 @@
 		},
 		{
 			"schema_version": 1,
-			"entity_id": 229,
+			"entity_id": 102,
 			"components": {
 				"transform": {
 					"x": 393216,
@@ -1340,58 +1302,6 @@
 						"hz": 32768
 					},
 					"tags": [
-						"solid",
-						"spike"
-					]
-				}
-			}
-		},
-		{
-			"schema_version": 1,
-			"entity_id": 230,
-			"components": {
-				"transform": {
-					"x": 196608,
-					"y": 0,
-					"z": 65536,
-					"yaw_bam": 0
-				},
-				"hazard": {
-					"damage": 0,
-					"knockback": 0,
-					"cooldown_ticks": 30
-				},
-				"zone": {
-					"shape": {
-						"kind": "box",
-						"hx": 32768,
-						"hy": 32768,
-						"hz": 32768
-					},
-					"tags": [
-						"flame"
-					]
-				}
-			}
-		},
-		{
-			"schema_version": 1,
-			"entity_id": 231,
-			"components": {
-				"transform": {
-					"x": 131072,
-					"y": -65536,
-					"z": 65536,
-					"yaw_bam": 0
-				},
-				"zone": {
-					"shape": {
-						"kind": "box",
-						"hx": 32768,
-						"hy": 32768,
-						"hz": 32768
-					},
-					"tags": [
 						"solid"
 					]
 				}
@@ -1399,47 +1309,7 @@
 		},
 		{
 			"schema_version": 1,
-			"entity_id": 232,
-			"components": {
-				"transform": {
-					"x": 131072,
-					"y": 0,
-					"z": 65536,
-					"yaw_bam": 0
-				},
-				"zone": {
-					"shape": {
-						"kind": "box",
-						"hx": 32768,
-						"hy": 32768,
-						"hz": 32768
-					},
-					"tags": [
-						"solid",
-						"crusher"
-					]
-				},
-				"mover": {
-					"path": [
-						{
-							"x": 131072,
-							"y": 65536,
-							"z": 65536
-						},
-						{
-							"x": 131072,
-							"y": 0,
-							"z": 65536
-						}
-					],
-					"speed": 4096,
-					"loop": true
-				}
-			}
-		},
-		{
-			"schema_version": 1,
-			"entity_id": 233,
+			"entity_id": 103,
 			"components": {
 				"transform": {
 					"x": 196608,
@@ -1462,18 +1332,13 @@
 		},
 		{
 			"schema_version": 1,
-			"entity_id": 234,
+			"entity_id": 104,
 			"components": {
 				"transform": {
 					"x": 458752,
-					"y": 0,
-					"z": 65536,
+					"y": -65536,
+					"z": -65536,
 					"yaw_bam": 0
-				},
-				"hazard": {
-					"damage": 0,
-					"knockback": 0,
-					"cooldown_ticks": 30
 				},
 				"zone": {
 					"shape": {
@@ -1483,17 +1348,17 @@
 						"hz": 32768
 					},
 					"tags": [
-						"roller"
+						"solid"
 					]
 				}
 			}
 		},
 		{
 			"schema_version": 1,
-			"entity_id": 235,
+			"entity_id": 105,
 			"components": {
 				"transform": {
-					"x": 458752,
+					"x": 131072,
 					"y": -65536,
 					"z": 65536,
 					"yaw_bam": 0
@@ -1513,66 +1378,12 @@
 		},
 		{
 			"schema_version": 1,
-			"entity_id": 236,
+			"entity_id": 107,
 			"components": {
 				"transform": {
-					"x": 393216,
-					"y": 0,
-					"z": 131072,
-					"yaw_bam": 0
-				},
-				"destructible": {
-					"durability": 1,
-					"regen_policy_id": 0
-				},
-				"zone": {
-					"shape": {
-						"kind": "box",
-						"hx": 32768,
-						"hy": 32768,
-						"hz": 32768
-					},
-					"tags": [
-						"rubble"
-					]
-				}
-			}
-		},
-		{
-			"schema_version": 1,
-			"entity_id": 237,
-			"components": {
-				"transform": {
-					"x": 327680,
-					"y": 0,
-					"z": 131072,
-					"yaw_bam": 0
-				},
-				"destructible": {
-					"durability": 1,
-					"regen_policy_id": 0
-				},
-				"zone": {
-					"shape": {
-						"kind": "box",
-						"hx": 32768,
-						"hy": 32768,
-						"hz": 32768
-					},
-					"tags": [
-						"obstacle_core"
-					]
-				}
-			}
-		},
-		{
-			"schema_version": 1,
-			"entity_id": 238,
-			"components": {
-				"transform": {
-					"x": 0,
-					"y": 0,
-					"z": 131072,
+					"x": 196608,
+					"y": -65536,
+					"z": -65536,
 					"yaw_bam": 0
 				},
 				"zone": {
@@ -1583,36 +1394,19 @@
 						"hz": 32768
 					},
 					"tags": [
-						"solid",
-						"pendulum"
+						"solid"
 					]
-				},
-				"mover": {
-					"path": [
-						{
-							"x": 0,
-							"y": 0,
-							"z": 262144
-						},
-						{
-							"x": 0,
-							"y": 0,
-							"z": 131072
-						}
-					],
-					"speed": 4096,
-					"loop": true
 				}
 			}
 		},
 		{
 			"schema_version": 1,
-			"entity_id": 239,
+			"entity_id": 108,
 			"components": {
 				"transform": {
 					"x": 65536,
 					"y": -65536,
-					"z": 131072,
+					"z": 65536,
 					"yaw_bam": 0
 				},
 				"zone": {
@@ -1623,8 +1417,7 @@
 						"hz": 32768
 					},
 					"tags": [
-						"solid",
-						"ice"
+						"solid"
 					]
 				}
 			}
