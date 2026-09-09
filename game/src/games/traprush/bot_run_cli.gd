@@ -16,11 +16,14 @@ extends RefCounted
 ## `--route=safe` 只对 course_01 有意义：封掉 +X 捷径上楼 two_way（entity 10），
 ## 再重放 C3 第 5 章已经走通的四向安全路。其它课没有这条语义，带 `--route=safe`
 ## 就整体拒绝，而不是悄悄当 any 跑。默认不带约束，仍走捷径。
+## `course_f_playable` 在 `--route=any` 下重放危险捷径脚本（打碎主路能量墙、
+## 等喷火/滚柱关相），因为完整搜索会在火焰半周期上把预算烧光。
 ##
 ## 判定强度与动作集的边界写在 TraprushCourseCompletionProbe 的文件头，
 ## 那里也解释了为什么 not_completable 不等于「人也过不去」。
 
 const CourseCompletionProbe := preload("res://src/games/traprush/course_completion_probe.gd")
+const CourseFPlayableScripts := preload("res://src/games/traprush/course_f_playable_scripts.gd")
 const OfficialTraprushCourses := preload("res://src/shared/official_traprush_courses.gd")
 
 const FLAG: String = "--bot-run"
@@ -104,8 +107,11 @@ static func run_and_print(user_args: PackedStringArray) -> int:
 	for course_id: String in courses:
 		var course_started: int = Time.get_ticks_msec()
 		var path: String = OfficialTraprushCourses.document_path(course_id)
+		var course_hint: PackedByteArray = hint_actions
+		if course_id == OfficialTraprushCourses.COURSE_F_PLAYABLE and route == ROUTE_ANY:
+			course_hint = CourseFPlayableScripts.fast_hint()
 		var result: Dictionary = CourseCompletionProbe.run_path(
-			path, max_ticks, max_depth, forbid_portals, action_count, hint_actions
+			path, max_ticks, max_depth, forbid_portals, action_count, course_hint
 		)
 		var outcome: String = result["outcome"]
 		if outcome == CourseCompletionProbe.OUTCOME_COMPLETABLE:
