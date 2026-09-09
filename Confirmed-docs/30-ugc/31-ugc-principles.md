@@ -71,7 +71,7 @@
 
 实现落点（[ADR-0006](../../docs/adr/0006-gameplay-asset-contract.md)，2026-08-29 拍板）：平台内置资产清单在 `game/src/shared/schema/gameplay_asset_catalog.gd`；创作者只能用 `gameplay_asset` 组件引用清单里的 `asset_id`，**不能自填尺寸**；权威碰撞随内容发布写进 SimulationBundle 的 `assets` 袋，所以已发布内容与旧回放按各自发布时的形状裁决。目录改几何时旧内容重编译失败，必须走新内容版本——这是本节第三条的机械保障。
 
-一期边界：占地由权威碰撞的 AABB 在格网上投影**派生**，不是独立字段；挂点只留字段位、仿真不消费；**不含导航**（无导航网格、无寻路），解冻 BASTION 时重开。视觉网格不进 bundle，客户端按 `latest` 解析（落点 `game/src/shared/visual_asset_catalog.gd`，2026-08-30），所以改视觉不产生新内容版本；解析不到时回退占位盒。资产文件本身的格式、目录与准入见 [CD-51 §5.1](../50-engineering/51-dev-environment.md)。一期可用 `ContentSign` 对编译后的 v2 wire 做 ContentHash 与 HMAC（sidecar，不改 Bundle 字段）；官方课开局锁定哈希、仍不要求信封。`latest` 发布与密码学不可变的公开目录仍待。
+一期边界：占地由权威碰撞的 AABB 在格网上投影**派生**，不是独立字段；挂点只留字段位、仿真不消费；**不含导航**（无导航网格、无寻路），解冻 BASTION 时重开。视觉网格不进 bundle，客户端按 `latest` 解析（落点 `game/src/shared/visual_asset_catalog.gd`，2026-08-30），所以改视觉不产生新内容版本；解析不到时回退占位盒。资产文件本身的格式、目录与准入见 [CD-51 §5.1](../50-engineering/51-dev-environment.md)。一期可用 `ContentSign` 对编译后的 v2 wire 做 ContentHash 与 HMAC（sidecar，不改 Bundle 字段）；官方课开局锁定哈希、仍不要求信封。已签名版本经控制面发布切 `latest`，新房吃新版本；密码学不可变的公开目录 / 广场仍待。
 
 **按 `asset_id` 逐资产取视觉尚未实装**：一期唯一内置资产是"占满一格"，七类占用袋全都引用它。今天按**袋类型**接线——`solids` 袋铺地块、玩家用角色资产，因为"踩得到的固体"是玩法语义；机关与可破坏箱按 [CD-11 §8](../10-product/11-scope-and-platforms.md) 的危险色保留色块。检查点垫、传送门与终点因此仍无独立视觉。这是内容还没有区分资产，不是本节承诺被削减。
 

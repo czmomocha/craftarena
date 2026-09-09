@@ -19,7 +19,7 @@
 | 扫掠预算 | 单次最多 **256** 样本；超限拒绝整段，不粗化密度。数字在 §1.1 |
 | 静态盒阔相 | 均匀格桶 = `SCALE`；单盒超 125 格或溢出走全量窄相。ID 顺序与全量扫描相同。胶囊仍线性 |
 | Rule VM | **第 1–5 章已交**：v1 信封 + 白名单解释器 + gas；`OnMatchStarted` / `OnEveryTicks` 图编成同一套字节码。§2.1 Query / Logic / Action 最小子集：`GetField` / `CountInZone`（按结果数加 gas）/ `Logic` / `Spawn` / `Despawn` / `ApplyEffect` / `EmitGameEvent`，经 `RuleVmHost`；超 gas 回滚 host 写入。其它事件仍编译拒绝。Preview 安全点 `try_replace_rule_graphs` 重编译生效；公开对局 `try_replace_rule_graphs` 禁止。不把规则图写入 AuthoringDocument / SimulationBundle。`run()` 不走 JSON |
-| 内容签名 | **M4b 第 1 章已交**：sidecar 信封，不改 SimulationBundle 字段。ContentHash = StateHasher 规范编码 `to_dictionary()` 的 SHA-256；签名 = HMAC-SHA256(`content_id` + LF + `version` + LF + hash)。对局开局锁定哈希；官方课不要求信封。无 `latest` |
+| 内容签名 | **M4b 第 1–2 章已交**：sidecar 信封，不改 SimulationBundle 字段。ContentHash = StateHasher 规范编码 `to_dictionary()` 的 SHA-256；签名 = HMAC-SHA256(`content_id` + LF + `version` + LF + hash)。控制面发布校验 HMAC 后原子切 `latest`；新房吃 `latest`，已开对局锁开局哈希。官方课不要求信封 |
 
 ## 1. Component Schema v1
 
@@ -272,6 +272,8 @@ Undo / Redo 是会话内对成功命令派生的反向 payload（`place`↔`remo
 | 可哈希 payload 白名单 | `game/src/shared/protocol/canonical_payload.gd` |
 | 关键状态哈希 | `game/src/shared/protocol/state_hasher.gd` |
 | 内容签名信封 | `game/src/ugc/content_sign.gd`（sidecar；对局 `TraprushMatchSession.content_hash`） |
+| 内容目录 / latest | `game/src/ugc/content_catalog.gd`（内存；新房解析 `latest`） |
+| 内容发布 HTTP | `backend/contracts/src/content_publish.ts`（控制面 `POST /content/publish`、`GET /content/:id/latest`） |
 | 定点与 BAM | `game/src/shared/fixed/` |
 | 组件名 | `game/src/shared/schema/component_names.gd` |
 | 碰撞 kind | `game/src/shared/schema/collision_shape_kinds.gd`（`shape_is_valid` 是形状袋校验的唯一实现，`zone.shape` 与资产表的权威碰撞都调它） |
@@ -291,4 +293,4 @@ JSON Schema 落点：
 | SimulationBundle | `backend/contracts/schemas/simulation_bundle.schema.json` |
 | 正反例与校验 | `tools/content-validator/`（由根目录 `npm test` 收集） |
 
-`payload` 只允许 nil / bool / int / String / Array / Dictionary（字符串键）；禁止 float、Object、Callable。PLAYER 命令必须带白名单 `intent` 字符串。EDIT 命令必须带白名单 `op` 字符串，payload 形状见 [§3.3](#33-服务端处理管线)。SYSTEM 命令允许 `actor_id = 0`。Component Schema v1 字段见 [§1.2](#12-字段标识符v1)。AuthoringDocument 字段见 [CD-32 §1.4](../30-ugc/32-editor-and-preview.md#14-共同数据模型)。SimulationBundle **v2** 字段见本表与 [CD-32 §3](../30-ugc/32-editor-and-preview.md#3-从编辑到预览)「TRAPRUSH 拓扑编译」（含可空 `hazards` 与可空 `solids` 袋、可选 `movers` / `conveyors` / `launches` / `switches` / `gates` / `energy_walls` / `portal_switches` / `spikes` / `flames` / `crushers` 袋，以及 v2 的 `assets` 袋与每袋资产引用，见 [§1.3](#13-权威碰撞的载体v2-起)）。Preview 试玩、MoveIntent、检查点占用验收、传送占用落地、冲线占用、重置到检查点、UseItemIntent 可破坏占用、JumpIntent 接地跳跃与周期机关固体切换见 [CD-32 §3](../30-ugc/32-editor-and-preview.md#3-从编辑到预览)「Preview 试玩」。对局票据 HTTP JSON Schema 在 `backend/contracts/src/match_ticket.ts`，由控制面 Fastify 路由挂载（含 `POST /match-sessions/:matchId/tickets/reconnect`）。单局结算 HTTP JSON Schema 在 `backend/contracts/src/match_settlement.ts`。Rule VM 图的 JSON Schema 仍未落地。OpenAPI 仍未落地。内容签名是 sidecar 信封，不改 SimulationBundle 字段；`GameplayAssetVersion` 的几何不可变仍靠字段与编译期准入，ContentHash 覆盖整份 v2 wire。无 `latest` 指针。
+`payload` 只允许 nil / bool / int / String / Array / Dictionary（字符串键）；禁止 float、Object、Callable。PLAYER 命令必须带白名单 `intent` 字符串。EDIT 命令必须带白名单 `op` 字符串，payload 形状见 [§3.3](#33-服务端处理管线)。SYSTEM 命令允许 `actor_id = 0`。Component Schema v1 字段见 [§1.2](#12-字段标识符v1)。AuthoringDocument 字段见 [CD-32 §1.4](../30-ugc/32-editor-and-preview.md#14-共同数据模型)。SimulationBundle **v2** 字段见本表与 [CD-32 §3](../30-ugc/32-editor-and-preview.md#3-从编辑到预览)「TRAPRUSH 拓扑编译」（含可空 `hazards` 与可空 `solids` 袋、可选 `movers` / `conveyors` / `launches` / `switches` / `gates` / `energy_walls` / `portal_switches` / `spikes` / `flames` / `crushers` 袋，以及 v2 的 `assets` 袋与每袋资产引用，见 [§1.3](#13-权威碰撞的载体v2-起)）。Preview 试玩、MoveIntent、检查点占用验收、传送占用落地、冲线占用、重置到检查点、UseItemIntent 可破坏占用、JumpIntent 接地跳跃与周期机关固体切换见 [CD-32 §3](../30-ugc/32-editor-and-preview.md#3-从编辑到预览)「Preview 试玩」。对局票据 HTTP JSON Schema 在 `backend/contracts/src/match_ticket.ts`，由控制面 Fastify 路由挂载（含 `POST /match-sessions/:matchId/tickets/reconnect`）。单局结算 HTTP JSON Schema 在 `backend/contracts/src/match_settlement.ts`。内容发布 HTTP JSON Schema 在 `backend/contracts/src/content_publish.ts`（信封五键 + `bundle`；控制面不重算 ContentHash）。Rule VM 图的 JSON Schema 仍未落地。OpenAPI 仍未落地。内容签名是 sidecar 信封，不改 SimulationBundle 字段；`GameplayAssetVersion` 的几何不可变仍靠字段与编译期准入，ContentHash 覆盖整份 v2 wire。`latest` 由控制面 `content_latest` 指向已签名版本；新房吃新版本，已开对局不改哈希。

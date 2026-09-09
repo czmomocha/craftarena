@@ -122,4 +122,24 @@ export const MIGRATIONS: readonly Migration[] = [
 			`ALTER TABLE match_queue ADD COLUMN seats INTEGER NOT NULL DEFAULT 2`,
 		],
 	},
+	{
+		id: "0009_content_versions_and_latest",
+		statements: [
+			// 已签名内容版本不可覆盖。latest 只指向 versions 里已有的一行。
+			`CREATE TABLE content_versions (
+				content_id TEXT NOT NULL,
+				version INTEGER NOT NULL,
+				content_hash TEXT NOT NULL,
+				signature TEXT NOT NULL,
+				bundle_json TEXT NOT NULL,
+				created_at TEXT NOT NULL,
+				PRIMARY KEY (content_id, version)
+			) STRICT`,
+			`CREATE TABLE content_latest (
+				content_id TEXT PRIMARY KEY,
+				version INTEGER NOT NULL,
+				FOREIGN KEY (content_id, version) REFERENCES content_versions (content_id, version)
+			) STRICT`,
+		],
+	},
 ];

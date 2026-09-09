@@ -31,6 +31,7 @@ import {
 	launchOrEnqueue,
 	viewQueue,
 } from "./server_matchmaking.ts";
+import { registerContentRoutes } from "./server_content.ts";
 import { registerSessionRoutes } from "./server_sessions.ts";
 
 export interface BuildServerOptions {
@@ -50,6 +51,8 @@ export interface BuildServerOptions {
 	readonly matchLauncher?: MatchLauncher;
 	/** Godot Web 导出目录。省略或 undefined 则不挂 `/play/`。 */
 	readonly webRoot?: string | undefined;
+	/** 内容发布 HMAC 钥。省略时用文档化测试钥。 */
+	readonly contentSignKey?: string | undefined;
 }
 
 export interface MatchIdParams {
@@ -123,6 +126,7 @@ export function buildServer(options: BuildServerOptions): FastifyInstance {
 	});
 
 	registerSessionRoutes(app, options, now, ticketTtlMs, runDrain);
+	registerContentRoutes(app, options);
 
 	app.post("/matchmaking/quick", async (request, reply) => {
 		const matchResult = readOfficialMatchBody(request.body);

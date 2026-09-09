@@ -17,9 +17,17 @@ import {
 	type TicketRejectReason,
 } from "../../../contracts/src/match_ticket.ts";
 import { MIGRATIONS, SCHEMA_MIGRATIONS_TABLE } from "./migrations.ts";
+import {
+	ControlPlaneContentStore,
+	ContentVersionExistsError,
+	ContentVersionNotNextError,
+	type ContentVersionRecord,
+} from "./database_content.ts";
 import { ControlPlaneQueueStore } from "./database_queue.ts";
 import { ControlPlaneSessionStore } from "./database_sessions.ts";
 import { ControlPlaneTicketStore } from "./database_tickets.ts";
+
+export { ContentVersionExistsError, ContentVersionNotNextError, type ContentVersionRecord };
 
 /** 运维 `POST /match-sessions` 省略 seats 时的列默认。不是匹配 HTTP 默认人数。 */
 export const DEFAULT_MATCH_SEATS = 8;
@@ -141,6 +149,7 @@ export class ControlPlaneDatabase {
 	readonly #sessions: ControlPlaneSessionStore;
 	readonly #tickets: ControlPlaneTicketStore;
 	readonly #queue: ControlPlaneQueueStore;
+	readonly #content: ControlPlaneContentStore;
 
 	constructor(databasePath: string) {
 		if (databasePath !== ":memory:") {
@@ -151,6 +160,7 @@ export class ControlPlaneDatabase {
 		this.#sessions = new ControlPlaneSessionStore(this.#db);
 		this.#tickets = new ControlPlaneTicketStore(this.#db, this.#sessions);
 		this.#queue = new ControlPlaneQueueStore(this.#db, this.#sessions, this.#tickets);
+		this.#content = new ControlPlaneContentStore(this.#db);
 		// 崩溃后仍能保持一致性，且并发读不被写阻塞。
 		this.#db.exec("PRAGMA journal_mode = WAL");
 		this.#db.exec("PRAGMA foreign_keys = ON");
@@ -320,6 +330,25 @@ export class ControlPlaneDatabase {
 
 	reconnectTicket(matchId: string, ticket: string, now: Date, ttlMs: number): ReconnectTicketResult {
 		return this.#tickets.reconnectTicket(matchId, ticket, now, ttlMs);
+	}
+
+	publishContent(input: {
+		readonly contentId: string;
+		readonly version: number;
+		readonly contentHash: string;
+		readonly signature: string;
+		readonly bundle: Record<string, unknown>;
+		readonly now: Date;
+	}): ContentVersionRecord {
+		return this.#content.publish(input);
+	}
+
+	getContentLatest(contentId: string): ContentVersionRecord | undefined {
+		return this.#content.getLatest(contentId);
+	}
+
+	getContentVersion(contentId: string, version: number): ContentVersionRecord | undefined {
+		return this.#content.getVersion(contentId, version);
 	}
 
 	close(): void {

@@ -56,4 +56,12 @@ export {
 	type MatchSettlementRow,
 	type RecordMatchSettlementRequest,
 } from "./match_settlement.ts";
+export {
+	CONTENT_PUBLISH_ERRORS,
+	CONTENT_PUBLISH_SCHEMA_VERSION,
+	contentPublishBodySchema,
+	type ContentPublishError,
+	type ContentPublishRequest,
+	type ContentVersionView,
+} from "./content_publish.ts";
 

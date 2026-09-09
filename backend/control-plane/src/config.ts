@@ -1,5 +1,6 @@
 import { resolve } from "node:path";
 
+import { CONTENT_SIGN_DEV_KEY } from "./content_sign.ts";
 import { DEFAULT_QUEUE_SLOT_ESTIMATE_MS, DEFAULT_QUEUE_TTL_MS } from "./queue.ts";
 import { DEFAULT_TICKET_TTL_MS } from "./tickets.ts";
 
@@ -25,6 +26,8 @@ export interface ControlPlaneConfig {
 	readonly logLevel: string;
 	/** Godot Web 导出目录的绝对路径。空则不挂 `/play/`。 */
 	readonly webRoot: string | undefined;
+	/** 内容发布 HMAC 钥。未设时用文档化测试钥，不是生产秘密。 */
+	readonly contentSignKey: string;
 }
 
 const DEFAULT_PORT = 8080;
@@ -34,8 +37,8 @@ const DEFAULT_MATCH_HOST_LAUNCH_TIMEOUT_MS = 20_000;
 /**
  * 只从环境变量读配置，没有配置文件。
  *
- * CD-51 §3 要求真实密钥留在进程外部，因此这里既不读也不落盘任何凭据；
- * 一旦将来引入密钥，必须继续走环境变量而不是提交到仓库的文件。
+ * CD-51 §3 要求真实密钥留在进程外部。内容签名钥只从 CONTENT_SIGN_KEY
+ * 读取；未设时用文档化测试钥，不把生产秘密写进仓库。
  */
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): ControlPlaneConfig {
 	const rawDatabasePath = env["CONTROL_PLANE_DB_PATH"] ?? "./data/control-plane.sqlite";
@@ -60,7 +63,17 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): ControlPlaneCo
 		version: env["CRAFTARENA_VERSION"] ?? "0.0.0-dev",
 		logLevel: env["CONTROL_PLANE_LOG_LEVEL"] ?? "info",
 		webRoot: parseOptionalPath(env["CRAFTARENA_WEB_ROOT"]),
+		contentSignKey: parseContentSignKey(env["CONTENT_SIGN_KEY"]),
 	};
+}
+
+function parseContentSignKey(raw: string | undefined): string {
+	const text = raw === undefined || raw.trim() === "" ? CONTENT_SIGN_DEV_KEY : raw;
+	const bytes = Buffer.byteLength(text, "utf8");
+	if (bytes < 16 || bytes > 64) {
+		throw new Error("CONTENT_SIGN_KEY must be 16-64 UTF-8 bytes");
+	}
+	return text;
 }
 
 function parseOptionalPath(raw: string | undefined): string | undefined {

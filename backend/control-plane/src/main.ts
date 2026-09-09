@@ -16,6 +16,7 @@ const app = buildServer({
 	queueSlotEstimateMs: config.queueSlotEstimateMs,
 	matchLauncher: new MatchHostHttpLauncher(config.matchHostUrl, config.matchHostLaunchTimeoutMs),
 	webRoot: config.webRoot,
+	contentSignKey: config.contentSignKey,
 });
 
 if (applied.length > 0) {
