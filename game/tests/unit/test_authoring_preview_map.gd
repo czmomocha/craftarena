@@ -138,14 +138,18 @@ func test_hazard_placeholder_uses_hazard_albedo() -> void:
 
 func test_solid_placeholder_uses_solid_albedo() -> void:
 	var world: AuthoringWorld = AuthoringWorld.new()
-	assert_true(world.put(_record_solid(7, 0, -CELL, 0)))
+	assert_true(world.put(_record_solid(7, 0, 0, 0)))
+	assert_true(world.put(_record_solid(8, 0, -CELL, 0)))
 	_map = AuthoringPreviewMap.new()
 	add_child(_map)
 	_map.rebuild(world)
-	var node: MeshInstance3D = _map.placeholder_node(7)
-	assert_not_null(node)
-	assert_eq(_placeholder_albedo(node), AuthoringPreviewMap.SOLID_ALBEDO)
-	assert_true(node.visible)
+	var birth: MeshInstance3D = _map.placeholder_node(7)
+	var lower: MeshInstance3D = _map.placeholder_node(8)
+	assert_not_null(birth)
+	assert_not_null(lower)
+	assert_eq(_placeholder_albedo(birth), AuthoringPreviewMap.SOLID_ALBEDO)
+	assert_eq(_placeholder_albedo(lower), PlaceholderSpec.floor_albedo(-CELL, CELL))
+	assert_true(birth.visible)
 
 
 func test_crate_placeholder_uses_crate_albedo() -> void:
