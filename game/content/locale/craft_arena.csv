@@ -39,6 +39,14 @@ craft_arena.ui.place_switch,Place switch,放置开关
 craft_arena.ui.place_gate,Place gate,放置门
 craft_arena.ui.place_energy_wall,Place energy wall,放置能量墙
 craft_arena.ui.place_gated_portal,Place gated portal,放置开关传送
+craft_arena.ui.place_spike,Place spike,放置地刺
+craft_arena.ui.place_flame,Place flame,放置喷火
+craft_arena.ui.place_crusher,Place crusher,放置压板
+craft_arena.ui.place_roller,Place roller,放置滚柱
+craft_arena.ui.place_rubble,Place rubble,放置碎石
+craft_arena.ui.place_obstacle_core,Place core,放置障碍核心
+craft_arena.ui.place_pendulum,Place pendulum,放置摆锤
+craft_arena.ui.place_ice,Place ice,放置冰面
 craft_arena.ui.mark_corner,Mark corner,标记角点
 craft_arena.ui.fill_solids,Fill solids,矩形填充
 craft_arena.ui.copy_entity,Copy,复制
@@ -67,3 +75,6 @@ craft_arena.ui.back_to_lobby,Back to lobby,返回大厅
 craft_arena.ui.validator_ok,Ready to publish,可以发布
 craft_arena.ui.validator_issues,%d issues block publishing,%d 个问题挡住发布
 craft_arena.ui.auto_tick,Auto run,自动推进
+craft_arena.ui.hud_bomb,Bomb ×%d,爆破球 ×%d
+craft_arena.ui.hud_dash,Dash ×%d,冲刺 ×%d
+craft_arena.ui.hud_fails,Fails ×%d,失败 ×%d

@@ -65,6 +65,19 @@ const GATE_ZONE_TAG: String = "gate"
 const ENERGY_WALL_ZONE_TAG: String = "energy_wall"
 ## 开关传送：传送门 + 本标签 + 已有 `interactable.link_group`。见 `TraprushGateCycle`。
 const PORTAL_SWITCH_ZONE_TAG: String = "portal_switch"
+## 地刺 / 喷火 / 压板：见 `TraprushTrapCycle`。
+const SPIKE_ZONE_TAG: String = "spike"
+const FLAME_ZONE_TAG: String = "flame"
+const CRUSHER_ZONE_TAG: String = "crusher"
+## 滚柱：周期机关 + 本标签。半周期固体挡路（与喷火相反）。
+const ROLLER_ZONE_TAG: String = "roller"
+## 碎石 / 障碍核心：可破坏占用 + 本标签。打碎走已有 UseItem。
+const RUBBLE_ZONE_TAG: String = "rubble"
+const OBSTACLE_CORE_ZONE_TAG: String = "obstacle_core"
+## 摆锤：水平 `mover` + 本标签。路径必须纯水平，否则整份拒绝。见压板（纯 Y）。
+const PENDULUM_ZONE_TAG: String = "pendulum"
+## 冰面：固体 + 本标签 + `transform.yaw_bam`。支撑时按走路步长滑，可侧向走下。
+const ICE_ZONE_TAG: String = "ice"
 
 
 static func compile(world: AuthoringWorld) -> SimulationBundle:
@@ -102,5 +115,13 @@ static func compile(world: AuthoringWorld) -> SimulationBundle:
 		SimulationBundle.FIELD_GATES: occupancy["gates"],
 		SimulationBundle.FIELD_ENERGY_WALLS: occupancy["energy_walls"],
 		SimulationBundle.FIELD_PORTAL_SWITCHES: portal_result["portal_switches"],
+		SimulationBundle.FIELD_SPIKES: occupancy["spikes"],
+		SimulationBundle.FIELD_FLAMES: occupancy["flames"],
+		SimulationBundle.FIELD_CRUSHERS: occupancy["crushers"],
+		SimulationBundle.FIELD_ROLLERS: occupancy["rollers"],
+		SimulationBundle.FIELD_RUBBLES: occupancy["rubbles"],
+		SimulationBundle.FIELD_OBSTACLE_CORES: occupancy["obstacle_cores"],
+		SimulationBundle.FIELD_PENDULUMS: occupancy["pendulums"],
+		SimulationBundle.FIELD_ICES: occupancy["ices"],
 	}
 	return SimulationBundle.from_dictionary(body)

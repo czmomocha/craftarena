@@ -23,6 +23,30 @@ func test_attach_builds_named_gadget_children() -> void:
 	var gadget: Node3D = OccupancyGadget.gadget_node(host)
 	assert_not_null(gadget)
 	assert_gte(gadget.get_child_count(), 2)
+	var spike_host: Node3D = Node3D.new()
+	add_child_autofree(spike_host)
+	assert_true(OccupancyGadget.attach(spike_host, OccupancyGadget.KIND_SPIKE, 0))
+	assert_not_null(OccupancyGadget.gadget_node(spike_host))
+	var flame_host: Node3D = Node3D.new()
+	add_child_autofree(flame_host)
+	assert_true(OccupancyGadget.attach(flame_host, OccupancyGadget.KIND_FLAME, 0))
+	assert_not_null(OccupancyGadget.gadget_node(flame_host))
+	var crusher_host: Node3D = Node3D.new()
+	add_child_autofree(crusher_host)
+	assert_true(OccupancyGadget.attach(crusher_host, OccupancyGadget.KIND_CRUSHER, 0))
+	assert_not_null(OccupancyGadget.gadget_node(crusher_host))
+	var roller_host: Node3D = Node3D.new()
+	add_child_autofree(roller_host)
+	assert_true(OccupancyGadget.attach(roller_host, OccupancyGadget.KIND_ROLLER, 0))
+	assert_not_null(OccupancyGadget.gadget_node(roller_host))
+	var rubble_host: Node3D = Node3D.new()
+	add_child_autofree(rubble_host)
+	assert_true(OccupancyGadget.attach(rubble_host, OccupancyGadget.KIND_RUBBLE, 0))
+	assert_not_null(OccupancyGadget.gadget_node(rubble_host))
+	var core_host: Node3D = Node3D.new()
+	add_child_autofree(core_host)
+	assert_true(OccupancyGadget.attach(core_host, OccupancyGadget.KIND_OBSTACLE_CORE, 0))
+	assert_not_null(OccupancyGadget.gadget_node(core_host))
 
 
 func test_lift_path_is_pure_y() -> void:
@@ -71,6 +95,27 @@ func test_solid_map_skips_tiles_for_gadget_kinds() -> void:
 	assert_not_null(OccupancyGadget.gadget_node(solids.solid_node(SWITCH_ID)))
 	assert_eq(solids.visual_node(CONVEYOR_ID), null)
 	assert_eq(solids.visual_node(SWITCH_ID), null)
+
+
+func test_floor_albedo_differs_by_storey() -> void:
+	assert_eq(PlaceholderSpec.floor_albedo(0, CELL), PlaceholderSpec.SOLID_ALBEDO)
+	assert_ne(PlaceholderSpec.floor_albedo(CELL, CELL), PlaceholderSpec.SOLID_ALBEDO)
+	assert_ne(PlaceholderSpec.floor_albedo(-CELL, CELL), PlaceholderSpec.SOLID_ALBEDO)
+
+
+func test_crusher_pulse_scales_gadget() -> void:
+	var host: Node3D = Node3D.new()
+	add_child_autofree(host)
+	assert_true(OccupancyGadget.attach(host, OccupancyGadget.KIND_CRUSHER, 0))
+	OccupancyGadget.pulse_danger(host, 0)
+	assert_gt(OccupancyGadget.gadget_node(host).scale.x, 1.0)
+	OccupancyGadget.pulse_danger(host, 4)
+	assert_almost_eq(OccupancyGadget.gadget_node(host).scale.x, 1.0, 0.001)
+	var conveyor: Node3D = Node3D.new()
+	add_child_autofree(conveyor)
+	assert_true(OccupancyGadget.attach(conveyor, OccupancyGadget.KIND_CONVEYOR, 0))
+	OccupancyGadget.pulse_danger(conveyor, 0)
+	assert_almost_eq(OccupancyGadget.gadget_node(conveyor).scale.x, 1.0, 0.001)
 
 
 func _tagged_solid(

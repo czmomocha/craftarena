@@ -48,6 +48,13 @@ static func build_view(
 	if map != null:
 		reach_ok = map.reachability_ok()
 		reach_issue_count = map.reachability_issue_count()
+	var bomb_count: int = -1
+	var dash_count: int = -1
+	var fails_count: int = -1
+	if playing and preview != null:
+		bomb_count = preview.play_bomb_count()
+		dash_count = preview.play_dash_count()
+		fails_count = preview.play_setback_count
 	return {
 		"connected": connected,
 		"preview_revision": preview_revision,
@@ -66,6 +73,9 @@ static func build_view(
 		"window_visible": window_visible,
 		"reach_ok": reach_ok,
 		"reach_issue_count": reach_issue_count,
+		"bomb_count": bomb_count,
+		"dash_count": dash_count,
+		"fails_count": fails_count,
 	}
 
 

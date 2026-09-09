@@ -4,6 +4,8 @@ extends RefCounted
 ## Read model for AuthoringPreview play: progress, inventory, floor, anim.
 ## Does not apply intents, patches, or occupancy.
 
+const TrapCycle := preload("res://src/games/traprush/trap_cycle.gd")
+
 
 func play_accepted_count(preview: AuthoringPreview) -> int:
 	if preview.play_track == null:
@@ -79,6 +81,13 @@ func play_solid_count(preview: AuthoringPreview) -> int:
 func play_is_hazard_solid(preview: AuthoringPreview, entity_id: int) -> bool:
 	if not preview.is_playing() or preview.play_world == null:
 		return false
+	if TrapCycle.flame_is_on(
+		entity_id, preview.play_flame_cycle, preview.play_world.tick_index
+	):
+		return true
+	for flame: Dictionary in preview.play_flame_cycle:
+		if flame["entity_id"] == entity_id:
+			return false
 	if not preview.play_hazard_ids.has(entity_id):
 		return false
 	var box_raw: Variant = preview.play_hazard_ids[entity_id]

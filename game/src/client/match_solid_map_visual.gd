@@ -62,3 +62,41 @@ static func unshaded(color: Color) -> StandardMaterial3D:
 	material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	material.albedo_color = color
 	return material
+
+
+static func xyz_from_bag(bag: Dictionary) -> Dictionary:
+	if not bag.has("entity_id") or typeof(bag["entity_id"]) != TYPE_INT:
+		return {}
+	var entity_id: int = bag["entity_id"]
+	if entity_id < 1:
+		return {}
+	if not bag.has("x") or typeof(bag["x"]) != TYPE_INT:
+		return {}
+	if not bag.has("y") or typeof(bag["y"]) != TYPE_INT:
+		return {}
+	if not bag.has("z") or typeof(bag["z"]) != TYPE_INT:
+		return {}
+	var x: int = bag["x"]
+	var y: int = bag["y"]
+	var z: int = bag["z"]
+	return {"entity_id": entity_id, "x": x, "y": y, "z": z}
+
+
+static func copy_poses(bags: Array[Dictionary]) -> Array[Dictionary]:
+	var poses: Array[Dictionary] = []
+	for bag: Dictionary in bags:
+		poses.append(xyz_from_bag(bag))
+	return poses
+
+
+static func bags_are_mappable(bags: Array[Dictionary]) -> bool:
+	var seen: Dictionary = {}
+	for bag: Dictionary in bags:
+		var pose: Dictionary = xyz_from_bag(bag)
+		if pose.is_empty():
+			return false
+		var entity_id: int = pose["entity_id"]
+		if seen.has(entity_id):
+			return false
+		seen[entity_id] = true
+	return true

@@ -18,6 +18,7 @@ const BUNDLE_PATHS: PackedStringArray = [
 	"res://src/ugc/simulation_bundle.gd",
 	"res://src/ugc/simulation_bundle_decode.gd",
 	"res://src/ugc/simulation_bundle_bags.gd",
+	"res://src/ugc/simulation_bundle_optional.gd",
 ]
 
 

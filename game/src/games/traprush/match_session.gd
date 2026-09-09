@@ -3,8 +3,7 @@ extends RefCounted
 
 ## TRAPRUSH 对局会话门面：一份编译拓扑装进共享权威 SimulationWorld，1~8 名玩家。
 ## 协作者是 TraprushMatchBootstrap / Intents / Scan / View，使本文件低于 E9 400 行。
-## commit_tick 先积分再 world.tick；MatchRealtime 在积分与 tick 之间应用意图。
-## 公开 API 仍在本门面上。占用扫描顺序：垫→门→垫→终点。
+## commit_tick 先积分再 world.tick；MatchRealtime 在积分与 tick 之间应用意图。占用扫描：垫→门→垫→终点。
 
 const Gravity := preload("res://src/games/traprush/gravity.gd")
 const ConveyorCycle := preload("res://src/games/traprush/conveyor_cycle.gd")
@@ -37,6 +36,8 @@ var item_cooldown_ticks: int = 1
 var hazard_knockback_step: int = 0
 ## 传送带每 tick 推的距离。调用方注入的占位桩，不是产品速度。0 ⇒ 传送带不推人。
 var conveyor_step: int = 0
+## 冰面每 tick 滑的距离。走路占位步长，可侧向走下。0 ⇒ 不滑。
+var ice_step: int = 0
 ## 弹射垫竖直冲量 / 水平送出。调用方注入的占位桩。都为 0 ⇒ 垫不弹。
 var launch_dy: int = 0
 var launch_xz: int = 0
@@ -69,6 +70,11 @@ var _launch_supported: Dictionary = {}
 var _switch_cycle: Array[Dictionary] = []
 var _gate_cycle: Array[Dictionary] = []
 var _portal_switch_cycle: Array[Dictionary] = []
+var _spike_cycle: Array[Dictionary] = []
+var _flame_cycle: Array[Dictionary] = []
+var _crusher_cycle: Array[Dictionary] = []
+var _pendulum_cycle: Array[Dictionary] = []
+var _ice_cycle: Array[Dictionary] = []
 var _pickup_ids: Dictionary = {}
 var _pickup_kinds: Dictionary = {}
 var _spawn: TraprushCheckpointSpawn = null
@@ -143,6 +149,10 @@ func player_setback_reason(slot: int) -> String:
 
 func player_setback_tick(slot: int) -> int:
 	return view.player_tick_field(self, slot, "setback_tick")
+
+
+func player_setback_count(slot: int) -> int:
+	return view.player_int_field(self, slot, "setback_count", 0)
 
 
 func player_last_shove_tick(slot: int) -> int:
@@ -225,10 +235,11 @@ func advance_sim_tick() -> void:
 	_tick_stuns()
 	_world.tick()
 	_apply_movers()
-	_apply_conveyors()
+	_apply_slides()
 	_apply_launches()
 	_apply_gates()
 	HazardCycle.apply(_world, _hazard_cycle)
+	scan.keep_flames_nonsolid(self)
 	for player: Dictionary in _players:
 		_resolve_player_hazards(player)
 		_reset_player_if_out_of_range(player)
@@ -307,32 +318,38 @@ func _reset_player_if_out_of_range(player: Dictionary) -> bool:
 	return scan.reset_player_if_out_of_range(self, player)
 
 
-func _apply_movers() -> void:
-	var capsule_ids: PackedInt32Array = PackedInt32Array()
+func _player_capsule_ids() -> PackedInt32Array:
+	var ids: PackedInt32Array = PackedInt32Array()
 	for player: Dictionary in _players:
 		var capsule_id: int = player["capsule_id"]
-		capsule_ids.append(capsule_id)
-	var blocked: PackedInt32Array = MoverCycle.apply(
-		_world, _mover_cycle, capsule_ids, support_dy
-	)
-	for capsule_id: int in blocked:
+		ids.append(capsule_id)
+	return ids
+
+
+func _reset_capsules(ids: PackedInt32Array) -> void:
+	for capsule_id: int in ids:
 		for player: Dictionary in _players:
-			if player["capsule_id"] == capsule_id:
+			var player_id: int = player["capsule_id"]
+			if player_id == capsule_id:
 				scan.reset_player_to_pad(self, player)
 				break
 
 
-## 传送带在移动平台之后、周期机关之前推。顺序不是随意的：平台先把乘客带到
-## 这一拍的位姿，传送带才知道谁站在自己身上；机关的固体切换再决定这一拍会不会
-## 被打。硬直中的玩家照样被推——被机关打晕后从带子上滑走，正是这块东西的用处。
-func _apply_conveyors() -> void:
-	if _conveyor_cycle.is_empty() or conveyor_step <= 0:
-		return
-	var capsule_ids: PackedInt32Array = PackedInt32Array()
-	for player: Dictionary in _players:
-		var capsule_id: int = player["capsule_id"]
-		capsule_ids.append(capsule_id)
-	ConveyorCycle.apply(_world, _conveyor_cycle, capsule_ids, support_dy, conveyor_step)
+func _apply_movers() -> void:
+	var blocked: PackedInt32Array = MoverCycle.apply(
+		_world, _mover_cycle, _player_capsule_ids(), support_dy
+	)
+	_reset_capsules(blocked)
+	scan.apply_crushers(self)
+	scan.apply_pendulums(self)
+
+
+func _apply_slides() -> void:
+	var ids: PackedInt32Array = _player_capsule_ids()
+	if conveyor_step > 0:
+		ConveyorCycle.apply(_world, _conveyor_cycle, ids, support_dy, conveyor_step)
+	if ice_step > 0:
+		ConveyorCycle.apply(_world, _ice_cycle, ids, support_dy, ice_step)
 
 
 func conveyor_count() -> int:
@@ -343,55 +360,33 @@ func launch_count() -> int:
 	return _launch_cycle.size()
 
 
-## 弹射垫在传送带之后：带子可能把人送上垫，这一拍就该弹，而不是再等一拍。
 func _apply_launches() -> void:
 	if _launch_cycle.is_empty():
 		return
 	if launch_dy <= 0 and launch_xz <= 0:
 		return
-	var capsule_ids: PackedInt32Array = PackedInt32Array()
-	for player: Dictionary in _players:
-		var capsule_id: int = player["capsule_id"]
-		capsule_ids.append(capsule_id)
 	_launch_supported = LaunchCycle.apply(
-		_world,
-		_launch_cycle,
-		capsule_ids,
-		support_dy,
-		launch_dy,
-		launch_xz,
-		_launch_supported
+		_world, _launch_cycle, _player_capsule_ids(), support_dy,
+		launch_dy, launch_xz, _launch_supported
 	)
 
 
 func _apply_gates() -> void:
 	if _gate_cycle.is_empty():
 		return
-	var capsule_ids: PackedInt32Array = PackedInt32Array()
-	for player: Dictionary in _players:
-		var capsule_id: int = player["capsule_id"]
-		capsule_ids.append(capsule_id)
-	var crushed: PackedInt32Array = GateCycle.apply(
-		_world, _switch_cycle, _gate_cycle, capsule_ids, support_dy
-	)
-	for capsule_id: int in crushed:
-		for player: Dictionary in _players:
-			if player["capsule_id"] == capsule_id:
-				scan.reset_player_to_pad(self, player)
-				break
+	_reset_capsules(GateCycle.apply(
+		_world, _switch_cycle, _gate_cycle, _player_capsule_ids(), support_dy
+	))
 
 
 func _resolve_player_hazards(player: Dictionary) -> bool:
 	return scan.resolve_player_hazards(self, player)
 
-
 func _player_stunned(player: Dictionary) -> bool:
 	return scan.player_stunned(player)
 
-
 func _tick_stuns() -> void:
 	scan.tick_stuns(self)
-
 
 func _grant_player_pickups(player: Dictionary) -> void:
 	scan.grant_player_pickups(self, player)

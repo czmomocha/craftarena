@@ -40,6 +40,14 @@ const FIELD_SWITCHES: String = "switches"
 const FIELD_GATES: String = "gates"
 const FIELD_ENERGY_WALLS: String = "energy_walls"
 const FIELD_PORTAL_SWITCHES: String = "portal_switches"
+const FIELD_SPIKES: String = "spikes"
+const FIELD_FLAMES: String = "flames"
+const FIELD_CRUSHERS: String = "crushers"
+const FIELD_ROLLERS: String = "rollers"
+const FIELD_RUBBLES: String = "rubbles"
+const FIELD_OBSTACLE_CORES: String = "obstacle_cores"
+const FIELD_PENDULUMS: String = "pendulums"
+const FIELD_ICES: String = "ices"
 ## v2 里**可省略**的袋。省略与空数组等价，所以旧内容（三张官方课、任何已存的
 ## AuthoringDocument）不重新编译也照常解码。加袋因此不是 Schema 破坏性变更。
 const OPTIONAL_FIELDS: PackedStringArray = [
@@ -50,6 +58,14 @@ const OPTIONAL_FIELDS: PackedStringArray = [
 	FIELD_GATES,
 	FIELD_ENERGY_WALLS,
 	FIELD_PORTAL_SWITCHES,
+	FIELD_SPIKES,
+	FIELD_FLAMES,
+	FIELD_CRUSHERS,
+	FIELD_ROLLERS,
+	FIELD_RUBBLES,
+	FIELD_OBSTACLE_CORES,
+	FIELD_PENDULUMS,
+	FIELD_ICES,
 ]
 
 var cell: int = 0
@@ -74,6 +90,21 @@ var gates: Array[Dictionary] = []
 var energy_walls: Array[Dictionary] = []
 ## 开关传送：几何在 `portals` 里，本袋只带 `link_group`。见 `TraprushGateCycle`。
 var portal_switches: Array[Dictionary] = []
+## 地刺：几何在 `solids` 里，本袋只带 `entity_id`。见 `TraprushTrapCycle`。
+var spikes: Array[Dictionary] = []
+## 喷火：几何在 `hazards` 里，本袋只带 `entity_id`。永远非固体。
+var flames: Array[Dictionary] = []
+## 压板：几何在 `solids` 里，竖直 `mover` 在 `movers`。本袋只带 `entity_id`。
+var crushers: Array[Dictionary] = []
+## 滚柱：几何在 `hazards` 里，本袋只带 `entity_id`。半周期固体挡路。
+var rollers: Array[Dictionary] = []
+## 碎石 / 障碍核心：几何在 `destructibles` 里，本袋只带 `entity_id`。
+var rubbles: Array[Dictionary] = []
+var obstacle_cores: Array[Dictionary] = []
+## 摆锤：几何在 `solids`，水平 `mover` 在 `movers`。本袋只带 `entity_id`。
+var pendulums: Array[Dictionary] = []
+## 冰面：几何在 `solids`，本袋只带方向。支撑时按走路步长滑。
+var ices: Array[Dictionary] = []
 
 
 static func from_dictionary(data: Dictionary) -> SimulationBundle:
@@ -126,6 +157,30 @@ func to_dictionary() -> Dictionary:
 	var portal_switch_list: Array = []
 	for item: Dictionary in portal_switches:
 		portal_switch_list.append(item.duplicate(true))
+	var spike_list: Array = []
+	for item: Dictionary in spikes:
+		spike_list.append(item.duplicate(true))
+	var flame_list: Array = []
+	for item: Dictionary in flames:
+		flame_list.append(item.duplicate(true))
+	var crusher_list: Array = []
+	for item: Dictionary in crushers:
+		crusher_list.append(item.duplicate(true))
+	var roller_list: Array = []
+	for item: Dictionary in rollers:
+		roller_list.append(item.duplicate(true))
+	var rubble_list: Array = []
+	for item: Dictionary in rubbles:
+		rubble_list.append(item.duplicate(true))
+	var core_list: Array = []
+	for item: Dictionary in obstacle_cores:
+		core_list.append(item.duplicate(true))
+	var pendulum_list: Array = []
+	for item: Dictionary in pendulums:
+		pendulum_list.append(item.duplicate(true))
+	var ice_list: Array = []
+	for item: Dictionary in ices:
+		ice_list.append(item.duplicate(true))
 	return {
 		FIELD_SCHEMA_VERSION: SCHEMA_VERSION,
 		FIELD_CELL: cell,
@@ -145,6 +200,14 @@ func to_dictionary() -> Dictionary:
 		FIELD_GATES: gate_list,
 		FIELD_ENERGY_WALLS: energy_wall_list,
 		FIELD_PORTAL_SWITCHES: portal_switch_list,
+		FIELD_SPIKES: spike_list,
+		FIELD_FLAMES: flame_list,
+		FIELD_CRUSHERS: crusher_list,
+		FIELD_ROLLERS: roller_list,
+		FIELD_RUBBLES: rubble_list,
+		FIELD_OBSTACLE_CORES: core_list,
+		FIELD_PENDULUMS: pendulum_list,
+		FIELD_ICES: ice_list,
 	}
 
 

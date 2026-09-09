@@ -283,6 +283,8 @@ static func from_dictionary(data: Dictionary) -> SimulationBundle:
 	bundle.gates = gate_list
 	bundle.energy_walls = energy_wall_list
 	bundle.portal_switches = portal_switch_list
+	if not OptionalGd.assign_trap_bags(bundle, body, solid_ids, hazard_ids, destructible_ids):
+		return null
 	return bundle
 
 

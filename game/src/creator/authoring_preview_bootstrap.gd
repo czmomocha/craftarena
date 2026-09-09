@@ -6,7 +6,6 @@ extends RefCounted
 const HazardCycle := preload("res://src/games/traprush/hazard_cycle.gd")
 const LaunchCycle := preload("res://src/games/traprush/launch_cycle.gd")
 const GateCycle := preload("res://src/games/traprush/gate_cycle.gd")
-
 static func connect_from(preview: AuthoringPreview, session: AuthoringSession) -> bool:
 	if session == null or session.world == null:
 		return false
@@ -20,7 +19,6 @@ static func connect_from(preview: AuthoringPreview, session: AuthoringSession) -
 	preview.needs_restart = false
 	preview._in_tick = false
 	return true
-
 
 static func try_start_play(
 	preview: AuthoringPreview,
@@ -110,15 +108,11 @@ static func try_start_play(
 	if mover_cycle.size() != bundle.movers.size():
 		return false
 	preview.play_mover_cycle = mover_cycle
-	var conveyor_cycle: Array[Dictionary] = TraprushConveyorCycle.entries_from(
-		bundle.conveyors, solid_ids
-	)
+	var conveyor_cycle: Array[Dictionary] = TraprushConveyorCycle.entries_from(bundle.conveyors, solid_ids)
 	if conveyor_cycle.size() != bundle.conveyors.size():
 		return false
 	preview.play_conveyor_cycle = conveyor_cycle
-	var launch_cycle: Array[Dictionary] = LaunchCycle.entries_from(
-		bundle.launches, solid_ids
-	)
+	var launch_cycle: Array[Dictionary] = LaunchCycle.entries_from(bundle.launches, solid_ids)
 	if launch_cycle.size() != bundle.launches.size():
 		return false
 	preview.play_launch_cycle = launch_cycle
@@ -134,6 +128,8 @@ static func try_start_play(
 	if portal_switch_cycle.size() != bundle.portal_switches.size():
 		return false
 	preview.play_portal_switch_cycle = portal_switch_cycle
+	if not preview.scan.load_play_traps(preview, bundle, solid_ids):
+		return false
 	preview.play_solid_ids = solid_ids
 	preview.play_pickup_ids = pickup_ids
 	preview.play_pickup_kinds = pickup_kinds_from_bundle(bundle)
@@ -157,14 +153,12 @@ static func try_start_play(
 	preview._resolve_play_hazards()
 	return true
 
-
 static func try_stop_play(preview: AuthoringPreview) -> bool:
 	if not preview._playing:
 		return false
 	preview.leave_tick()
 	clear_play(preview)
 	return true
-
 
 static func clear_play(preview: AuthoringPreview) -> void:
 	preview._playing = false
@@ -179,10 +173,16 @@ static func clear_play(preview: AuthoringPreview) -> void:
 	preview.play_hazard_cycle = []
 	preview.play_mover_cycle = []
 	preview.play_conveyor_cycle = []
+	preview.play_ice_cycle = []
 	preview.play_launch_cycle = []
 	preview.play_switch_cycle = []
 	preview.play_gate_cycle = []
 	preview.play_portal_switch_cycle = []
+	preview.play_spike_cycle = []
+	preview.play_flame_cycle = []
+	preview.play_crusher_cycle = []
+	preview.play_pendulum_cycle = []
+	preview.play_setback_count = 0
 	preview._play_launch_supported = {}
 	preview.play_solid_ids = {}
 	preview.play_pickup_ids = {}

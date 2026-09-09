@@ -51,7 +51,78 @@ static func try_append_energy_wall(
 		return false
 	if FieldsGd.has_lift_tag(record) or FieldsGd.has_solid_tag(record):
 		return false
+	if FieldsGd.has_spike_tag(record) or FieldsGd.has_crusher_tag(record):
+		return false
+	if FieldsGd.has_flame_tag(record) or FieldsGd.has_roller_tag(record):
+		return false
+	if FieldsGd.has_rubble_tag(record) or FieldsGd.has_obstacle_core_tag(record):
+		return false
+	if FieldsGd.has_pendulum_tag(record) or FieldsGd.has_ice_tag(record):
+		return false
 	energy_wall_list.append({"entity_id": entity_id})
+	return true
+
+
+static func try_append_traps(
+	entity_id: int,
+	record: SharedComponentRecord,
+	mover_bag: Dictionary,
+	has_conveyor: bool,
+	has_launch: bool,
+	spike_list: Array[Dictionary],
+	crusher_list: Array[Dictionary]
+) -> bool:
+	var has_spike: bool = FieldsGd.has_spike_tag(record)
+	var has_crusher: bool = FieldsGd.has_crusher_tag(record)
+	if has_spike and has_crusher:
+		return false
+	if FieldsGd.has_pendulum_tag(record) or FieldsGd.has_ice_tag(record):
+		if has_spike or has_crusher:
+			return false
+	if not has_spike and not has_crusher:
+		return true
+	if has_conveyor or has_launch:
+		return false
+	if FieldsGd.has_switch_tag(record) or FieldsGd.has_gate_tag(record):
+		return false
+	if FieldsGd.has_lift_tag(record) or FieldsGd.has_flame_tag(record):
+		return false
+	if has_spike:
+		if not mover_bag.is_empty():
+			return false
+		spike_list.append({"entity_id": entity_id})
+		return true
+	if mover_bag.is_empty():
+		return false
+	var path: Array = mover_bag["path"]
+	if not SimulationBundleBags.path_is_vertical(path):
+		return false
+	crusher_list.append({"entity_id": entity_id})
+	return true
+
+
+static func try_append_flame(
+	entity_id: int, record: SharedComponentRecord, flame_list: Array[Dictionary]
+) -> bool:
+	if not FieldsGd.has_flame_tag(record):
+		return true
+	if FieldsGd.has_solid_tag(record):
+		return false
+	if FieldsGd.has_conveyor_tag(record) or FieldsGd.has_launch_tag(record):
+		return false
+	if FieldsGd.has_switch_tag(record) or FieldsGd.has_gate_tag(record):
+		return false
+	if FieldsGd.has_lift_tag(record) or FieldsGd.has_spike_tag(record):
+		return false
+	if FieldsGd.has_crusher_tag(record) or FieldsGd.has_energy_wall_tag(record):
+		return false
+	if FieldsGd.has_roller_tag(record) or FieldsGd.has_rubble_tag(record):
+		return false
+	if FieldsGd.has_obstacle_core_tag(record):
+		return false
+	if FieldsGd.has_pendulum_tag(record) or FieldsGd.has_ice_tag(record):
+		return false
+	flame_list.append({"entity_id": entity_id})
 	return true
 
 
@@ -69,6 +140,10 @@ static func try_append_portal_switch(
 	if FieldsGd.has_switch_tag(record) or FieldsGd.has_gate_tag(record):
 		return false
 	if FieldsGd.has_energy_wall_tag(record) or FieldsGd.has_lift_tag(record):
+		return false
+	if FieldsGd.has_spike_tag(record) or FieldsGd.has_crusher_tag(record):
+		return false
+	if FieldsGd.has_flame_tag(record):
 		return false
 	if not record.components.has(SharedComponentNames.PORTAL):
 		return false

@@ -18,9 +18,10 @@ const OCCUPANCY_BAGS = [
  * `entity_id` 能在 `solids` 里找到；JSON Schema 表达不了跨袋引用，所以这条规则
  * 必须在这里复核，否则 GDScript 拒了而 `npm test` 放行。
  */
-const SOLID_BACKED_BAGS = ["movers", "conveyors", "launches", "switches", "gates"] as const;
-const DESTRUCTIBLE_BACKED_BAGS = ["energy_walls"] as const;
+const SOLID_BACKED_BAGS = ["movers", "conveyors", "launches", "switches", "gates", "spikes", "crushers", "pendulums", "ices"] as const;
+const DESTRUCTIBLE_BACKED_BAGS = ["energy_walls", "rubbles", "obstacle_cores"] as const;
 const PORTAL_BACKED_BAGS = ["portal_switches"] as const;
+const HAZARD_BACKED_BAGS = ["flames", "rollers"] as const;
 
 export function validateSimulationBundle(instance: unknown): JsonSchemaError[] {
 	const errors = validateJsonSchema(loadJsonFile(SIMULATION_BUNDLE_SCHEMA_PATH), instance, {
@@ -41,10 +42,14 @@ export function validateSimulationBundle(instance: unknown): JsonSchemaError[] {
 	for (const bag of PORTAL_BACKED_BAGS) {
 		pushDuplicateIds(errors, instance[bag], `$.${bag}`);
 	}
+	for (const bag of HAZARD_BACKED_BAGS) {
+		pushDuplicateIds(errors, instance[bag], `$.${bag}`);
+	}
 	pushAssetErrors(errors, instance);
 	pushSolidBackedErrors(errors, instance);
 	pushDestructibleBackedErrors(errors, instance);
 	pushPortalBackedErrors(errors, instance);
+	pushHazardBackedErrors(errors, instance);
 	return errors;
 }
 
@@ -130,6 +135,35 @@ function pushPortalBackedErrors(errors: JsonSchemaError[], instance: JsonObject)
 			errors.push({
 				path: `$.${bag}/${index}/entity_id`,
 				message: "entity_id is not declared in portals",
+			});
+		}
+	}
+}
+
+function pushHazardBackedErrors(errors: JsonSchemaError[], instance: JsonObject): void {
+	const hazards = instance.hazards;
+	const hazardIds = new Set<number>();
+	if (Array.isArray(hazards)) {
+		for (const item of hazards) {
+			const entityId = isObject(item) ? integerOrUndefined(item.entity_id) : undefined;
+			if (entityId !== undefined) {
+				hazardIds.add(entityId);
+			}
+		}
+	}
+	for (const bag of HAZARD_BACKED_BAGS) {
+		const list = instance[bag];
+		if (!Array.isArray(list)) {
+			continue;
+		}
+		for (const [index, item] of list.entries()) {
+			const entityId = isObject(item) ? integerOrUndefined(item.entity_id) : undefined;
+			if (entityId === undefined || hazardIds.has(entityId)) {
+				continue;
+			}
+			errors.push({
+				path: `$.${bag}/${index}/entity_id`,
+				message: "entity_id is not declared in hazards",
 			});
 		}
 	}

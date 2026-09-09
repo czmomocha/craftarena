@@ -28,6 +28,17 @@
 | 开关门 | 可玩性深化已接**踩区**：固体 + `zone.tags` 含 `switch` / `gate` + 已有 `interactable.link_group`。开合是当前占用的纯函数，不写 `state`、不进快照。走开同一拍关上。`InteractIntent` 仍未接线 |
 | 开关传送 | 可玩性深化已接**踩区**：传送占用 + `zone.tags` 含 `portal_switch` + 已有 `interactable.link_group`。未列入可选 `portal_switches` 袋的门永远可传。关上时不落地。走开同一拍关上。`InteractIntent` 仍未接线 |
 | 能量墙 | 可玩性深化已接：可破坏占用 + `zone.tags` 含 `energy_wall`。`SimulationBundle` 加可选 `energy_walls` 袋（省略 ≡ 空）。打碎走已有 UseItem。权威碰撞仍是一格盒 |
+| 地刺 | 可玩性深化已接：固体 + `zone.tags` 含 `spike`。被支撑才环境失败（hazard）。可选 `spikes` 袋只带 `entity_id` |
+| 喷火 | 可玩性深化已接：周期机关 + `zone.tags` 含 `flame`。永远非固体；半周期开时重叠才烫。可选 `flames` 袋只带 `entity_id` |
+| 压板 | 可玩性深化已接：竖直 `mover` + `zone.tags` 含 `crusher`。重叠且不是乘客 ⇒ crush。可选 `crushers` 袋只带 `entity_id` |
+| 滚柱 | 可玩性深化已接：周期机关 + `zone.tags` 含 `roller`。半周期固体挡路。可选 `rollers` 袋只带 `entity_id`。Place 用 cooldown 30 |
+| 碎石 / 障碍核心 | 可玩性深化已接：可破坏占用 + `rubble` / `obstacle_core`。可选 `rubbles` / `obstacle_cores` 袋只带 `entity_id`。打碎走已有 UseItem |
+| 摆锤 | 可玩性深化已接：水平 `mover` + `zone.tags` 含 `pendulum`。重叠且不是乘客 ⇒ crush。可选 `pendulums` 袋只带 `entity_id` |
+| 冰面 | 可玩性深化已接：固体 + `zone.tags` 含 `ice` + `transform.yaw_bam`。支撑时按走路步长滑。可选 `ices` 袋带方向 |
+| 道具栏 HUD | 可玩性深化已接：Solo / Preview 显示爆破球 / 冲刺持有数与失败次数。**不进快照帧**，线上读不到 |
+| 碎裂反馈 | 可玩性深化已接：可破坏占用离开 live set 时喷占位碎片。纯表现，不进权威 |
+| 楼层着色 | 可玩性深化已接：普通固体按楼层偏绿 / 品红。机关占位不染色 |
+| 压板 / 摆锤预警 | 可玩性深化已接：gadget 按 tick 缩放。喷火 / 滚柱仍走半周期预警盒 |
 | 失败原因读数 | 可玩性深化已接：服务端记 `hazard` / `out_of_range` / `crushed` 与发生 tick。**不进快照帧、不进 `hash_state`**，所以只有 Solo / Preview 读得到；线上要读须先做协议不兼容变更（宪法第十八条） |
 | 寻路指示 | 可玩性深化已接：下一个目标 = `order == accepted_count` 的垫，全验收后是终点。方向按**屏幕**八向给（相机 D4 斜 45°），不按世界轴。纯表现读出 |
 | HUD 计时 | F 线 FA：局时 = `tick/60`；过垫分段为客户端记忆，不进权威；冲线冻钟。结算表画已有 `rows[]` / `mvp_slot`，贴在窗口右上。字号从 `placeholder_spec` 读。Solo 本地 `try_build`，在线仍只 GET |
@@ -156,7 +167,7 @@ UGC 权威碰撞形状约束见 [CD-42](../40-technical/42-contracts-and-rulevm.
 | 可破坏障碍 | 木箱、能量墙、碎石、障碍核心 | 普通攻击机制或道具削减耐久 |
 | 触发型障碍 | 门、移动平台、开关链 | 交互、踩区或规则图触发 |
 
-当前实现：`hazards` 袋按 `cooldown_ticks` 半周期切固体；`solids` 袋始终固体（编译进 `gates` 的门在占用打开时非固体）；官方三张课各 1 个机关、出生点 −X 一格固体、出生点正下一格立足固体。编辑器 Place solid / hazard / crate / finish / mover / conveyor / lift / launch / switch / gate / energy wall / gated portal 走已有 `place`。形状见 [CD-32 §3](../30-ugc/32-editor-and-preview.md) 与 [CD-42 §3.4](../40-technical/42-contracts-and-rulevm.md)。口径见文首。
+当前实现：`hazards` 袋按 `cooldown_ticks` 半周期切固体；`solids` 袋始终固体（编译进 `gates` 的门在占用打开时非固体）；官方三张课各 1 个机关、出生点 −X 一格固体、出生点正下一格立足固体。编辑器 Place solid / hazard / crate / finish / mover / conveyor / lift / launch / switch / gate / energy wall / gated portal / spike / flame / crusher / roller / rubble / core 走已有 `place`。形状见 [CD-32 §3](../30-ugc/32-editor-and-preview.md) 与 [CD-42 §3.4](../40-technical/42-contracts-and-rulevm.md)。口径见文首。
 
 「触发型障碍」这一行已交付移动平台、传送带、电梯、弹射垫、踩区开关门与开关传送：
 
@@ -167,6 +178,13 @@ UGC 权威碰撞形状约束见 [CD-42](../40-technical/42-contracts-and-rulevm.
 - **踩区开关门**（可玩性深化）：开关与门都是固体 + `switch` / `gate` 标签 + 已有 `interactable.link_group`。一组打开当且仅当有胶囊被该组开关支撑，或有胶囊与该组门盒相交（含当前非固体的门）。走开同一拍关上；关在身上按 crush 复位。与 conveyor / launch / mover 同实体拒绝。不新增组件。
 - **能量墙**（可玩性深化）：可破坏占用 + `zone.tags` 的 `energy_wall`。几何和耐久在 `destructibles`，可选 `energy_walls` 袋只带 `entity_id`。打碎走已有 UseItemIntent，不改爆破半径。权威碰撞仍是一格盒；程序化半透板只是表现。与 solid / conveyor / launch / switch / gate / lift 同实体拒绝。
 - **开关传送**（可玩性深化）：传送占用 + `zone.tags` 的 `portal_switch` + 已有 `interactable.link_group`。几何在 `portals`，可选 `portal_switches` 袋只带 `link_group`。未列入袋的传送门行为不变。关上时重叠也不落地。占用规则与开关门同一套：被该组开关支撑，或与该组**门**盒相交。传送门自己的占用**不会**把组打开——否则走进去永远能传。与 solid / conveyor / launch / switch / gate / energy_wall / lift 同实体拒绝；悬空带 tag 整份拒绝。
+- **地刺**（可玩性深化）：固体 + `zone.tags` 的 `spike`。几何在 `solids`，可选 `spikes` 袋只带 `entity_id`。被该盒**支撑**才环境失败（hazard）。与 conveyor / launch / switch / gate / lift / crusher / flame 同实体拒绝。
+- **喷火**（可玩性深化）：已有周期机关 + `zone.tags` 的 `flame`。几何在 `hazards`，可选 `flames` 袋只带 `entity_id`。盒子永远非固体（预测不当墙）；半周期「开」时重叠 ⇒ 环境失败。与滚柱的差别是挡路 vs 穿过去会被烫。与 solid / conveyor / launch / switch / gate / lift / spike / crusher / energy_wall 同实体拒绝。
+- **压板**（可玩性深化）：竖直 `mover` + `zone.tags` 的 `crusher`。几何在 `solids`，竖直路径在 `movers`，可选 `crushers` 袋只带 `entity_id`。重叠且不是该盒乘客 ⇒ crush。路径必须纯 Y，否则编译拒绝。与 conveyor / launch / switch / gate / lift / spike / flame 同实体拒绝。
+- **滚柱**（可玩性深化）：已有周期机关 + `zone.tags` 的 `roller`。几何在 `hazards`，可选 `rollers` 袋只带 `entity_id`。半周期固体挡路（与喷火相反）。与 flame 同实体拒绝。Place 用 cooldown 30。未打 tag 的旧 hazard 行为不变。
+- **碎石 / 障碍核心**（可玩性深化）：可破坏占用 + `rubble` / `obstacle_core`。几何和耐久在 `destructibles`，可选袋只带 `entity_id`。打碎走已有 UseItem。与 energy_wall 同实体拒绝。权威仍是一格盒。
+- **摆锤**（可玩性深化）：固体 + 水平 `mover` + `zone.tags` 的 `pendulum`。几何在 `solids`，路径在 `movers`，可选 `pendulums` 袋只带 `entity_id`。重叠且不是乘客 ⇒ crush。路径必须纯水平，否则编译拒绝。与压板（纯 Y）互斥。
+- **冰面**（可玩性深化）：固体 + `zone.tags` 的 `ice` + `transform.yaw_bam`。几何在 `solids`，可选 `ices` 袋带方向。支撑时按走路步长滑（可逆走相消、可侧向走下）。与 conveyor / launch / mover 同实体拒绝。
 
 **`InteractIntent` 仍未接线。** 命令帧新增 intent id、快照帧新增开合状态都是协议不兼容变更（宪法第十八条）。本刀开合不进快照；线上表现用快照位姿重算，可能与权威差一拍。锁存 / 延时关门未做。
 
@@ -175,7 +193,7 @@ UGC 权威碰撞形状约束见 [CD-42](../40-technical/42-contracts-and-rulevm.
 - 可破坏障碍具有服务端权威 `health`；
 - 玩家普通撞击不能直接摧毁障碍；
 - 必须使用爆破、钻头、冲击或地图机关；
-- 障碍破坏后产生明确碎裂反馈，但碎片只做表现，不进入权威物理；
+- 障碍破坏后产生明确碎裂反馈，但碎片只做表现，不进入权威物理（可玩性深化：`MatchCrateBreak`，约 0.35 s）；Preview 开玩后耐久为 0 的箱子隐藏；
 - 是否重生、重生时间和重生次数由白名单参数控制；
 - 破坏不得导致地图彻底不可达；
 - 重要竞速门只允许状态切换，不允许永久删除；

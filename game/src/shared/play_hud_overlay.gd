@@ -10,6 +10,7 @@ const CLOCK_NAME: String = "Clock"
 const SPLIT_NAME: String = "Split"
 const GUIDE_NAME: String = "Guide"
 const SETBACK_NAME: String = "Setback"
+const ITEMS_NAME: String = "Items"
 const ClockGd := preload("res://src/shared/play_clock.gd")
 const PanelGd := preload("res://src/shared/match_settlement_panel.gd")
 
@@ -17,6 +18,7 @@ var clock: Label = null
 var split: Label = null
 var guide: Label = null
 var setback: Label = null
+var items: Label = null
 var panel: PanelContainer = null
 
 
@@ -52,6 +54,11 @@ func attach(window: Window, toolbar: Control) -> void:
 	setback.add_theme_color_override("font_color", PlaceholderSpec.HAZARD_ALBEDO)
 	toolbar.add_child(setback)
 	toolbar.move_child(setback, insert_at + 3)
+	items = Label.new()
+	items.name = ITEMS_NAME
+	items.add_theme_font_size_override("font_size", PlaceholderSpec.HUD_SPLIT_FONT_SIZE)
+	toolbar.add_child(items)
+	toolbar.move_child(items, insert_at + 4)
 	panel = PanelGd.attach(window)
 
 
@@ -76,6 +83,22 @@ func apply(view: Dictionary) -> void:
 		var setback_line: String = str(view.get("setback_text", ""))
 		setback.visible = playing and setback_line != ""
 		setback.text = setback_line
+	if items != null and is_instance_valid(items):
+		var bomb: int = ClockGd.dict_int(view, "bomb_count", -1)
+		var dash: int = ClockGd.dict_int(view, "dash_count", -1)
+		if playing and bomb >= 0 and dash >= 0:
+			items.visible = true
+			var line: String = "%s  %s" % [
+				UiCopy.text(UiCopy.HUD_BOMB) % bomb,
+				UiCopy.text(UiCopy.HUD_DASH) % dash,
+			]
+			var fails: int = ClockGd.dict_int(view, "fails_count", -1)
+			if fails >= 0:
+				line = "%s  %s" % [line, UiCopy.text(UiCopy.HUD_FAILS) % fails]
+			items.text = line
+		else:
+			items.visible = false
+			items.text = ""
 	var board_raw: Variant = view.get("settlement_board", {})
 	var board: Dictionary = {}
 	if typeof(board_raw) == TYPE_DICTIONARY:
@@ -105,6 +128,12 @@ func setback_text() -> String:
 	if setback == null or not is_instance_valid(setback):
 		return ""
 	return setback.text
+
+
+func items_text() -> String:
+	if items == null or not is_instance_valid(items):
+		return ""
+	return items.text
 
 
 func settlement_visible() -> bool:

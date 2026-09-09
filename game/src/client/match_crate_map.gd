@@ -22,6 +22,7 @@ const AuthoringDocumentGd := preload("res://src/creator/authoring_document.gd")
 const TraprushTopologyCompilerGd := preload("res://src/ugc/traprush_topology_compiler.gd")
 const MatchSnapshotFollowGd := preload("res://src/client/match_snapshot_follow.gd")
 const OccupancyGadget := preload("res://src/shared/occupancy_gadget.gd")
+const BreakGd := preload("res://src/client/match_crate_break.gd")
 
 const CRATE_PREFIX: String = "crate_"
 const VISUAL_NAME: String = "visual"
@@ -34,6 +35,8 @@ var _cell: int = 0
 var _poses: Array[Dictionary] = []
 var _live_solids: Array[Dictionary] = []
 var _energy_wall_ids: Dictionary = {}
+var _rubble_ids: Dictionary = {}
+var _core_ids: Dictionary = {}
 var _crate_count: int = 0
 
 
@@ -67,6 +70,8 @@ func apply_bundle(bundle: SimulationBundle) -> bool:
 	_cell = bundle.cell
 	_poses = _copy_poses(bundle.destructibles)
 	_energy_wall_ids = OccupancyGadget.id_lookup(bundle.energy_walls)
+	_rubble_ids = OccupancyGadget.id_lookup(bundle.rubbles)
+	_core_ids = OccupancyGadget.id_lookup(bundle.obstacle_cores)
 	_rebuild(_durability_from_bags(bundle.destructibles))
 	return true
 
@@ -86,6 +91,10 @@ func apply_crates(crates: Array) -> bool:
 	return true
 
 
+func _process(delta: float) -> void:
+	BreakGd.tick(self, delta)
+
+
 func crate_count() -> int:
 	return _crate_count
 
@@ -100,6 +109,10 @@ func crate_total() -> int:
 
 func crate_node(entity_id: int) -> MeshInstance3D:
 	return get_node_or_null(crate_name(entity_id)) as MeshInstance3D
+
+
+func break_node(entity_id: int) -> Node3D:
+	return get_node_or_null(BreakGd.node_name(entity_id)) as Node3D
 
 
 func visual_node(entity_id: int) -> Node3D:
@@ -275,10 +288,22 @@ func _despawn_crates_except(wanted: Dictionary) -> void:
 	for child: Node in get_children():
 		var child_name: String = str(child.name)
 		if child_name.begins_with(CRATE_PREFIX) and not wanted.has(child_name):
+			if _crate_still_on_course(child):
+				BreakGd.spawn_from_crate(self, child as Node3D)
 			stale.append(child)
 	for node: Node in stale:
 		remove_child(node)
 		node.free()
+
+
+func _crate_still_on_course(crate: Node) -> bool:
+	var entity_id: int = BreakGd.entity_id_of(crate as Node3D)
+	if entity_id < 1:
+		return false
+	for pose: Dictionary in _poses:
+		if PlayClock.dict_int(pose, "entity_id", 0) == entity_id:
+			return true
+	return false
 
 
 func _visible_count() -> int:
@@ -297,6 +322,10 @@ func _spawn_box(node_name: String, pose: Dictionary) -> void:
 	var albedo: Color = PlaceholderSpec.CRATE_ALBEDO
 	if _energy_wall_ids.has(entity_id):
 		albedo = PlaceholderSpec.ENERGY_WALL_ALBEDO
+	elif _rubble_ids.has(entity_id):
+		albedo = PlaceholderSpec.RUBBLE_ALBEDO
+	elif _core_ids.has(entity_id):
+		albedo = PlaceholderSpec.OBSTACLE_CORE_ALBEDO
 	var mesh: BoxMesh = BoxMesh.new()
 	mesh.size = PLACEHOLDER_SIZE
 	mesh.material = _unshaded(albedo)
@@ -307,6 +336,12 @@ func _spawn_box(node_name: String, pose: Dictionary) -> void:
 	add_child(node)
 	if _energy_wall_ids.has(entity_id):
 		if OccupancyGadget.attach(node, OccupancyGadget.KIND_ENERGY_WALL, 0):
+			node.layers = 0
+	elif _rubble_ids.has(entity_id):
+		if OccupancyGadget.attach(node, OccupancyGadget.KIND_RUBBLE, 0):
+			node.layers = 0
+	elif _core_ids.has(entity_id):
+		if OccupancyGadget.attach(node, OccupancyGadget.KIND_OBSTACLE_CORE, 0):
 			node.layers = 0
 	else:
 		_attach_visual(node)

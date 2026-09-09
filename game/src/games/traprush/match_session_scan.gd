@@ -12,6 +12,7 @@ const PadAccept := preload("res://src/games/traprush/pad_accept.gd")
 const PickupAccept := preload("res://src/games/traprush/pickup_accept.gd")
 const PortalLanding := preload("res://src/games/traprush/portal_landing.gd")
 const GateCycle := preload("res://src/games/traprush/gate_cycle.gd")
+const TrapCycle := preload("res://src/games/traprush/trap_cycle.gd")
 
 
 func accept_player_pads(session: TraprushMatchSession, player: Dictionary) -> void:
@@ -194,7 +195,53 @@ func resolve_player_hazards(session: TraprushMatchSession, player: Dictionary) -
 	var reset: bool = result.get("reset", false)
 	if reset:
 		mark_setback(session, player, PlaySetback.HAZARD)
-	return reset
+		return true
+	return _reset_if_listed(
+		session, player, TrapCycle.spike_hits(
+			session._world, session._spike_cycle, _capsule_ids(session), session.support_dy
+		), PlaySetback.HAZARD
+	) or _reset_if_listed(
+		session, player, TrapCycle.flame_hits(
+			session._world, session._flame_cycle, _capsule_ids(session)
+		), PlaySetback.HAZARD
+	)
+
+
+func keep_flames_nonsolid(session: TraprushMatchSession) -> void:
+	TrapCycle.keep_flames_nonsolid(session._world, session._flame_cycle)
+
+
+func apply_crushers(session: TraprushMatchSession) -> void:
+	_reset_crushed(session, session._crusher_cycle)
+
+
+func apply_pendulums(session: TraprushMatchSession) -> void:
+	_reset_crushed(session, session._pendulum_cycle)
+
+
+func _reset_crushed(session: TraprushMatchSession, cycle: Array[Dictionary]) -> void:
+	var crushed: PackedInt32Array = TrapCycle.crusher_hits(
+		session._world, cycle, _capsule_ids(session), session.support_dy
+	)
+	for capsule_id: int in crushed:
+		for player: Dictionary in session._players:
+			if player["capsule_id"] == capsule_id:
+				reset_player_to_pad(session, player)
+				break
+
+
+func _reset_if_listed(
+	session: TraprushMatchSession,
+	player: Dictionary,
+	hits: PackedInt32Array,
+	reason: String
+) -> bool:
+	var capsule_id: int = player["capsule_id"]
+	if not hits.has(capsule_id):
+		return false
+	reset_player_to_pad(session, player)
+	player["setback_reason"] = reason
+	return true
 
 
 ## 一次环境失败的三件事：清传送门闩、上硬直、记下原因与 tick。
@@ -207,6 +254,11 @@ func mark_setback(session: TraprushMatchSession, player: Dictionary, reason: Str
 		return
 	player["setback_reason"] = reason
 	player["setback_tick"] = session.tick_index()
+	var count_raw: Variant = player.get("setback_count", 0)
+	var count: int = 0
+	if typeof(count_raw) == TYPE_INT:
+		count = count_raw
+	player["setback_count"] = count + 1
 
 
 func player_stunned(player: Dictionary) -> bool:

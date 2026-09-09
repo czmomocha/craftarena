@@ -116,6 +116,8 @@ func test_snapshot_durability_hides_and_restores_without_moving() -> void:
 	assert_eq(_map.crate_total(), 1)
 	assert_eq(_map.live_solid_boxes().size(), 0)
 	assert_null(_map.crate_node(40))
+	assert_not_null(_map.break_node(40))
+	assert_gte(_map.break_node(40).get_child_count(), 4)
 	assert_true(_map.apply_crates([_crate(40, 1)]))
 	assert_eq(_map.crate_total(), 1)
 	var crate: MeshInstance3D = _map.crate_node(40)

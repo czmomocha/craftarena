@@ -18,8 +18,15 @@ func spawn_placeholder(
 	var albedo: Color = PlaceholderSpec.ENTITY_STUB_ALBEDO
 	var kind: String = ""
 	if record != null and record.components.has(SharedComponentNames.HAZARD):
-		albedo = AuthoringPreviewMap.HAZARD_ALBEDO
-		kind = "hazard"
+		if _record_has_zone_tag(record, "flame"):
+			albedo = PlaceholderSpec.FLAME_ALBEDO
+			kind = OccupancyGadget.KIND_FLAME
+		elif _record_has_zone_tag(record, "roller"):
+			albedo = PlaceholderSpec.ROLLER_ALBEDO
+			kind = OccupancyGadget.KIND_ROLLER
+		else:
+			albedo = AuthoringPreviewMap.HAZARD_ALBEDO
+			kind = "hazard"
 	elif record != null and _record_has_zone_tag(record, "switch"):
 		albedo = PlaceholderSpec.SWITCH_ALBEDO
 		kind = OccupancyGadget.KIND_SWITCH
@@ -35,13 +42,32 @@ func spawn_placeholder(
 	elif record != null and _record_has_zone_tag(record, "lift"):
 		albedo = PlaceholderSpec.LIFT_ALBEDO
 		kind = OccupancyGadget.KIND_LIFT
+	elif record != null and _record_has_zone_tag(record, "spike"):
+		albedo = PlaceholderSpec.SPIKE_ALBEDO
+		kind = OccupancyGadget.KIND_SPIKE
+	elif record != null and _record_has_zone_tag(record, "crusher"):
+		albedo = PlaceholderSpec.CRUSHER_ALBEDO
+		kind = OccupancyGadget.KIND_CRUSHER
+	elif record != null and _record_has_zone_tag(record, "pendulum"):
+		albedo = PlaceholderSpec.PENDULUM_ALBEDO
+		kind = OccupancyGadget.KIND_PENDULUM
+	elif record != null and _record_has_zone_tag(record, "ice"):
+		albedo = PlaceholderSpec.ICE_ALBEDO
+		kind = OccupancyGadget.KIND_ICE
 	elif record != null and _record_has_solid_tag(record):
-		albedo = AuthoringPreviewMap.SOLID_ALBEDO
+		var y: int = pose["y"]
+		albedo = PlaceholderSpec.floor_albedo(y, Fixed.SCALE)
 		kind = "tile"
 	elif record != null and record.components.has(SharedComponentNames.DESTRUCTIBLE):
 		if _record_has_zone_tag(record, "energy_wall"):
 			albedo = PlaceholderSpec.ENERGY_WALL_ALBEDO
 			kind = OccupancyGadget.KIND_ENERGY_WALL
+		elif _record_has_zone_tag(record, "rubble"):
+			albedo = PlaceholderSpec.RUBBLE_ALBEDO
+			kind = OccupancyGadget.KIND_RUBBLE
+		elif _record_has_zone_tag(record, "obstacle_core"):
+			albedo = PlaceholderSpec.OBSTACLE_CORE_ALBEDO
+			kind = OccupancyGadget.KIND_OBSTACLE_CORE
 		else:
 			albedo = AuthoringPreviewMap.CRATE_ALBEDO
 			kind = "crate"
@@ -105,6 +131,14 @@ func _attach_kind_visual(
 		or kind == OccupancyGadget.KIND_SWITCH
 		or kind == OccupancyGadget.KIND_GATE
 		or kind == OccupancyGadget.KIND_ENERGY_WALL
+		or kind == OccupancyGadget.KIND_SPIKE
+		or kind == OccupancyGadget.KIND_FLAME
+		or kind == OccupancyGadget.KIND_CRUSHER
+		or kind == OccupancyGadget.KIND_ROLLER
+		or kind == OccupancyGadget.KIND_RUBBLE
+		or kind == OccupancyGadget.KIND_OBSTACLE_CORE
+		or kind == OccupancyGadget.KIND_PENDULUM
+		or kind == OccupancyGadget.KIND_ICE
 	):
 		if OccupancyGadget.attach(placeholder, kind, 0):
 			placeholder.layers = 0

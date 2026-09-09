@@ -1,0 +1,40 @@
+{
+	"schema_version": 2,
+	"cell": 65536,
+	"source_revision": 0,
+	"assets": [
+		{
+			"asset_id": 1,
+			"gameplay_version": 1,
+			"collision": {
+				"kind": "box",
+				"hx": 32768,
+				"hy": 32768,
+				"hz": 32768
+			},
+			"attach_points": []
+		}
+	],
+	"pads": [],
+	"portals": [],
+	"finish": [],
+	"destructibles": [],
+	"hazards": [
+		{
+			"entity_id": 50,
+			"x": 0,
+			"y": 0,
+			"z": 65536,
+			"cooldown_ticks": 30,
+			"asset_id": 1,
+			"gameplay_version": 1
+		}
+	],
+	"solids": [],
+	"pickups": [],
+	"rollers": [
+		{
+			"entity_id": 50
+		}
+	]
+}
