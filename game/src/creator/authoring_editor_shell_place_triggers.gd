@@ -19,6 +19,12 @@ static func try_place_gate(
 	return _try_place(shell, entity_id, cell_x, cell_y, cell_z, gate_payload)
 
 
+static func try_place_energy_wall(
+	shell: AuthoringEditorShell, entity_id: int, cell_x: int, cell_y: int, cell_z: int
+) -> bool:
+	return _try_place(shell, entity_id, cell_x, cell_y, cell_z, energy_wall_payload)
+
+
 static func _try_place(
 	shell: AuthoringEditorShell,
 	entity_id: int,
@@ -49,6 +55,32 @@ static func gate_payload(entity_id: int, x: int, y: int, z: int, half: int) -> D
 	return _trigger_payload(
 		entity_id, x, y, z, half, TraprushTopologyCompiler.GATE_ZONE_TAG
 	)
+
+
+static func energy_wall_payload(entity_id: int, x: int, y: int, z: int, half: int) -> Dictionary:
+	return {
+		"op": "place",
+		"record": {
+			"schema_version": 1,
+			"entity_id": entity_id,
+			"components": {
+				"transform": {"x": x, "y": y, "z": z, "yaw_bam": 0},
+				"destructible": {
+					"durability": TraprushEditorPanel.CRATE_DURABILITY_STUB,
+					"regen_policy_id": TraprushEditorPanel.CRATE_REGEN_POLICY_STUB,
+				},
+				"zone": {
+					"shape": {
+						"kind": SharedCollisionShapeKinds.BOX,
+						"hx": half,
+						"hy": half,
+						"hz": half,
+					},
+					"tags": [TraprushTopologyCompiler.ENERGY_WALL_ZONE_TAG],
+				},
+			},
+		},
+	}
 
 
 static func _trigger_payload(

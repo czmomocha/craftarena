@@ -60,6 +60,8 @@ const LAUNCH_ZONE_TAG: String = "launch"
 ## 踩区开关 / 门：固体 + 本标签 + 已有 `interactable.link_group`。见 `TraprushGateCycle`。
 const SWITCH_ZONE_TAG: String = "switch"
 const GATE_ZONE_TAG: String = "gate"
+## 能量墙：可破坏占用 + 本标签。几何在 `destructibles`，本袋只带 `entity_id`。
+const ENERGY_WALL_ZONE_TAG: String = "energy_wall"
 
 
 static func compile(world: AuthoringWorld) -> SimulationBundle:
@@ -95,5 +97,6 @@ static func compile(world: AuthoringWorld) -> SimulationBundle:
 		SimulationBundle.FIELD_LAUNCHES: occupancy["launches"],
 		SimulationBundle.FIELD_SWITCHES: occupancy["switches"],
 		SimulationBundle.FIELD_GATES: occupancy["gates"],
+		SimulationBundle.FIELD_ENERGY_WALLS: occupancy["energy_walls"],
 	}
 	return SimulationBundle.from_dictionary(body)

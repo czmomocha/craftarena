@@ -22,6 +22,7 @@ static func collect_occupancy(
 	var launch_list: Array[Dictionary] = []
 	var switch_list: Array[Dictionary] = []
 	var gate_list: Array[Dictionary] = []
+	var energy_wall_list: Array[Dictionary] = []
 	var ids: Array[int] = world.entity_ids()
 	for entity_id: int in ids:
 		var record: SharedComponentRecord = world.get_record(entity_id)
@@ -29,6 +30,10 @@ static func collect_occupancy(
 			return {"ok": false}
 		var next_asset: Dictionary = FieldsGd.asset_ref(record)
 		if next_asset.is_empty():
+			return {"ok": false}
+		if FieldsGd.has_energy_wall_tag(record) and not record.components.has(
+			SharedComponentNames.DESTRUCTIBLE
+		):
 			return {"ok": false}
 		if record.components.has(SharedComponentNames.INVENTORY):
 			if not _append_pickup(entity_id, record, next_asset, used_assets, pickup_list):
@@ -54,7 +59,9 @@ static func collect_occupancy(
 				return {"ok": false}
 			continue
 		if record.components.has(SharedComponentNames.DESTRUCTIBLE):
-			if not _append_destructible(entity_id, record, next_asset, used_assets, destructible_list):
+			if not _append_destructible(
+				entity_id, record, next_asset, used_assets, destructible_list, energy_wall_list
+			):
 				return {"ok": false}
 			continue
 		if record.components.has(SharedComponentNames.HAZARD):
@@ -78,6 +85,7 @@ static func collect_occupancy(
 		"launches": launch_list,
 		"switches": switch_list,
 		"gates": gate_list,
+		"energy_walls": energy_wall_list,
 	}
 
 
@@ -211,6 +219,8 @@ static func _append_solid(
 		return false
 	if record.components.has(SharedComponentNames.HAZARD):
 		return false
+	if FieldsGd.has_energy_wall_tag(record):
+		return false
 	var solid_pose: Dictionary = FieldsGd.transform_xyz(record)
 	if solid_pose.is_empty():
 		return false
@@ -267,7 +277,8 @@ static func _append_destructible(
 	record: SharedComponentRecord,
 	next_asset: Dictionary,
 	used_assets: Dictionary[int, int],
-	destructible_list: Array[Dictionary]
+	destructible_list: Array[Dictionary],
+	energy_wall_list: Array[Dictionary]
 ) -> bool:
 	if record.components.has(SharedComponentNames.CHECKPOINT):
 		return false
@@ -280,6 +291,8 @@ static func _append_destructible(
 		return false
 	var crate_body: Dictionary = FieldsGd.destructible_body(record)
 	if crate_body.is_empty():
+		return false
+	if not TriggersGd.try_append_energy_wall(entity_id, record, energy_wall_list):
 		return false
 	destructible_list.append(FieldsGd.with_asset({
 		"entity_id": entity_id,

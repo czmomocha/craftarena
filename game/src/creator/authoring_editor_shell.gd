@@ -172,6 +172,10 @@ func try_place_gate(entity_id: int, cell_x: int, cell_y: int, cell_z: int) -> bo
 	return PlaceTriggersGd.try_place_gate(self, entity_id, cell_x, cell_y, cell_z)
 
 
+func try_place_energy_wall(entity_id: int, cell_x: int, cell_y: int, cell_z: int) -> bool:
+	return PlaceTriggersGd.try_place_energy_wall(self, entity_id, cell_x, cell_y, cell_z)
+
+
 func try_move_entity(entity_id: int, cell_x: int, cell_y: int, cell_z: int) -> bool:
 	return PlaceGd.try_move_entity(self, entity_id, cell_x, cell_y, cell_z)
 

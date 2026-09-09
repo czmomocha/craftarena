@@ -21,6 +21,7 @@ extends Node3D
 const AuthoringDocumentGd := preload("res://src/creator/authoring_document.gd")
 const TraprushTopologyCompilerGd := preload("res://src/ugc/traprush_topology_compiler.gd")
 const MatchSnapshotFollowGd := preload("res://src/client/match_snapshot_follow.gd")
+const OccupancyGadget := preload("res://src/shared/occupancy_gadget.gd")
 
 const CRATE_PREFIX: String = "crate_"
 const VISUAL_NAME: String = "visual"
@@ -32,6 +33,7 @@ var _has_course: bool = false
 var _cell: int = 0
 var _poses: Array[Dictionary] = []
 var _live_solids: Array[Dictionary] = []
+var _energy_wall_ids: Dictionary = {}
 var _crate_count: int = 0
 
 
@@ -64,6 +66,7 @@ func apply_bundle(bundle: SimulationBundle) -> bool:
 	_has_course = true
 	_cell = bundle.cell
 	_poses = _copy_poses(bundle.destructibles)
+	_energy_wall_ids = OccupancyGadget.id_lookup(bundle.energy_walls)
 	_rebuild(_durability_from_bags(bundle.destructibles))
 	return true
 
@@ -290,15 +293,23 @@ func _spawn_box(node_name: String, pose: Dictionary) -> void:
 	var x: int = pose["x"]
 	var y: int = pose["y"]
 	var z: int = pose["z"]
+	var entity_id: int = pose["entity_id"]
+	var albedo: Color = PlaceholderSpec.CRATE_ALBEDO
+	if _energy_wall_ids.has(entity_id):
+		albedo = PlaceholderSpec.ENERGY_WALL_ALBEDO
 	var mesh: BoxMesh = BoxMesh.new()
 	mesh.size = PLACEHOLDER_SIZE
-	mesh.material = _unshaded(PlaceholderSpec.CRATE_ALBEDO)
+	mesh.material = _unshaded(albedo)
 	var node: MeshInstance3D = MeshInstance3D.new()
 	node.name = node_name
 	node.mesh = mesh
 	node.position = Vector3(meters_from_fixed(x), meters_from_fixed(y), meters_from_fixed(z))
 	add_child(node)
-	_attach_visual(node)
+	if _energy_wall_ids.has(entity_id):
+		if OccupancyGadget.attach(node, OccupancyGadget.KIND_ENERGY_WALL, 0):
+			node.layers = 0
+	else:
+		_attach_visual(node)
 
 
 func _attach_visual(crate: MeshInstance3D) -> bool:

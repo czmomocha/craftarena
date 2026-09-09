@@ -37,6 +37,7 @@ craft_arena.ui.place_lift,Place lift,放置电梯
 craft_arena.ui.place_launch,Place launch,放置弹射垫
 craft_arena.ui.place_switch,Place switch,放置开关
 craft_arena.ui.place_gate,Place gate,放置门
+craft_arena.ui.place_energy_wall,Place energy wall,放置能量墙
 craft_arena.ui.mark_corner,Mark corner,标记角点
 craft_arena.ui.fill_solids,Fill solids,矩形填充
 craft_arena.ui.copy_entity,Copy,复制

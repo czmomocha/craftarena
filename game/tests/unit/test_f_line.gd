@@ -8,6 +8,8 @@ const AuthoringWorldGd := preload("res://src/creator/authoring_world.gd")
 const MatchHazardWarnGd := preload("res://src/client/match_hazard_warn.gd")
 const MatchPickupMapGd := preload("res://src/client/match_pickup_map.gd")
 const MatchSolidMapGd := preload("res://src/client/match_solid_map.gd")
+const MatchCrateMapGd := preload("res://src/client/match_crate_map.gd")
+const OccupancyGadget := preload("res://src/shared/occupancy_gadget.gd")
 const OfficialCoursesGd := preload("res://src/shared/official_traprush_courses.gd")
 const PlaySfxGd := preload("res://src/client/play_sfx.gd")
 const SharedComponentRecordGd := preload("res://src/shared/schema/component_record.gd")
@@ -140,8 +142,11 @@ func test_course_f_playable_compiles_with_f_line_features() -> void:
 	assert_eq(bundle.launches.size(), 1)
 	assert_eq(bundle.switches.size(), 1)
 	assert_eq(bundle.gates.size(), 1)
+	assert_eq(bundle.energy_walls.size(), 1)
+	assert_eq(bundle.destructibles.size(), 2)
 	assert_eq(PlayClockGd.dict_int(bundle.switches[0], "entity_id", 0), 85)
 	assert_eq(PlayClockGd.dict_int(bundle.gates[0], "entity_id", 0), 223)
+	assert_eq(PlayClockGd.dict_int(bundle.energy_walls[0], "entity_id", 0), 224)
 	assert_gt(bundle.solids.size(), 6)
 	var switch_solid: Dictionary = {}
 	var gate_solid: Dictionary = {}
@@ -183,6 +188,12 @@ func test_course_f_playable_compiles_with_f_line_features() -> void:
 	if solids.visual_count() > 0:
 		assert_eq(solids.visual_node(85), null, "switch must stay a coloured box, not a terrain tile")
 		assert_eq(solids.visual_node(223), null, "gate must stay a coloured box, not a terrain tile")
+	assert_not_null(OccupancyGadget.gadget_node(solids.solid_node(85)))
+	assert_not_null(OccupancyGadget.gadget_node(solids.solid_node(223)))
+	var crates: MatchCrateMapGd = MatchCrateMapGd.new()
+	add_child_autofree(crates)
+	assert_true(crates.apply_bundle(bundle))
+	assert_not_null(OccupancyGadget.gadget_node(crates.crate_node(224)))
 
 
 func test_solo_shell_opens_course_f_playable() -> void:

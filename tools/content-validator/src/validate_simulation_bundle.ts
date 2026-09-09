@@ -19,6 +19,7 @@ const OCCUPANCY_BAGS = [
  * 必须在这里复核，否则 GDScript 拒了而 `npm test` 放行。
  */
 const SOLID_BACKED_BAGS = ["movers", "conveyors", "launches", "switches", "gates"] as const;
+const DESTRUCTIBLE_BACKED_BAGS = ["energy_walls"] as const;
 
 export function validateSimulationBundle(instance: unknown): JsonSchemaError[] {
 	const errors = validateJsonSchema(loadJsonFile(SIMULATION_BUNDLE_SCHEMA_PATH), instance, {
@@ -33,8 +34,12 @@ export function validateSimulationBundle(instance: unknown): JsonSchemaError[] {
 	for (const bag of SOLID_BACKED_BAGS) {
 		pushDuplicateIds(errors, instance[bag], `$.${bag}`);
 	}
+	for (const bag of DESTRUCTIBLE_BACKED_BAGS) {
+		pushDuplicateIds(errors, instance[bag], `$.${bag}`);
+	}
 	pushAssetErrors(errors, instance);
 	pushSolidBackedErrors(errors, instance);
+	pushDestructibleBackedErrors(errors, instance);
 	return errors;
 }
 
@@ -62,6 +67,35 @@ function pushSolidBackedErrors(errors: JsonSchemaError[], instance: JsonObject):
 			errors.push({
 				path: `$.${bag}/${index}/entity_id`,
 				message: "entity_id is not declared in solids",
+			});
+		}
+	}
+}
+
+function pushDestructibleBackedErrors(errors: JsonSchemaError[], instance: JsonObject): void {
+	const crates = instance.destructibles;
+	const crateIds = new Set<number>();
+	if (Array.isArray(crates)) {
+		for (const item of crates) {
+			const entityId = isObject(item) ? integerOrUndefined(item.entity_id) : undefined;
+			if (entityId !== undefined) {
+				crateIds.add(entityId);
+			}
+		}
+	}
+	for (const bag of DESTRUCTIBLE_BACKED_BAGS) {
+		const list = instance[bag];
+		if (!Array.isArray(list)) {
+			continue;
+		}
+		for (const [index, item] of list.entries()) {
+			const entityId = isObject(item) ? integerOrUndefined(item.entity_id) : undefined;
+			if (entityId === undefined || crateIds.has(entityId)) {
+				continue;
+			}
+			errors.push({
+				path: `$.${bag}/${index}/entity_id`,
+				message: "entity_id is not declared in destructibles",
 			});
 		}
 	}
