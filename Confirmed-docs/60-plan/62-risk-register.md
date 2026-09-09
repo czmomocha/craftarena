@@ -61,7 +61,7 @@
 | Godot AI 匿名遥测默认开启 | 中，已治理 | 第一次启用插件前写入 `GODOT_AI_DISABLE_TELEMETRY=true`，Dock 再关 Telemetry，Cursor attach 带 `--disable-telemetry`。口径见 [CD-51 §7.2](../50-engineering/51-dev-environment.md)，不属于 [CD-14](../10-product/14-data-and-telemetry.md) 玩家遥测 |
 | `_mcp_game_helper` 写入 `project.godot` 后进入 Headless / 导出包 | 高，已缓解 | **第一次真导出**（2026-08-26）证明旧「已缓解」不成立：`res://addons/godot_ai/` 会被打进 release 包。现缓解：三预设 `exclude_filter` 含 `addons/*`、包内自检 `no_godot_ai_packed` / `no_addons_packed`、`npm run godot-settings:scrub` / `:check`、Agent `git commit`/`git add` 由 `tools/shell-guard/` fail closed 拦截。残余：插件仍会写回本机 `project.godot`；人手敲的 git 不被拦；源码 Headless 若脏工程仍可能加载 helper。口径见 [CD-51 §7.3](../50-engineering/51-dev-environment.md) 与 [desktop-export-check.md §5](../../docs/runbooks/desktop-export-check.md) |
 | 多 Agent 并行放大 review 负担 | 高，已缓解 | 启用判据 A1–A4 与并行度上限见 [CD-52 §5](../50-engineering/52-ai-workflow.md)。门禁覆盖率不足时禁止并行 |
-| Cursor 托管 worktree 自动清理可能丢失未提交产出 | 中，已缓解 | 任务粒度半天到两天；任务结束即开 PR。隔离分支提交须等分支保护落地后才允许，见 [CD-52 §1.1](../50-engineering/52-ai-workflow.md) |
+| Cursor 托管 worktree 自动清理可能丢失未提交产出 | 中，已缓解 | 任务粒度半天到两天；任务结束人类验证后立刻提交 `main`。见 [CD-52 §1.1](../50-engineering/52-ai-workflow.md) |
 | Bugbot / Cloud Agent 需要仓库读写权限 | 中，已接受 | 属安全边界扩大，随 [ADR-0004](../../docs/adr/0004-multi-agent-adoption-timing-and-architecture.md) 批准。GitHub PR 侧 Bugbot 已跳过（SCM 安装对不上）；合入靠 CI + 人类批准。不启用 fail-on-unresolved-issues。Cloud Agent 仍须分支保护 |
 | 测试期把明文 `http`/`ws` 打到远端测试机 | 高，已接受 | 纠偏 D11（2026-08-27）：C1 不配域名与 Let's Encrypt。不得对外表述为已具备 TLS。正式公开运营前必须回到宪法第二十二条。手册不写死 IP/域名，见 [纠偏方案 §4.0.1](../../docs/plans/course-correction-2026-08.md) |
 | 单人审查带宽超载 | 高，已缓解 | 纠偏前 7 天 102 个 PR。D9：章粒度 5×、审查分级深/常/轻。E10（2026-09-03 选项 A）：**不设**周合入上限；深审级章的逐行审查 = PR 正文失败模式 + 人类批准。不另建审查日志。不能标「已治理」 |

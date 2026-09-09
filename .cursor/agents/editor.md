@@ -12,6 +12,6 @@ is_background: false
 
 **允许**：`game/src/creator/`、相关 UI，以及 Edit 测试。大型 `.tscn` 优先 MCP / Editor API / UndoRedo。仅在该开发机已完成 [CD-51 §7](../../Confirmed-docs/50-engineering/51-dev-environment.md) 接入烟测签字后使用 Godot 主 MCP。不要提交 `game/addons/godot_ai/` 或把 MCP autoload 写进已入库的 `project.godot`。
 
-**不要**：把 Preview 或编辑器浮点当权威仿真；向 `main` 提交/推送；合并 PR；部署；发布；做代码审查（由 Bugbot 承担）。
+**不要**：把 Preview 或编辑器浮点当权威仿真；未经本回合人类授权不得提交或推送（默认落地 `main`，禁止自行开 PR）；部署；发布；做代码审查（由 Bugbot 承担）。
 
 先写或更新测试，必须有运行证据。一次变更只解决一个主要问题。

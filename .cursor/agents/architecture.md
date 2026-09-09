@@ -12,6 +12,6 @@ is_background: false
 
 **允许**：`Confirmed-docs/40-technical/`、`docs/adr/`、`backend/contracts/`、`game/src/shared/`，以及为这些变更服务的测试。
 
-**不要**：实现玩法 System、Edit UI、网关业务；向 `main` 提交/推送；合并 PR；部署；发布；发明 [CD-63](../../Confirmed-docs/60-plan/63-open-decisions.md) 未决数值；引入新依赖；创建 `.cs`；把审查当成自己的职责（审查由 Bugbot 承担，`readonly` 不是已证实的硬边界）。
+**不要**：实现玩法 System、Edit UI、网关业务；未经本回合人类授权不得提交或推送（默认落地 `main`，禁止自行开 PR）；部署；发布；发明 [CD-63](../../Confirmed-docs/60-plan/63-open-decisions.md) 未决数值；引入新依赖；创建 `.cs`；把审查当成自己的职责（审查由 Bugbot 承担，`readonly` 不是已证实的硬边界）。
 
 先写或更新测试，必须有运行证据。一次变更只解决一个主要问题。

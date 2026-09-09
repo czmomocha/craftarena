@@ -138,7 +138,7 @@
 
 ## D.6 AI、协作与项目治理
 
-- `ai_autonomy = edit_test_no_commit_release` 已被 `ai_autonomy_scope = isolated_branch_commit_ok`（2026-08-21）**收窄解释、并未推翻**：禁止的是向 `main` 或受保护分支提交/推送，以及部署、发布与线上回滚；允许在隔离的 agent 分支或 worktree 上 commit/push。人类门禁落在 PR 合并（`pr_merge_gate`）与 GitHub 分支保护。**分支保护落地前仍按原字面执行**——Agent 不得创建任何提交。口径见 [CD-52 §1.1](../50-engineering/52-ai-workflow.md)，来源 [ADR-0004](../../docs/adr/0004-multi-agent-adoption-timing-and-architecture.md)。
+- `ai_autonomy = edit_test_no_commit_release` 已被 `ai_autonomy_scope = isolated_branch_commit_ok`（2026-08-21）**收窄解释、并未推翻**：禁止的是向 `main` 或受保护分支提交/推送，以及部署、发布与线上回滚；允许在隔离的 agent 分支或 worktree 上 commit/push。人类门禁落在 PR 合并（`pr_merge_gate`）与 GitHub 分支保护。**分支保护落地前仍按原字面执行**——Agent 不得创建任何提交。口径见 [CD-52 §1.1](../50-engineering/52-ai-workflow.md)，来源 [ADR-0004](../../docs/adr/0004-multi-agent-adoption-timing-and-architecture.md)。该句再被 `ai_autonomy_scope = main_after_human_auth`（2026-09-09）覆盖：默认在当前 checkout（通常 `main`）上完成一章，人类验证并授权后 commit / push 到 `main`；未经本回合确认仍不得提交。`isolated_branch_commit_ok` 只保留为「人类要求开 PR / Cloud Agent 隔离分支」的例外。宪法第十八条不变。
 - `human_review_granularity = task_and_gate`。该句被 `pr_scope = complete_chapter`（2026-08-23）**收窄解释、并未推翻**：任务仍是可验证切片，但提交给人类的 PR 必须是完整一章（契约 + 实现 + 测试 + 所有者文档），不得把同一链路拆成不能独立验收的半成品。`git_workflow = trunk_short_pr` 不被推翻，仍禁止整里程碑巨型 PR。口径见 [CD-52 §3.1](../50-engineering/52-ai-workflow.md)。该句再被 `chapter_device_check = numbered_runbook_and_pr`（2026-08-25）补充：完整章节 PR 必须把人类窗口验收写成编号步骤，写入 [开发机窗口验收](../../docs/runbooks/dev-window-check.md) 本刀并在 PR Test plan 给出同一份清单；禁止只写「真机再看一眼」。无开发机可见行为的章写「无」加原因。这是人工检查，不是 CI 门禁。口径见 [CD-52 §3.2](../50-engineering/52-ai-workflow.md)。该句再被 `dev_window_check_not_export = runbook_rename`（2026-09-02）补充：文件从 `chapter-device-check.md` 更名为 `dev-window-check.md`，显示名「开发机窗口验收」；「真机」一词留给导出包（[desktop-export-check.md](../../docs/runbooks/desktop-export-check.md)）。不覆盖编号步骤义务本身。
 - `ai_parallelism = lead_isolated_domains`。
 - `multi_agent_runtime = cursor_native_worktree`（2026-08-21）：一期用 Cursor 原生 `/worktree` + `.cursor/agents/` + `.cursor/hooks.json`。不引入 Multica 类平台，不用 Cursor Automations。启用判据、并行度上限与角色表见 [CD-52 §5](../50-engineering/52-ai-workflow.md)。
@@ -148,7 +148,7 @@
 - `ai_asset_sources = no_traceability`。
 - `ai_asset_takedown = manual_case_review`。
 - `repository_hosting = github_private`。
-- `git_workflow = trunk_short_pr`。
+- `git_workflow = trunk_short_pr`。该句被 `git_workflow = trunk_direct_after_auth`（2026-09-09）覆盖：默认提交 `main`；只有人类主动说「开 PR」才拉分支开 PR。大改动先做完、人类验证、授权后才提交。`pr_scope = complete_chapter` 与章粒度 5× 仍有效，对象从「PR」改成「提交」。shell-guard 不再拦向 `main` 的普通 commit/push，仍拦 force push、删除 `main`、`worktree remove --force`、以及把 Godot AI 本机条目写进 `project.godot`。GitHub 若仍要求 PR，由人类调整保护规则或使用管理员绕过；Agent 不改仓库保护。口径见 [CD-52 §1.1](../50-engineering/52-ai-workflow.md)。
 - `ci_environment = github_plus_selfhosted`。
 - `pr_merge_gate = required_ci_one_human`。
 - `web_preview_frequency = per_pr_preview`。

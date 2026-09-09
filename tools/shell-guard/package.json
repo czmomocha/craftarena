@@ -3,6 +3,6 @@
 	"version": "0.0.0",
 	"private": true,
 	"type": "module",
-	"description": "Cursor beforeShellExecution decision logic for protected-branch git writes.",
+	"description": "Cursor beforeShellExecution decision logic: block force-push/delete of main, worktree --force, and Godot AI local project.godot entries.",
 	"license": "UNLICENSED"
 }

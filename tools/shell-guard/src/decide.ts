@@ -1,3 +1,4 @@
+/** Force-push and delete of these refs stay blocked. Ordinary commit/push to `main` is allowed (CD-52 §1.1). */
 export const PROTECTED_BRANCHES: readonly string[] = ["main"];
 
 export type Permission = "allow" | "deny";
@@ -71,12 +72,6 @@ export function decideShellCommand(command: string, options: DecideOptions = {})
 	const settings = decideProjectSettings(subcommand, afterGit.slice(1), options);
 	if (settings.permission === "deny") {
 		return settings;
-	}
-	if (isProtectedWrite(subcommand, afterGit.slice(1)) && branchIsProtected(options.currentBranch)) {
-		return deny(
-			"commit-on-protected",
-			`git ${subcommand} on protected branch '${options.currentBranch ?? "unknown"}' is blocked`,
-		);
 	}
 	return ALLOW;
 }
@@ -174,38 +169,71 @@ function decideWorktree(args: readonly string[]): Decision {
 	return ALLOW;
 }
 
+function isForcePush(args: readonly string[]): boolean {
+	return (
+		args.includes("--force") ||
+		args.includes("-f") ||
+		args.includes("--force-with-lease") ||
+		args.includes("--force-if-includes")
+	);
+}
+
 function decidePush(args: readonly string[], currentBranch: string | undefined): Decision {
 	if (args.includes("--all") || args.includes("--mirror")) {
 		return deny("push-all", "git push --all/--mirror is blocked");
 	}
 
 	const { deleteMode, refspecs, implicit } = parsePushArgs(args);
+	const forced = isForcePush(args);
 	if (implicit) {
 		if (currentBranch === undefined) {
-			return deny("push-implicit-unknown", "git push without a refspec is blocked unless the current branch is known and not protected");
+			return deny(
+				"push-implicit-unknown",
+				"git push without a refspec is blocked unless the current branch is known",
+			);
 		}
-		if (isProtectedBranch(currentBranch)) {
-			return deny("push-protected", `git push of protected branch '${currentBranch}' is blocked`);
+		if (deleteMode && isProtectedBranch(currentBranch)) {
+			return deny("push-protected", `git push deleting protected branch '${currentBranch}' is blocked`);
+		}
+		if (forced && isProtectedBranch(currentBranch)) {
+			return deny(
+				"push-force-protected",
+				`git force-push of protected branch '${currentBranch}' is blocked`,
+			);
 		}
 		return ALLOW;
 	}
 
 	for (const spec of refspecs) {
 		const dest = refspecDestination(spec);
+		const forceSpec = spec.startsWith("+") || forced;
+		const deleteSpec = deleteMode || spec.replace(/^\+/, "").startsWith(":");
 		if (dest === "HEAD") {
 			if (currentBranch === undefined) {
 				return deny(
 					"push-implicit-unknown",
-					"git push of HEAD is blocked unless the current branch is known and not protected",
+					"git push of HEAD is blocked unless the current branch is known",
 				);
 			}
-			if (isProtectedBranch(currentBranch)) {
-				return deny("push-protected", `git push of protected branch '${currentBranch}' via HEAD is blocked`);
+			if (deleteSpec && isProtectedBranch(currentBranch)) {
+				return deny("push-protected", `git push deleting protected branch '${currentBranch}' is blocked`);
+			}
+			if (forceSpec && isProtectedBranch(currentBranch)) {
+				return deny(
+					"push-force-protected",
+					`git force-push of protected branch '${currentBranch}' via HEAD is blocked`,
+				);
 			}
 			continue;
 		}
-		if (isProtectedBranch(dest) || (deleteMode && isProtectedBranch(spec))) {
-			return deny("push-protected", `git push updating '${dest}' is blocked`);
+		if (deleteSpec && isProtectedBranch(dest)) {
+			return deny("push-protected", `git push deleting '${dest}' is blocked`);
+		}
+		if (forceSpec && isProtectedBranch(dest)) {
+			return deny(
+				"push-force-protected",
+				`git force-push of protected branch '${dest}' is blocked`,
+			);
 		}
 	}
 	return ALLOW;
@@ -264,24 +292,6 @@ function refspecDestination(spec: string): string {
 		return trimmed;
 	}
 	return trimmed.slice(colon + 1);
-}
-
-function isProtectedWrite(subcommand: string, args: readonly string[]): boolean {
-	if (args.includes("--abort") || args.includes("--help") || args.includes("-h")) {
-		return false;
-	}
-	return (
-		subcommand === "commit" ||
-		subcommand === "merge" ||
-		subcommand === "rebase" ||
-		subcommand === "cherry-pick" ||
-		subcommand === "revert" ||
-		subcommand === "am"
-	);
-}
-
-function branchIsProtected(name: string | undefined): boolean {
-	return name !== undefined && isProtectedBranch(name);
 }
 
 function skipGitGlobals(tokens: readonly string[]): readonly string[] {

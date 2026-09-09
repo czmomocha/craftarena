@@ -1,21 +1,23 @@
 ---
-description: Submit complete chapters for human review, not half-finished PRs
+description: Submit complete chapters for human review; default to main, PR only when asked
 alwaysApply: true
 ---
 
 # 完整章节再提交
 
-所有者：[CD-52 §3.1](Confirmed-docs/50-engineering/52-ai-workflow.md)。决策：`pr_scope = complete_chapter`。
+所有者：[CD-52 §3.1](Confirmed-docs/50-engineering/52-ai-workflow.md)。决策：`pr_scope = complete_chapter`；落地：`git_workflow = trunk_direct_after_auth`。
 
-能做成完整一章，就按完整一章开 PR，再请人类审查。短 PR 仍然要短，但必须能独立验收。
+能做成完整一章，就按完整一章交给人类审查。短提交仍然要短，但必须能独立验收。
 
 一章 = 同一条链路的一次闭合：要锁的契约 + 实现 + 正反例测试 + 所有者文档落点。
 
+**默认提交 `main`。** 人类验证并说「提交」之后才 commit；得到推送授权才 push。只有人类主动说「开 PR」才拉分支开 PR。大改动先做完、让人类验证、得到授权才提交。
+
 **章粒度 5× 与审查分级仍有效**，见 [章粒度下限与审查分级](.cursor/rules/chapter-granularity-and-review.mdc)。纠偏冻结令已解除；开工顺序见 [纠偏冻结令（已解除）](.cursor/rules/course-correction-freeze.mdc) 与 [CD-61](Confirmed-docs/60-plan/61-milestones.md)。
 
-真机：PR Test plan 与 [开发机窗口验收](docs/runbooks/dev-window-check.md) 本刀必须是编号步骤（怎么开、点什么、期望 / 失败）；禁止只写「真机再看一眼」。无 GUI 的章写「无」加原因。人工检查，不是 CI 门禁。口径见 [CD-52 §3.2](Confirmed-docs/50-engineering/52-ai-workflow.md)。
+真机：[开发机窗口验收](docs/runbooks/dev-window-check.md) 本刀必须是编号步骤（怎么开、点什么、期望 / 失败）；禁止只写「真机再看一眼」。无 GUI 的章写「无」加原因。人工检查，不是 CI 门禁。口径见 [CD-52 §3.2](Confirmed-docs/50-engineering/52-ai-workflow.md)。
 
-- 做（下一刀 = **可玩性深化**）：游戏性 / 第一张 TRAPRUSH 玩法与表现 / UGC / 编辑调试（含 Web 轻量 Edit 的摆放调参 Preview）。对照 [CD-61](Confirmed-docs/60-plan/61-milestones.md)。开 PR 时整节替换 [开发机窗口验收](docs/runbooks/dev-window-check.md) 本刀。
+- 做（下一刀 = **可玩性深化**）：游戏性 / 第一张 TRAPRUSH 玩法与表现 / UGC / 编辑调试（含 Web 轻量 Edit 的摆放调参 Preview）。对照 [CD-61](Confirmed-docs/60-plan/61-milestones.md)。交章时整节替换 [开发机窗口验收](docs/runbooks/dev-window-check.md) 本刀。
 - 不做：开工 Android / iOS 烟测；公开 TLS / PR Web 沙盒；抢先 M4a / M4b / M6 / M7；改爆破半径、推击力度、道具重生（D-F4 / D-F5 / D-F6）；改默认相机距离/FOV 产品值；自由旋转镜头；改 `SimulationCore` 定点数合同；Kenney 24 皮入库（D-F9 未拍）；发明新 Hz；字体入包；触控 UI。
 - 仍欠着（不因本章合入而消失）：Android / iOS 烟测（**一期收尾**）；M5 之后的公开 TLS / PR Web 沙盒；M-Art 剩余（字体入包在一期收尾；皮肤池等 D-F9）；胶囊对胶囊仍线性。
 - 仍不做：把 locale 热切换做成产品设置页。

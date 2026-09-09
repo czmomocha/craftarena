@@ -8,11 +8,16 @@ const REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), "../../..");
 const MAIN = join(REPO_ROOT, "tools/shell-guard/src/main.ts");
 
 describe("shell-guard hook process", () => {
-	it("prints deny JSON for git push origin main", async () => {
-		const body = await runHook({ command: "git push origin main", cwd: REPO_ROOT });
+	it("prints deny JSON for git push --force origin main", async () => {
+		const body = await runHook({ command: "git push --force origin main", cwd: REPO_ROOT });
 		assert.equal(body.permission, "deny");
 		assert.equal(typeof body.user_message, "string");
 		assert.match(String(body.user_message), /blocked/i);
+	});
+
+	it("prints allow JSON for git push origin main", async () => {
+		const body = await runHook({ command: "git push origin main", cwd: REPO_ROOT });
+		assert.equal(body.permission, "allow");
 	});
 
 	it("prints allow JSON for git status", async () => {

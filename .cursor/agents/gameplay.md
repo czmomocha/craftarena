@@ -12,6 +12,6 @@ is_background: false
 
 **允许**：`game/src/simulation/`、`game/src/games/`，以及对应 GUT 测试。客户端只提交意图，权威在服务端与定点仿真。
 
-**不要**：改 L0 信封或 JSON Schema（交给架构角色）；把 Godot Node / 浮点物理当权威；发明 [CD-63](../../Confirmed-docs/60-plan/63-open-decisions.md) 未决数值；向 `main` 提交/推送；合并 PR；部署；发布；做代码审查（由 Bugbot 承担）。
+**不要**：改 L0 信封或 JSON Schema（交给架构角色）；把 Godot Node / 浮点物理当权威；发明 [CD-63](../../Confirmed-docs/60-plan/63-open-decisions.md) 未决数值；未经本回合人类授权不得提交或推送（默认落地 `main`，禁止自行开 PR）；部署；发布；做代码审查（由 Bugbot 承担）。
 
 先写或更新测试，必须有运行证据。一次变更只解决一个主要问题。

@@ -16,22 +16,32 @@ describe("shell-guard allows ordinary git on a feature branch", () => {
 	});
 });
 
-describe("shell-guard blocks protected-branch writes", () => {
-	it("blocks git push that updates main", () => {
-		assert.equal(decideShellCommand("git push origin main").code, "push-protected");
-		assert.equal(decideShellCommand("git push origin HEAD:main", { currentBranch: "feat/x" }).code, "push-protected");
-		assert.equal(decideShellCommand("git push origin feat/x:main").code, "push-protected");
-		assert.equal(decideShellCommand("git push origin +main").code, "push-protected");
-		assert.equal(decideShellCommand("git push origin refs/heads/main").code, "push-protected");
-		assert.equal(decideShellCommand("git push --force origin main").code, "push-protected");
-		assert.equal(decideShellCommand("git --no-pager push origin main").code, "push-protected");
+describe("shell-guard allows ordinary writes on main", () => {
+	it("allows commit and ordinary push to main", () => {
+		assert.equal(decideShellCommand("git commit -m x", { currentBranch: "main" }).permission, "allow");
+		assert.equal(decideShellCommand("git merge feat/x", { currentBranch: "main" }).permission, "allow");
+		assert.equal(decideShellCommand("git push origin main").permission, "allow");
+		assert.equal(decideShellCommand("git push origin HEAD:main", { currentBranch: "feat/x" }).permission, "allow");
+		assert.equal(decideShellCommand("git push origin feat/x:main").permission, "allow");
+		assert.equal(decideShellCommand("git push origin refs/heads/main").permission, "allow");
+		assert.equal(decideShellCommand("git --no-pager push origin main").permission, "allow");
+		assert.equal(decideShellCommand("git push -u origin HEAD", { currentBranch: "main" }).permission, "allow");
+		assert.equal(decideShellCommand("git push", { currentBranch: "main" }).permission, "allow");
+		assert.equal(decideShellCommand("git push origin", { currentBranch: "main" }).permission, "allow");
 	});
 
-	it("blocks implicit push when the current branch is main or unknown", () => {
-		assert.equal(decideShellCommand("git push -u origin HEAD", { currentBranch: "main" }).code, "push-protected");
+	it("still blocks force-push and delete of main", () => {
+		assert.equal(decideShellCommand("git push --force origin main").code, "push-force-protected");
+		assert.equal(decideShellCommand("git push -f origin main").code, "push-force-protected");
+		assert.equal(decideShellCommand("git push --force-with-lease origin main").code, "push-force-protected");
+		assert.equal(decideShellCommand("git push origin +main").code, "push-force-protected");
+		assert.equal(decideShellCommand("git push --force", { currentBranch: "main" }).code, "push-force-protected");
+		assert.equal(decideShellCommand("git push --delete origin main").code, "push-protected");
+		assert.equal(decideShellCommand("git push origin :main").code, "push-protected");
+	});
+
+	it("blocks implicit push when the current branch is unknown", () => {
 		assert.equal(decideShellCommand("git push origin HEAD").code, "push-implicit-unknown");
-		assert.equal(decideShellCommand("git push", { currentBranch: "main" }).code, "push-protected");
-		assert.equal(decideShellCommand("git push origin", { currentBranch: "main" }).code, "push-protected");
 		assert.equal(decideShellCommand("git push").code, "push-implicit-unknown");
 		assert.equal(decideShellCommand("git push origin", { currentBranch: "feat/x" }).permission, "allow");
 	});
@@ -39,12 +49,6 @@ describe("shell-guard blocks protected-branch writes", () => {
 	it("blocks git push --all and --mirror", () => {
 		assert.equal(decideShellCommand("git push --all origin").code, "push-all");
 		assert.equal(decideShellCommand("git push --mirror origin").code, "push-all");
-	});
-
-	it("blocks commit-like commands on main", () => {
-		assert.equal(decideShellCommand("git commit -m x", { currentBranch: "main" }).code, "commit-on-protected");
-		assert.equal(decideShellCommand("git merge feat/x", { currentBranch: "main" }).code, "commit-on-protected");
-		assert.equal(decideShellCommand("git merge --abort", { currentBranch: "main" }).permission, "allow");
 	});
 });
 
@@ -57,9 +61,9 @@ describe("shell-guard blocks forced worktree deletion", () => {
 });
 
 describe("shell-guard unwraps quoted wrappers", () => {
-	it("still sees git push origin main inside powershell -Command", () => {
-		const wrapped = 'powershell.exe -NoProfile -Command "git push origin main"';
-		assert.equal(decideShellCommand(wrapped).code, "push-protected");
+	it("still sees git push --force origin main inside powershell -Command", () => {
+		const wrapped = 'powershell.exe -NoProfile -Command "git push --force origin main"';
+		assert.equal(decideShellCommand(wrapped).code, "push-force-protected");
 	});
 });
 
@@ -142,9 +146,9 @@ describe("shell-guard keeps machine-local Godot AI settings out of a commit", ()
 		);
 	});
 
-	it("reports the settings problem before the protected-branch problem", () => {
+	it("reports the settings problem even when committing on main", () => {
 		// 两个原因同时成立时消息里必须写「怎么修 project.godot」，
-		// 否则人只看到「main 上不许提交」，还原那一步会被漏掉。
+		// 否则人只看到别的拦截、还原那一步会被漏掉。
 		assert.equal(
 			decideShellCommand("git commit -m x", { currentBranch: "main", ...STAGED }).code,
 			"godot-ai-project-settings",

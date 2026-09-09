@@ -13,7 +13,7 @@
 
 | 项 | 当前口径 |
 |---|---|
-| 每次 PR | tsc + GUT fast/slow 全量 + Schema + 红线 + 资产预算 |
+| 每次推送 `main` / 每次 PR | tsc + GUT fast/slow 全量 + Schema + 红线 + 资产预算 |
 | PR Web 预览 | **未实现**。Web 导出已有；人类 2026-09-03 拍板推迟到 M5 之后开工 |
 | 可玩性签署 | **E6 已签：好玩**（2026-09-02，非外部测试）。M5 / 发布候选清单仍未签 |
 | `--bot-run` | 不进 PR CI |
@@ -375,20 +375,20 @@ AI 生成代码必须比普通手写代码有**更强的自动化证据**，因�
 | 玩法清单签署 | 未实现 | E6 首次结论已签（好玩，非外部测试）。本表是发布候选清单，不是 E6 |
 | 人类安全与发布确认 | 未实现 | 正式公开运营前阻断清单见 CD-63 §4 |
 
-### 4.5 PR 合并规则
+### 4.5 合入 `main`
 
-PR 合并必须 CI 全绿并至少获得一次人类批准；AI 审查不能替代人类。GitHub PR 侧 Bugbot 已跳过，不构成本条的「一次人类批准」。若日后恢复，其 check 默认仍为 `neutral`，勾选该 check **不会**因为发现问题而阻止合并。
+默认路径是人类授权后直推 `main`（[CD-52 §1.1](52-ai-workflow.md)）。CI 在推送 `main` 与所有 PR 上跑。走 PR 的例外路径仍须 CI 全绿并至少获得一次人类批准；AI 审查不能替代人类。GitHub PR 侧 Bugbot 已跳过，不构成本条的「一次人类批准」。若日后恢复，其 check 默认仍为 `neutral`，勾选该 check **不会**因为发现问题而阻止合并。
 
-[ADR-0004](../../docs/adr/0004-multi-agent-adoption-timing-and-architecture.md) 决策 4 把 GitHub 分支保护定为隔离分支提交的硬前置。目标配置：
+[ADR-0004](../../docs/adr/0004-multi-agent-adoption-timing-and-architecture.md) 决策 4 曾把「禁止直推 `main`」定为隔离分支提交的硬前置。该句已被 `git_workflow = trunk_direct_after_auth`（2026-09-09）覆盖。目标配置改为：
 
-- `main` 禁止直推，必须走 PR；
-- 要求 CI 通过；
-- 要求一次人类批准；
+- `main` **允许**人类授权后的普通直推；仍禁止 force push 与删除 `main`；
+- 推送 `main` 与 PR 都要求 CI 通过；
+- 走 PR 时要求一次人类批准；
 - `CODEOWNERS` 覆盖 `game/src/shared/`、`backend/contracts/`、`Confirmed-docs/`、`.github/`。
 
-**当前（2026-08-21）：`main` 分支保护已由 GitHub API 复核。** 已启用：要求 1 次批准、过期 review 作废、Require review from Code Owners、禁止 force push、禁止删除 `main`、要求状态检查通过且分支与 `main` 同步。必过检查：`Backend typecheck and tests`、`Godot check-only and GUT`。未启用：`enforce_admins`（仓库管理员仍可绕过）。
+**当前（2026-08-21 起 GitHub 侧）**：`main` 保护仍可能要求 PR（人类 2026-08-21 保存过「必须走 PR + CI + 一次批准」）。`enforce_admins` 仍关，仓库管理员可绕过。**与 2026-09-09 主干直推口径对齐，须由人类改 GitHub 保护规则**；Agent 不改。必过检查：`Backend typecheck and tests`、`Godot check-only and GUT`。
 
-> 2026-09-01 的 GUT 分层**没有改必过检查名单**：`godot` job 的 `name` 仍是 `Godot check-only and GUT`，它现在跑四个目录（fast + slow）。没有新增需要设为必过的 job。`.github/CODEOWNERS` 覆盖 `game/src/shared/`、`backend/contracts/`、`Confirmed-docs/`、`.github/`。A4 回路已走通一次： [PR #1](https://github.com/czmomocha/craftarena/pull/1)。此后 Agent 可在隔离分支上创建提交，仍不得向 `main` 提交或推送（[CD-52 §1.1](52-ai-workflow.md)）。
+> 2026-09-01 的 GUT 分层**没有改必过检查名单**：`godot` job 的 `name` 仍是 `Godot check-only and GUT`，它现在跑四个目录（fast + slow）。没有新增需要设为必过的 job。`.github/CODEOWNERS` 覆盖 `game/src/shared/`、`backend/contracts/`、`Confirmed-docs/`、`.github/`。A4 回路已走通一次： [PR #1](https://github.com/czmomocha/craftarena/pull/1)。此后 Agent 在人类授权下可向 `main` 提交（[CD-52 §1.1](52-ai-workflow.md)）。
 
 每个 PR 的 Web 预览公开访问，但必须使用独立临时沙盒命名空间、测试数据和可销毁凭据，关闭 PR 后清理。合入 `main` 后更新稳定测试链接。
 

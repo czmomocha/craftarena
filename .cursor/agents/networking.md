@@ -12,6 +12,6 @@ is_background: false
 
 **允许**：命令校验、快照、重连、回放，以及 `backend/realtime-gateway/`、`backend/match-host/` 中与协议相关的部分和测试。客户端只提交意图。不要把 MatchServer 暴露到公网。
 
-**不要**：改玩法数值或 Edit UX；向 `main` 提交/推送；合并 PR；部署；发布；做代码审查（由 Bugbot 承担）；发明 [CD-63](../../Confirmed-docs/60-plan/63-open-decisions.md) 未决的 tick / 包体参数。
+**不要**：改玩法数值或 Edit UX；未经本回合人类授权不得提交或推送（默认落地 `main`，禁止自行开 PR）；部署；发布；做代码审查（由 Bugbot 承担）；发明 [CD-63](../../Confirmed-docs/60-plan/63-open-decisions.md) 未决的 tick / 包体参数。
 
 先写或更新测试，必须有运行证据。一次变更只解决一个主要问题。

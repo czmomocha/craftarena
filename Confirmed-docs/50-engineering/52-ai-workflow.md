@@ -1,7 +1,7 @@
 # CD-52 AI 主导开发方式
 
 > 文档 ID：CD-52
-> 单一事实源：人机分工与 AI 权限边界、标准任务循环、任务单模板、完整章节 PR 的人类真机步骤义务、AI 使用规则、多 Agent 协作、项目治理与语言约定、Godot AI MCP 使用边界
+> 单一事实源：人机分工与 AI 权限边界、标准任务循环、任务单模板、完整章节提交的人类开发机窗口验收步骤义务、AI 使用规则、多 Agent 协作、项目治理与语言约定、Godot AI MCP 使用边界
 > 加载建议：AI Agent 接手任务时必读；调整协作流程或权限边界时读取
 > 上位约束：[CD-00 宪法](../00-constitution/CONSTITUTION.md) 第九、十、十一、十二、十八、二十条
 > 相关：[CD-53 测试与 CI](53-testing-and-ci.md)、[CD-51 开发环境](51-dev-environment.md)、[CD-61 里程碑路线](../60-plan/61-milestones.md)、[开发机窗口验收](../../docs/runbooks/dev-window-check.md)、[ADR-0003](../../docs/adr/0003-godot-mcp-selection.md)、[ADR-0004](../../docs/adr/0004-multi-agent-adoption-timing-and-architecture.md)
@@ -13,8 +13,8 @@
 
 | 项 | 当前口径 |
 |---|---|
-| 提交边界 | 隔离分支可 commit/push；禁止向 `main` 提交/推送、合并、部署、发布 |
-| 章粒度 | 完整一章才开 PR；约 5× 纠偏前（D9，解冻后仍有效），禁止单字段成章 |
+| 提交边界 | **默认提交 `main`**：人类验证并授权后 commit / push。只有人类主动说「开 PR」才拉分支。仍禁止未经授权的提交、force push `main`、部署、发布 |
+| 章粒度 | 完整一章才提交；约 5× 纠偏前（D9，解冻后仍有效），禁止单字段成章 |
 | 审查分级 | 深审 / 常审 / 轻审，见 §3 |
 | 开发机窗口 | [dev-window-check.md](../../docs/runbooks/dev-window-check.md)；「真机」留给导出包 |
 | 并行 | 2 域；第 3 域未开 |
@@ -38,12 +38,15 @@
 
 **权限边界**：AI 可以自主读取和修改代码、场景、文档和测试，也可运行本地游戏、Headless 与测试。
 
-提交与推送按 [ADR-0004](../../docs/adr/0004-multi-agent-adoption-timing-and-architecture.md) 对 `ai_autonomy = edit_test_no_commit_release` 的收窄解释执行（[CD-91 D.6](../90-reference/91-decision-log.md)）：
+提交与推送按 [CD-91 D.6](../90-reference/91-decision-log.md) `git_workflow = trunk_direct_after_auth` 执行（覆盖 `isolated_branch_commit_ok` / `trunk_short_pr`）。宪法第十八条不变：未经人类确认，不得提交、推送、部署、发布或回滚。
 
-- **允许**：在隔离的 agent 分支或 git worktree 上创建提交，并推送到对应的非保护远程分支。这是 Cursor Cloud Agent 与 `/worktree` 的运行时形态，也避免未提交产出被 worktree 清理丢失。
-- **禁止，且属宪法第十八条人类门禁**：向 `main` 或任何受保护分支提交或推送；合并 PR；部署；发布；回滚线上内容。人类门禁落在 PR 合并（`pr_merge_gate = required_ci_one_human`）与 GitHub 分支保护。
-- **机械化拦截**：项目级 `.cursor/hooks.json` 的 `beforeShellExecution` 拦向 `main` / 受保护分支的提交与推送，以及 `git worktree remove --force`。该 hook **必须** `failClosed: true`（Cursor 默认 fail-open，崩溃即放行）。判定逻辑在 `tools/shell-guard/`，由 `npm test` 覆盖。
-- **硬前置**：GitHub 分支保护未配置完成之前，上述「允许」条款不生效，仍按原字面执行——Agent **不得**创建任何提交或推送。分支保护的目标项见 [CD-53 §4.5](53-testing-and-ci.md)，当前是否已配置以那一节为准。
+- **默认**：在当前 checkout（通常是 `main`）上做完整一章。人类验证后明确说「提交」才 `git commit`；得到推送授权才 `git push` 到 `main`。CI 在推送 `main` 上跑，见 [CD-53](53-testing-and-ci.md)。
+- **大改动**：先做完、停在工作树里让人类验证，**得到授权才提交**。禁止为了占历史把半成品推上主线。
+- **PR 是例外**：只有人类主动说「开 PR」才拉分支、推非 `main` 远程、开 Pull Request。Agent 不得自行把默认路径改成「先开 PR」。走 PR 时仍须 CI 全绿并一次人类批准。
+- **仍然禁止、且属第十八条**：未经本回合人类确认的提交或推送；部署；发布；回滚线上内容；force push / 删除 `main`。
+- **机械化拦截**：项目级 `.cursor/hooks.json` 的 `beforeShellExecution` 拦 `git push --force`（含 `--force-with-lease` 与 `+refspec`）、删除受保护分支、`git worktree remove --force`，以及把本机 Godot AI 条目写进 `game/project.godot` 的提交。**不再**拦向 `main` 的普通 commit / 普通 push——人类授权是门禁，hook 看不见那句话。该 hook **必须** `failClosed: true`（Cursor 默认 fail-open，崩溃即放行）。判定逻辑在 `tools/shell-guard/`，由 `npm test` 覆盖。
+- **GitHub 保护**：若远程仍要求「必须走 PR」，由人类调整规则或使用管理员绕过（`enforce_admins` 仍关）。Agent **不**改仓库保护设置。现行配置见 [CD-53 §4.5](53-testing-and-ci.md)。
+- Cloud Agent / worktree：仍可在隔离分支上工作；合回默认是人类验证后提交 `main`，不是自动开 PR。
 
 ### 1.2 人类负责
 
@@ -71,8 +74,9 @@
 → 运行场景 / Headless 验证
 → 将本章开发机窗口步骤写入 docs/runbooks/dev-window-check.md 本刀（见 §3.2）
 → 检查日志与性能
-→ 人类审查
-→ 人类决定是否合入 main / 部署 / 发布
+→ 人类审查 / 真机验证
+→ 人类授权后提交 main（仅当人类说开 PR 才拉分支）
+→ 人类决定是否推送 / 部署 / 发布
 → 更新文档和任务状态
 ```
 
@@ -103,7 +107,7 @@ AI 不得用"代码看起来正确"代替运行证据。
 
 `隔离方式` 必填。阶段 A（§5.1 的四条退出条件未全绿）只允许 `无`，即单 Agent 串行、共享当前 checkout。阶段 B 起必须填 `worktree` 或 `cloud`：**Cursor 的 subagent 默认共享父 Agent 的 checkout，不显式要求隔离会静默互相覆盖。** 不得留空。
 
-功能任务应控制在**半天到两天**可验证的粒度。**一章必须是一条完整链路的闭合，规模约为纠偏前的 5 倍**（D9，解冻后仍有效）；颜色、单个 HUD 字段、按钮焦点、窗口尺寸、Label 前缀不再单独成章。禁止用"实现完整 UGC 平台"这类无法审查的任务驱动 Agent。任务结束时由人类审查后立刻开 PR，不要让未提交产出跨夜留在 worktree 里（Cursor 托管 worktree 会自动清理，见 [CD-62](../60-plan/62-risk-register.md)）。提交粒度见 [§3.1](#31-提交粒度完整章节)。
+功能任务应控制在**半天到两天**可验证的粒度。**一章必须是一条完整链路的闭合，规模约为纠偏前的 5 倍**（D9，解冻后仍有效）；颜色、单个 HUD 字段、按钮焦点、窗口尺寸、Label 前缀不再单独成章。禁止用"实现完整 UGC 平台"这类无法审查的任务驱动 Agent。任务结束时由人类验证后立刻提交 `main`（人类说「提交」才 commit），不要让未提交产出跨夜留在 worktree 里（Cursor 托管 worktree 会自动清理，见 [CD-62](../60-plan/62-risk-register.md)）。提交粒度见 [§3.1](#31-提交粒度完整章节)。
 
 审查分级（人类按此分配深度，等权审查的结果是每章都浅）：
 
@@ -115,7 +119,7 @@ AI 不得用"代码看起来正确"代替运行证据。
 
 ### 3.1 提交粒度：完整章节
 
-人类拍板（2026-08-23）：**能做成完整一章，就按完整一章提交审查。** [CD-91 D.6](../90-reference/91-decision-log.md) 的 `git_workflow = trunk_short_pr` 仍然禁止「整个里程碑一个 PR」，但禁止把同一条链路拆成多份不能独立验收的半成品。
+人类拍板（2026-08-23）：**能做成完整一章，就按完整一章提交审查。** [CD-91 D.6](../90-reference/91-decision-log.md) 的 `pr_scope = complete_chapter` 仍然禁止「整个里程碑一次交」，但禁止把同一条链路拆成多份不能独立验收的半成品。2026-09-09 起默认落地是 `main` 上的一次（或人类指定的若干次）commit，而不是默认开 PR。
 
 一章 = 同一条产品或技术链路的一次闭合：需要锁的契约 + 实现 + 正反例测试 + 所有者文档落点。人类一次审查应能回答「这章是否成立」，而不是「另一半合入后才有意义」。
 
@@ -127,7 +131,7 @@ AI 不得用"代码看起来正确"代替运行证据。
 
 ### 3.2 人类开发机窗口验收步骤
 
-完整章节 PR 交给人类审查时，Test plan **禁止**只写「窗口再看一眼」或「真机再看一眼」。必须给出**编号步骤**：启动什么、点哪个控件、期望看见什么、失败长什么样。同一份步骤写入 [开发机窗口验收](../../docs/runbooks/dev-window-check.md) 的「本刀」节（**整节替换**上一章），人类只打开这一份就能验当前 PR。PR 正文可写「照 runbook 本刀」并粘贴同一份编号，不得只留一句口号。
+完整章节交给人类审查时，[开发机窗口验收](../../docs/runbooks/dev-window-check.md) 的「本刀」**禁止**只写「窗口再看一眼」或「真机再看一眼」。必须给出**编号步骤**：启动什么、点哪个控件、期望看见什么、失败长什么样。**整节替换**上一章，人类只打开这一份就能验当前章。仅当人类要求开 PR 时，PR 正文可写「照 runbook 本刀」并粘贴同一份编号，不得只留一句口号。
 
 - 有开发机可见表面（大厅、Preview、编辑器窗口）：必须写步骤。这是**开发机窗口**，不是导出包。
 - 导出安装包的核查走 [desktop-export-check.md](../../docs/runbooks/desktop-export-check.md)；那里才用「真机」。
