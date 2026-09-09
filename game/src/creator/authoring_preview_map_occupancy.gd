@@ -2,6 +2,7 @@ class_name AuthoringPreviewMapOccupancy
 extends RefCounted
 
 const ConvertGd := preload("res://src/creator/authoring_preview_map_convert.gd")
+const OccupancyGadget := preload("res://src/shared/occupancy_gadget.gd")
 
 ## Occupancy placeholders for AuthoringPreviewMap: one BoxMesh per transform,
 ## plus kind visuals (tile / checkpoint / finish / crate / hazard).
@@ -21,14 +22,29 @@ func spawn_placeholder(
 		kind = "hazard"
 	elif record != null and _record_has_zone_tag(record, "switch"):
 		albedo = PlaceholderSpec.SWITCH_ALBEDO
+		kind = OccupancyGadget.KIND_SWITCH
 	elif record != null and _record_has_zone_tag(record, "gate"):
 		albedo = PlaceholderSpec.GATE_ALBEDO
+		kind = OccupancyGadget.KIND_GATE
+	elif record != null and _record_has_zone_tag(record, "conveyor"):
+		albedo = PlaceholderSpec.CONVEYOR_ALBEDO
+		kind = OccupancyGadget.KIND_CONVEYOR
+	elif record != null and _record_has_zone_tag(record, "launch"):
+		albedo = PlaceholderSpec.LAUNCH_ALBEDO
+		kind = OccupancyGadget.KIND_LAUNCH
+	elif record != null and _record_has_zone_tag(record, "lift"):
+		albedo = PlaceholderSpec.LIFT_ALBEDO
+		kind = OccupancyGadget.KIND_LIFT
 	elif record != null and _record_has_solid_tag(record):
 		albedo = AuthoringPreviewMap.SOLID_ALBEDO
 		kind = "tile"
 	elif record != null and record.components.has(SharedComponentNames.DESTRUCTIBLE):
-		albedo = AuthoringPreviewMap.CRATE_ALBEDO
-		kind = "crate"
+		if _record_has_zone_tag(record, "energy_wall"):
+			albedo = PlaceholderSpec.ENERGY_WALL_ALBEDO
+			kind = OccupancyGadget.KIND_ENERGY_WALL
+		else:
+			albedo = AuthoringPreviewMap.CRATE_ALBEDO
+			kind = "crate"
 	elif record != null and record.components.has(SharedComponentNames.INVENTORY):
 		kind = "pickup"
 		albedo = _pickup_albedo(record)
@@ -82,6 +98,18 @@ func _attach_kind_visual(
 		)
 	elif kind == "pickup":
 		visual = SharedVisualAssetCatalog.try_instantiate_fitted_prop(_pickup_scene(albedo))
+	elif (
+		kind == OccupancyGadget.KIND_CONVEYOR
+		or kind == OccupancyGadget.KIND_LAUNCH
+		or kind == OccupancyGadget.KIND_LIFT
+		or kind == OccupancyGadget.KIND_SWITCH
+		or kind == OccupancyGadget.KIND_GATE
+		or kind == OccupancyGadget.KIND_ENERGY_WALL
+	):
+		if OccupancyGadget.attach(placeholder, kind, 0):
+			placeholder.layers = 0
+			return true
+		return false
 	if visual == null:
 		return false
 	visual.name = AuthoringPreviewMap.VISUAL_NAME

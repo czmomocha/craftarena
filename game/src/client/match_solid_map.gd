@@ -16,8 +16,8 @@ extends Node3D
 ## 当 `tile_scene_path` 能解析出地块视觉（SharedVisualAssetCatalog）时，每个固体
 ## 节点多挂一个 `visual` 子节点，占位盒自身退出渲染（`layers = 0`）但网格与石色
 ## 原样保留——`live_solid_boxes()` 给的是编译拓扑的权威半长，与视觉无关，本席预测
-## 读的还是同一份。视觉解析失败就是今天的行为，一个石色 1 米盒。开关 / 门不铺
-## 地块，只留占位色，否则贴图会盖住青绿踏板和紫墙。
+## 读的还是同一份。视觉解析失败就是今天的行为，一个石色 1 米盒。开关 / 门 /
+## 传送带 / 电梯 / 弹射垫不铺地块，改挂 OccupancyGadget，否则贴图会盖住机关。
 ##
 ## 只有**始终固体**铺地块。周期机关走 MatchHazardMap（洋红）、可破坏箱走
 ## MatchCrateMap（橙），两者都不铺：D4 已把危险色定成可读性的一部分。
@@ -27,6 +27,8 @@ const TraprushTopologyCompilerGd := preload("res://src/ugc/traprush_topology_com
 const MoverCycleGd := preload("res://src/games/traprush/mover_cycle.gd")
 const GateCycleGd := preload("res://src/games/traprush/gate_cycle.gd")
 const PlayStubsGd := preload("res://src/games/traprush/play_stubs.gd")
+const OccupancyGadgetGd := preload("res://src/shared/occupancy_gadget.gd")
+const VisualGd := preload("res://src/client/match_solid_map_visual.gd")
 
 const SOLID_PREFIX: String = "solid_"
 const VISUAL_NAME: String = "visual"
@@ -46,6 +48,9 @@ var _gates: Array[Dictionary] = []
 var _switch_ids: Dictionary = {}
 var _gate_ids: Dictionary = {}
 var _open_gate_ids: Dictionary = {}
+var _conveyor_yaw: Dictionary = {}
+var _launch_yaw: Dictionary = {}
+var _lift_ids: Dictionary = {}
 var _live_solids: Array[Dictionary] = []
 var _solid_count: int = 0
 var _visual_count: int = 0
@@ -85,6 +90,9 @@ func apply_bundle(bundle: SimulationBundle) -> bool:
 		_movers.append(item.duplicate(true))
 	_copy_link_bags(bundle.switches, _switches, _switch_ids)
 	_copy_link_bags(bundle.gates, _gates, _gate_ids)
+	_conveyor_yaw = OccupancyGadgetGd.yaw_lookup(bundle.conveyors)
+	_launch_yaw = OccupancyGadgetGd.yaw_lookup(bundle.launches)
+	_lift_ids = OccupancyGadgetGd.lift_ids_from_movers(_movers)
 	_open_gate_ids = {}
 	_rebuild()
 	return true
@@ -325,7 +333,23 @@ func _rebuild() -> void:
 			"z": pose["z"],
 		})
 		var entity_id: int = pose["entity_id"]
-		_spawn_box(solid_name(entity_id), pose)
+		var albedo: Color = SOLID_ALBEDO
+		if _switch_ids.has(entity_id):
+			albedo = SWITCH_ALBEDO
+		elif _gate_ids.has(entity_id):
+			albedo = GATE_ALBEDO
+		var kind: String = OccupancyGadgetGd.solid_kind(
+			entity_id, _conveyor_yaw, _launch_yaw, _lift_ids, _switch_ids, _gate_ids
+		)
+		var yaw_bam: int = 0
+		if _conveyor_yaw.has(entity_id):
+			yaw_bam = _conveyor_yaw[entity_id]
+		elif _launch_yaw.has(entity_id):
+			yaw_bam = _launch_yaw[entity_id]
+		if VisualGd.spawn_box(
+			self, solid_name(entity_id), pose, albedo, kind, yaw_bam, tile_scene_path
+		):
+			_visual_count += 1
 	_solid_count = _visible_count()
 
 
@@ -335,47 +359,6 @@ func _visible_count() -> int:
 		if str(child.name).begins_with(SOLID_PREFIX):
 			count += 1
 	return count
-
-
-func _spawn_box(node_name: String, pose: Dictionary) -> void:
-	var x: int = pose["x"]
-	var y: int = pose["y"]
-	var z: int = pose["z"]
-	var entity_id: int = pose["entity_id"]
-	var albedo: Color = SOLID_ALBEDO
-	if _switch_ids.has(entity_id):
-		albedo = SWITCH_ALBEDO
-	elif _gate_ids.has(entity_id):
-		albedo = GATE_ALBEDO
-	var mesh: BoxMesh = BoxMesh.new()
-	mesh.size = PLACEHOLDER_SIZE
-	mesh.material = _unshaded(albedo)
-	var node: MeshInstance3D = MeshInstance3D.new()
-	node.name = node_name
-	node.mesh = mesh
-	node.position = Vector3(meters_from_fixed(x), meters_from_fixed(y), meters_from_fixed(z))
-	add_child(node)
-	if not _switch_ids.has(entity_id) and not _gate_ids.has(entity_id):
-		_attach_visual(node)
-
-
-## 地块在时：挂 `visual` 子节点并让占位盒本体退出渲染层。用 `layers = 0` 而不是
-## `visible = false`，因为后者会连带隐藏刚挂上的视觉。不染色：固体不需要区分归属，
-## 石色本来就是占位色，地块自带贴图。
-func _attach_visual(solid: MeshInstance3D) -> bool:
-	if tile_scene_path.is_empty():
-		return false
-	var visual: Node3D = SharedVisualAssetCatalog.try_instantiate(tile_scene_path)
-	if visual == null:
-		return false
-	if not SharedVisualAssetCatalog.fit_tile_on_cell(visual):
-		visual.free()
-		return false
-	visual.name = VISUAL_NAME
-	solid.add_child(visual)
-	solid.layers = 0
-	_visual_count += 1
-	return true
 
 
 func _clear_solids() -> void:
@@ -388,10 +371,3 @@ func _clear_solids() -> void:
 		node.free()
 	_solid_count = 0
 	_visual_count = 0
-
-
-func _unshaded(color: Color) -> StandardMaterial3D:
-	var material: StandardMaterial3D = StandardMaterial3D.new()
-	material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	material.albedo_color = color
-	return material

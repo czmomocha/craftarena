@@ -6,6 +6,7 @@ extends RefCounted
 ## that file). Public API stays on SimulationBundle so this file stays under E9.
 
 const BagsGd := preload("res://src/ugc/simulation_bundle_bags.gd")
+const OptionalGd := preload("res://src/ugc/simulation_bundle_optional.gd")
 
 
 static func from_dictionary(data: Dictionary) -> SimulationBundle:
@@ -20,10 +21,6 @@ static func from_dictionary(data: Dictionary) -> SimulationBundle:
 		return null
 	var carries_assets: bool = version == SimulationBundle.SCHEMA_VERSION
 	var has_movers: bool = body.has(SimulationBundle.FIELD_MOVERS)
-	var has_conveyors: bool = body.has(SimulationBundle.FIELD_CONVEYORS)
-	var has_launches: bool = body.has(SimulationBundle.FIELD_LAUNCHES)
-	var has_switches: bool = body.has(SimulationBundle.FIELD_SWITCHES)
-	var has_gates: bool = body.has(SimulationBundle.FIELD_GATES)
 	var expected_size: int = 11 if carries_assets else 10
 	for optional: String in SimulationBundle.OPTIONAL_FIELDS:
 		if body.has(optional):
@@ -213,54 +210,36 @@ static func from_dictionary(data: Dictionary) -> SimulationBundle:
 			if not solid_ids.has(mover_id):
 				return null
 			mover_list.append(parsed_mover)
-	var conveyor_list: Array[Dictionary] = []
-	if has_conveyors:
-		var conveyor_raw: Variant = body[SimulationBundle.FIELD_CONVEYORS]
-		if typeof(conveyor_raw) != TYPE_ARRAY:
-			return null
-		var conveyor_items: Array = conveyor_raw
-		var parsed_conveyors: Dictionary = BagsGd.parse_optional_solid_refs(
-			conveyor_items, solid_ids, "yaw"
-		)
-		if not parsed_conveyors.get("ok", false):
-			return null
-		conveyor_list = parsed_conveyors["items"]
-	var launch_list: Array[Dictionary] = []
-	if has_launches:
-		var launch_raw: Variant = body[SimulationBundle.FIELD_LAUNCHES]
-		if typeof(launch_raw) != TYPE_ARRAY:
-			return null
-		var launch_items: Array = launch_raw
-		var parsed_launches: Dictionary = BagsGd.parse_optional_solid_refs(
-			launch_items, solid_ids, "yaw"
-		)
-		if not parsed_launches.get("ok", false):
-			return null
-		launch_list = parsed_launches["items"]
-	var switch_list: Array[Dictionary] = []
-	if has_switches:
-		var switch_raw: Variant = body[SimulationBundle.FIELD_SWITCHES]
-		if typeof(switch_raw) != TYPE_ARRAY:
-			return null
-		var switch_items: Array = switch_raw
-		var parsed_switches: Dictionary = BagsGd.parse_optional_solid_refs(
-			switch_items, solid_ids, "link"
-		)
-		if not parsed_switches.get("ok", false):
-			return null
-		switch_list = parsed_switches["items"]
-	var gate_list: Array[Dictionary] = []
-	if has_gates:
-		var gate_raw: Variant = body[SimulationBundle.FIELD_GATES]
-		if typeof(gate_raw) != TYPE_ARRAY:
-			return null
-		var gate_items: Array = gate_raw
-		var parsed_gates: Dictionary = BagsGd.parse_optional_solid_refs(
-			gate_items, solid_ids, "link"
-		)
-		if not parsed_gates.get("ok", false):
-			return null
-		gate_list = parsed_gates["items"]
+	var parsed_conveyors: Dictionary = OptionalGd.parse_optional_field(
+		body, SimulationBundle.FIELD_CONVEYORS, solid_ids, "yaw"
+	)
+	if not parsed_conveyors.get("ok", false):
+		return null
+	var conveyor_list: Array[Dictionary] = parsed_conveyors["items"]
+	var parsed_launches: Dictionary = OptionalGd.parse_optional_field(
+		body, SimulationBundle.FIELD_LAUNCHES, solid_ids, "yaw"
+	)
+	if not parsed_launches.get("ok", false):
+		return null
+	var launch_list: Array[Dictionary] = parsed_launches["items"]
+	var parsed_switches: Dictionary = OptionalGd.parse_optional_field(
+		body, SimulationBundle.FIELD_SWITCHES, solid_ids, "link"
+	)
+	if not parsed_switches.get("ok", false):
+		return null
+	var switch_list: Array[Dictionary] = parsed_switches["items"]
+	var parsed_gates: Dictionary = OptionalGd.parse_optional_field(
+		body, SimulationBundle.FIELD_GATES, solid_ids, "link"
+	)
+	if not parsed_gates.get("ok", false):
+		return null
+	var gate_list: Array[Dictionary] = parsed_gates["items"]
+	var parsed_walls: Dictionary = OptionalGd.parse_optional_field(
+		body, SimulationBundle.FIELD_ENERGY_WALLS, destructible_ids, "id"
+	)
+	if not parsed_walls.get("ok", false):
+		return null
+	var energy_wall_list: Array[Dictionary] = parsed_walls["items"]
 	var occupancy: Array[Dictionary] = []
 	occupancy.append_array(pads)
 	occupancy.append_array(portals)
@@ -298,6 +277,7 @@ static func from_dictionary(data: Dictionary) -> SimulationBundle:
 	bundle.launches = launch_list
 	bundle.switches = switch_list
 	bundle.gates = gate_list
+	bundle.energy_walls = energy_wall_list
 	return bundle
 
 

@@ -172,6 +172,14 @@ const CRATE_ALBEDO: Color = Color(0.85, 0.4, 0.25)
 ## 踩区开关（青绿踏板）与门（紫墙）。不是产品材质，只为和石色固体分开。
 const SWITCH_ALBEDO: Color = Color(0.28, 0.78, 0.48)
 const GATE_ALBEDO: Color = Color(0.58, 0.32, 0.82)
+## 传送带 / 弹射垫 / 电梯 / 能量墙的程序化占位色。不是产品材质。
+const CONVEYOR_ALBEDO: Color = Color(0.82, 0.62, 0.18)
+const CONVEYOR_MARK_ALBEDO: Color = Color(0.98, 0.88, 0.32)
+const LAUNCH_ALBEDO: Color = Color(0.92, 0.48, 0.16)
+const LAUNCH_MARK_ALBEDO: Color = Color(1.0, 0.82, 0.28)
+const LIFT_ALBEDO: Color = Color(0.42, 0.52, 0.62)
+const LIFT_MARK_ALBEDO: Color = Color(0.72, 0.82, 0.9)
+const ENERGY_WALL_ALBEDO: Color = Color(0.13, 0.75, 0.95, 0.55)
 ## Preview 里没被上面任何一类认领的实体占位色。
 const ENTITY_STUB_ALBEDO: Color = Color(0.85, 0.7, 0.25)
 

@@ -21,6 +21,7 @@ const PLACE_LIFT_NAME: String = "PlaceLift"
 const PLACE_LAUNCH_NAME: String = "PlaceLaunch"
 const PLACE_SWITCH_NAME: String = "PlaceSwitch"
 const PLACE_GATE_NAME: String = "PlaceGate"
+const PLACE_ENERGY_WALL_NAME: String = "PlaceEnergyWall"
 const REMOVE_LAST_NAME: String = "RemoveLast"
 const FLOOR_UP_NAME: String = "FloorUp"
 const FLOOR_DOWN_NAME: String = "FloorDown"
@@ -114,6 +115,7 @@ func mount(p_host: AuthoringEditorShell) -> void:
 	_add_button(occupancy_row, PLACE_LAUNCH_NAME, UiCopy.PLACE_LAUNCH, place_next_launch)
 	_add_button(occupancy_row, PLACE_SWITCH_NAME, UiCopy.PLACE_SWITCH, place_next_switch)
 	_add_button(occupancy_row, PLACE_GATE_NAME, UiCopy.PLACE_GATE, place_next_gate)
+	_add_button(occupancy_row, PLACE_ENERGY_WALL_NAME, UiCopy.PLACE_ENERGY_WALL, place_next_energy_wall)
 	var pickup_row: HBoxContainer = HBoxContainer.new()
 	pickup_row.name = "PickupRow"
 	add_child(pickup_row)
@@ -266,6 +268,12 @@ func place_next_switch() -> bool:
 func place_next_gate() -> bool:
 	return _place_occupancy(func(entity_id: int) -> bool:
 		return host.try_place_gate(entity_id, cursor.cell_x, cursor.cell_y, cursor.cell_z)
+	)
+
+
+func place_next_energy_wall() -> bool:
+	return _place_occupancy(func(entity_id: int) -> bool:
+		return host.try_place_energy_wall(entity_id, cursor.cell_x, cursor.cell_y, cursor.cell_z)
 	)
 
 

@@ -37,3 +37,19 @@ static func try_append(
 	else:
 		gate_list.append(bag)
 	return true
+
+
+## 能量墙：必须已经是可破坏占用。和传送带 / 弹射 / 开关门同体拒绝。
+static func try_append_energy_wall(
+	entity_id: int, record: SharedComponentRecord, energy_wall_list: Array[Dictionary]
+) -> bool:
+	if not FieldsGd.has_energy_wall_tag(record):
+		return true
+	if FieldsGd.has_conveyor_tag(record) or FieldsGd.has_launch_tag(record):
+		return false
+	if FieldsGd.has_switch_tag(record) or FieldsGd.has_gate_tag(record):
+		return false
+	if FieldsGd.has_lift_tag(record) or FieldsGd.has_solid_tag(record):
+		return false
+	energy_wall_list.append({"entity_id": entity_id})
+	return true
