@@ -35,6 +35,17 @@ static func collect_occupancy(
 			SharedComponentNames.DESTRUCTIBLE
 		):
 			return {"ok": false}
+		if FieldsGd.has_portal_switch_tag(record):
+			if FieldsGd.has_solid_tag(record):
+				return {"ok": false}
+			if record.components.has(SharedComponentNames.DESTRUCTIBLE):
+				return {"ok": false}
+			if record.components.has(SharedComponentNames.HAZARD):
+				return {"ok": false}
+			if FieldsGd.has_finish_tag(record):
+				return {"ok": false}
+			if not record.components.has(SharedComponentNames.PORTAL):
+				return {"ok": false}
 		if record.components.has(SharedComponentNames.INVENTORY):
 			if not _append_pickup(entity_id, record, next_asset, used_assets, pickup_list):
 				return {"ok": false}
@@ -87,52 +98,6 @@ static func collect_occupancy(
 		"gates": gate_list,
 		"energy_walls": energy_wall_list,
 	}
-
-
-static func collect_portals(
-	world: AuthoringWorld, used_assets: Dictionary[int, int]
-) -> Dictionary:
-	var portals: Array[Dictionary] = []
-	var links: Array[Dictionary] = world.portal_links()
-	for link: Dictionary in links:
-		var kind: String = link.get("kind", "")
-		if kind == AuthoringPortalKinds.DANGLING:
-			continue
-		if kind != AuthoringPortalKinds.TWO_WAY and kind != AuthoringPortalKinds.ONE_WAY:
-			return {"ok": false}
-		var dest_id: int = link.get("dest_id", 0)
-		var dest: SharedComponentRecord = world.get_record(dest_id)
-		if dest == null:
-			return {"ok": false}
-		var dest_pose: Dictionary = FieldsGd.transform_xyz(dest)
-		if dest_pose.is_empty():
-			return {"ok": false}
-		var source_id: int = link.get("source_id", 0)
-		if source_id < 1:
-			return {"ok": false}
-		var source: SharedComponentRecord = world.get_record(source_id)
-		if source == null:
-			return {"ok": false}
-		var source_pose: Dictionary = FieldsGd.transform_xyz(source)
-		if source_pose.is_empty():
-			return {"ok": false}
-		var source_asset: Dictionary = FieldsGd.asset_ref(source)
-		if source_asset.is_empty():
-			return {"ok": false}
-		var dest_yaw_bam: int = link.get("dest_yaw_bam", 0)
-		portals.append(FieldsGd.with_asset({
-			"entity_id": source_id,
-			"target_id": dest_id,
-			"kind": kind,
-			"x": source_pose["x"],
-			"y": source_pose["y"],
-			"z": source_pose["z"],
-			"dest_x": dest_pose["x"],
-			"dest_y": dest_pose["y"],
-			"dest_z": dest_pose["z"],
-			"dest_yaw_bam": dest_yaw_bam,
-		}, source_asset, used_assets))
-	return {"ok": true, "portals": portals}
 
 
 static func _append_pickup(

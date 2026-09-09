@@ -60,6 +60,9 @@ var _finish_ids: Array[int] = []
 ## 呼吸动效要 `order`。留两份表迟早会有一份忘了清。
 var _pad_targets: Array[Dictionary] = []
 var _finish_targets: Array[Dictionary] = []
+var _portal_switches: Array[Dictionary] = []
+var _portal_switch_groups: Dictionary = {}
+var _open_portal_ids: Dictionary = {}
 
 
 static func meters_from_fixed(value: int) -> float:
@@ -149,6 +152,7 @@ func apply_bundle(bundle: SimulationBundle) -> bool:
 	_pad_count = bundle.pads.size()
 	_portal_count = bundle.portals.size()
 	_finish_count = bundle.finish.size()
+	FxGd.remember_portal_switches(self, bundle)
 	return true
 
 
@@ -163,6 +167,10 @@ func apply_own_progress(accepted_count: int, finish_tick: int = -1) -> void:
 ## 的终点呼吸。对局壳每帧调一次，不新建节点。见 `MatchCourseMapFx` 文件头。
 func apply_tick(tick: int) -> int:
 	return FxGd.apply_tick(self, tick)
+
+
+func portal_switch_bags() -> Array[Dictionary]:
+	return _portal_switches
 
 
 func own_accepted_count() -> int:
@@ -336,6 +344,9 @@ func _clear_course() -> void:
 	_finish_ids.clear()
 	_pad_targets.clear()
 	_finish_targets.clear()
+	_portal_switches.clear()
+	_portal_switch_groups.clear()
+	_open_portal_ids.clear()
 
 
 func _spawn_spawn_marker() -> void:

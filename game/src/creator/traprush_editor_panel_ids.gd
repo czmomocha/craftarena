@@ -77,6 +77,42 @@ static func pending_pair_entity_id(world: AuthoringWorld, pending_portal_id: int
 	return target_id
 
 
+static func place_next_portal(panel: TraprushEditorPanel, gated: bool) -> bool:
+	if panel.host == null or panel.cursor == null:
+		return false
+	var entity_id: int = 0
+	var target_id: int = 0
+	if panel._pending_portal_id > 0:
+		entity_id = panel._pending_pair_entity_id()
+		if entity_id <= 0:
+			entity_id = panel._peek_entity_id()
+		target_id = panel._pending_portal_id
+	else:
+		entity_id = panel._peek_entity_id()
+		target_id = entity_id + 1
+		while panel._world_has(target_id):
+			target_id += 1
+	var placed: bool = false
+	if gated:
+		placed = panel.host.try_place_gated_portal(
+			entity_id, target_id, panel.cursor.cell_x, panel.cursor.cell_y, panel.cursor.cell_z
+		)
+	else:
+		placed = panel.host.try_place_portal(
+			entity_id, target_id, panel.cursor.cell_x, panel.cursor.cell_y, panel.cursor.cell_z
+		)
+	if not placed:
+		return false
+	panel._commit_entity_id(entity_id)
+	if panel._pending_portal_id > 0:
+		panel._pending_portal_id = 0
+	else:
+		panel._pending_portal_id = entity_id
+	panel.cursor.bump_x()
+	panel._select_placed(entity_id)
+	return true
+
+
 static func _checkpoint_order(record: SharedComponentRecord) -> int:
 	if not record.components.has(SharedComponentNames.CHECKPOINT):
 		return -1

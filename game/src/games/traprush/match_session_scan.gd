@@ -11,6 +11,7 @@ const OutOfRangeReset := preload("res://src/games/traprush/out_of_range_reset.gd
 const PadAccept := preload("res://src/games/traprush/pad_accept.gd")
 const PickupAccept := preload("res://src/games/traprush/pickup_accept.gd")
 const PortalLanding := preload("res://src/games/traprush/portal_landing.gd")
+const GateCycle := preload("res://src/games/traprush/gate_cycle.gd")
 
 
 func accept_player_pads(session: TraprushMatchSession, player: Dictionary) -> void:
@@ -57,8 +58,17 @@ func resolve_player_portals(session: TraprushMatchSession, player: Dictionary) -
 		if latch.has(entity_id):
 			next_latch[entity_id] = true
 	player["latch"] = next_latch
+	var occupied: Dictionary = GateCycle.occupied_groups(
+		session._world,
+		session._switch_cycle,
+		session._gate_cycle,
+		_capsule_ids(session),
+		session.support_dy
+	)
 	for entity_id: int in overlapping:
 		if next_latch.has(entity_id):
+			continue
+		if not GateCycle.portal_is_open(entity_id, session._portal_switch_cycle, occupied):
 			continue
 		var landed: Dictionary = PortalLanding.try_land_exit(
 			session._world,
@@ -247,3 +257,11 @@ func grant_player_pickups(session: TraprushMatchSession, player: Dictionary) -> 
 	var next_taken_raw: Variant = granted.get("taken", taken)
 	if typeof(next_taken_raw) == TYPE_DICTIONARY:
 		player["taken"] = next_taken_raw
+
+
+func _capsule_ids(session: TraprushMatchSession) -> PackedInt32Array:
+	var capsule_ids: PackedInt32Array = PackedInt32Array()
+	for player: Dictionary in session._players:
+		var capsule_id: int = player["capsule_id"]
+		capsule_ids.append(capsule_id)
+	return capsule_ids

@@ -3,11 +3,8 @@ extends RefCounted
 
 ## TRAPRUSH 对局会话门面：一份编译拓扑装进共享权威 SimulationWorld，1~8 名玩家。
 ## 协作者是 TraprushMatchBootstrap / Intents / Scan / View，使本文件低于 E9 400 行。
-## 依据 CD-21 §4.2/§6/§8 与 CD-43 §3.1：检查点与冲线由服务端占用判定。
-## commit_tick 先积分再 world.tick（与灰盒相同）。MatchRealtime 在积分与
-## world.tick 之间应用意图。周期机关在 world.tick() 之后切换固体。
-## 占用扫描顺序：垫→门→垫→终点。无网络、无结算、不在线写入。
-## 公开 API 仍在本门面上。
+## commit_tick 先积分再 world.tick；MatchRealtime 在积分与 tick 之间应用意图。
+## 公开 API 仍在本门面上。占用扫描顺序：垫→门→垫→终点。
 
 const Gravity := preload("res://src/games/traprush/gravity.gd")
 const ConveyorCycle := preload("res://src/games/traprush/conveyor_cycle.gd")
@@ -21,9 +18,7 @@ const TraprushMatchScanGd := preload("res://src/games/traprush/match_session_sca
 const TraprushMatchViewGd := preload("res://src/games/traprush/match_session_view.gd")
 
 const MAX_PLAYERS: int = 8
-## 每条 Move 命令每轴上限。等于 Fixed.SCALE（1 格）。不是产品速度。
 const MOVE_STEP_MAX: int = Fixed.SCALE
-## 每条 Shove 的调用方步长上限与选目标邻域。等于 Fixed.SCALE（1 格）。不是产品力度。
 const SHOVE_STEP_MAX: int = Fixed.SCALE
 const SHOVE_REACH_MAX: int = Fixed.SCALE
 const SPRINT_STEP_MAX: int = Fixed.SCALE
@@ -73,6 +68,7 @@ var _launch_cycle: Array[Dictionary] = []
 var _launch_supported: Dictionary = {}
 var _switch_cycle: Array[Dictionary] = []
 var _gate_cycle: Array[Dictionary] = []
+var _portal_switch_cycle: Array[Dictionary] = []
 var _pickup_ids: Dictionary = {}
 var _pickup_kinds: Dictionary = {}
 var _spawn: TraprushCheckpointSpawn = null
@@ -199,6 +195,10 @@ func is_gate_solid(entity_id: int) -> bool:
 
 func open_gate_entity_ids() -> PackedInt32Array:
 	return GateCycle.open_entity_ids(_world, _gate_cycle)
+
+
+func open_portal_entity_ids() -> PackedInt32Array:
+	return view.open_portal_entity_ids(self)
 
 
 func destructible_states() -> Array[Dictionary]:

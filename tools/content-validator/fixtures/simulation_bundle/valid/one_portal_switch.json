@@ -1,0 +1,46 @@
+{
+	"schema_version": 2,
+	"cell": 65536,
+	"source_revision": 0,
+	"assets": [
+		{
+			"asset_id": 1,
+			"gameplay_version": 1,
+			"collision": {
+				"kind": "box",
+				"hx": 32768,
+				"hy": 32768,
+				"hz": 32768
+			},
+			"attach_points": []
+		}
+	],
+	"pads": [],
+	"portals": [
+		{
+			"entity_id": 40,
+			"target_id": 41,
+			"kind": "two_way",
+			"x": 0,
+			"y": 0,
+			"z": 65536,
+			"dest_x": 131072,
+			"dest_y": 0,
+			"dest_z": 0,
+			"dest_yaw_bam": 0,
+			"asset_id": 1,
+			"gameplay_version": 1
+		}
+	],
+	"finish": [],
+	"destructibles": [],
+	"hazards": [],
+	"solids": [],
+	"pickups": [],
+	"portal_switches": [
+		{
+			"entity_id": 40,
+			"link_group": 1
+		}
+	]
+}

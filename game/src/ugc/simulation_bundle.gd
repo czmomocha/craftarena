@@ -39,6 +39,7 @@ const FIELD_LAUNCHES: String = "launches"
 const FIELD_SWITCHES: String = "switches"
 const FIELD_GATES: String = "gates"
 const FIELD_ENERGY_WALLS: String = "energy_walls"
+const FIELD_PORTAL_SWITCHES: String = "portal_switches"
 ## v2 里**可省略**的袋。省略与空数组等价，所以旧内容（三张官方课、任何已存的
 ## AuthoringDocument）不重新编译也照常解码。加袋因此不是 Schema 破坏性变更。
 const OPTIONAL_FIELDS: PackedStringArray = [
@@ -48,6 +49,7 @@ const OPTIONAL_FIELDS: PackedStringArray = [
 	FIELD_SWITCHES,
 	FIELD_GATES,
 	FIELD_ENERGY_WALLS,
+	FIELD_PORTAL_SWITCHES,
 ]
 
 var cell: int = 0
@@ -70,6 +72,8 @@ var switches: Array[Dictionary] = []
 var gates: Array[Dictionary] = []
 ## 能量墙：几何在 `destructibles` 里，本袋只带 `entity_id`。打碎走已有 UseItem。
 var energy_walls: Array[Dictionary] = []
+## 开关传送：几何在 `portals` 里，本袋只带 `link_group`。见 `TraprushGateCycle`。
+var portal_switches: Array[Dictionary] = []
 
 
 static func from_dictionary(data: Dictionary) -> SimulationBundle:
@@ -119,6 +123,9 @@ func to_dictionary() -> Dictionary:
 	var energy_wall_list: Array = []
 	for item: Dictionary in energy_walls:
 		energy_wall_list.append(item.duplicate(true))
+	var portal_switch_list: Array = []
+	for item: Dictionary in portal_switches:
+		portal_switch_list.append(item.duplicate(true))
 	return {
 		FIELD_SCHEMA_VERSION: SCHEMA_VERSION,
 		FIELD_CELL: cell,
@@ -137,6 +144,7 @@ func to_dictionary() -> Dictionary:
 		FIELD_SWITCHES: switch_list,
 		FIELD_GATES: gate_list,
 		FIELD_ENERGY_WALLS: energy_wall_list,
+		FIELD_PORTAL_SWITCHES: portal_switch_list,
 	}
 
 

@@ -25,6 +25,24 @@ static func try_place_energy_wall(
 	return _try_place(shell, entity_id, cell_x, cell_y, cell_z, energy_wall_payload)
 
 
+static func try_place_gated_portal(
+	shell: AuthoringEditorShell,
+	entity_id: int,
+	target_id: int,
+	cell_x: int,
+	cell_y: int,
+	cell_z: int
+) -> bool:
+	if shell.session == null or shell.session.world == null or shell.session.world.grid == null:
+		return false
+	var cell: int = shell.session.world.grid.cell
+	return shell.try_edit(
+		gated_portal_payload(
+			entity_id, target_id, cell_x * cell, cell_y * cell, cell_z * cell, cell / 2
+		)
+	)
+
+
 static func _try_place(
 	shell: AuthoringEditorShell,
 	entity_id: int,
@@ -77,6 +95,35 @@ static func energy_wall_payload(entity_id: int, x: int, y: int, z: int, half: in
 						"hz": half,
 					},
 					"tags": [TraprushTopologyCompiler.ENERGY_WALL_ZONE_TAG],
+				},
+			},
+		},
+	}
+
+
+static func gated_portal_payload(
+	entity_id: int, target_id: int, x: int, y: int, z: int, half: int
+) -> Dictionary:
+	return {
+		"op": "place",
+		"record": {
+			"schema_version": 1,
+			"entity_id": entity_id,
+			"components": {
+				"transform": {"x": x, "y": y, "z": z, "yaw_bam": 0},
+				"portal": {"target_id": target_id, "yaw_bam": 0, "cooldown_ticks": 0},
+				"zone": {
+					"shape": {
+						"kind": SharedCollisionShapeKinds.BOX,
+						"hx": half,
+						"hy": half,
+						"hz": half,
+					},
+					"tags": [TraprushTopologyCompiler.PORTAL_SWITCH_ZONE_TAG],
+				},
+				"interactable": {
+					"state": 0,
+					"link_group": DEFAULT_LINK_GROUP,
 				},
 			},
 		},

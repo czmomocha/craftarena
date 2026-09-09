@@ -1,7 +1,7 @@
 {
 	"schema_version": 1,
 	"cell": 65536,
-	"revision": 6,
+	"revision": 7,
 	"entities": [
 		{
 			"schema_version": 1,
@@ -1218,6 +1218,106 @@
 					},
 					"tags": [
 						"energy_wall"
+					]
+				}
+			}
+		},
+		{
+			"schema_version": 1,
+			"entity_id": 225,
+			"components": {
+				"transform": {
+					"x": 262144,
+					"y": 0,
+					"z": 65536,
+					"yaw_bam": 0
+				},
+				"portal": {
+					"target_id": 226,
+					"yaw_bam": 0,
+					"cooldown_ticks": 0
+				},
+				"zone": {
+					"shape": {
+						"kind": "box",
+						"hx": 32768,
+						"hy": 32768,
+						"hz": 32768
+					},
+					"tags": [
+						"portal_switch"
+					]
+				},
+				"interactable": {
+					"state": 0,
+					"link_group": 2
+				}
+			}
+		},
+		{
+			"schema_version": 1,
+			"entity_id": 226,
+			"components": {
+				"transform": {
+					"x": 262144,
+					"y": 0,
+					"z": -327680,
+					"yaw_bam": 0
+				},
+				"portal": {
+					"target_id": 225,
+					"yaw_bam": 0,
+					"cooldown_ticks": 0
+				}
+			}
+		},
+		{
+			"schema_version": 1,
+			"entity_id": 227,
+			"components": {
+				"transform": {
+					"x": 262144,
+					"y": -65536,
+					"z": 65536,
+					"yaw_bam": 0
+				},
+				"zone": {
+					"shape": {
+						"kind": "box",
+						"hx": 32768,
+						"hy": 32768,
+						"hz": 32768
+					},
+					"tags": [
+						"solid",
+						"switch"
+					]
+				},
+				"interactable": {
+					"state": 0,
+					"link_group": 2
+				}
+			}
+		},
+		{
+			"schema_version": 1,
+			"entity_id": 228,
+			"components": {
+				"transform": {
+					"x": 262144,
+					"y": -65536,
+					"z": -327680,
+					"yaw_bam": 0
+				},
+				"zone": {
+					"shape": {
+						"kind": "box",
+						"hx": 32768,
+						"hy": 32768,
+						"hz": 32768
+					},
+					"tags": [
+						"solid"
 					]
 				}
 			}

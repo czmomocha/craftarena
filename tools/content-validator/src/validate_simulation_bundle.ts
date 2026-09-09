@@ -20,6 +20,7 @@ const OCCUPANCY_BAGS = [
  */
 const SOLID_BACKED_BAGS = ["movers", "conveyors", "launches", "switches", "gates"] as const;
 const DESTRUCTIBLE_BACKED_BAGS = ["energy_walls"] as const;
+const PORTAL_BACKED_BAGS = ["portal_switches"] as const;
 
 export function validateSimulationBundle(instance: unknown): JsonSchemaError[] {
 	const errors = validateJsonSchema(loadJsonFile(SIMULATION_BUNDLE_SCHEMA_PATH), instance, {
@@ -37,9 +38,13 @@ export function validateSimulationBundle(instance: unknown): JsonSchemaError[] {
 	for (const bag of DESTRUCTIBLE_BACKED_BAGS) {
 		pushDuplicateIds(errors, instance[bag], `$.${bag}`);
 	}
+	for (const bag of PORTAL_BACKED_BAGS) {
+		pushDuplicateIds(errors, instance[bag], `$.${bag}`);
+	}
 	pushAssetErrors(errors, instance);
 	pushSolidBackedErrors(errors, instance);
 	pushDestructibleBackedErrors(errors, instance);
+	pushPortalBackedErrors(errors, instance);
 	return errors;
 }
 
@@ -96,6 +101,35 @@ function pushDestructibleBackedErrors(errors: JsonSchemaError[], instance: JsonO
 			errors.push({
 				path: `$.${bag}/${index}/entity_id`,
 				message: "entity_id is not declared in destructibles",
+			});
+		}
+	}
+}
+
+function pushPortalBackedErrors(errors: JsonSchemaError[], instance: JsonObject): void {
+	const portals = instance.portals;
+	const portalIds = new Set<number>();
+	if (Array.isArray(portals)) {
+		for (const item of portals) {
+			const entityId = isObject(item) ? integerOrUndefined(item.entity_id) : undefined;
+			if (entityId !== undefined) {
+				portalIds.add(entityId);
+			}
+		}
+	}
+	for (const bag of PORTAL_BACKED_BAGS) {
+		const list = instance[bag];
+		if (!Array.isArray(list)) {
+			continue;
+		}
+		for (const [index, item] of list.entries()) {
+			const entityId = isObject(item) ? integerOrUndefined(item.entity_id) : undefined;
+			if (entityId === undefined || portalIds.has(entityId)) {
+				continue;
+			}
+			errors.push({
+				path: `$.${bag}/${index}/entity_id`,
+				message: "entity_id is not declared in portals",
 			});
 		}
 	}

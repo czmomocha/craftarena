@@ -240,6 +240,10 @@ static func from_dictionary(data: Dictionary) -> SimulationBundle:
 	if not parsed_walls.get("ok", false):
 		return null
 	var energy_wall_list: Array[Dictionary] = parsed_walls["items"]
+	var parsed_portal_switches: Dictionary = parse_portal_switches_field(body, portals)
+	if not parsed_portal_switches.get("ok", false):
+		return null
+	var portal_switch_list: Array[Dictionary] = parsed_portal_switches["items"]
 	var occupancy: Array[Dictionary] = []
 	occupancy.append_array(pads)
 	occupancy.append_array(portals)
@@ -278,7 +282,17 @@ static func from_dictionary(data: Dictionary) -> SimulationBundle:
 	bundle.switches = switch_list
 	bundle.gates = gate_list
 	bundle.energy_walls = energy_wall_list
+	bundle.portal_switches = portal_switch_list
 	return bundle
+
+
+static func parse_portal_switches_field(body: Dictionary, portals: Array[Dictionary]) -> Dictionary:
+	var portal_ids: Dictionary = {}
+	for portal: Dictionary in portals:
+		portal_ids[portal["entity_id"]] = true
+	return OptionalGd.parse_optional_field(
+		body, SimulationBundle.FIELD_PORTAL_SWITCHES, portal_ids, "link"
+	)
 
 
 static func parse_assets(value: Variant) -> Array[Dictionary]:
