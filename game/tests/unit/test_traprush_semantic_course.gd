@@ -22,7 +22,7 @@ const TraprushTopologyLoader := preload("res://src/games/traprush/traprush_topol
 const COURSE_01: String = "res://content/official/traprush/course_01.json"
 const CELL: int = 65536
 const FALL_TICKS: int = 40
-const COURSE_01_SOLIDS: int = 36
+const COURSE_01_SOLIDS: int = 41
 const COURSE_01_PORTALS: int = 5
 const SHORTCUT_STEPS: int = 5
 
@@ -30,12 +30,12 @@ const SHORTCUT_STEPS: int = 5
 func test_course_01_keeps_publish_reachability() -> void:
 	var world: AuthoringWorld = AuthoringDocument.load_from_path(COURSE_01)
 	assert_not_null(world)
-	assert_eq(world.revision, 14)
+	assert_eq(world.revision, 15)
 	assert_eq(world.entity_ids(), [
 		1, 2, 3, 10, 11, 12, 20, 21, 30, 40, 60, 70, 80, 81, 82, 83, 84, 85,
 		86, 87, 88, 100, 101, 110, 111, 112, 113, 114, 115, 116, 117, 118, 119,
 		120, 121, 122, 123, 124, 125, 126, 127, 128, 129, 130, 131, 132, 133,
-		134, 135,
+		134, 135, 200, 201, 202, 203, 204,
 	])
 	var result: Dictionary = AuthoringReachability.evaluate(world)
 	var ok: bool = result.get("ok", false)

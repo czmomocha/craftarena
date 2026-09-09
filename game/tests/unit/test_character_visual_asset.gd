@@ -483,7 +483,8 @@ func test_match_solids_get_tiles_and_keep_authoritative_half_extents() -> void:
 		OfficialTraprushCourses.COURSE_01
 	)))
 	assert_gt(_solids.solid_total(), 0, "course_01 应该有始终固体")
-	assert_eq(_solids.visual_count(), _solids.solid_total(), "每个固体都该铺上地块")
+	assert_eq(_solids.solid_total(), 41)
+	assert_eq(_solids.visual_count(), 37, "冰 / 传送带 / 开关 / 门走机关占位，不铺地块")
 	# 权威半长与视觉无关：本席预测读的还是编译拓扑那一份。
 	var boxes: Array = _solids.live_solid_boxes()
 	assert_eq(boxes.size(), _solids.solid_total())

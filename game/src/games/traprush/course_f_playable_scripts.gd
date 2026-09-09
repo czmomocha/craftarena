@@ -1,16 +1,16 @@
 class_name TraprushCourseFPlayableScripts
 extends RefCounted
 
-## Scripted routes for `course_f_playable` revision 11.
-## Fast path waits out the spine flame/roller off-phase (cooldown 30), then
-## walks +X. Indices match TraprushCourseCompletionProbe._ACTION_NAMES.
+## Scripted routes for `course_f_playable` revision 12.
+## Fast path: stand on the −Z side of the spine energy wall (UseItem reach is
+## +Z only), break it, step back onto z=0, then walk +X. Periodic gadgets sit
+## on the −Z roadside so the shortcut does not wait through flame / roller
+## half-cycles. Indices match TraprushCourseCompletionProbe._ACTION_NAMES.
 
 const _MOVE_X: int = 0
 const _MOVE_Z: int = 2
 const _MOVE_NEG_Z: int = 3
 const _USE_ITEM: int = 9
-const _WAIT: int = 10
-const _FLAME_OFF_WAITS: int = 26
 
 
 static func fast_hint() -> PackedByteArray:
@@ -19,10 +19,6 @@ static func fast_hint() -> PackedByteArray:
 	packed.append(_MOVE_X)
 	packed.append(_USE_ITEM)
 	packed.append(_MOVE_Z)
-	var wait_i: int = 0
-	while wait_i < _FLAME_OFF_WAITS:
-		packed.append(_WAIT)
-		wait_i += 1
 	var walk_i: int = 0
 	while walk_i < 6:
 		packed.append(_MOVE_X)

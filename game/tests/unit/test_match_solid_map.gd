@@ -30,9 +30,9 @@ func test_official_courses_map_path_floors() -> void:
 	_map = MatchSolidMap.new()
 	add_child(_map)
 	assert_true(_map.apply_path(COURSE_01_PATH))
-	assert_eq(_map.solid_count(), 36)
-	assert_eq(_map.solid_total(), 36)
-	assert_eq(_map.live_solid_boxes().size(), 36)
+	assert_eq(_map.solid_count(), 41)
+	assert_eq(_map.solid_total(), 41)
+	assert_eq(_map.live_solid_boxes().size(), 41)
 	assert_eq(_map.crate_node_count(), 0)
 	assert_eq(_map.hazard_node_count(), 0)
 	var node: MeshInstance3D = _map.solid_node(70)
@@ -45,8 +45,8 @@ func test_official_courses_map_path_floors() -> void:
 	assert_almost_eq(footing.position.y, -1.0, EPS)
 	assert_almost_eq(footing.position.z, 0.0, EPS)
 	assert_true(_map.apply_path(COURSE_03_PATH))
-	assert_eq(_map.solid_count(), 14)
-	assert_eq(_map.solid_total(), 14)
+	assert_eq(_map.solid_count(), 21)
+	assert_eq(_map.solid_total(), 21)
 	assert_false(_map.allows_online_writes())
 
 

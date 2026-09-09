@@ -1,7 +1,7 @@
 {
 	"schema_version": 1,
 	"cell": 65536,
-	"revision": 6,
+	"revision": 7,
 	"entities": [
 		{
 			"schema_version": 1,
@@ -531,6 +531,273 @@
 				},
 				"inventory": {
 					"item_state": "dash"
+				}
+			}
+		},
+		{
+			"schema_version": 1,
+			"entity_id": 200,
+			"components": {
+				"transform": {
+					"x": 262144,
+					"y": 0,
+					"z": -131072,
+					"yaw_bam": 0
+				},
+				"zone": {
+					"shape": {
+						"kind": "box",
+						"hx": 32768,
+						"hy": 32768,
+						"hz": 32768
+					},
+					"tags": [
+						"solid",
+						"launch"
+					]
+				}
+			}
+		},
+		{
+			"schema_version": 1,
+			"entity_id": 201,
+			"components": {
+				"transform": {
+					"x": 0,
+					"y": 0,
+					"z": 131072,
+					"yaw_bam": 0
+				},
+				"zone": {
+					"shape": {
+						"kind": "box",
+						"hx": 32768,
+						"hy": 32768,
+						"hz": 32768
+					},
+					"tags": [
+						"solid",
+						"lift"
+					]
+				},
+				"mover": {
+					"path": [
+						{
+							"x": 0,
+							"y": 0,
+							"z": 131072
+						},
+						{
+							"x": 0,
+							"y": 131072,
+							"z": 131072
+						}
+					],
+					"speed": 4096,
+					"loop": true
+				}
+			}
+		},
+		{
+			"schema_version": 1,
+			"entity_id": 202,
+			"components": {
+				"transform": {
+					"x": 0,
+					"y": -65536,
+					"z": 131072,
+					"yaw_bam": 0
+				},
+				"zone": {
+					"shape": {
+						"kind": "box",
+						"hx": 32768,
+						"hy": 32768,
+						"hz": 32768
+					},
+					"tags": [
+						"solid"
+					]
+				}
+			}
+		},
+		{
+			"schema_version": 1,
+			"entity_id": 203,
+			"components": {
+				"transform": {
+					"x": 65536,
+					"y": 0,
+					"z": 131072,
+					"yaw_bam": 0
+				},
+				"zone": {
+					"shape": {
+						"kind": "box",
+						"hx": 32768,
+						"hy": 32768,
+						"hz": 32768
+					},
+					"tags": [
+						"solid",
+						"crusher"
+					]
+				},
+				"mover": {
+					"path": [
+						{
+							"x": 65536,
+							"y": 65536,
+							"z": 131072
+						},
+						{
+							"x": 65536,
+							"y": 0,
+							"z": 131072
+						}
+					],
+					"speed": 4096,
+					"loop": true
+				}
+			}
+		},
+		{
+			"schema_version": 1,
+			"entity_id": 204,
+			"components": {
+				"transform": {
+					"x": 131072,
+					"y": 0,
+					"z": 131072,
+					"yaw_bam": 0
+				},
+				"zone": {
+					"shape": {
+						"kind": "box",
+						"hx": 32768,
+						"hy": 32768,
+						"hz": 32768
+					},
+					"tags": [
+						"solid",
+						"pendulum"
+					]
+				},
+				"mover": {
+					"path": [
+						{
+							"x": 262144,
+							"y": 0,
+							"z": 131072
+						},
+						{
+							"x": 131072,
+							"y": 0,
+							"z": 131072
+						}
+					],
+					"speed": 4096,
+					"loop": true
+				}
+			}
+		},
+		{
+			"schema_version": 1,
+			"entity_id": 210,
+			"components": {
+				"transform": {
+					"x": 327680,
+					"y": 0,
+					"z": 0,
+					"yaw_bam": 0
+				},
+				"portal": {
+					"target_id": 211,
+					"yaw_bam": 0,
+					"cooldown_ticks": 0
+				},
+				"zone": {
+					"shape": {
+						"kind": "box",
+						"hx": 32768,
+						"hy": 32768,
+						"hz": 32768
+					},
+					"tags": [
+						"portal_switch"
+					]
+				},
+				"interactable": {
+					"state": 0,
+					"link_group": 3
+				}
+			}
+		},
+		{
+			"schema_version": 1,
+			"entity_id": 211,
+			"components": {
+				"transform": {
+					"x": 327680,
+					"y": 0,
+					"z": -131072,
+					"yaw_bam": 0
+				},
+				"portal": {
+					"target_id": 210,
+					"yaw_bam": 0,
+					"cooldown_ticks": 0
+				}
+			}
+		},
+		{
+			"schema_version": 1,
+			"entity_id": 212,
+			"components": {
+				"transform": {
+					"x": 327680,
+					"y": -65536,
+					"z": 0,
+					"yaw_bam": 0
+				},
+				"zone": {
+					"shape": {
+						"kind": "box",
+						"hx": 32768,
+						"hy": 32768,
+						"hz": 32768
+					},
+					"tags": [
+						"solid",
+						"switch"
+					]
+				},
+				"interactable": {
+					"state": 0,
+					"link_group": 3
+				}
+			}
+		},
+		{
+			"schema_version": 1,
+			"entity_id": 213,
+			"components": {
+				"transform": {
+					"x": 327680,
+					"y": -65536,
+					"z": -131072,
+					"yaw_bam": 0
+				},
+				"zone": {
+					"shape": {
+						"kind": "box",
+						"hx": 32768,
+						"hy": 32768,
+						"hz": 32768
+					},
+					"tags": [
+						"solid"
+					]
 				}
 			}
 		}

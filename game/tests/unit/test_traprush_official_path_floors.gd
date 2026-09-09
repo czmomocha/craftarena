@@ -28,9 +28,9 @@ const FALL_TICKS: int = 40
 
 
 func test_official_courses_have_path_floor_counts() -> void:
-	assert_eq(_compile(COURSE_01).solids.size(), 36)
-	assert_eq(_compile(COURSE_02).solids.size(), 8)
-	assert_eq(_compile(COURSE_03).solids.size(), 14)
+	assert_eq(_compile(COURSE_01).solids.size(), 41)
+	assert_eq(_compile(COURSE_02).solids.size(), 11)
+	assert_eq(_compile(COURSE_03).solids.size(), 21)
 
 
 func test_required_path_cells_are_supported() -> void:

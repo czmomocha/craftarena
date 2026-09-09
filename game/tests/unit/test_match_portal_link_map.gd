@@ -61,7 +61,7 @@ func test_official_courses_map_distinct_layouts_and_one_way_direction() -> void:
 	assert_null(_map.link_node(10))
 	assert_not_null(_map.link_node(20))
 	assert_true(_map.apply_path(COURSE_03_PATH))
-	assert_eq(_map.link_count(), 3)
+	assert_eq(_map.link_count(), 5)
 	assert_eq(_map.direction_count(), 1)
 	var one_way: MeshInstance3D = _map.link_node(10)
 	assert_not_null(one_way)

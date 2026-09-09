@@ -1,7 +1,7 @@
 {
 	"schema_version": 1,
 	"cell": 65536,
-	"revision": 14,
+	"revision": 15,
 	"entities": [
 		{
 			"schema_version": 1,
@@ -1053,6 +1053,133 @@
 				},
 				"inventory": {
 					"item_state": "dash"
+				}
+			}
+		},
+		{
+			"schema_version": 1,
+			"entity_id": 200,
+			"components": {
+				"transform": {
+					"x": 196608,
+					"y": -65536,
+					"z": 393216,
+					"yaw_bam": 0
+				},
+				"zone": {
+					"shape": {
+						"kind": "box",
+						"hx": 32768,
+						"hy": 32768,
+						"hz": 32768
+					},
+					"tags": [
+						"solid"
+					]
+				}
+			}
+		},
+		{
+			"schema_version": 1,
+			"entity_id": 201,
+			"components": {
+				"transform": {
+					"x": 262144,
+					"y": -65536,
+					"z": 393216,
+					"yaw_bam": 0
+				},
+				"zone": {
+					"shape": {
+						"kind": "box",
+						"hx": 32768,
+						"hy": 32768,
+						"hz": 32768
+					},
+					"tags": [
+						"solid",
+						"ice"
+					]
+				}
+			}
+		},
+		{
+			"schema_version": 1,
+			"entity_id": 202,
+			"components": {
+				"transform": {
+					"x": 327680,
+					"y": -65536,
+					"z": 393216,
+					"yaw_bam": 0
+				},
+				"zone": {
+					"shape": {
+						"kind": "box",
+						"hx": 32768,
+						"hy": 32768,
+						"hz": 32768
+					},
+					"tags": [
+						"solid",
+						"conveyor"
+					]
+				}
+			}
+		},
+		{
+			"schema_version": 1,
+			"entity_id": 203,
+			"components": {
+				"transform": {
+					"x": 131072,
+					"y": -65536,
+					"z": 393216,
+					"yaw_bam": 0
+				},
+				"zone": {
+					"shape": {
+						"kind": "box",
+						"hx": 32768,
+						"hy": 32768,
+						"hz": 32768
+					},
+					"tags": [
+						"solid",
+						"switch"
+					]
+				},
+				"interactable": {
+					"state": 0,
+					"link_group": 1
+				}
+			}
+		},
+		{
+			"schema_version": 1,
+			"entity_id": 204,
+			"components": {
+				"transform": {
+					"x": 131072,
+					"y": 0,
+					"z": 393216,
+					"yaw_bam": 0
+				},
+				"zone": {
+					"shape": {
+						"kind": "box",
+						"hx": 32768,
+						"hy": 32768,
+						"hz": 32768
+					},
+					"tags": [
+						"solid",
+						"gate"
+					]
+				},
+				"interactable": {
+					"state": 0,
+					"link_group": 1
 				}
 			}
 		}

@@ -20,9 +20,9 @@
 | 出界 | 开发桩 ±8 格，不是产品场地 |
 | 输入 | 壳消费 `PlayInput`。当前键：WASD / Space / F 推击 / Q 使用 / Shift 冲刺 / R 复位（上升沿，不是产品长按）。触控 UI 未做（D7） |
 | Tick / 快照 / 插值 | **未锁**（[CD-43 §4](../40-technical/43-networking-and-replay.md)）。不得用 ICMP 锁定 |
-| 官方课 | 3 张。第 4 张及以后属 M5。F 线示范课 `course_f_playable` **不计入**该计数。revision 11 起是有路线选择的一局（危险捷径 +X，安全路 +Z），不是侧廊展览 |
+| 官方课 | 3 张。第 4 张及以后属 M5。F 线示范课 `course_f_playable` **不计入**该计数。revision 12：危险捷径 +X 只挡能量墙（站其 −Z 侧 Q 打碎），周期机关在 −Z 侧廊；安全路 +Z。官方 01–03 侧廊已接深化段新机关，不挡既有捷径 / 安全路脚本 |
 | 描边 | 不做（D8） |
-| 传送带 | 可玩性深化已接：固体 + `zone.tags` 含 `conveyor` + `transform.yaw_bam`（四向）。**不新增组件**。占位步长是走路占位步长的两倍 ⇒ 逆行走不回去。示范课 revision 11 安全路外侧 z=+3 有三块。数值仍属 [CD-63 §1.3](../60-plan/63-open-decisions.md) |
+| 传送带 | 可玩性深化已接：固体 + `zone.tags` 含 `conveyor` + `transform.yaw_bam`（四向）。**不新增组件**。占位步长是走路占位步长的两倍 ⇒ 逆行走不回去。示范课 revision 12 安全路外侧 z=+3 有三块；官方 `course_01` 侧廊 z=+6 有一块。数值仍属 [CD-63 §1.3](../60-plan/63-open-decisions.md) |
 | 电梯 | 可玩性深化已接：竖直 `mover` + `zone.tags` 含 `lift`。**不另开袋、不新增组件**。路径必须纯 Y，否则编译拒绝。水平往返仍走已有 mover。占位速度 `SCALE/16` |
 | 弹射垫 | 可玩性深化已接：固体 + `zone.tags` 含 `launch` + `transform.yaw_bam`（四向）。支撑**上升沿**弹一次：竖直 `LAUNCH_DY = JUMP_DY * 2`，水平送出一格。与 conveyor / mover 同实体则编译拒绝。数值仍属 [CD-63 §1.3](../60-plan/63-open-decisions.md) |
 | 开关门 | 可玩性深化已接**踩区**：固体 + `zone.tags` 含 `switch` / `gate` + 已有 `interactable.link_group`。开合是当前占用的纯函数，不写 `state`、不进快照。走开同一拍关上。`InteractIntent` 仍未接线 |
@@ -167,7 +167,7 @@ UGC 权威碰撞形状约束见 [CD-42](../40-technical/42-contracts-and-rulevm.
 | 可破坏障碍 | 木箱、能量墙、碎石、障碍核心 | 普通攻击机制或道具削减耐久 |
 | 触发型障碍 | 门、移动平台、开关链 | 交互、踩区或规则图触发 |
 
-当前实现：`hazards` 袋按 `cooldown_ticks` 半周期切固体；`solids` 袋始终固体（编译进 `gates` 的门在占用打开时非固体）；官方三张课各 1 个机关、出生点 −X 一格固体、出生点正下一格立足固体。编辑器 Place solid / hazard / crate / finish / mover / conveyor / lift / launch / switch / gate / energy wall / gated portal / spike / flame / crusher / roller / rubble / core 走已有 `place`。形状见 [CD-32 §3](../30-ugc/32-editor-and-preview.md) 与 [CD-42 §3.4](../40-technical/42-contracts-and-rulevm.md)。口径见文首。
+当前实现：`hazards` 袋按 `cooldown_ticks` 半周期切固体；`solids` 袋始终固体（编译进 `gates` 的门在占用打开时非固体）；官方三张课仍各有出生点 −Z 周期机关、−X 一格固体、正下一格立足固体。第十八批在侧廊接了深化段机关（01 冰 / 传送带 / 开关门，02 喷火 / 滚柱 / 地刺，03 弹射 / 电梯 / 压板 / 摆锤 / 开关传送），不挡既有捷径。编辑器 Place solid / hazard / crate / finish / mover / conveyor / lift / launch / switch / gate / energy wall / gated portal / spike / flame / crusher / roller / rubble / core 走已有 `place`。形状见 [CD-32 §3](../30-ugc/32-editor-and-preview.md) 与 [CD-42 §3.4](../40-technical/42-contracts-and-rulevm.md)。口径见文首。
 
 「触发型障碍」这一行已交付移动平台、传送带、电梯、弹射垫、踩区开关门与开关传送：
 

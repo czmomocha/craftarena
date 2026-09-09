@@ -40,8 +40,8 @@ func test_official_course_03_loads_and_is_publish_ready() -> void:
 	var world: AuthoringWorld = AuthoringDocument.load_from_path(COURSE_03_PATH)
 	assert_not_null(world)
 	assert_eq(world.grid.cell, CELL)
-	assert_eq(world.revision, 6)
-	assert_eq(world.entity_ids(), [1, 2, 3, 4, 10, 11, 12, 30, 40, 60, 70, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 100, 101])
+	assert_eq(world.revision, 7)
+	assert_eq(world.entity_ids(), [1, 2, 3, 4, 10, 11, 12, 30, 40, 60, 70, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 100, 101, 200, 201, 202, 203, 204, 210, 211, 212, 213])
 	var result: Dictionary = AuthoringReachability.evaluate(world)
 	assert_true(_ok(result))
 	var issues: Array = result.get("issues", [1])
@@ -58,7 +58,7 @@ func test_course_03_has_one_way_ascent_unlike_01_02() -> void:
 	assert_ne(first.hash_state().hex_encode(), third.hash_state().hex_encode())
 	assert_ne(second.hash_state().hex_encode(), third.hash_state().hex_encode())
 	var links: Array[Dictionary] = third.portal_links()
-	assert_eq(links.size(), 3)
+	assert_eq(links.size(), 5)
 	var one_way_count: int = 0
 	var two_way_count: int = 0
 	for item: Dictionary in links:
@@ -70,7 +70,7 @@ func test_course_03_has_one_way_ascent_unlike_01_02() -> void:
 		elif kind == AuthoringPortalKinds.TWO_WAY:
 			two_way_count += 1
 	assert_eq(one_way_count, 1)
-	assert_eq(two_way_count, 2)
+	assert_eq(two_way_count, 4)
 	var first_one_way: int = 0
 	for item: Dictionary in first.portal_links():
 		var first_kind: String = _link_str(item, "kind")
@@ -94,11 +94,11 @@ func test_course_03_compiles_and_loads() -> void:
 	var bundle: SimulationBundle = TraprushTopologyCompiler.compile(world)
 	assert_not_null(bundle)
 	assert_eq(bundle.pads.size(), 4)
-	assert_eq(bundle.portals.size(), 3)
+	assert_eq(bundle.portals.size(), 5)
 	assert_eq(bundle.finish.size(), 1)
 	assert_eq(bundle.destructibles.size(), 1)
 	assert_eq(bundle.hazards.size(), 1)
-	assert_eq(bundle.solids.size(), 14)
+	assert_eq(bundle.solids.size(), 21)
 	var occupancy_hazard: Dictionary = _hazard(bundle, 60)
 	var occupancy_solid: Dictionary = _solid(bundle, 70)
 	var occupancy_footing: Dictionary = _solid(bundle, 80)
@@ -123,13 +123,13 @@ func test_course_03_compiles_and_loads() -> void:
 	var finish_ids: Dictionary = loaded["finish_ids"]
 	var destructible_ids: Dictionary = loaded["destructible_ids"]
 	assert_eq(pad_ids.size(), 4)
-	assert_eq(portal_ids.size(), 3)
+	assert_eq(portal_ids.size(), 5)
 	assert_eq(finish_ids.size(), 1)
 	assert_eq(destructible_ids.size(), 1)
 	var hazard_ids: Dictionary = loaded["hazard_ids"]
 	assert_eq(hazard_ids.size(), 1)
 	var solid_ids: Dictionary = loaded["solid_ids"]
-	assert_eq(solid_ids.size(), 14)
+	assert_eq(solid_ids.size(), 21)
 	var pad_box: int = pad_ids[1]
 	assert_false(sim.is_static_box_solid(pad_box))
 	var crate_box: int = destructible_ids[40]

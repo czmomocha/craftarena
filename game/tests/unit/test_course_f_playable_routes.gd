@@ -1,8 +1,9 @@
 extends GutTest
 
-## 可玩性深化收口：示范课从侧廊展览改成有路线选择的一局。
-## 危险捷径走 z=0 主路（能量墙挡路，须从 −Z 侧 Q 打碎）；安全路走 z=+2，
-## 途中下到检查点 1 再绕回。不改协议、不进匹配 HTTP、不新增机关种类。
+## 可玩性深化第十八批：示范课 revision 12 可读 / 可完赛。
+## 危险捷径仍走 z=0 主路（能量墙挡路，UseItem reach 只探 +Z，须站其 −Z 侧 Q）；
+## 喷火 / 滚柱 / 摆锤 / 压板改到 −Z 侧廊，捷径不再空等半周期。
+## 安全路仍走 z=+2，途中下到检查点 1 再绕回。不改协议、不进匹配 HTTP。
 
 const AuthoringDocumentGd := preload("res://src/creator/authoring_document.gd")
 const AuthoringReachabilityGd := preload("res://src/creator/authoring_reachability.gd")
@@ -23,7 +24,7 @@ const GATE_ID: int = 223
 func test_course_f_playable_is_a_routed_run_not_a_museum() -> void:
 	var world: AuthoringWorldGd = AuthoringDocumentGd.load_from_path(COURSE_F)
 	assert_not_null(world)
-	assert_eq(world.revision, 11)
+	assert_eq(world.revision, 12)
 	var reach: Dictionary = AuthoringReachabilityGd.evaluate(world)
 	var reach_ok: bool = reach["ok"]
 	assert_true(reach_ok, str(reach.get("issues", [])))
@@ -66,6 +67,7 @@ func test_fast_script_is_shorter_than_safe_script_and_both_finish() -> void:
 	assert_gte(safe_finish, 0)
 	assert_eq(safe_accepted, safe_pads)
 	assert_gt(_move_count(safe_actions), _move_count(fast_actions))
+	assert_eq(_wait_count(fast_actions), 0)
 
 
 func _move_count(actions: Array) -> int:
@@ -73,6 +75,14 @@ func _move_count(actions: Array) -> int:
 	for raw: Variant in actions:
 		var name: String = str(raw)
 		if name.begins_with("move"):
+			count += 1
+	return count
+
+
+func _wait_count(actions: Array) -> int:
+	var count: int = 0
+	for raw: Variant in actions:
+		if str(raw) == "wait":
 			count += 1
 	return count
 

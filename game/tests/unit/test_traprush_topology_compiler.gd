@@ -52,9 +52,9 @@ func test_official_courses_compile_distinct_topology() -> void:
 	assert_eq(first.destructibles.size(), 1)
 	assert_eq(second.destructibles.size(), 1)
 	assert_eq(first.hazards.size(), 1)
-	assert_eq(second.hazards.size(), 1)
-	assert_eq(first.solids.size(), 36)
-	assert_eq(second.solids.size(), 8)
+	assert_eq(second.hazards.size(), 3)
+	assert_eq(first.solids.size(), 41)
+	assert_eq(second.solids.size(), 11)
 	var first_hazard: Dictionary = _hazard(first, 60)
 	var first_solid: Dictionary = _solid(first, 70)
 	var first_footing: Dictionary = _solid(first, 80)
@@ -251,7 +251,7 @@ func test_loaded_pads_are_non_solid_occupancy_and_world_ticks() -> void:
 	var hazard_ids: Dictionary = loaded["hazard_ids"]
 	assert_eq(hazard_ids.size(), 1)
 	var solid_ids: Dictionary = loaded["solid_ids"]
-	assert_eq(solid_ids.size(), 36)
+	assert_eq(solid_ids.size(), 41)
 	var pickup_ids: Dictionary = loaded["pickup_ids"]
 	assert_eq(pickup_ids.size(), 2)
 	var box_id: int = pad_ids[1]

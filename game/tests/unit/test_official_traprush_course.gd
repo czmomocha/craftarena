@@ -25,12 +25,12 @@ func test_official_course_loads_and_is_publish_ready() -> void:
 	var world: AuthoringWorld = AuthoringDocument.load_from_path(COURSE_PATH)
 	assert_not_null(world)
 	assert_eq(world.grid.cell, 65536)
-	assert_eq(world.revision, 14)
+	assert_eq(world.revision, 15)
 	assert_eq(world.entity_ids(), [
 		1, 2, 3, 10, 11, 12, 20, 21, 30, 40, 60, 70, 80, 81, 82, 83, 84, 85,
 		86, 87, 88, 100, 101, 110, 111, 112, 113, 114, 115, 116, 117, 118, 119,
 		120, 121, 122, 123, 124, 125, 126, 127, 128, 129, 130, 131, 132, 133,
-		134, 135,
+		134, 135, 200, 201, 202, 203, 204,
 	])
 	var result: Dictionary = AuthoringReachability.evaluate(world)
 	assert_true(_ok(result))
