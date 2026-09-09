@@ -164,6 +164,7 @@ static func try_create(
 		session._resolve_player_portals(player)
 		session._accept_player_finish(player)
 		session._grant_player_pickups(player)
+	session.rule_vm.notify_match_started()
 	return session
 
 

@@ -36,6 +36,7 @@ func test_new_preview_owns_collaborators() -> void:
 	assert_not_null(preview.intents)
 	assert_not_null(preview.scan)
 	assert_not_null(preview.view)
+	assert_not_null(preview.rule_vm)
 	assert_false(preview.connected)
 	assert_false(preview.is_playing())
 	assert_false(preview.allows_settlement())

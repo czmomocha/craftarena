@@ -4,6 +4,7 @@ extends RefCounted
 ## TRAPRUSH 对局会话门面：一份编译拓扑装进共享权威 SimulationWorld，1~8 名玩家。
 ## 协作者是 TraprushMatchBootstrap / Intents / Scan / View，使本文件低于 E9 400 行。
 ## commit_tick 先积分再 world.tick；MatchRealtime 在积分与 tick 之间应用意图。占用扫描：垫→门→垫→终点。
+## 空默认 RuleVmDispatch：开局 OnMatchStarted、tick 后 OnEveryTicks；未 bind 为 no-op。
 
 const Gravity := preload("res://src/games/traprush/gravity.gd")
 const ConveyorCycle := preload("res://src/games/traprush/conveyor_cycle.gd")
@@ -15,6 +16,7 @@ const TraprushMatchBootstrapGd := preload("res://src/games/traprush/match_sessio
 const TraprushMatchIntentsGd := preload("res://src/games/traprush/match_session_intents.gd")
 const TraprushMatchScanGd := preload("res://src/games/traprush/match_session_scan.gd")
 const TraprushMatchViewGd := preload("res://src/games/traprush/match_session_view.gd")
+const RuleVmDispatchGd := preload("res://src/ugc/rule_vm_dispatch.gd")
 
 const MAX_PLAYERS: int = 8
 const MOVE_STEP_MAX: int = Fixed.SCALE
@@ -53,6 +55,7 @@ var range_max_z: int = 0
 var intents: TraprushMatchIntentsGd = TraprushMatchIntentsGd.new()
 var scan: TraprushMatchScanGd = TraprushMatchScanGd.new()
 var view: TraprushMatchViewGd = TraprushMatchViewGd.new()
+var rule_vm: RuleVmDispatchGd = RuleVmDispatchGd.new()
 
 var _world: SimulationWorld = null
 var _graph: TraprushPortalGraph = null
@@ -248,6 +251,7 @@ func advance_sim_tick() -> void:
 		_accept_player_pads(player)
 		_accept_player_finish(player)
 		_grant_player_pickups(player)
+	rule_vm.notify_every_ticks()
 
 
 func commit_tick() -> void:

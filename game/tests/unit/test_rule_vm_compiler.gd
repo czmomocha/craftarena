@@ -1,8 +1,8 @@
 extends GutTest
 
-## M4a chapter 2: compile a typed OnMatchStarted graph to v1 bytecode.
-## Extra keys / unknown events / unknown node kinds rejected.
-## run() still only consumes bytes. Preview / match dispatch stay later.
+## M4a chapter 2–3: compile typed OnMatchStarted / OnEveryTicks graphs to v1
+## bytecode. Extra keys / unknown events / unknown node kinds rejected.
+## run() still only consumes bytes. Dispatch lives in RuleVmDispatch.
 
 const RuleVmGd := preload("res://src/ugc/rule_vm.gd")
 const Opcodes := preload("res://src/ugc/rule_vm_opcodes.gd")
@@ -30,6 +30,16 @@ func test_compare_set_graph_compiles_and_runs() -> void:
 	assert_eq(vars[3], 1)
 	var used: int = ran.get(Opcodes.KEY_GAS_USED, 0)
 	assert_eq(used, 5)
+
+
+func test_empty_on_every_ticks_compiles() -> void:
+	var compiled: Dictionary = RuleVmGd.compile(_graph(
+		Opcodes.RULESET_VERSION, 4, Opcodes.EVENT_ON_EVERY_TICKS, []
+	))
+	var compile_ok: bool = compiled.get(Opcodes.KEY_OK, false)
+	assert_true(compile_ok)
+	var event_name: String = compiled.get(Opcodes.KEY_EVENT, "")
+	assert_eq(event_name, Opcodes.EVENT_ON_EVERY_TICKS)
 
 
 func test_empty_on_match_started_is_empty_program() -> void:
@@ -87,7 +97,9 @@ func test_rejects_extra_keys_unknown_event_and_kind() -> void:
 	var extra: Dictionary = _started_graph(4, [])
 	extra["note"] = "nope"
 	_assert_compile_reason(extra, Opcodes.REASON_COMPILE_KEYS)
-	_assert_compile_reason(_graph(1, 4, "OnEveryTicks", []), Opcodes.REASON_COMPILE_EVENT)
+	_assert_compile_reason(_graph(1, 4, Opcodes.EVENT_ON_ENTERED_ZONE, []), Opcodes.REASON_COMPILE_EVENT)
+	_assert_compile_reason(_graph(1, 4, Opcodes.EVENT_ON_ENTITY_DIED, []), Opcodes.REASON_COMPILE_EVENT)
+	_assert_compile_reason(_graph(1, 4, Opcodes.EVENT_ON_VARIABLE_THRESHOLD, []), Opcodes.REASON_COMPILE_EVENT)
 	_assert_compile_reason(_started_graph(4, [
 		{Opcodes.KEY_KIND: "Spawn", Opcodes.KEY_DEST: 0, Opcodes.KEY_SRC: 1},
 	]), Opcodes.REASON_COMPILE_UNKNOWN_NODE)

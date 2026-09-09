@@ -3,9 +3,10 @@ extends RefCounted
 
 ## Compiles a typed Rule VM graph to v1 bytecode (CD-42 §2).
 ## The interpreter still only runs PackedByteArray — this file is compile-time.
-## It does not generate GDScript or load scripts. Chapter 2 only accepts
-## OnMatchStarted plus the chapter-1 whitelist (LoadConst is a literal helper,
-## not a §2.1 product node). Extra keys and unknown kinds/events are rejected.
+## It does not generate GDScript or load scripts. Chapter 3 accepts
+## OnMatchStarted and OnEveryTicks plus the chapter-1 whitelist (LoadConst is
+## a literal helper, not a §2.1 product node). Extra keys and unknown
+## kinds/events are rejected.
 
 const Opcodes := preload("res://src/ugc/rule_vm_opcodes.gd")
 const CodecGd := preload("res://src/ugc/rule_vm_codec.gd")
@@ -31,7 +32,7 @@ static func compile(graph: Dictionary) -> Dictionary:
 	if not body.has(Opcodes.KEY_EVENT) or typeof(body[Opcodes.KEY_EVENT]) != TYPE_STRING:
 		return _fail(Opcodes.REASON_COMPILE_KEYS)
 	var event_name: String = body[Opcodes.KEY_EVENT]
-	if event_name != Opcodes.EVENT_ON_MATCH_STARTED:
+	if not Opcodes.is_compile_event(event_name):
 		return _fail(Opcodes.REASON_COMPILE_EVENT)
 	if not body.has(Opcodes.KEY_NODES) or typeof(body[Opcodes.KEY_NODES]) != TYPE_ARRAY:
 		return _fail(Opcodes.REASON_COMPILE_KEYS)

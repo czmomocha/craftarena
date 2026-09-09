@@ -2,8 +2,9 @@ class_name RuleVmOpcodes
 extends RefCounted
 
 ## Rule VM v1 opcode table, fixed gas costs, and locatable error codes.
-## Owner: CD-42 §2. Envelope + whitelist interpreter + graph compiler.
-## Event dispatch, spatial queries, remaining nodes, and Preview wiring are later.
+## Owner: CD-42 §2. Envelope + whitelist interpreter + graph compiler +
+## OnMatchStarted / OnEveryTicks dispatch. Spatial queries and remaining
+## §2.1 nodes stay later.
 
 const RULESET_VERSION: int = 1
 const SLOT_COUNT: int = 16
@@ -56,8 +57,14 @@ const REASON_COMPILE_NODE_KEYS: String = "compile_node_keys"
 const REASON_COMPILE_SLOT: String = "compile_slot"
 const REASON_COMPILE_PREDICATE: String = "compile_predicate"
 const REASON_COMPILE_ENCODE: String = "compile_encode"
+const REASON_BIND_DUPLICATE: String = "bind_duplicate"
+const REASON_ALREADY_STARTED: String = "already_started"
 
 const EVENT_ON_MATCH_STARTED: String = "OnMatchStarted"
+const EVENT_ON_EVERY_TICKS: String = "OnEveryTicks"
+const EVENT_ON_ENTERED_ZONE: String = "OnEnteredZone"
+const EVENT_ON_ENTITY_DIED: String = "OnEntityDied"
+const EVENT_ON_VARIABLE_THRESHOLD: String = "OnVariableThreshold"
 
 const KIND_LOAD_CONST: String = "LoadConst"
 const KIND_GET_VARIABLE: String = "GetVariable"
@@ -137,3 +144,7 @@ static func slot_ok(slot: int) -> bool:
 
 static func pred_ok(pred: int) -> bool:
 	return pred >= PRED_EQ and pred <= PRED_MAX
+
+
+static func is_compile_event(event_name: String) -> bool:
+	return event_name == EVENT_ON_MATCH_STARTED or event_name == EVENT_ON_EVERY_TICKS

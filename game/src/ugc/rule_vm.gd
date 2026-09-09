@@ -5,7 +5,7 @@ extends RefCounted
 ## Client and server run this same static-typed GDScript. Over-gas aborts this
 ## content logic with a locatable reason and does not commit variable writes.
 ## Graphs compile to bytecode first; run() never walks JSON, generates
-## GDScript, or loads scripts. Not wired to Preview or the match loop.
+## GDScript, or loads scripts. Preview / match fire programs via RuleVmDispatch.
 
 const Opcodes := preload("res://src/ugc/rule_vm_opcodes.gd")
 const CodecGd := preload("res://src/ugc/rule_vm_codec.gd")

@@ -3,7 +3,7 @@ extends GutTest
 ## M4a chapter 1: versioned Rule VM bytecode + whitelist interpreter + gas.
 ## Does not walk JSON graphs. Unknown opcode / version / reserved rejected.
 ## Over-gas aborts that run and leaves the caller's slots unchanged.
-## Preview / match / Event dispatch / spatial queries are later chapters.
+## Event dispatch is RuleVmDispatch. Spatial queries stay later.
 
 const RuleVmGd := preload("res://src/ugc/rule_vm.gd")
 const Opcodes := preload("res://src/ugc/rule_vm_opcodes.gd")

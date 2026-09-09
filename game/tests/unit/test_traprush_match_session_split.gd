@@ -36,6 +36,7 @@ func test_new_session_owns_collaborators() -> void:
 	assert_not_null(session.intents)
 	assert_not_null(session.scan)
 	assert_not_null(session.view)
+	assert_not_null(session.rule_vm)
 	assert_eq(session.player_count(), 0)
 	assert_eq(session.tick_index(), 0)
 

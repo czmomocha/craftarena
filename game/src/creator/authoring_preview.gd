@@ -10,7 +10,9 @@ extends RefCounted
 ## bundle, loads SimulationWorld, and spawns on the lowest-order pad.
 ## try_advance_play integrates caller play_fall_dy then ticks; occupancy
 ## order is pad→portal→pad→finish. try_apply_play_intent does not tick.
-## Never settlement or online writes. Window host is AuthoringPreviewShell.
+## Never settlement or online writes. Empty RuleVmDispatch fires OnMatchStarted
+## on start and OnEveryTicks after a play tick; unbound is a no-op. P3 still
+## waits for the Preview safety chapter. Window host is AuthoringPreviewShell.
 
 const Gravity := preload("res://src/games/traprush/gravity.gd")
 const HazardCycle := preload("res://src/games/traprush/hazard_cycle.gd")
@@ -20,6 +22,7 @@ const AuthoringPreviewBootstrapGd := preload("res://src/creator/authoring_previe
 const AuthoringPreviewIntentsGd := preload("res://src/creator/authoring_preview_intents.gd")
 const AuthoringPreviewScanGd := preload("res://src/creator/authoring_preview_scan.gd")
 const AuthoringPreviewViewGd := preload("res://src/creator/authoring_preview_view.gd")
+const RuleVmDispatchGd := preload("res://src/ugc/rule_vm_dispatch.gd")
 
 var world: AuthoringWorld = null
 var preview_revision: int = 0
@@ -91,6 +94,7 @@ var _play_launch_supported: Dictionary = {}
 var intents: AuthoringPreviewIntentsGd = AuthoringPreviewIntentsGd.new()
 var scan: AuthoringPreviewScanGd = AuthoringPreviewScanGd.new()
 var view: AuthoringPreviewViewGd = AuthoringPreviewViewGd.new()
+var rule_vm: RuleVmDispatchGd = RuleVmDispatchGd.new()
 
 
 func connect_from(session: AuthoringSession) -> bool:
@@ -125,11 +129,18 @@ func is_playing() -> bool:
 
 
 func try_start_play(seed: int, radius: int = 0, cylinder_height: int = 0) -> bool:
-	return AuthoringPreviewBootstrapGd.try_start_play(self, seed, radius, cylinder_height)
+	if not AuthoringPreviewBootstrapGd.try_start_play(self, seed, radius, cylinder_height):
+		return false
+	rule_vm.reset_run_state()
+	rule_vm.notify_match_started()
+	return true
 
 
 func try_stop_play() -> bool:
-	return AuthoringPreviewBootstrapGd.try_stop_play(self)
+	if not AuthoringPreviewBootstrapGd.try_stop_play(self):
+		return false
+	rule_vm.reset_run_state()
+	return true
 
 
 func try_advance_play() -> bool:
@@ -171,6 +182,7 @@ func try_advance_play() -> bool:
 	_accept_overlapping_play_pads()
 	_accept_overlapping_play_finish()
 	_grant_play_pickups()
+	rule_vm.notify_every_ticks()
 	return true
 
 
