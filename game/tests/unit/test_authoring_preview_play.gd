@@ -264,6 +264,34 @@ func test_preview_lift_occupancy_follows_the_sim() -> void:
 	assert_gt(after_player_y, before_player_y)
 
 
+func test_preview_jump_on_lift_does_not_reset_to_spawn() -> void:
+	_editor_shell = AuthoringEditorShell.create(AuthoringSurfaceNames.INTERNAL_DEV)
+	add_child(_editor_shell)
+	assert_true(_editor_shell.open())
+	_editor_shell.tools.cursor.set_cell(0, 0, 0)
+	assert_true(_editor_shell.tools.place_next_checkpoint())
+	_editor_shell.tools.cursor.set_cell(0, -1, 0)
+	assert_true(_editor_shell.tools.place_next_lift())
+	assert_true(_editor_shell.open_preview())
+	var preview_shell: AuthoringPreviewShell = _editor_shell.preview
+	assert_true(preview_shell.try_start_play(1, RADIUS, HEIGHT))
+	for _tick: int in range(16):
+		assert_true(preview_shell.try_advance_play())
+	var ridden: Dictionary = preview_shell.preview.play_world.get_pose(
+		preview_shell.preview.player_id
+	)
+	var ridden_y: int = ridden.get("y", 0)
+	assert_gt(ridden_y, 0)
+	assert_true(preview_shell.try_apply_play_intent({"intent": PlayerIntentNames.JUMP}))
+	for _tick: int in range(4):
+		assert_true(preview_shell.try_advance_play())
+	var after: Dictionary = preview_shell.preview.play_world.get_pose(
+		preview_shell.preview.player_id
+	)
+	var after_y: int = after.get("y", 0)
+	assert_gt(after_y, ridden_y - CELL / 2)
+
+
 func _connected_empty() -> AuthoringPreview:
 	var preview: AuthoringPreview = AuthoringPreview.new()
 	assert_true(preview.connect_from(AuthoringSession.new()))

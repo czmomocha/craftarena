@@ -227,6 +227,9 @@ func apply_snapshot(
 	var slot: int = camera_follow_slot(offline_playing, play)
 	if map != null:
 		map.follow_slot = slot
+		map.follow_grounded = true
+		if offline_playing and offline_session != null:
+			map.follow_grounded = not offline_session.player_airborne(0)
 		map.apply_players(players, follow.crates)
 	var own_accepted: int = MatchLobbyHud.own_player_int(follow.players, slot, "accepted_count", true)
 	var own_finish_tick: int = MatchLobbyHud.own_player_int(follow.players, slot, "finish_tick", false)

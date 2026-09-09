@@ -232,7 +232,7 @@ Undo / Redo 是会话内对成功命令派生的反向 payload（`place`↔`remo
 | 移动平台周期 | `game/src/games/traprush/mover_cycle.gd`（位姿 = f(tick, path, speed, loop)；`SimulationWorld.try_set_static_box_pose` 更新 AABB 并重挂索引；载客跟 delta，跟不上则出界复位） |
 | 传送带周期 | `game/src/games/traprush/conveyor_cycle.gd`（几何不动，被**支撑**的胶囊每 tick 推一步；四向量化；多块支撑只认最小 `entity_id`；`zone.tags` 的 `conveyor` 标签不改 Component Schema v1） |
 | 弹射垫周期 | `game/src/games/traprush/launch_cycle.gd`（支撑**上升沿**弹一次：竖直走已有 `apply_jump`，水平沿四向送出一格；`zone.tags` 的 `launch` 标签不改 Component Schema v1） |
-| 对局进程多人仿真循环 | `game/src/games/traprush/match_session.gd`（`fall_dy` 默认 0；boot / Solo / Preview 壳注入 `TraprushPlayStubs.FALL_DY = -JUMP_DY`） |
+| 对局进程多人仿真循环 | `game/src/games/traprush/match_session.gd`（`fall_dy` 默认 0；boot / Solo / Preview 壳注入 `TraprushPlayStubs.FALL_DY`） |
 | 对局二进制协议 v1 | `game/src/shared/protocol/match_frame_codec.gd` |
 | TRAPRUSH 直播名次 | `game/src/games/traprush/standing.gd` |
 | 对局大厅名次表现映射 | `game/src/client/match_standing_map.gd` |

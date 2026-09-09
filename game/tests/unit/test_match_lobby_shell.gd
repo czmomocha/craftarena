@@ -1138,13 +1138,21 @@ func test_solo_jump_sets_jump_then_land() -> void:
 	assert_true(_shell.try_solo())
 	var spawn: Dictionary = _shell.offline.session.player_pose(0)
 	var spawn_y: int = spawn.get("y", 0)
+	var camera_y: float = _shell.map.camera_node().position.y
 	assert_false(_shell.try_sample_play_jump(true).is_empty())
 	var hopped: Dictionary = _shell.offline.session.player_pose(0)
 	var hopped_y: int = hopped.get("y", 0)
 	assert_eq(hopped_y, spawn_y + TraprushPlayStubs.JUMP_DY)
 	assert_eq(_shell.map.anim_state(0), PlayAnimState.JUMP)
+	_shell._apply_snapshot_map()
+	assert_almost_eq(
+		_shell.map.camera_node().position.y,
+		camera_y,
+		0.01
+	)
+	assert_gt(_shell.map.player_node(0).position.y, 0.0)
 	var saw_land: bool = false
-	for _tick: int in range(24):
+	for _tick: int in range(48):
 		assert_true(_shell.offline.try_advance())
 		_shell._apply_snapshot_map()
 		var state: String = _shell.map.anim_state(0)

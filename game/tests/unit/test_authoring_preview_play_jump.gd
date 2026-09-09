@@ -122,7 +122,7 @@ func test_shell_official_jump_stays_until_advance_lands() -> void:
 	assert_true(_preview_shell.open_from(session))
 	assert_true(_preview_shell.try_start_play(1, PLAY_RADIUS, PLAY_RADIUS))
 	assert_eq(_preview_shell.preview.play_fall_dy, TraprushPlayStubs.PREVIEW_FALL_DY)
-	assert_true(_preview_shell.try_advance_play())
+	_settle_preview_play(_preview_shell)
 	var rest: Dictionary = _preview_shell.preview.play_world.get_pose(
 		_preview_shell.preview.player_id
 	)
@@ -133,22 +133,31 @@ func test_shell_official_jump_stays_until_advance_lands() -> void:
 	)
 	var hopped_y: int = hopped.get("y", 2)
 	assert_eq(hopped_y, rest_y + TraprushPlayStubs.JUMP_DY)
-	assert_eq(_preview_shell.preview.play_world.tick_index, 1)
-	## JUMP_DY == -FALL_DY：下一拍重力刚好抵消冲量，停在峰值；再一拍才落地。
-	assert_true(_preview_shell.try_advance_play())
-	var peak: Dictionary = _preview_shell.preview.play_world.get_pose(
-		_preview_shell.preview.player_id
+	var peak_y: int = hopped_y
+	var landed_y: int = hopped_y
+	var hops: int = 0
+	while hops < 64:
+		assert_true(_preview_shell.try_advance_play())
+		var pose: Dictionary = _preview_shell.preview.play_world.get_pose(
+			_preview_shell.preview.player_id
+		)
+		var pose_y: int = pose.get("y", 3)
+		if pose_y > peak_y:
+			peak_y = pose_y
+		landed_y = pose_y
+		hops += 1
+		if pose_y < peak_y and _preview_shell.preview.play_world.get_vy(
+			_preview_shell.preview.player_id
+		) == 0:
+			break
+	assert_gt(peak_y, hopped_y)
+	assert_eq(
+		_preview_shell.preview.play_world.get_vy(_preview_shell.preview.player_id),
+		0
 	)
-	var peak_y: int = peak.get("y", 3)
-	assert_eq(peak_y, hopped_y)
-	assert_eq(_preview_shell.preview.play_world.tick_index, 2)
-	assert_true(_preview_shell.try_advance_play())
-	var landed: Dictionary = _preview_shell.preview.play_world.get_pose(
-		_preview_shell.preview.player_id
-	)
-	var landed_y: int = landed.get("y", 4)
-	assert_eq(landed_y, rest_y)
-	assert_eq(_preview_shell.preview.play_world.tick_index, 3)
+	assert_gt(landed_y, rest_y - CELL / 4)
+	assert_lt(landed_y, hopped_y)
+	assert_gt(hops, 4)
 
 
 func test_preview_anim_idle_then_jump_then_land() -> void:
@@ -158,12 +167,12 @@ func test_preview_anim_idle_then_jump_then_land() -> void:
 	add_child(_preview_shell)
 	assert_true(_preview_shell.open_from(session))
 	assert_true(_preview_shell.try_start_play(1, PLAY_RADIUS, PLAY_RADIUS))
-	assert_true(_preview_shell.try_advance_play())
+	_settle_preview_play(_preview_shell)
 	assert_eq(_preview_shell.map.player_anim_state(), PlayAnimState.IDLE)
 	assert_true(_preview_shell.try_sample_play_jump(true))
 	assert_eq(_preview_shell.map.player_anim_state(), PlayAnimState.JUMP)
 	var saw_land: bool = false
-	for _tick: int in range(8):
+	for _tick: int in range(64):
 		assert_true(_preview_shell.try_advance_play())
 		if _preview_shell.map.player_anim_state() == PlayAnimState.LAND:
 			saw_land = true
@@ -180,7 +189,7 @@ func test_preview_walk_sets_run() -> void:
 	add_child(_preview_shell)
 	assert_true(_preview_shell.open_from(session))
 	assert_true(_preview_shell.try_start_play(1, PLAY_RADIUS, PLAY_RADIUS))
-	assert_true(_preview_shell.try_advance_play())
+	_settle_preview_play(_preview_shell)
 	assert_true(_preview_shell.try_sample_play_move(false, false, false, true))
 	assert_eq(_preview_shell.map.player_anim_state(), PlayAnimState.RUN)
 	assert_false(_preview_shell.try_sample_play_move(false, false, false, false))
@@ -324,6 +333,23 @@ func _assert_spawn_jump_moves_up(preview: AuthoringPreview) -> void:
 	assert_eq(preview.play_world.tick_index, 0)
 	assert_true(preview.play_solid_count() >= 8)
 	assert_false(preview.allows_settlement())
+
+
+func _settle_preview_play(shell: AuthoringPreviewShell) -> void:
+	var last_y: int = 2147483647
+	var hops: int = 0
+	while hops < 48:
+		assert_true(shell.try_advance_play())
+		var pose: Dictionary = shell.preview.play_world.get_pose(shell.preview.player_id)
+		var pose_y: int = pose.get("y", 0)
+		var vy: int = shell.preview.play_world.get_vy(shell.preview.player_id)
+		if vy == 0 and pose_y == last_y:
+			if shell.map.player_anim_state() == PlayAnimState.LAND:
+				shell._apply_play_anim()
+			return
+		last_y = pose_y
+		hops += 1
+	assert_eq(shell.preview.play_world.get_vy(shell.preview.player_id), 0)
 
 
 func _grounded_preview() -> AuthoringPreview:

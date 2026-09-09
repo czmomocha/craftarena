@@ -3,8 +3,8 @@ extends RefCounted
 
 ## 动作数值的单一配置源。
 ##
-## 跳跃 / 重力已由 F 线 FD 接到产品桩（D-F2 / D-F3）：`JUMP_DY = SCALE*5/4`，
-## `FALL_DY = -JUMP_DY`。爆破伤害与推击力度仍未拍板（[CD-63](Confirmed-docs/60-plan/63-open-decisions.md) §1）。
+## 跳跃 / 重力：峰值仍够上一格台阶；冲量与加速度分开，弧线约 8 拍到顶
+## （不再一拍瞬移 1.25 格）。爆破伤害与推击力度仍未拍板（[CD-63](Confirmed-docs/60-plan/63-open-decisions.md) §1）。
 ## 例外：`RESPAWN_STUN_MS` 已由纠偏 D5 定为 1.0 s；
 ## 换算用的 `PHYSICS_TICKS_PER_SECOND_PLACEHOLDER` 仍是当前引擎 physics，不是
 ## [CD-43](Confirmed-docs/40-technical/43-networking-and-replay.md) 产品 Tick。
@@ -24,13 +24,14 @@ extends RefCounted
 const OutOfRangeReset := preload("res://src/games/traprush/out_of_range_reset.gd")
 const TraprushMatchSession := preload("res://src/games/traprush/match_session.gd")
 
-## 一格 hop 的竖直冲量。D-F2：SCALE*5/4，下一拍到顶，峰值 1.25 格。
+## 起跳冲量（本拍位移 + 初速）。四分之一格，后面各拍继续上升，不再一拍到顶。
 ## apply_jump 把本拍位移和 vy 都写成这个值，后续各拍由重力加速度拉回。
-const JUMP_DY: int = Fixed.SCALE * 5 / 4
+const JUMP_DY: int = Fixed.SCALE / 4
 ## 向下探测立足固体，与灰盒同向。
 const SUPPORT_DY: int = -Fixed.SCALE
-## D-F2 / D-F3：与跳跃冲量等量反向。下一拍到顶，峰值 1.25 格。
-const FALL_DY: int = -JUMP_DY
+## 竖直加速度。|FALL_DY| * 8 = JUMP_DY ⇒ 约 8 拍到顶、17 拍落地（60 Hz ≈ 0.28 s）。
+## 离散峰值约 1.125 格，仍够上一格台阶。
+const FALL_DY: int = -Fixed.SCALE / 32
 ## Preview Advance 与对局同一加速度，不再用 -SCALE 特判。
 const PREVIEW_FALL_DY: int = FALL_DY
 
@@ -53,7 +54,7 @@ const HAZARD_KNOCKBACK_STEP: int = Fixed.SCALE / 4
 ## 仍会被带着往前一倍步长——**走不回去**，只能绕开或从旁边跳上去。
 ## 占位桩，不是产品速度（CD-63 §1.3 仍延期）。
 const CONVEYOR_STEP: int = Fixed.SCALE / 8
-## 弹射垫竖直冲量：跳跃的两倍，峰值约 3.75 格，够落到高两格的落点。
+## 弹射垫竖直冲量：跳跃冲量的两倍。同一套加速度下峰值约 4 格，够落到高两格的落点。
 ## 水平送出一整格，落点可读。占位桩，不是产品弹射表。
 const LAUNCH_DY: int = JUMP_DY * 2
 const LAUNCH_XZ: int = Fixed.SCALE

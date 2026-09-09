@@ -29,7 +29,6 @@ extends Node3D
 ## 名次标签、朝向标记与预测 overlay 读的还是同一个节点位姿。视觉解析失败就是
 ## 今天的行为，一个 1 米盒。视觉从不参与裁决，权威胶囊仍是
 ## PlaceholderSpec.CHARACTER_RADIUS / HEIGHT。
-##
 ## apply_players 复用席位节点，只有席位数变化才增删（见 `_sync_players`）。
 ## 这不是优化偏好，是每帧预算：全清全建会每帧重新 instantiate 角色 `.glb`。
 ##
@@ -63,9 +62,9 @@ const REMOTE_ALBEDO: Color = PlaceholderSpec.REMOTE_ALBEDO
 var follow_slot: int = -1
 var camera_distance: float = PlaceholderSpec.CAMERA_DISTANCE
 var camera_pan: Vector3 = Vector3.ZERO
-## 跳变滑行状态机（可玩性深化，轨 1）。常态跟随不经过它做平滑，只有传送 /
-## 复位那种一帧大位移才会开一段滑行，见 `CameraFollowTransition` 文件头。
+## 跳变滑行见 CameraFollowTransition。follow_grounded：空中冻高度，同层 hop 不抬镜头。
 var follow_transition: CameraFollowTransition = CameraFollowTransition.new()
+var follow_grounded: bool = true
 ## 空字符串或解析失败 ⇒ 回退占位盒。是变量而不是常量，好让测试两条分支都能跑。
 var character_scene_path: String = SharedVisualAssetCatalog.CHARACTER_SCENE_PATH
 var _player_count: int = 0

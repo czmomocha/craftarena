@@ -10,8 +10,9 @@ extends RefCounted
 ##
 ## **只有跳变才触发。** 常态跟随仍是逐帧对齐，没有引入任何跟随延迟——给普通
 ## 移动加平滑会改掉全部操作手感，那不在本刀范围。判据是一次 `track` 里锚点位移
-## 超过 `PlaceholderSpec.CAMERA_TELEPORT_SNAP_M`；一帧的走 / 跳 / 冲刺 / 下落
-## 都远小于它（最大的一步是冲刺 1 格 = 1 米）。
+## 超过 `PlaceholderSpec.CAMERA_TELEPORT_SNAP_M`；一帧的走 / 冲刺都远小于它
+## （最大的一步是冲刺 1 格 = 1 米）。同层 hop 走 `track_pose`：空中冻结 Y，
+## 不把跳跃高度当成跟随目标。
 ##
 ## 纯逻辑：不持有 Node，不读 SceneTree，也不自己取时间。`advance(delta)` 由壳
 ## 每帧喂一次，`track(target)` 在采样出本席表现位姿之后调。权威位姿仍在快照里，
@@ -24,6 +25,8 @@ extends RefCounted
 var anchor: Vector3 = Vector3.ZERO
 ## 正在滑行。滑行期间 `anchor` 在 `_from` 与 `_to` 之间，不等于本席位置。
 var active: bool = false
+## 上次接地时的跟随高度。空中冻结，换层落地或乘电梯（仍接地）才改。
+var _held_y: float = 0.0
 
 var _has_anchor: bool = false
 var _from: Vector3 = Vector3.ZERO
@@ -61,6 +64,7 @@ func reset() -> void:
 	anchor = Vector3.ZERO
 	active = false
 	_has_anchor = false
+	_held_y = 0.0
 	_from = Vector3.ZERO
 	_to = Vector3.ZERO
 	_elapsed = 0.0
@@ -71,9 +75,20 @@ func snap_to(target: Vector3) -> void:
 	anchor = target
 	_has_anchor = true
 	active = false
+	_held_y = target.y
 	_from = target
 	_to = target
 	_elapsed = 0.0
+
+
+## 跟随本席，但空中不把镜头抬到跳跃高度。接地（含乘电梯）才更新 `_held_y`。
+## XZ 仍逐帧对齐。同层 hop 因此不会整屏跟着抖。
+func track_pose(target: Vector3, grounded: bool) -> bool:
+	if not _has_anchor:
+		return track(target)
+	if grounded:
+		_held_y = target.y
+	return track(Vector3(target.x, _held_y, target.z))
 
 
 ## 认下这一帧的本席位姿。返回 true 只在**本次调用刚开启一段滑行**时——
