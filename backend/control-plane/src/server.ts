@@ -32,6 +32,7 @@ import {
 	viewQueue,
 } from "./server_matchmaking.ts";
 import { registerContentRoutes } from "./server_content.ts";
+import { registerPlazaRoutes } from "./server_plaza.ts";
 import { registerSessionRoutes } from "./server_sessions.ts";
 
 export interface BuildServerOptions {
@@ -127,6 +128,7 @@ export function buildServer(options: BuildServerOptions): FastifyInstance {
 
 	registerSessionRoutes(app, options, now, ticketTtlMs, runDrain);
 	registerContentRoutes(app, options);
+	registerPlazaRoutes(app, options);
 
 	app.post("/matchmaking/quick", async (request, reply) => {
 		const matchResult = readOfficialMatchBody(request.body);

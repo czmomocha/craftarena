@@ -113,6 +113,24 @@ func apply_course(path: String) -> void:
 		orders.apply_path(path)
 
 
+func apply_bundle(bundle: SimulationBundle) -> void:
+	course_path = ""
+	if course != null:
+		course.apply_bundle(bundle)
+	if crates != null:
+		crates.apply_bundle(bundle)
+	if hazards != null:
+		hazards.apply_bundle(bundle)
+	if pickups != null:
+		pickups.apply_bundle(bundle)
+	if solids != null:
+		solids.apply_bundle(bundle)
+	if links != null:
+		links.apply_bundle(bundle)
+	if orders != null:
+		orders.apply_bundle(bundle)
+
+
 func mapped_counts() -> Dictionary:
 	var counts: Dictionary = {
 		"players": 0,

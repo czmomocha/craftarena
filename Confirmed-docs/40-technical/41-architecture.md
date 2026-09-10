@@ -17,7 +17,7 @@
 | D4 数值落点 | `game/src/shared/placeholder_spec.gd`（唯一配置源） |
 | 资产目录 | `game/content/assets/`、`game/content/locale/` |
 | E9 | 生产路径全量 < 400 行（`game/src/**/*.gd` + `backend` 非测试 `*.ts`，C5 第 17 章门禁）。测试 / addons / GUT 不在本口径 |
-| 仍待 | OpenAPI、Rule VM 图 JSON、BASTION 面板、内容广场、账号页 |
+| 仍待 | OpenAPI、Rule VM 图 JSON、BASTION 面板、账号页 |
 
 ## 1. 共享底座构成
 

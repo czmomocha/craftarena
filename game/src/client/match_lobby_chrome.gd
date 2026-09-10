@@ -21,6 +21,7 @@ const SOLO_NAME: String = "SoloPlay"
 const POLL_NAME: String = "Poll"
 const SPRINT_NAME: String = "Sprint"
 const CREATOR_NAME: String = "CreateCourse"
+const PLAZA_NAME: String = "ContentPlaza"
 const ROOM_NAME: String = "RoomCode"
 const COURSE_ID_NAME: String = "CourseId"
 const SEATS_NAME: String = "Seats"
@@ -101,6 +102,7 @@ func attach(parent: Node, handlers: Dictionary) -> Window:
 	# 「创作课程」与「单人试玩」并排，不藏进二级菜单：拿到链接的人要能在同一屏
 	# 上看见「能玩」和「能做」两件事，那正是 Web 轻量 Edit 要补的那个洞。
 	_add_button(row, CREATOR_NAME, UiCopy.CREATE_COURSE, _handler(handlers, "creator"))
+	_add_button(row, PLAZA_NAME, UiCopy.PLAZA, _handler(handlers, "plaza"))
 	var server_row: HBoxContainer = HBoxContainer.new()
 	server_row.name = "ServerActions"
 	root.add_child(server_row)

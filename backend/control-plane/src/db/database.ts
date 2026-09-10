@@ -28,6 +28,13 @@ import {
 	type ContentPatchRecord,
 	type ContentVersionRecord,
 } from "./database_content.ts";
+import {
+	ControlPlanePlazaStore,
+	PlazaPlayExistsError,
+	PlazaRatingExistsError,
+	type PlazaListingRecord,
+} from "./database_plaza.ts";
+import type { PlazaTab } from "../../../contracts/src/content_plaza.ts";
 import { ControlPlaneQueueStore } from "./database_queue.ts";
 import { ControlPlaneSessionStore } from "./database_sessions.ts";
 import { ControlPlaneTicketStore } from "./database_tickets.ts";
@@ -38,11 +45,13 @@ export {
 	ContentVersionExistsError,
 	ContentVersionMissingError,
 	ContentVersionNotNextError,
+	PlazaPlayExistsError,
+	PlazaRatingExistsError,
 	type ContentPatchRecord,
 	type ContentVersionRecord,
+	type PlazaListingRecord,
 };
 
-/** 运维 `POST /match-sessions` 省略 seats 时的列默认。不是匹配 HTTP 默认人数。 */
 export const DEFAULT_MATCH_SEATS = 8;
 export { MIN_MATCH_SEATS, MAX_MATCH_SEATS };
 export const isValidSeatCount = isValidMatchSeats;
@@ -74,45 +83,22 @@ export type ReconnectTicketResult =
 export { RECONNECT_TICKET_ERRORS };
 
 export class MatchSessionExistsError extends Error {
-	constructor(matchId: string) {
-		super(`match session already exists: ${matchId}`);
-		this.name = "MatchSessionExistsError";
-	}
+	constructor(matchId: string) { super(`match session already exists: ${matchId}`); this.name = "MatchSessionExistsError"; }
 }
-
 export class MatchSessionNotFoundError extends Error {
-	constructor(matchId: string) {
-		super(`match session not found: ${matchId}`);
-		this.name = "MatchSessionNotFoundError";
-	}
+	constructor(matchId: string) { super(`match session not found: ${matchId}`); this.name = "MatchSessionNotFoundError"; }
 }
-
 export class MatchSessionFullError extends Error {
-	constructor(matchId: string) {
-		super(`match session is full: ${matchId}`);
-		this.name = "MatchSessionFullError";
-	}
+	constructor(matchId: string) { super(`match session is full: ${matchId}`); this.name = "MatchSessionFullError"; }
 }
-
 export class RoomCodeConflictError extends Error {
-	constructor(roomCode: string) {
-		super(`room code already exists: ${roomCode}`);
-		this.name = "RoomCodeConflictError";
-	}
+	constructor(roomCode: string) { super(`room code already exists: ${roomCode}`); this.name = "RoomCodeConflictError"; }
 }
-
 export class MatchQueueNotWaitingError extends Error {
-	constructor(tokenHash: string) {
-		super(`match queue entry is not waiting: ${tokenHash}`);
-		this.name = "MatchQueueNotWaitingError";
-	}
+	constructor(tokenHash: string) { super(`match queue entry is not waiting: ${tokenHash}`); this.name = "MatchQueueNotWaitingError"; }
 }
-
 export class MatchSettlementExistsError extends Error {
-	constructor(matchId: string) {
-		super(`match settlement already exists: ${matchId}`);
-		this.name = "MatchSettlementExistsError";
-	}
+	constructor(matchId: string) { super(`match settlement already exists: ${matchId}`); this.name = "MatchSettlementExistsError"; }
 }
 
 export interface MatchSettlementRecord {
@@ -150,19 +136,14 @@ export interface EnqueuedMatch {
 
 export type CancelQueueResult = "cancelled" | "ready" | "missing";
 
-/**
- * 控制面对 SQLite 的唯一入口。
- *
- * 宪法第二十一条：一期只有 Fastify 控制面可以直接读写数据库。网关、MatchHost 和
- * Godot MatchServer 必须走控制面 API。因此这个模块**只允许** control-plane 内部导入，
- * 不要把它提到 contracts 或任何共享位置——那样等于把边界让出去。
- */
+/** SQLite 唯一入口（宪法第二十一条）。只允许 control-plane 内部导入。 */
 export class ControlPlaneDatabase {
 	readonly #db: DatabaseSync;
 	readonly #sessions: ControlPlaneSessionStore;
 	readonly #tickets: ControlPlaneTicketStore;
 	readonly #queue: ControlPlaneQueueStore;
 	readonly #content: ControlPlaneContentStore;
+	readonly #plaza: ControlPlanePlazaStore;
 
 	constructor(databasePath: string) {
 		if (databasePath !== ":memory:") {
@@ -174,12 +155,11 @@ export class ControlPlaneDatabase {
 		this.#tickets = new ControlPlaneTicketStore(this.#db, this.#sessions);
 		this.#queue = new ControlPlaneQueueStore(this.#db, this.#sessions, this.#tickets);
 		this.#content = new ControlPlaneContentStore(this.#db);
-		// 崩溃后仍能保持一致性，且并发读不被写阻塞。
+		this.#plaza = new ControlPlanePlazaStore(this.#db);
 		this.#db.exec("PRAGMA journal_mode = WAL");
 		this.#db.exec("PRAGMA foreign_keys = ON");
 	}
 
-	/** 按顺序执行尚未应用的迁移。可重复调用，已应用的会跳过。 */
 	migrate(): readonly string[] {
 		this.#db.exec(SCHEMA_MIGRATIONS_TABLE);
 
@@ -200,8 +180,6 @@ export class ControlPlaneDatabase {
 				continue;
 			}
 
-			// 一个迁移内的所有语句要么全成功要么全回滚，否则会留下半应用的 schema
-			// 却没有记录，下次启动无法自动修复。
 			this.#db.exec("BEGIN");
 			try {
 				for (const statement of migration.statements) {
@@ -220,10 +198,6 @@ export class ControlPlaneDatabase {
 		return newlyApplied;
 	}
 
-	/**
-	 * 做一次真实的写—读往返。只 open 数据库不足以证明它可用：
-	 * 磁盘满、文件只读、WAL 目录不可写这些情况都要等到真正写入才暴露。
-	 */
 	probeReadWrite(now: Date): boolean {
 		const stamp = now.toISOString();
 		this.#db
@@ -236,7 +210,6 @@ export class ControlPlaneDatabase {
 
 		return row !== undefined && String(row["last_checked_at"]) === stamp;
 	}
-
 
 	insertMatchSession(input: {
 		readonly matchId?: string | undefined;
@@ -364,6 +337,7 @@ export class ControlPlaneDatabase {
 		return this.#content.getVersion(contentId, version);
 	}
 
+
 	publishContentPatch(input: {
 		readonly contentId: string;
 		readonly baseVersion: number;
@@ -384,6 +358,16 @@ export class ControlPlaneDatabase {
 	rollbackContentLatest(contentId: string, targetVersion: number): ContentVersionRecord {
 		return this.#content.rollbackLatest(contentId, targetVersion);
 	}
+
+	listPlaza(tab: PlazaTab): readonly PlazaListingRecord[] { return this.#plaza.list(tab); }
+	getPlazaListing(contentId: string): PlazaListingRecord | undefined { return this.#plaza.get(contentId); }
+	recordPlazaPlay(contentId: string, matchId: string, now: Date): PlazaListingRecord {
+		return this.#plaza.recordPlay(contentId, matchId, now);
+	}
+	ratePlaza(input: {
+		readonly contentId: string; readonly rater: string; readonly stars: number;
+		readonly tags: readonly string[]; readonly now: Date;
+	}): PlazaListingRecord { return this.#plaza.rate(input); }
 
 	close(): void {
 		this.#db.close();

@@ -60,6 +60,7 @@ var orders: MatchCheckpointOrderMap = null
 var standings: MatchStandingMap = null
 var frame_rate: FrameRateMeter = null
 var creator: CreatorEntry = null
+var plaza: ContentPlazaEntry = null
 var window: Window = null
 var live_io: bool = false
 var web_platform: bool = false
@@ -77,7 +78,6 @@ var play_input: PlayInput = PlayInput.new()
 var split_tracker: PlaySplitTrackerGd = PlaySplitTrackerGd.new()
 func _init() -> void:
 	director.bind(self)
-
 
 static func create() -> MatchLobbyShell:
 	var shell := new()
@@ -159,12 +159,17 @@ func try_poll() -> bool:
 	return director.try_poll()
 func try_solo() -> bool:
 	return director.try_solo()
-## Web 轻量 Edit 入口。懒建，因为绝大多数会话只游玩不创作。见 CreatorEntry 文件头。
 func try_open_creator() -> bool:
 	creator = CreatorEntry.ensure(self, creator)
 	return creator != null and creator.try_open()
 func try_close_creator() -> bool:
 	return creator != null and creator.try_close()
+func try_open_plaza() -> bool:
+	return director.try_open_plaza()
+func try_close_plaza() -> bool:
+	return director.try_close_plaza()
+func try_solo_plaza(content_id: String = "") -> bool:
+	return director.try_solo_plaza(content_id)
 func try_stop_offline() -> bool:
 	return director.try_stop_offline()
 func try_cancel() -> bool:
@@ -252,7 +257,6 @@ func try_camera_pan(relative: Vector2) -> bool:
 func refresh_status() -> void:
 	_refresh_status()
 
-
 func _refresh_status() -> void:
 	var view: Dictionary = status_view()
 	var play_state: String = ""
@@ -263,7 +267,6 @@ func _refresh_status() -> void:
 	)
 	chrome.set_status_text(MatchLobbyHudGd.format_line(view))
 	chrome.sync_play_hud(view)
-
 
 func _local_settlement_board() -> Dictionary:
 	if not offline_playing() or offline == null:
@@ -351,6 +354,7 @@ func _ensure_window() -> void:
 		"join": try_join_room,
 		"solo": try_solo,
 		"creator": try_open_creator,
+		"plaza": try_open_plaza,
 		"cancel": try_cancel,
 		"poll": try_poll,
 		"sprint": _on_sprint,

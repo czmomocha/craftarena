@@ -1,6 +1,7 @@
 import type { DatabaseSync } from "node:sqlite";
 
 import type { ContentPatchOp } from "../../../contracts/src/content_patch.ts";
+import { syncPlazaLatest, upsertPlazaListing } from "./database_plaza.ts";
 import { isUniqueConstraint } from "./database_rows.ts";
 
 export interface ContentVersionRecord {
@@ -113,6 +114,13 @@ export class ControlPlaneContentStore {
 					ON CONFLICT(content_id) DO UPDATE SET version = excluded.version`,
 				)
 				.run(input.contentId, input.version);
+			upsertPlazaListing(this.db, {
+				contentId: input.contentId,
+				version: input.version,
+				contentHash: input.contentHash,
+				bundle: input.bundle,
+				listedAt: createdAt,
+			});
 			this.db.exec("COMMIT");
 		} catch (error) {
 			this.db.exec("ROLLBACK");
@@ -249,6 +257,12 @@ export class ControlPlaneContentStore {
 			this.db
 				.prepare("UPDATE content_latest SET version = ? WHERE content_id = ?")
 				.run(targetVersion, contentId);
+			syncPlazaLatest(this.db, {
+				contentId,
+				version: target.version,
+				contentHash: target.contentHash,
+				bundle: target.bundle,
+			});
 			this.db.exec("COMMIT");
 			return target;
 		} catch (error) {

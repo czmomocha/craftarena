@@ -73,6 +73,26 @@ func try_begin(path: String, _web_platform: bool = false) -> bool:
 	if bundle == null:
 		last_error = "missing_course"
 		return false
+	if not _attach(bundle):
+		return false
+	course_path = path
+	return true
+
+
+func try_begin_bundle(bundle: SimulationBundle) -> bool:
+	if state == STATE_PLAYING:
+		last_error = "busy"
+		return false
+	if bundle == null:
+		last_error = "missing_course"
+		return false
+	if not _attach(bundle):
+		return false
+	course_path = ""
+	return true
+
+
+func _attach(bundle: SimulationBundle) -> bool:
 	var offsets: Array[Dictionary] = [{"dx": 0, "dy": 0, "dz": 0}]
 	var created: TraprushMatchSessionGd = TraprushMatchSessionGd.create(
 		bundle,
@@ -106,7 +126,6 @@ func try_begin(path: String, _web_platform: bool = false) -> bool:
 	session = created
 	follow = MatchSnapshotFollowGd.new()
 	last_command = PackedByteArray()
-	course_path = path
 	state = STATE_PLAYING
 	last_error = ""
 	return _publish()

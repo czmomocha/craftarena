@@ -160,4 +160,38 @@ export const MIGRATIONS: readonly Migration[] = [
 			) STRICT`,
 		],
 	},
+	{
+		id: "0011_content_plaza",
+		statements: [
+			`CREATE TABLE content_plaza (
+				content_id TEXT PRIMARY KEY,
+				version INTEGER NOT NULL,
+				content_hash TEXT NOT NULL,
+				display_name TEXT NOT NULL,
+				tags_json TEXT NOT NULL,
+				play_count INTEGER NOT NULL DEFAULT 0,
+				rating_sum INTEGER NOT NULL DEFAULT 0,
+				rating_count INTEGER NOT NULL DEFAULT 0,
+				verified INTEGER NOT NULL DEFAULT 0 CHECK (verified IN (0, 1)),
+				listed_at TEXT NOT NULL,
+				FOREIGN KEY (content_id, version) REFERENCES content_versions (content_id, version)
+			) STRICT`,
+			`CREATE TABLE content_plaza_plays (
+				content_id TEXT NOT NULL,
+				match_id TEXT NOT NULL,
+				created_at TEXT NOT NULL,
+				PRIMARY KEY (content_id, match_id),
+				FOREIGN KEY (content_id) REFERENCES content_plaza (content_id)
+			) STRICT`,
+			`CREATE TABLE content_plaza_ratings (
+				content_id TEXT NOT NULL,
+				rater TEXT NOT NULL,
+				stars INTEGER NOT NULL CHECK (stars >= 1 AND stars <= 5),
+				tags_json TEXT NOT NULL,
+				created_at TEXT NOT NULL,
+				PRIMARY KEY (content_id, rater),
+				FOREIGN KEY (content_id) REFERENCES content_plaza (content_id)
+			) STRICT`,
+		],
+	},
 ];

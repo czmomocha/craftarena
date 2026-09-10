@@ -103,6 +103,60 @@ func try_solo() -> bool:
 	return true
 
 
+func try_open_plaza() -> bool:
+	host.chrome.release_focus()
+	host.plaza = ContentPlazaEntry.ensure(host, host.plaza)
+	if host.plaza == null:
+		return false
+	host.plaza.on_solo = try_solo_plaza
+	return host.plaza.try_open()
+
+
+func try_close_plaza() -> bool:
+	if host.plaza == null:
+		return false
+	return host.plaza.try_close()
+
+
+func try_solo_plaza(content_id: String = "") -> bool:
+	host.chrome.release_focus()
+	if host.plaza == null or host.offline == null:
+		return false
+	if host.online_busy():
+		host.offline.last_error = "online_busy"
+		host.refresh_status()
+		return false
+	var id: String = content_id
+	if id == "":
+		id = host.plaza.selected_content_id()
+	var bundle: SimulationBundle = host.plaza.bundle_of(id)
+	if id == "" or bundle == null:
+		host.offline.last_error = "unknown_course"
+		host.refresh_status()
+		return false
+	if host.offline_playing() and not try_stop_offline():
+		return false
+	if host.join != null and (
+		host.join.state == MatchJoinSessionGd.STATE_IDLE
+		or host.join.state == MatchJoinSessionGd.STATE_FAILED
+	):
+		host.join.error = ""
+		if host.join.state == MatchJoinSessionGd.STATE_FAILED:
+			host.join.state = MatchJoinSessionGd.STATE_IDLE
+	host.offline.apply_play_stubs()
+	host.stage.reset_interp()
+	host.sampler.reset_motion()
+	host.play_anim.reset()
+	if not host.offline.try_begin_bundle(bundle):
+		host.refresh_status()
+		return false
+	host.stage.apply_bundle(bundle)
+	host.plaza.try_close()
+	host.apply_snapshot_map()
+	host.refresh_status()
+	return true
+
+
 func try_stop_offline() -> bool:
 	if host.offline == null or not host.offline_playing():
 		return false
@@ -112,6 +166,9 @@ func try_stop_offline() -> bool:
 	host.sampler.reset_motion()
 	host.play_anim.reset()
 	host.stage.clear_play_overlay()
+	var official: String = OfficialTraprushCoursesGd.document_path(host.selected_course_id())
+	if official != "":
+		host.apply_course_document(official)
 	host.refresh_status()
 	return true
 

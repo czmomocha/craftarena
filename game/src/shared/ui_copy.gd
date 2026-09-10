@@ -109,6 +109,15 @@ const AUTO_TICK: String = "craft_arena.ui.auto_tick"
 const HUD_BOMB: String = "craft_arena.ui.hud_bomb"
 const HUD_DASH: String = "craft_arena.ui.hud_dash"
 const HUD_FAILS: String = "craft_arena.ui.hud_fails"
+const PLAZA: String = "craft_arena.ui.plaza"
+const WINDOW_PLAZA: String = "craft_arena.ui.window_plaza"
+const PLAZA_NEWEST: String = "craft_arena.ui.plaza_newest"
+const PLAZA_RATING: String = "craft_arena.ui.plaza_rating"
+const PLAZA_PLAYS: String = "craft_arena.ui.plaza_plays"
+const PLAZA_VERIFIED: String = "craft_arena.ui.plaza_verified"
+const PLAZA_SOLO: String = "craft_arena.ui.plaza_solo"
+const PLAZA_UNVERIFIED: String = "craft_arena.ui.plaza_unverified"
+const PLAZA_EMPTY: String = "craft_arena.ui.plaza_empty"
 
 const ALL_KEYS: PackedStringArray = [
 	WINDOW_TRAPRUSH,
@@ -190,6 +199,15 @@ const ALL_KEYS: PackedStringArray = [
 	HUD_BOMB,
 	HUD_DASH,
 	HUD_FAILS,
+	PLAZA,
+	WINDOW_PLAZA,
+	PLAZA_NEWEST,
+	PLAZA_RATING,
+	PLAZA_PLAYS,
+	PLAZA_VERIFIED,
+	PLAZA_SOLO,
+	PLAZA_UNVERIFIED,
+	PLAZA_EMPTY,
 ]
 
 static var _loaded: bool = false

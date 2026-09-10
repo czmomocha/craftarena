@@ -221,6 +221,7 @@ AI 生成代码必须比普通手写代码有**更强的自动化证据**，因�
 - P0/P1 运行房补丁：签名失败 / P2 ops / 低报等级拒绝且不入队；P1 耐久在开局 latch 的下一 `commit_tick` 生效且 ContentHash 不变；站在已验收垫上不重新 latch；另一 base 的房间不收补丁；新房 spawn 重放已存 PatchHash 序列；
 - latest 回滚：`POST /content/:id/rollback` 切回已签名旧版本，旧 version 仍可读；回滚后下一发布号为已存 max+1；`already_latest` 409；
 - 进程内技术回滚：`note_fault` 立刻把上一补丁的值写回并追加反向 PatchHash；结算 Godot payload 带 `content_hash` / `patch_hashes`，控制面结算 HTTP 不改；
+- 内容广场：发布后 `GET /content/plaza` 列出；四 tab；词库名与占用袋标签；未验证不进 verified；`POST /content/:id/plays` 后 verified；自由文本标签 400；Godot `ContentPlaza` 与契约同名；大厅广场窗四 tab + 空列表可关回大厅；Solo 走已签名 bundle，不走官方 AuthoringDocument 路径；匹配 HTTP 仍只官方课；
 - 发布中途进程退出；
 - 被下架内容不能创建新房；
 - 已开始对局仍能按锁定版本完成。
@@ -352,7 +353,7 @@ AI 生成代码必须比普通手写代码有**更强的自动化证据**，因�
 |---|---|---|
 | 依赖与许可证变化检查 | 未实现 | 无自动化 diff。引入依赖必须人类批准；许可证不进 CI |
 | Windows/Android 导出烟测 | 人工已跑（E1，不在 CI） | C1 有 Windows / Linux Headless / Web 导出预设与[包内核查清单](../../docs/runbooks/desktop-export-check.md)。2026-09-02 Windows `--package-check` `ok=true`。Android 导出按 [CD-61](../60-plan/61-milestones.md) 排到一期收尾；不把导出放进 CI（宪法第二十四条） |
-| 内容发布和回滚演练 | 部分 | M4b 第 1–2 章已交哈希/HMAC、`latest` 原子切换与新房/旧房并存；无回滚演练 |
+| 内容发布和回滚演练 | 部分 | M4b 第 1–4 章已交哈希/HMAC、`latest` 原子切换、新房/旧房并存、P0/P1 回滚与广场列表；账号仍待 |
 
 ### 4.4 发布候选
 

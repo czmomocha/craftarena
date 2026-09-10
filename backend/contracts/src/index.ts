@@ -77,4 +77,24 @@ export {
 	type ContentPatchView,
 	type ContentRollbackRequest,
 } from "./content_patch.ts";
+export {
+	CONTENT_PLAZA_ERRORS,
+	DEFAULT_PLAZA_TAB,
+	PLAZA_TABS,
+	plazaDisplayName,
+	plazaPlayBodySchema,
+	plazaRatingBodySchema,
+	plazaTagsFromBundle,
+	readPlazaTags,
+	isPlazaMatchId,
+	isPlazaRater,
+	isPlazaStars,
+	isPlazaTab,
+	type ContentPlazaError,
+	type PlazaItemView,
+	type PlazaListView,
+	type PlazaPlayRequest,
+	type PlazaRatingRequest,
+	type PlazaTab,
+} from "./content_plaza.ts";
 

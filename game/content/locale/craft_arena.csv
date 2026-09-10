@@ -78,3 +78,12 @@ craft_arena.ui.auto_tick,Auto run,自动推进
 craft_arena.ui.hud_bomb,Bomb ×%d,爆破球 ×%d
 craft_arena.ui.hud_dash,Dash ×%d,冲刺 ×%d
 craft_arena.ui.hud_fails,Fails ×%d,失败 ×%d
+craft_arena.ui.plaza,Content plaza,内容广场
+craft_arena.ui.window_plaza,Content plaza,内容广场
+craft_arena.ui.plaza_newest,Newest,最新
+craft_arena.ui.plaza_rating,Rating,评分
+craft_arena.ui.plaza_plays,Plays,游玩次数
+craft_arena.ui.plaza_verified,Verified,已验证
+craft_arena.ui.plaza_solo,Solo play,单人试玩
+craft_arena.ui.plaza_unverified,(unverified),（未验证）
+craft_arena.ui.plaza_empty,No public courses yet,还没有公开课程

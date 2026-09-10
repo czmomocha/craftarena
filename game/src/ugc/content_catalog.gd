@@ -11,6 +11,7 @@ extends RefCounted
 const BundleGd := preload("res://src/ugc/simulation_bundle.gd")
 const PatchApplyGd := preload("res://src/games/traprush/match_session_patch.gd")
 const PatchGd := preload("res://src/ugc/content_patch.gd")
+const PlazaGd := preload("res://src/ugc/content_plaza.gd")
 const SignGd := preload("res://src/ugc/content_sign.gd")
 const SessionGd := preload("res://src/games/traprush/match_session.gd")
 
@@ -29,10 +30,12 @@ const REASON_SEQ_NOT_NEXT: String = "seq_not_next"
 const REASON_ALREADY_LATEST: String = "already_latest"
 const REASON_VERSION_MISSING: String = "version_missing"
 
+var plaza: PlazaGd = PlazaGd.new()
 var _versions: Dictionary = {}
 var _latest: Dictionary = {}
 var _patches: Dictionary = {}
 var _rooms: Array[Dictionary] = []
+var _listed_clock: int = 0
 
 
 func publish(envelope: Dictionary, bundle: BundleGd, key: PackedByteArray) -> Dictionary:
@@ -61,12 +64,15 @@ func publish(envelope: Dictionary, bundle: BundleGd, key: PackedByteArray) -> Di
 		KEY_BUNDLE: copy,
 	}
 	_latest[content_id] = version
+	var content_hash: String = str(checked.get(SignGd.KEY_CONTENT_HASH, ""))
+	_listed_clock += 1
+	plaza.index_listing(content_id, version, content_hash, copy, "%020d" % _listed_clock)
 	return {
 		KEY_OK: true,
 		KEY_REASON: SignGd.REASON_OK,
 		SignGd.KEY_CONTENT_ID: content_id,
 		SignGd.KEY_VERSION: version,
-		SignGd.KEY_CONTENT_HASH: str(checked.get(SignGd.KEY_CONTENT_HASH, "")),
+		SignGd.KEY_CONTENT_HASH: content_hash,
 	}
 
 
@@ -82,6 +88,14 @@ func rollback_latest(content_id: String, version: int) -> Dictionary:
 	if current == version:
 		return _fail(REASON_ALREADY_LATEST)
 	_latest[content_id] = version
+	var row: Dictionary = rows[version]
+	var envelope: Dictionary = row[KEY_ENVELOPE]
+	var stored_raw: Variant = row[KEY_BUNDLE]
+	if stored_raw is BundleGd:
+		var stored: BundleGd = stored_raw
+		plaza.sync_latest(
+			content_id, version, str(envelope.get(SignGd.KEY_CONTENT_HASH, "")), stored
+		)
 	return {
 		KEY_OK: true,
 		KEY_REASON: SignGd.REASON_OK,
