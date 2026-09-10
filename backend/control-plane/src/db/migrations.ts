@@ -142,4 +142,22 @@ export const MIGRATIONS: readonly Migration[] = [
 			) STRICT`,
 		],
 	},
+	{
+		id: "0010_content_patches_and_latest_rollback",
+		statements: [
+			// P0/P1 补丁按 (content_id, base_version) 递增 seq，不覆盖、不移动 latest。
+			`CREATE TABLE content_patches (
+				content_id TEXT NOT NULL,
+				base_version INTEGER NOT NULL,
+				seq INTEGER NOT NULL,
+				level TEXT NOT NULL CHECK (level IN ('p0', 'p1')),
+				patch_hash TEXT NOT NULL,
+				signature TEXT NOT NULL,
+				ops_json TEXT NOT NULL,
+				created_at TEXT NOT NULL,
+				PRIMARY KEY (content_id, base_version, seq),
+				FOREIGN KEY (content_id, base_version) REFERENCES content_versions (content_id, version)
+			) STRICT`,
+		],
+	},
 ];

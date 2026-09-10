@@ -159,6 +159,7 @@ func accept_command(slot: int, bytes: PackedByteArray) -> bool:
 func commit_tick() -> void:
 	if session == null:
 		return
+	session.live_patch.call("try_apply_pending", session)
 	var before_mark: String = _lease_state_mark()
 	session.apply_player_falls()
 	var applied_ok: bool = false

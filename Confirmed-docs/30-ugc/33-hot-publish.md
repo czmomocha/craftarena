@@ -14,7 +14,7 @@
 | 项 | 当前口径 |
 |---|---|
 | 等级定义 | P0–P4 见 §1。Bundle v2 因 `GameplayAsset` 已发生一次 P4 |
-| 运行时管线 | **第 1–2 章已交**：ContentHash + HMAC 信封；控制面 `POST /content/publish` 一事务写入版本并切 `latest`；Godot `ContentCatalog` 按 `latest` 开新房，已开对局锁开局哈希。无 P0/P1 运行房补丁、无进程内回滚、无广场、无账号。Preview P3 安全点重编译已交（sidecar，不入库）；公开对局拒绝规则补丁 |
+| 运行时管线 | **第 1–3 章已交**：ContentHash + HMAC 信封；控制面 `POST /content/publish` 一事务写入版本并切 `latest`；Godot `ContentCatalog` 按 `latest` 开新房，已开对局锁开局哈希。P0/P1 是 sidecar 补丁（不覆盖基础 ContentHash）；运行房全量下发，开局 latch 或检查点垫验收后生效；P2/P3 拒绝。进程内 `note_fault` 立刻追加反向 PatchHash。`latest` 可切回已签名旧版本，下一发布号 = 已存 max+1。无广场、无账号。Preview P3 安全点重编译已交（sidecar，不入库）；公开对局拒绝规则补丁 |
 | 代码热更新 | 禁止 |
 
 ## 1. 热修改等级
@@ -75,6 +75,12 @@
 一期没有运维监控和主动告警。P1 自动回滚只能依赖 MatchServer / MatchHost 的**本地硬阈值**，无法感知跨房间的全局崩溃率或断线率突增，也不能依赖外部仪表盘或告警系统。
 
 该限制属于已接受风险，见 [CD-62 风险登记册](../60-plan/62-risk-register.md)。
+
+### 3.2 第 3 章落点
+
+P0/P1 补丁是 sidecar，不覆盖基础 `ContentHash`。`PatchHash` 是 StateHasher 规范编码 **ops 数组** 的 SHA-256。HMAC-SHA256 覆盖 `content_id` + LF + `base_version` + LF + `seq` + LF + `patch_hash`。信封恰好七键：`schema_version` / `content_id` / `base_version` / `seq` / `level` / `patch_hash` / `signature`。ops 恰好四键 `bag` / `entity_id` / `field` / `value`。运行房白名单：P0 `visual.fx_revision`；P1 `destructibles.durability` 与 `hazards.cooldown_ticks`。分类后的 P2/P3 拒绝。全量下发给同一 `content_id` + 锁住 `base_version` 的运行房；开局 latch 或检查点垫验收（`note_pad_accepted`，仅 `completed_count` 真正增加时；站在已验收垫上每 tick `try_accept` 仍返回 true，不重新 latch）后 `commit_tick` 开头应用。技术故障 `note_fault` 立刻追加反向 PatchHash，不走发布 HTTP。`latest` 可切回已签名旧版本；下一发布版本 = 已存 max(version)+1。新房 spawn 时应用该 base 上已存 P0/P1 序列。结算 Godot payload 带 `content_hash` / `patch_hashes`；控制面结算 HTTP 不改。官方课仍不要求信封。一期 Tick 超预算用测试注入 `note_fault("tick_over_budget")`，不发明墙钟 Hz。
+
+HTTP：`POST /content/patch`、`GET /content/:id/patches?base_version=`、`POST /content/:id/rollback`。控制面校验信封 HMAC 与 ops 白名单等级，不重算 PatchHash。
 
 ## 4. 代码热更新禁区
 

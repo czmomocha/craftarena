@@ -43,3 +43,12 @@ func current_health() -> int:
 
 func max_health() -> int:
 	return _max_health
+
+
+func try_set_max_health(new_max: int) -> bool:
+	if new_max < 1:
+		return false
+	_max_health = new_max
+	if _current_health > 0:
+		_current_health = new_max
+	return true

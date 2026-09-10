@@ -35,6 +35,18 @@ export function signContentMessage(
 	return createHmac("sha256", key).update(`${contentId}\n${version}\n${contentHash}`).digest("hex");
 }
 
+export function signPatchMessage(
+	key: string,
+	contentId: string,
+	baseVersion: number,
+	seq: number,
+	patchHash: string,
+): string {
+	return createHmac("sha256", key)
+		.update(`${contentId}\n${baseVersion}\n${seq}\n${patchHash}`)
+		.digest("hex");
+}
+
 export function signaturesEqual(left: string, right: string): boolean {
 	if (left.length !== right.length) {
 		return false;
@@ -69,6 +81,45 @@ export function verifyContentEnvelope(
 		return "envelope_keys";
 	}
 	const expected = signContentMessage(key, input.content_id, input.version, input.content_hash);
+	if (!signaturesEqual(expected, input.signature)) {
+		return "signature_mismatch";
+	}
+	return "ok";
+}
+
+export function verifyPatchEnvelope(
+	input: {
+		readonly schema_version: number;
+		readonly content_id: string;
+		readonly base_version: number;
+		readonly seq: number;
+		readonly patch_hash: string;
+		readonly signature: string;
+	},
+	key: string,
+): "ok" | "envelope_keys" | "id_invalid" | "version_invalid" | "seq_invalid" | "signature_mismatch" {
+	if (input.schema_version !== CONTENT_PUBLISH_SCHEMA_VERSION) {
+		return "envelope_keys";
+	}
+	if (!isContentId(input.content_id)) {
+		return "id_invalid";
+	}
+	if (!isContentVersion(input.base_version)) {
+		return "version_invalid";
+	}
+	if (!Number.isInteger(input.seq) || input.seq < 1 || input.seq > CONTENT_VERSION_MAX) {
+		return "seq_invalid";
+	}
+	if (!isContentHex(input.patch_hash) || !isContentHex(input.signature)) {
+		return "envelope_keys";
+	}
+	const expected = signPatchMessage(
+		key,
+		input.content_id,
+		input.base_version,
+		input.seq,
+		input.patch_hash,
+	);
 	if (!signaturesEqual(expected, input.signature)) {
 		return "signature_mismatch";
 	}

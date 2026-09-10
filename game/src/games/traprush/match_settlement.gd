@@ -8,6 +8,7 @@ extends RefCounted
 ## Path-distance / pad-arrival-time ranking stay deferred.
 
 const TraprushMatchSession := preload("res://src/games/traprush/match_session.gd")
+const TraprushMatchPatchGd := preload("res://src/games/traprush/match_session_patch.gd")
 const TraprushStanding := preload("res://src/games/traprush/standing.gd")
 
 
@@ -68,10 +69,17 @@ static func try_build(session: TraprushMatchSession) -> Dictionary:
 		})
 	if rows.is_empty():
 		return {"ok": false}
+	var patch_hashes: Array = []
+	var overlay: TraprushMatchPatchGd = session.live_patch as TraprushMatchPatchGd
+	if overlay != null:
+		for hex: String in overlay.patch_hashes():
+			patch_hashes.append(hex)
 	return {
 		"ok": true,
 		"tick": session.tick_index(),
 		"state_hash": session.hash_state(),
+		"content_hash": session.content_hash,
+		"patch_hashes": patch_hashes,
 		"pad_total": session.checkpoint_count(),
 		"mvp_slot": mvp_slot,
 		"rows": rows,
@@ -84,6 +92,8 @@ static func to_heartbeat(built: Dictionary) -> Dictionary:
 	return {
 		"tick": built.get("tick", 0),
 		"state_hash": built.get("state_hash", ""),
+		"content_hash": built.get("content_hash", ""),
+		"patch_hashes": built.get("patch_hashes", []),
 		"pad_total": built.get("pad_total", 0),
 		"mvp_slot": built.get("mvp_slot", -1),
 		"rows": built.get("rows", []),

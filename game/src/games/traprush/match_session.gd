@@ -1,9 +1,7 @@
 class_name TraprushMatchSession
 extends RefCounted
 
-## TRAPRUSH 对局会话门面：一份编译拓扑装进共享权威 SimulationWorld，1~8 名玩家。
-## 协作者是 TraprushMatchBootstrap / Intents / Scan / View，使本文件低于 E9 400 行。
-## commit_tick 先积分再 world.tick；MatchRealtime 在积分与 tick 之间应用意图。占用扫描：垫→门→垫→终点。
+## TRAPRUSH 对局门面（Bootstrap/Intents/Scan/View/Patch）。commit 先积分再 tick；占用垫→门→垫→终点。
 
 const Gravity := preload("res://src/games/traprush/gravity.gd")
 const ConveyorCycle := preload("res://src/games/traprush/conveyor_cycle.gd")
@@ -55,6 +53,7 @@ var intents: TraprushMatchIntentsGd = TraprushMatchIntentsGd.new()
 var scan: TraprushMatchScanGd = TraprushMatchScanGd.new()
 var view: TraprushMatchViewGd = TraprushMatchViewGd.new()
 var rule_vm: RuleVmDispatchGd = RuleVmDispatchGd.new()
+var live_patch: RefCounted = null
 var content_hash: String = ""
 var _world: SimulationWorld = null
 var _graph: TraprushPortalGraph = null
@@ -257,6 +256,7 @@ func advance_sim_tick() -> void:
 
 
 func commit_tick() -> void:
+	live_patch.call("try_apply_pending", self)
 	apply_player_falls()
 	advance_sim_tick()
 

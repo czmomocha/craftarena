@@ -10,10 +10,10 @@ const LaunchCycleGd := preload("res://src/games/traprush/launch_cycle.gd")
 const GateCycleGd := preload("res://src/games/traprush/gate_cycle.gd")
 const HazardCycle := preload("res://src/games/traprush/hazard_cycle.gd")
 const MoverCycleGd := preload("res://src/games/traprush/mover_cycle.gd")
+const PatchApplyGd := preload("res://src/games/traprush/match_session_patch.gd")
 const TopologyLoader := preload("res://src/games/traprush/traprush_topology_loader.gd")
 const TraprushDestructible := preload("res://src/games/traprush/destructible.gd")
 const ContentSignGd := preload("res://src/ugc/content_sign.gd")
-
 
 static func try_create(
 	bundle: SimulationBundle,
@@ -42,6 +42,7 @@ static func try_create(
 	if spawn == null:
 		return null
 	var session: TraprushMatchSession = TraprushMatchSession.new()
+	session.live_patch = PatchApplyGd.new()
 	session._world = loaded["world"]
 	session._graph = loaded["graph"]
 	session._pad_ids = loaded["pad_ids"]
@@ -168,7 +169,6 @@ static func try_create(
 		return null
 	session.rule_vm.notify_match_started()
 	return session
-
 
 static func pickup_kinds_from_bundle(bundle: SimulationBundle) -> Dictionary:
 	var kinds: Dictionary = {}

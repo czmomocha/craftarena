@@ -2,6 +2,7 @@ import { mkdirSync } from "node:fs";
 import { dirname } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 
+import type { ContentPatchOp } from "../../../contracts/src/content_patch.ts";
 import type { MatchQueueKind } from "../../../contracts/src/match_room.ts";
 import {
 	DEFAULT_MATCHMAKING_SEATS,
@@ -19,15 +20,27 @@ import {
 import { MIGRATIONS, SCHEMA_MIGRATIONS_TABLE } from "./migrations.ts";
 import {
 	ControlPlaneContentStore,
+	ContentAlreadyLatestError,
+	ContentPatchSeqNotNextError,
 	ContentVersionExistsError,
+	ContentVersionMissingError,
 	ContentVersionNotNextError,
+	type ContentPatchRecord,
 	type ContentVersionRecord,
 } from "./database_content.ts";
 import { ControlPlaneQueueStore } from "./database_queue.ts";
 import { ControlPlaneSessionStore } from "./database_sessions.ts";
 import { ControlPlaneTicketStore } from "./database_tickets.ts";
 
-export { ContentVersionExistsError, ContentVersionNotNextError, type ContentVersionRecord };
+export {
+	ContentAlreadyLatestError,
+	ContentPatchSeqNotNextError,
+	ContentVersionExistsError,
+	ContentVersionMissingError,
+	ContentVersionNotNextError,
+	type ContentPatchRecord,
+	type ContentVersionRecord,
+};
 
 /** 运维 `POST /match-sessions` 省略 seats 时的列默认。不是匹配 HTTP 默认人数。 */
 export const DEFAULT_MATCH_SEATS = 8;
@@ -349,6 +362,27 @@ export class ControlPlaneDatabase {
 
 	getContentVersion(contentId: string, version: number): ContentVersionRecord | undefined {
 		return this.#content.getVersion(contentId, version);
+	}
+
+	publishContentPatch(input: {
+		readonly contentId: string;
+		readonly baseVersion: number;
+		readonly seq: number;
+		readonly level: "p0" | "p1";
+		readonly patchHash: string;
+		readonly signature: string;
+		readonly ops: readonly ContentPatchOp[];
+		readonly now: Date;
+	}): ContentPatchRecord {
+		return this.#content.publishPatch(input);
+	}
+
+	listContentPatches(contentId: string, baseVersion: number): readonly ContentPatchRecord[] {
+		return this.#content.listPatches(contentId, baseVersion);
+	}
+
+	rollbackContentLatest(contentId: string, targetVersion: number): ContentVersionRecord {
+		return this.#content.rollbackLatest(contentId, targetVersion);
 	}
 
 	close(): void {

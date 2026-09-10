@@ -48,6 +48,13 @@ func test_all_finished_builds_standing_payload() -> void:
 	assert_eq(tick, FINISH_STEPS)
 	assert_eq(hash_text, session.hash_state())
 	assert_false(hash_text.is_empty())
+	var content_hash: String = built.get("content_hash", "")
+	assert_eq(content_hash, session.content_hash)
+	assert_false(content_hash.is_empty())
+	var patch_raw: Variant = built.get("patch_hashes", null)
+	assert_eq(typeof(patch_raw), TYPE_ARRAY)
+	var patch_hashes: Array = patch_raw
+	assert_eq(patch_hashes.size(), 0)
 	var rows_raw: Variant = built.get("rows", [])
 	assert_eq(typeof(rows_raw), TYPE_ARRAY)
 	var rows: Array = rows_raw
@@ -114,6 +121,9 @@ func test_heartbeat_omits_settlement_until_all_finish() -> void:
 	assert_eq(mvp_slot, 0)
 	assert_eq(pad_total, 3)
 	assert_eq(state_hash, finished.hash_state())
+	assert_eq(str(wire.get("content_hash", "")), finished.content_hash)
+	var wire_patches_raw: Variant = wire.get("patch_hashes", null)
+	assert_eq(typeof(wire_patches_raw), TYPE_ARRAY)
 	var rows_raw: Variant = wire.get("rows", [])
 	assert_eq(typeof(rows_raw), TYPE_ARRAY)
 	var rows: Array = rows_raw

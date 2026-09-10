@@ -26,6 +26,7 @@ func accept_player_pads(session: TraprushMatchSession, player: Dictionary) -> vo
 		if typeof(box_raw) != TYPE_INT:
 			continue
 		var box_id: int = box_raw
+		var before: int = track.completed_count()
 		var ok: bool = PadAccept.try_accept_on_pad(
 			session._world,
 			capsule_id,
@@ -34,6 +35,8 @@ func accept_player_pads(session: TraprushMatchSession, player: Dictionary) -> vo
 			box_id
 		)
 		if ok:
+			if track.completed_count() > before:
+				session.live_patch.call("note_pad_accepted")
 			accept_player_finish(session, player)
 
 

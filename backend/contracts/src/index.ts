@@ -64,4 +64,17 @@ export {
 	type ContentPublishRequest,
 	type ContentVersionView,
 } from "./content_publish.ts";
+export {
+	CONTENT_PATCH_ERRORS,
+	CONTENT_PATCH_SCHEMA_VERSION,
+	classifyPatchOps,
+	contentPatchBodySchema,
+	contentRollbackBodySchema,
+	livePatchAllowed,
+	patchRank,
+	type ContentPatchError,
+	type ContentPatchRequest,
+	type ContentPatchView,
+	type ContentRollbackRequest,
+} from "./content_patch.ts";
 

@@ -218,8 +218,10 @@ AI 生成代码必须比普通手写代码有**更强的自动化证据**，因�
 - Preview 试玩：两张官方赛道能开玩且玩家占用最小 `order` 垫；空垫 / 缺 `transform` 拒绝；开玩进入 tick 后补丁拒绝，Stop 后可再补丁；`try_advance_play` 推进 tick 且不结算；Play 画出玩家表现桩，Stop 清掉；开玩期间编辑写入脱同步且不回滚编辑；开玩后 `MoveIntent` 改 XZ 且不推进 tick；WASD 按世界方向编码；未开玩 / 缺字段拒绝；窗口隐藏不采样键盘但仍接受直接意图；开玩占用第一垫即验收；走到同层次一垫验收下一 id；跳点 / 未重叠 / 未开玩拒绝；状态 `pads=n/m`；走进传送源点盒经 `try_land_exit` 单跳落地；`two_way` 落点门闩不往返弹跳；出口占用则等待且本帧不位移；传送不代验收检查点；状态 `floor=n`；官方赛道能走到上层检查点；全部垫完成后走进终点盒经 `try_cross` 记 `finish_tick`；缺垫或缺重叠拒绝；传送不代冲线；状态 `finish=n`（未冲线为 -1）；开玩后 `ResetToCheckpointIntent` 回到最近已验收检查点落点且不回退进度；未验收则回起点偏移；客户端坐标忽略；传送后门闩清掉；已冲线后重置仍保留 `finish_tick`；窗口可见时 Reset / R 上升沿采样，隐藏不采样；开玩后 `UseItemIntent` 在调用方 reach 姿态与固体箱盒相交时才扣耐久；零 reach / 零伤害 / 未开玩拒绝；摧毁后箱盒非固体且 MoveIntent 可穿过；客户端命中字段忽略；状态 `crates=n/m`；窗口可见时 Use item / `use_item` 上升沿采样，隐藏不采样；开玩后 `JumpIntent` 经接地检查（调用方 support 探测固体支撑）才按调用方 jump_dy 上移直到阻挡；未接地不位移仍回 ok；零 jump_dy 不位移；未开玩拒绝；客户端高度字段忽略；窗口可见时 Jump / `jump` 上升沿采样，隐藏不采样；Interact / Shove 仍拒绝；出界复位默认关闭，开启紧区间后两格 Move 弹回起点且不验收下一垫；壳打开 ±8 格桩；周期机关经 `TraprushHazardCycle` 在 `try_advance_play` 于 `world.tick()` 之后按 `cooldown_ticks` 切换固体，意图不切换；壳 **Advance tick** 先按 `play_fall_dy` 下落再 tick；不计数 N、不写硬直、不结算、不锁爆破表或跳跃数值或产品重力；
 - 内容签名信封：官方课 ContentHash 稳定且课间不同；HMAC-SHA256 对齐 RFC 4231 用例 1；sign/verify 正例；篡改 bundle / 错钥 / 改签名拒绝；多余键 / 非法 id / 版本 0 / 短密钥拒绝；对局 `create` 锁定同一哈希且不要求信封；不改 Bundle Schema / 匹配 HTTP；
 - 发布管线：HMAC 失败不入库；版本已存在 / 非下一号 409 且 latest 不动；`POST /content/publish` 后 GET latest 为新版本、GET 旧 version 仍可读；Godot 先发 v1 开房 A 再发 v2 开房 B，A 的 hash 仍是 v1；不改匹配 HTTP 课表；
+- P0/P1 运行房补丁：签名失败 / P2 ops / 低报等级拒绝且不入队；P1 耐久在开局 latch 的下一 `commit_tick` 生效且 ContentHash 不变；站在已验收垫上不重新 latch；另一 base 的房间不收补丁；新房 spawn 重放已存 PatchHash 序列；
+- latest 回滚：`POST /content/:id/rollback` 切回已签名旧版本，旧 version 仍可读；回滚后下一发布号为已存 max+1；`already_latest` 409；
+- 进程内技术回滚：`note_fault` 立刻把上一补丁的值写回并追加反向 PatchHash；结算 Godot payload 带 `content_hash` / `patch_hashes`，控制面结算 HTTP 不改；
 - 发布中途进程退出；
-- 一键回滚；
 - 被下架内容不能创建新房；
 - 已开始对局仍能按锁定版本完成。
 

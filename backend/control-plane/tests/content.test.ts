@@ -2,14 +2,15 @@ import assert from "node:assert/strict";
 import { createHmac } from "node:crypto";
 import { after, before, describe, test } from "node:test";
 
-import type { ContentVersionView } from "../../contracts/src/index.ts";
-import { CONTENT_SIGN_DEV_KEY, signContentMessage } from "../src/content_sign.ts";
+import type { ContentPatchView, ContentVersionView } from "../../contracts/src/index.ts";
+import { CONTENT_SIGN_DEV_KEY, signContentMessage, signPatchMessage } from "../src/content_sign.ts";
 import { loadConfig } from "../src/config.ts";
 import { ControlPlaneDatabase } from "../src/db/database.ts";
 import { buildServer } from "../src/server.ts";
 
 const HASH_V1 = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
 const HASH_V2 = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
+const HASH_PATCH = "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc";
 const CONTENT_ID = "ugc_pipe_01";
 
 describe("control plane content sign config", () => {
@@ -160,13 +161,117 @@ describe("control plane content store transaction", () => {
 						bundle: { note: "skip" },
 						now,
 					}),
-				/not the next latest/,
+				/not the next stored version/,
 			);
 			assert.equal(database.getContentLatest(CONTENT_ID)?.version, 1);
 			assert.equal(database.getContentVersion(CONTENT_ID, 3), undefined);
 		} finally {
 			database.close();
 		}
+	});
+});
+
+describe("control plane content patch and rollback", () => {
+	let database: ControlPlaneDatabase;
+	let now: Date;
+	let app: ReturnType<typeof buildServer>;
+
+	before(async () => {
+		database = new ControlPlaneDatabase(":memory:");
+		database.migrate();
+		now = new Date("2026-09-10T02:00:00.000Z");
+		app = buildServer({
+			database,
+			version: "1.2.3-test",
+			logger: false,
+			now: () => now,
+			contentSignKey: CONTENT_SIGN_DEV_KEY,
+		});
+		await app.ready();
+	});
+
+	after(async () => {
+		await app.close();
+		database.close();
+	});
+
+	test("stores a P0 patch without moving latest and rejects P2 ops", async () => {
+		const published = await publish(app, 1, HASH_V1, { schema_version: 2, note: "base" });
+		assert.equal(published.statusCode, 201);
+
+		const p0 = await patch(app, 1, 1, "p0", [
+			{ bag: "visual", entity_id: 0, field: "fx_revision", value: 2 },
+		]);
+		assert.equal(p0.statusCode, 201);
+		const body = p0.json<ContentPatchView>();
+		assert.equal(body.seq, 1);
+		assert.equal(body.level, "p0");
+		assert.equal(body.patch_hash, HASH_PATCH);
+
+		const listed = await app.inject({
+			method: "GET",
+			url: `/content/${CONTENT_ID}/patches?base_version=1`,
+		});
+		assert.equal(listed.statusCode, 200);
+		assert.equal(listed.json<{ patches: ContentPatchView[] }>().patches.length, 1);
+
+		const latest = await app.inject({ method: "GET", url: `/content/${CONTENT_ID}/latest` });
+		assert.equal(latest.json<ContentVersionView>().version, 1);
+
+		const skipped = await patch(app, 1, 3, "p0", [
+			{ bag: "visual", entity_id: 0, field: "fx_revision", value: 3 },
+		]);
+		assert.equal(skipped.statusCode, 409);
+		assert.deepEqual(skipped.json(), { error: "seq_not_next" });
+
+		const underreported = await patch(app, 1, 2, "p0", [
+			{ bag: "destructibles", entity_id: 40, field: "durability", value: 2 },
+		]);
+		assert.equal(underreported.statusCode, 400);
+		assert.deepEqual(underreported.json(), { error: "level_underreported" });
+
+		const forbidden = await patch(app, 1, 2, "p1", [
+			{ bag: "solids", entity_id: 80, field: "x", value: 1 },
+		]);
+		assert.equal(forbidden.statusCode, 400);
+		assert.deepEqual(forbidden.json(), { error: "level_forbidden" });
+	});
+
+	test("rolls latest back to v1 while v2 stays readable", async () => {
+		const second = await publish(app, 2, HASH_V2, { schema_version: 2, note: "v2" });
+		assert.equal(second.statusCode, 201);
+		const rolled = await app.inject({
+			method: "POST",
+			url: `/content/${CONTENT_ID}/rollback`,
+			payload: { schema_version: 1, target_version: 1 },
+		});
+		assert.equal(rolled.statusCode, 200);
+		assert.equal(rolled.json<ContentVersionView>().version, 1);
+		assert.equal(rolled.json<ContentVersionView>().content_hash, HASH_V1);
+
+		const latest = await app.inject({ method: "GET", url: `/content/${CONTENT_ID}/latest` });
+		assert.equal(latest.json<ContentVersionView>().version, 1);
+		const already = await app.inject({
+			method: "POST",
+			url: `/content/${CONTENT_ID}/rollback`,
+			payload: { schema_version: 1, target_version: 1 },
+		});
+		assert.equal(already.statusCode, 409);
+		assert.deepEqual(already.json(), { error: "already_latest" });
+		const old = await app.inject({ method: "GET", url: `/content/${CONTENT_ID}/versions/2` });
+		assert.equal(old.statusCode, 200);
+		assert.equal(old.json<ContentVersionView>().content_hash, HASH_V2);
+
+		const replayV2 = await publish(app, 2, HASH_V2, { schema_version: 2, note: "again" });
+		assert.equal(replayV2.statusCode, 409);
+		const third = await publish(
+			app,
+			3,
+			"dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+			{ schema_version: 2, note: "v3" },
+		);
+		assert.equal(third.statusCode, 201);
+		assert.equal(third.json<ContentVersionView>().version, 3);
 	});
 });
 
@@ -194,4 +299,27 @@ function hmac(contentId: string, version: number, contentHash: string): string {
 	return createHmac("sha256", CONTENT_SIGN_DEV_KEY)
 		.update(`${contentId}\n${version}\n${contentHash}`)
 		.digest("hex");
+}
+
+async function patch(
+	app: ReturnType<typeof buildServer>,
+	baseVersion: number,
+	seq: number,
+	level: "p0" | "p1",
+	ops: Array<{ bag: string; entity_id: number; field: string; value: number }>,
+) {
+	return app.inject({
+		method: "POST",
+		url: "/content/patch",
+		payload: {
+			schema_version: 1,
+			content_id: CONTENT_ID,
+			base_version: baseVersion,
+			seq,
+			level,
+			patch_hash: HASH_PATCH,
+			signature: signPatchMessage(CONTENT_SIGN_DEV_KEY, CONTENT_ID, baseVersion, seq, HASH_PATCH),
+			ops,
+		},
+	});
 }
