@@ -23,8 +23,8 @@ extends Node
 ##   生成；玩家包里给出来等于把内部工具当产品发。
 ##
 ## 草稿走 `user://`（Web 上是浏览器存储）。刷新页面丢掉半小时的摆放是外人放弃
-## 试用的最短路径，所以入口默认挂 `AuthoringDraftStore`。不上传、不签名——
-## 云端草稿与发布属 M4b。
+## 试用的最短路径，所以入口默认挂 `AuthoringDraftStore`。本地草稿仍不签名。
+## 云端最新草稿与账号认领见 M4b 第 5 章。
 
 const AuthoringDraftStoreGd := preload("res://src/creator/authoring_draft_store.gd")
 const AuthoringEditorShellGd := preload("res://src/creator/authoring_editor_shell.gd")

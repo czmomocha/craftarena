@@ -15,10 +15,10 @@
 |---|---|
 | 效力 | **本文件是现行口径**。人类 2026-09-02 接受草案 §8 后回写。批准记录见 [cd-61-rearrangement-draft.md](../../docs/plans/cd-61-rearrangement-draft.md) |
 | 已退出 | M0、M1、M2 |
-| 已收口插入 | 创作者可测；**F 线**（FA–FH + 可读性）；**可玩性深化**（第一至十八批；2026-09-09 人类验证第十八批后宣布收口）；**M4a**（第 1–5 章：Rule VM + Preview P3 安全边界） |
+| 已收口插入 | 创作者可测；**F 线**（FA–FH + 可读性）；**可玩性深化**（第一至十八批；2026-09-09 人类验证第十八批后宣布收口）；**M4a**（第 1–5 章：Rule VM + Preview P3 安全边界）；**M4b**（第 1–5 章：签名 / `latest` / P0P1 回滚 / 广场 / 账号认领） |
 | 进行中 | M3（表现层增强不阻塞 M3 退出，归 M-Art；深化段已收口的表现不再挡本号） |
-| 部分交付 | M-Export（C1 三预设；**Web 游玩分发第一刀已交**；Android / iOS 排到一期收尾）；M-Art（C4 契约与第一批 `.glb`；与 F 线重叠项已交）；**M4b 第 1–4 章**（ContentHash + HMAC + 发布切 `latest` + 新房吃新版本 + P0/P1 运行房补丁 + 进程内回滚 + latest 指针回滚 + 内容广场） |
-| 未开工（顺序，不是冻结） | M4b 其余（账号认领草稿）、M6、M7；第 4 张及以后官方课属 M5；Android / iOS 烟测（一期收尾）；角色选择界面（紧跟主大厅壳，不提前开工） |
+| 部分交付 | M-Export（C1 三预设；**Web 游玩分发第一刀已交**；Android / iOS 排到一期收尾）；M-Art（C4 契约与第一批 `.glb`；与 F 线重叠项已交） |
+| 未开工（顺序，不是冻结） | M5（第 4 张及以后官方课）；M6、M7；Android / iOS 烟测（一期收尾）；角色选择界面（紧跟主大厅壳，不提前开工） |
 | 纠偏闸门 | **已解除**（2026-09-03）。C0–C5 不是里程碑号。此后本文件进度顺序生效 |
 | 解冻后顺序 | 创作者可测（已收口）→ F 线（已收口）→ Web 游玩分发（第一刀已收口）→ 可玩性深化（已收口）→ M-Art 剩余已拍板项 → **M4a** → M4b → M5 → 公开 TLS / PR Web 沙盒 → M6 / M7 → **一期收尾**（字体入包、Android / iOS 烟测、触控 UI） |
 
@@ -333,7 +333,7 @@
 
 原 M4 的 L2 半边。可玩性深化已于 2026-09-09 收口。不再以 Android / iOS 烟测为前置。
 
-状态：**已收口**（2026-09-09）。第 1–5 章已交：信封 / 解释器 / gas / 图编译 / Event 分发 / §2.1 Query·Logic·Action 最小子集 / Preview P3 安全点重编译、公开对局禁止。其它 §2.1 事件仍编译拒绝。规则图不写入 AuthoringDocument / SimulationBundle。不发明 M8。下一动是 M4b（第 1–4 章已交；其余是账号）。
+状态：**已收口**（2026-09-09）。第 1–5 章已交：信封 / 解释器 / gas / 图编译 / Event 分发 / §2.1 Query·Logic·Action 最小子集 / Preview P3 安全点重编译、公开对局禁止。其它 §2.1 事件仍编译拒绝。规则图不写入 AuthoringDocument / SimulationBundle。不发明 M8。下一动是 M5（M4b 第 1–5 章已收口）。
 
 产出：
 
@@ -347,7 +347,7 @@
 
 原 M4 的 L6 半边，并挂上 CD-11 §4 无主的账号 / 草稿云 / 内容广场。**不另开里程碑号，不发明 M8。**
 
-状态：**进行中**（2026-09-10）。第 1–4 章已交：`ContentSign` sidecar + 控制面发布 HTTP + Godot `ContentCatalog` 按 `latest` 开新房；P0/P1 sidecar 补丁（`ContentPatch`：PatchHash = StateHasher 规范编码 ops 的 SHA-256；HMAC 覆盖 `content_id` + LF + `base_version` + LF + `seq` + LF + hash；信封七键）全量下发到同一 `content_id` + 锁住 `base_version` 的运行房，开局 latch 或检查点垫验收后生效；P2/P3 拒绝。进程内 `note_fault` 立刻追加反向 PatchHash（不走发布 HTTP）。`POST /content/:id/rollback` 把 `latest` 切回已签名旧版本，历史仍可读；下一发布号 = 已存 max(version)+1。结算 Godot payload 带 `content_hash` / `patch_hashes`，控制面结算 HTTP 不改。官方课仍不要求信封。内容广场：发布自动进公共列表；四标签；词库名；占用袋标签；`POST /content/:id/plays` 标已验证；评分拒绝自由文本；大厅 Solo 已签名 UGC。匹配 HTTP 课表仍只 `course_01`/`course_02`/`course_03`。无账号认领。不改 Bundle Schema。不发明 M8。
+状态：**已收口**（2026-09-10）。第 1–5 章已交：`ContentSign` sidecar + 控制面发布 HTTP + Godot `ContentCatalog` 按 `latest` 开新房；P0/P1 sidecar 补丁（`ContentPatch`：PatchHash = StateHasher 规范编码 ops 的 SHA-256；HMAC 覆盖 `content_id` + LF + `base_version` + LF + `seq` + LF + hash；信封七键）全量下发到同一 `content_id` + 锁住 `base_version` 的运行房，开局 latch 或检查点垫验收后生效；P2/P3 拒绝。进程内 `note_fault` 立刻追加反向 PatchHash（不走发布 HTTP）。`POST /content/:id/rollback` 把 `latest` 切回已签名旧版本，历史仍可读；下一发布号 = 已存 max(version)+1。结算 Godot payload 带 `content_hash` / `patch_hashes`，控制面结算 HTTP 不改。官方课仍不要求信封。内容广场：发布自动进公共列表；四标签；词库名；占用袋标签；`POST /content/:id/plays` 标已验证；评分拒绝自由文本；大厅 Solo 已签名 UGC。账号认领：Guest ID + 恢复密钥；用户名 + 密码；认领 Guest 云端最新草稿。匹配 HTTP 课表仍只 `course_01`/`course_02`/`course_03`。发布 HTTP 与入场票据仍不绑账号。不改 Bundle Schema。不发明 M8。下一动是 M5。
 
 产出：
 

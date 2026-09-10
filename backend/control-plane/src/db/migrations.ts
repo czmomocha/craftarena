@@ -194,4 +194,35 @@ export const MIGRATIONS: readonly Migration[] = [
 			) STRICT`,
 		],
 	},
+	{
+		id: "0012_accounts",
+		statements: [
+			`CREATE TABLE accounts (
+				account_id TEXT PRIMARY KEY,
+				username TEXT NOT NULL UNIQUE,
+				password_hash TEXT NOT NULL,
+				created_at TEXT NOT NULL
+			) STRICT`,
+			`CREATE TABLE account_guests (
+				guest_id TEXT PRIMARY KEY,
+				recovery_hash TEXT NOT NULL,
+				claimed_account_id TEXT,
+				created_at TEXT NOT NULL,
+				FOREIGN KEY (claimed_account_id) REFERENCES accounts (account_id)
+			) STRICT`,
+			`CREATE TABLE account_sessions (
+				token_hash TEXT PRIMARY KEY,
+				account_id TEXT NOT NULL,
+				created_at TEXT NOT NULL,
+				FOREIGN KEY (account_id) REFERENCES accounts (account_id)
+			) STRICT`,
+			`CREATE TABLE account_drafts (
+				owner_kind TEXT NOT NULL CHECK (owner_kind IN ('guest', 'account')),
+				owner_id TEXT NOT NULL,
+				document_json TEXT NOT NULL,
+				updated_at TEXT NOT NULL,
+				PRIMARY KEY (owner_kind, owner_id)
+			) STRICT`,
+		],
+	},
 ];

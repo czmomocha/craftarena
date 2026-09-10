@@ -61,6 +61,7 @@ var standings: MatchStandingMap = null
 var frame_rate: FrameRateMeter = null
 var creator: CreatorEntry = null
 var plaza: ContentPlazaEntry = null
+var account: AccountEntry = null
 var window: Window = null
 var live_io: bool = false
 var web_platform: bool = false
@@ -164,18 +165,14 @@ func try_open_creator() -> bool:
 	return creator != null and creator.try_open()
 func try_close_creator() -> bool:
 	return creator != null and creator.try_close()
-func try_open_plaza() -> bool:
-	return director.try_open_plaza()
-func try_close_plaza() -> bool:
-	return director.try_close_plaza()
-func try_solo_plaza(content_id: String = "") -> bool:
-	return director.try_solo_plaza(content_id)
-func try_stop_offline() -> bool:
-	return director.try_stop_offline()
-func try_cancel() -> bool:
-	return director.try_cancel()
-func try_leave_play() -> bool:
-	return director.try_leave_play()
+func try_open_plaza() -> bool: return director.try_open_plaza()
+func try_close_plaza() -> bool: return director.try_close_plaza()
+func try_solo_plaza(content_id: String = "") -> bool: return director.try_solo_plaza(content_id)
+func try_open_account() -> bool: return director.try_open_account()
+func try_close_account() -> bool: return director.try_close_account()
+func try_stop_offline() -> bool: return director.try_stop_offline()
+func try_cancel() -> bool: return director.try_cancel()
+func try_leave_play() -> bool: return director.try_leave_play()
 func accept_http(status_code: int, body: Dictionary) -> bool:
 	return director.accept_http(status_code, body)
 func apply_http_text(status_code: int, text: String) -> bool:
@@ -355,6 +352,7 @@ func _ensure_window() -> void:
 		"solo": try_solo,
 		"creator": try_open_creator,
 		"plaza": try_open_plaza,
+		"account": try_open_account,
 		"cancel": try_cancel,
 		"poll": try_poll,
 		"sprint": _on_sprint,

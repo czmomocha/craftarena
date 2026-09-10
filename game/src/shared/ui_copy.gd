@@ -118,6 +118,15 @@ const PLAZA_VERIFIED: String = "craft_arena.ui.plaza_verified"
 const PLAZA_SOLO: String = "craft_arena.ui.plaza_solo"
 const PLAZA_UNVERIFIED: String = "craft_arena.ui.plaza_unverified"
 const PLAZA_EMPTY: String = "craft_arena.ui.plaza_empty"
+const ACCOUNT: String = "craft_arena.ui.account"
+const WINDOW_ACCOUNT: String = "craft_arena.ui.window_account"
+const ACCOUNT_REGISTER: String = "craft_arena.ui.account_register"
+const ACCOUNT_LOGIN: String = "craft_arena.ui.account_login"
+const ACCOUNT_CLAIM: String = "craft_arena.ui.account_claim"
+const ACCOUNT_GUEST: String = "craft_arena.ui.account_guest"
+const ACCOUNT_SIGNED_IN: String = "craft_arena.ui.account_signed_in"
+const ACCOUNT_USERNAME: String = "craft_arena.ui.account_username"
+const ACCOUNT_PASSWORD: String = "craft_arena.ui.account_password"
 
 const ALL_KEYS: PackedStringArray = [
 	WINDOW_TRAPRUSH,
@@ -208,6 +217,15 @@ const ALL_KEYS: PackedStringArray = [
 	PLAZA_SOLO,
 	PLAZA_UNVERIFIED,
 	PLAZA_EMPTY,
+	ACCOUNT,
+	WINDOW_ACCOUNT,
+	ACCOUNT_REGISTER,
+	ACCOUNT_LOGIN,
+	ACCOUNT_CLAIM,
+	ACCOUNT_GUEST,
+	ACCOUNT_SIGNED_IN,
+	ACCOUNT_USERNAME,
+	ACCOUNT_PASSWORD,
 ]
 
 static var _loaded: bool = false

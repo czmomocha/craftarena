@@ -22,6 +22,7 @@ const POLL_NAME: String = "Poll"
 const SPRINT_NAME: String = "Sprint"
 const CREATOR_NAME: String = "CreateCourse"
 const PLAZA_NAME: String = "ContentPlaza"
+const ACCOUNT_NAME: String = "Account"
 const ROOM_NAME: String = "RoomCode"
 const COURSE_ID_NAME: String = "CourseId"
 const SEATS_NAME: String = "Seats"
@@ -103,6 +104,7 @@ func attach(parent: Node, handlers: Dictionary) -> Window:
 	# 上看见「能玩」和「能做」两件事，那正是 Web 轻量 Edit 要补的那个洞。
 	_add_button(row, CREATOR_NAME, UiCopy.CREATE_COURSE, _handler(handlers, "creator"))
 	_add_button(row, PLAZA_NAME, UiCopy.PLAZA, _handler(handlers, "plaza"))
+	_add_button(row, ACCOUNT_NAME, UiCopy.ACCOUNT, _handler(handlers, "account"))
 	var server_row: HBoxContainer = HBoxContainer.new()
 	server_row.name = "ServerActions"
 	root.add_child(server_row)

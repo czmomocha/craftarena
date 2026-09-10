@@ -87,3 +87,12 @@ craft_arena.ui.plaza_verified,Verified,已验证
 craft_arena.ui.plaza_solo,Solo play,单人试玩
 craft_arena.ui.plaza_unverified,(unverified),（未验证）
 craft_arena.ui.plaza_empty,No public courses yet,还没有公开课程
+craft_arena.ui.account,Account,账号
+craft_arena.ui.window_account,Account,账号
+craft_arena.ui.account_register,Register,注册
+craft_arena.ui.account_login,Sign in,登录
+craft_arena.ui.account_claim,Claim drafts,认领草稿
+craft_arena.ui.account_guest,Guest,访客
+craft_arena.ui.account_signed_in,Signed in,已登录
+craft_arena.ui.account_username,Username,用户名
+craft_arena.ui.account_password,Password,密码

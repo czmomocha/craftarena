@@ -118,6 +118,20 @@ func try_close_plaza() -> bool:
 	return host.plaza.try_close()
 
 
+func try_open_account() -> bool:
+	host.chrome.release_focus()
+	host.account = AccountEntry.ensure(host, host.account)
+	if host.account == null:
+		return false
+	return host.account.try_open()
+
+
+func try_close_account() -> bool:
+	if host.account == null:
+		return false
+	return host.account.try_close()
+
+
 func try_solo_plaza(content_id: String = "") -> bool:
 	host.chrome.release_focus()
 	if host.plaza == null or host.offline == null:

@@ -13,7 +13,7 @@
 
 | 项 | 当前口径 |
 |---|---|
-| 账号接线 | 未做。入场票据不绑账号 |
+| 账号接线 | **本刀已交**：Guest ID + 恢复密钥；用户名 + 密码注册 / 登录；认领 Guest 云端草稿。入场票据与发布 HTTP 仍不绑账号 |
 | 离线 | 永不回写；恢复在线也不补传。**测试期 Web 允许 Solo** |
 | 单局排名 | 名次 + MVP；无 MMR / 段位 |
 | 补票 | 已消费票补发同一席位；Cancel 不补票 |
@@ -42,6 +42,8 @@
 - 忘记密码只能注册新账号，旧账号和内容不迁移；
 - 注册用户名直接作为公开玩家名与作者名，不做文本过滤；
 - 一期不提供文字、语音、快捷短语或 Ping。
+
+实现落点（2026-09-10）：控制面 `POST /accounts/guest` 签发 Guest ID + 恢复密钥；`PUT /drafts` 以 Guest 头或账号 session 写入最新 AuthoringDocument JSON（不存本地检查点带）；`POST /accounts/register` / `login` 走用户名 + 密码（scrypt）；注册可附带认领。大厅「账号」窗走进程内 `AccountCatalog`（GUT / 开发机窗口不打 HTTP）。发布 HTTP 与入场票据仍不绑账号。无邮箱验证、无 CAPTCHA、无密码找回、无过期清扫。落点见 [CD-42 §3.4](../40-technical/42-contracts-and-rulevm.md#34-实现落点)。
 
 > 上述开放注册、公开用户名和零防滥用组合风险很高，只适用于当前长期测试环境，不能表述为正式公开运营能力。见 [CD-62 风险登记册](../60-plan/62-risk-register.md)。
 

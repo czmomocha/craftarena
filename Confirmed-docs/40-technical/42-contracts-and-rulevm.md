@@ -19,7 +19,7 @@
 | 扫掠预算 | 单次最多 **256** 样本；超限拒绝整段，不粗化密度。数字在 §1.1 |
 | 静态盒阔相 | 均匀格桶 = `SCALE`；单盒超 125 格或溢出走全量窄相。ID 顺序与全量扫描相同。胶囊仍线性 |
 | Rule VM | **第 1–5 章已交**：v1 信封 + 白名单解释器 + gas；`OnMatchStarted` / `OnEveryTicks` 图编成同一套字节码。§2.1 Query / Logic / Action 最小子集：`GetField` / `CountInZone`（按结果数加 gas）/ `Logic` / `Spawn` / `Despawn` / `ApplyEffect` / `EmitGameEvent`，经 `RuleVmHost`；超 gas 回滚 host 写入。其它事件仍编译拒绝。Preview 安全点 `try_replace_rule_graphs` 重编译生效；公开对局 `try_replace_rule_graphs` 禁止。不把规则图写入 AuthoringDocument / SimulationBundle。`run()` 不走 JSON |
-| 内容签名 | **M4b 第 1–4 章已交**：sidecar 信封，不改 SimulationBundle 字段。ContentHash = StateHasher 规范编码 `to_dictionary()` 的 SHA-256；签名 = HMAC-SHA256(`content_id` + LF + `version` + LF + hash)。控制面发布校验 HMAC 后原子切 `latest`；新房吃 `latest`，已开对局锁开局哈希。P0/P1 PatchHash = 规范编码 ops 的 SHA-256；HMAC 另覆盖 `base_version` + `seq`。发布自动进广场列表。官方课不要求信封 |
+| 内容签名 | **M4b 第 1–5 章已交**：sidecar 信封，不改 SimulationBundle 字段。ContentHash = StateHasher 规范编码 `to_dictionary()` 的 SHA-256；签名 = HMAC-SHA256(`content_id` + LF + `version` + LF + hash)。控制面发布校验 HMAC 后原子切 `latest`；新房吃 `latest`，已开对局锁开局哈希。P0/P1 PatchHash = 规范编码 ops 的 SHA-256；HMAC 另覆盖 `base_version` + `seq`。发布自动进广场列表。Guest / 注册 / 登录 / 认领草稿已交。官方课不要求信封 |
 
 ## 1. Component Schema v1
 
@@ -279,6 +279,9 @@ Undo / Redo 是会话内对成功命令派生的反向 payload（`place`↔`remo
 | 内容广场 HTTP | `backend/contracts/src/content_plaza.ts`（`GET /content/plaza`、`POST /content/:id/plays`、`POST /content/:id/ratings`） |
 | 内容广场内存列表 | `game/src/ugc/content_plaza.gd`（词库名 / 占用袋标签；与契约同算法） |
 | 大厅广场窗 | `game/src/client/content_plaza_entry.gd`（四 tab；Solo 已签名 bundle，不走 AuthoringDocument） |
+| 账号认领 HTTP | `backend/contracts/src/account.ts`（`POST /accounts/guest`、`/register`、`/login`、`/claim`、`GET /accounts/me`、`PUT`/`GET /drafts`） |
+| 账号认领内存目录 | `game/src/ugc/account_catalog.gd`（Guest / 注册 / 登录 / 认领；与契约同动词） |
+| 大厅账号窗 | `game/src/client/account_entry.gd` |
 | 定点与 BAM | `game/src/shared/fixed/` |
 | 组件名 | `game/src/shared/schema/component_names.gd` |
 | 碰撞 kind | `game/src/shared/schema/collision_shape_kinds.gd`（`shape_is_valid` 是形状袋校验的唯一实现，`zone.shape` 与资产表的权威碰撞都调它） |

@@ -14,7 +14,7 @@
 | 项 | 当前口径 |
 |---|---|
 | 等级定义 | P0–P4 见 §1。Bundle v2 因 `GameplayAsset` 已发生一次 P4 |
-| 运行时管线 | **第 1–4 章已交**：ContentHash + HMAC 信封；控制面 `POST /content/publish` 一事务写入版本并切 `latest`；Godot `ContentCatalog` 按 `latest` 开新房，已开对局锁开局哈希。P0/P1 是 sidecar 补丁（不覆盖基础 ContentHash）；运行房全量下发，开局 latch 或检查点垫验收后生效；P2/P3 拒绝。进程内 `note_fault` 立刻追加反向 PatchHash。`latest` 可切回已签名旧版本，下一发布号 = 已存 max+1。发布成功自动进公共列表（四标签、词库名、占用袋标签；plays 标已验证）。无账号。Preview P3 安全点重编译已交（sidecar，不入库）；公开对局拒绝规则补丁 |
+| 运行时管线 | **第 1–5 章已交**：ContentHash + HMAC 信封；控制面 `POST /content/publish` 一事务写入版本并切 `latest`；Godot `ContentCatalog` 按 `latest` 开新房，已开对局锁开局哈希。P0/P1 是 sidecar 补丁（不覆盖基础 ContentHash）；运行房全量下发，开局 latch 或检查点垫验收后生效；P2/P3 拒绝。进程内 `note_fault` 立刻追加反向 PatchHash。`latest` 可切回已签名旧版本，下一发布号 = 已存 max+1。发布成功自动进公共列表（四标签、词库名、占用袋标签；plays 标已验证）。Guest / 注册 / 登录 / 认领草稿已交；发布 HTTP 仍不绑账号。Preview P3 安全点重编译已交（sidecar，不入库）；公开对局拒绝规则补丁 |
 | 代码热更新 | 禁止 |
 
 ## 1. 热修改等级

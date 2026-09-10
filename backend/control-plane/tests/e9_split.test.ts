@@ -19,6 +19,7 @@ const SPLIT_FILES = [
 	"backend/control-plane/src/server_sessions.ts",
 	"backend/control-plane/src/server_content.ts",
 	"backend/control-plane/src/server_plaza.ts",
+	"backend/control-plane/src/server_accounts.ts",
 	"backend/control-plane/src/db/database.ts",
 	"backend/control-plane/src/db/database_rows.ts",
 	"backend/control-plane/src/db/database_sessions.ts",
@@ -26,6 +27,7 @@ const SPLIT_FILES = [
 	"backend/control-plane/src/db/database_queue.ts",
 	"backend/control-plane/src/db/database_content.ts",
 	"backend/control-plane/src/db/database_plaza.ts",
+	"backend/control-plane/src/db/database_accounts.ts",
 	"backend/match-host/src/registry.ts",
 	"backend/match-host/src/registry_launch.ts",
 ] as const;

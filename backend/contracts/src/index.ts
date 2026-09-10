@@ -97,4 +97,27 @@ export {
 	type PlazaRatingRequest,
 	type PlazaTab,
 } from "./content_plaza.ts";
+export {
+	ACCOUNT_ERRORS,
+	accountClaimBodySchema,
+	accountLoginBodySchema,
+	accountRegisterBodySchema,
+	draftPutBodySchema,
+	isAccountId,
+	isAccountPassword,
+	isAccountUsername,
+	isGuestId,
+	isRecoveryKey,
+	isSessionToken,
+	type AccountClaimRequest,
+	type AccountError,
+	type AccountLoginRequest,
+	type AccountMeView,
+	type AccountRegisterRequest,
+	type AccountSessionView,
+	type ClaimView,
+	type DraftPutRequest,
+	type DraftView,
+	type GuestMintView,
+} from "./account.ts";
 
