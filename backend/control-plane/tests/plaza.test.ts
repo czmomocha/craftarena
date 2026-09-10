@@ -60,6 +60,9 @@ describe("control plane content plaza", () => {
 		assert.equal(body.tab, "newest");
 		assert.equal(body.items.length, 1);
 		const item = body.items[0];
+		if (item === undefined) {
+			assert.fail("expected one plaza item");
+		}
 		assert.equal(item.content_id, ID_A);
 		assert.equal(item.version, 1);
 		assert.equal(item.content_hash, HASH_A);
