@@ -6,7 +6,6 @@ extends RefCounted
 ## SimulationWorld solidity. Authority still uses TraprushHazardCycle.
 
 const WARN_PREFIX: String = "warn_"
-const PlaySfxGd := preload("res://src/client/play_sfx.gd")
 const HazardCycleGd := preload("res://src/games/traprush/hazard_cycle.gd")
 
 

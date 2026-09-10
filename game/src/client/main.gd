@@ -20,6 +20,7 @@ extends Node
 
 const BOOT_EVENT: String = "client_boot"
 const BotRunCliGd := preload("res://src/games/traprush/bot_run_cli.gd")
+const ClientAudioGd := preload("res://src/client/client_audio.gd")
 const MatchLobbyShellGd := preload("res://src/client/match_lobby_shell.gd")
 const PackageCheckGd := preload("res://src/client/package_check.gd")
 const ServerEndpointGd := preload("res://src/client/server_endpoint.gd")
@@ -52,6 +53,7 @@ func _ready() -> void:
 	var page: Dictionary = WebPageLocationGd.read()
 	lobby.apply_endpoint(ServerEndpointGd.from_os(user_args, page))
 	add_child(lobby)
+	ClientAudioGd.ensure(self)
 	lobby.open()
 	# `?edit=1`（或桌面 `-- --edit`）直接落在创作上：把链接发给外人时，
 	# 「来做一张课」和「来玩一局」应该是两条链接，而不是一条链接加一句口头说明。

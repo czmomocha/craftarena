@@ -11,8 +11,8 @@ const MatchSolidMapGd := preload("res://src/client/match_solid_map.gd")
 const MatchCrateMapGd := preload("res://src/client/match_crate_map.gd")
 const MatchHazardMapGd := preload("res://src/client/match_hazard_map.gd")
 const OccupancyGadget := preload("res://src/shared/occupancy_gadget.gd")
+const ClientAudioGd := preload("res://src/client/client_audio.gd")
 const OfficialCoursesGd := preload("res://src/shared/official_traprush_courses.gd")
-const PlaySfxGd := preload("res://src/client/play_sfx.gd")
 const SharedComponentRecordGd := preload("res://src/shared/schema/component_record.gd")
 const SimulationBundleGd := preload("res://src/ugc/simulation_bundle.gd")
 const TraprushMoverCycleGd := preload("res://src/games/traprush/mover_cycle.gd")
@@ -28,21 +28,12 @@ const COURSE_F: String = "res://content/official/traprush/course_f_playable.json
 
 
 func test_headless_sfx_is_silent_and_eight_slots_exist() -> void:
-	assert_true(PlaySfxGd.muted())
-	assert_false(PlaySfxGd.play(PlaySfxGd.SLOT_JUMP))
-	var slots: PackedStringArray = PackedStringArray([
-		PlaySfxGd.SLOT_STEP,
-		PlaySfxGd.SLOT_JUMP,
-		PlaySfxGd.SLOT_LAND,
-		PlaySfxGd.SLOT_PICKUP,
-		PlaySfxGd.SLOT_CRATE,
-		PlaySfxGd.SLOT_HAZARD_WARN,
-		PlaySfxGd.SLOT_PORTAL,
-		PlaySfxGd.SLOT_FINISH,
-	])
+	assert_true(ClientAudioGd.muted())
+	assert_false(ClientAudioGd.post(ClientAudioGd.CUE_JUMP))
+	var slots: PackedStringArray = ClientAudioGd.all_slots()
 	assert_eq(slots.size(), 8)
 	for slot: String in slots:
-		assert_true(PlaySfxGd.has_slot(slot), slot)
+		assert_true(ClientAudioGd.has_slot(slot), slot)
 
 
 func test_hazard_warn_is_presentation_only() -> void:

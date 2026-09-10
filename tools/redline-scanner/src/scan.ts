@@ -3,6 +3,9 @@ import { extname, join, relative } from "node:path";
 
 import { prepareLine } from "./prepare_line.ts";
 import {
+	AUDIO_BACKEND_FILE,
+	AUDIO_ENGINE_TOKENS,
+	AUDIO_GAMEPLAY_WORDS,
 	CORE_SRC_DIRS,
 	GODOT3_IDENTIFIERS,
 	RULE_ID,
@@ -40,6 +43,7 @@ export function scanRepo(repoRoot: string): Finding[] {
 	findings.push(...scanCoreGdextension(repoRoot));
 	findings.push(...scanGodot3Api(repoRoot));
 	findings.push(...scanDotnetFiles(repoRoot));
+	findings.push(...scanAudioModule(repoRoot));
 	return findings;
 }
 
@@ -157,6 +161,54 @@ function scanDotnetFiles(repoRoot: string): Finding[] {
 		}
 		const rel = toPosix(relative(repoRoot, file));
 		findings.push(finding(RULE_ID.noDotnet, "7", rel, 1, rel, "C# / .NET project files are forbidden"));
+	}
+	return findings;
+}
+
+const AUDIO_WORD_PATTERN = new RegExp(
+	`(?<![A-Za-z])(${AUDIO_GAMEPLAY_WORDS.join("|")})(?![A-Za-z])`,
+	"i",
+);
+
+function scanAudioModule(repoRoot: string): Finding[] {
+	const findings: Finding[] = [];
+	const root = join(repoRoot, "game/src/audio");
+	for (const file of listFiles(root, [".gd"])) {
+		const rel = toPosix(relative(repoRoot, file));
+		const base = file.replaceAll("\\", "/").split("/").pop() ?? "";
+		const lines = readFileSync(file, "utf8").split(/\r?\n/);
+		for (let index = 0; index < lines.length; index += 1) {
+			const excerpt = lines[index] ?? "";
+			const word = excerpt.match(AUDIO_WORD_PATTERN)?.[1];
+			if (word !== undefined) {
+				findings.push(
+					finding(
+						RULE_ID.audioNoGameplayVocab,
+						"1",
+						rel,
+						index + 1,
+						excerpt.trim(),
+						`audio module must not contain gameplay word ${word.toLowerCase()}`,
+					),
+				);
+			}
+			if (base === AUDIO_BACKEND_FILE) {
+				continue;
+			}
+			const token = firstIdentifier(excerpt, AUDIO_ENGINE_TOKENS);
+			if (token !== undefined) {
+				findings.push(
+					finding(
+						RULE_ID.audioBackendOnlyEngine,
+						"5",
+						rel,
+						index + 1,
+						excerpt.trim(),
+						`only ${AUDIO_BACKEND_FILE} may use ${token}`,
+					),
+				);
+			}
+		}
 	}
 	return findings;
 }

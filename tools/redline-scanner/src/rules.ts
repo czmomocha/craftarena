@@ -71,8 +71,29 @@ export const RULE_ID = {
 	coreNoGdextension: "core-no-gdextension",
 	noGodot3Api: "no-godot3-api",
 	noDotnet: "no-dotnet",
+	audioNoGameplayVocab: "audio-no-gameplay-vocab",
+	audioBackendOnlyEngine: "audio-backend-only-engine",
 } as const;
 
 export type RuleId = (typeof RULE_ID)[keyof typeof RULE_ID];
 
-export const CORE_SRC_DIRS = ["shared", "simulation", "ugc", "server", "creator"] as const;
+export const CORE_SRC_DIRS = ["shared", "simulation", "ugc", "server", "creator", "audio"] as const;
+
+/** Gameplay nouns that must not appear in game/src/audio/**, including string literals. */
+export const AUDIO_GAMEPLAY_WORDS: readonly string[] = [
+	"traprush",
+	"bastion",
+	"jump",
+	"hazard",
+	"crate",
+	"finish",
+];
+
+export const AUDIO_ENGINE_TOKENS: readonly string[] = [
+	"AudioServer",
+	"AudioStreamPlayer",
+	"AudioStreamPlayer3D",
+	"AudioStream",
+];
+
+export const AUDIO_BACKEND_FILE = "audio_backend.gd";

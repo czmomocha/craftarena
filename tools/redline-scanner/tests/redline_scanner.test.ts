@@ -19,9 +19,13 @@ describe("redline fixtures", () => {
 		assert.equal(ids.has(RULE_ID.coreNoGdextension), true);
 		assert.equal(ids.has(RULE_ID.noGodot3Api), true);
 		assert.equal(ids.has(RULE_ID.noDotnet), true);
+		assert.equal(ids.has(RULE_ID.audioNoGameplayVocab), true);
+		assert.equal(ids.has(RULE_ID.audioBackendOnlyEngine), true);
 		assert.ok(hasFinding(findings, RULE_ID.noGodot3Api, "game/src/client/old_api.gd"));
 		assert.ok(hasFinding(findings, RULE_ID.noDotnet, "game/Cheat.cs"));
 		assert.ok(hasFinding(findings, RULE_ID.coreNoGdextension, "game/src/shared/native.gdextension"));
+		assert.ok(hasFinding(findings, RULE_ID.audioNoGameplayVocab, "game/src/audio/uses_jump.gd"));
+		assert.ok(hasFinding(findings, RULE_ID.audioBackendOnlyEngine, "game/src/audio/uses_engine.gd"));
 	});
 
 	it("does not treat _physics_process as _process", () => {

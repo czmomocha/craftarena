@@ -17,6 +17,7 @@ const REQUIRED_PATHS = [
 const COURSE_CORRECTION_PATHS = [
 	"/game/src/client/",
 	"/game/src/games/",
+	"/game/src/audio/",
 	"/.cursor/rules/",
 ] as const;
 
@@ -33,7 +34,7 @@ describe("CODEOWNERS", () => {
 		}
 	});
 
-	it("covers the client, games, and rules blind spots", () => {
+	it("covers the client, games, audio, and rules blind spots", () => {
 		const source = readFileSync(join(REPO_ROOT, ".github/CODEOWNERS"), "utf8");
 		for (const path of COURSE_CORRECTION_PATHS) {
 			assertOwned(source, path);

@@ -10,4 +10,5 @@
 # Audit finding 8.4: drift happened exactly in the paths ownership did not cover.
 /game/src/client/ @czmomocha
 /game/src/games/ @czmomocha
+/game/src/audio/ @czmomocha
 /.cursor/rules/ @czmomocha

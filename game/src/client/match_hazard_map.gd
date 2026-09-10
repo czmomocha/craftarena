@@ -19,7 +19,7 @@ const HazardCycleGd := preload("res://src/games/traprush/hazard_cycle.gd")
 const MatchSnapshotFollowGd := preload("res://src/client/match_snapshot_follow.gd")
 const TraprushTopologyCompilerGd := preload("res://src/ugc/traprush_topology_compiler.gd")
 const WarnGd := preload("res://src/client/match_hazard_warn.gd")
-const PlaySfxGd := preload("res://src/client/play_sfx.gd")
+const ClientAudioGd := preload("res://src/client/client_audio.gd")
 const OccupancyGadgetGd := preload("res://src/shared/occupancy_gadget.gd")
 
 const HAZARD_PREFIX: String = "hazard_"
@@ -235,7 +235,7 @@ func _rebuild() -> void:
 			warn_wanted[WarnGd.warn_name(entity_id)] = true
 			_ensure_warn(entity_id, pose)
 			if not _warned.has(entity_id):
-				PlaySfxGd.play(PlaySfxGd.SLOT_HAZARD_WARN)
+				ClientAudioGd.post(ClientAudioGd.CUE_HAZARD_WARN)
 			next_warned[entity_id] = true
 	_despawn_hazards_except(wanted)
 	_despawn_warns_except(warn_wanted)

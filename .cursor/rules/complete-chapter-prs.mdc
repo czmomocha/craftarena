@@ -17,12 +17,12 @@ alwaysApply: true
 
 真机：[开发机窗口验收](docs/runbooks/dev-window-check.md) 本刀必须是编号步骤（怎么开、点什么、期望 / 失败）；禁止只写「真机再看一眼」。无 GUI 的章写「无」加原因。人工检查，不是 CI 门禁。口径见 [CD-52 §3.2](Confirmed-docs/50-engineering/52-ai-workflow.md)。
 
-- 做（下一刀 = **可玩性深化**）：游戏性 / 第一张 TRAPRUSH 玩法与表现 / UGC / 编辑调试（含 Web 轻量 Edit 的摆放调参 Preview）。对照 [CD-61](Confirmed-docs/60-plan/61-milestones.md)。交章时整节替换 [开发机窗口验收](docs/runbooks/dev-window-check.md) 本刀。
-- 不做：开工 Android / iOS 烟测；公开 TLS / PR Web 沙盒；抢先 M4a / M4b / M6 / M7；改爆破半径、推击力度、道具重生（D-F4 / D-F5 / D-F6）；改默认相机距离/FOV 产品值；自由旋转镜头；改 `SimulationCore` 定点数合同；Kenney 24 皮入库（D-F9 未拍）；发明新 Hz；字体入包；触控 UI。
+- 做（下一刀 = **M5**）：对照 [CD-61](Confirmed-docs/60-plan/61-milestones.md) 与 [M5 章节计划](docs/plans/m5-traprush-vertical-slice.md)，从 A1 音频内核起。交章时整节替换 [开发机窗口验收](docs/runbooks/dev-window-check.md) 本刀。
+- 不做：开工 Android / iOS 烟测；公开 TLS / PR Web 沙盒；抢先 M6 / M7；改爆破半径、推击力度、道具重生（D-F4 / D-F5 / D-F6）；改默认相机距离/FOV 产品值；自由旋转镜头；改 `SimulationCore` 定点数合同；Kenney 24 皮入库（D-F9 未拍）；发明新 Hz；字体入包；触控 UI；C3 / C4 在 §5.2 拍板前不开。
 - 仍欠着（不因本章合入而消失）：Android / iOS 烟测（**一期收尾**）；M5 之后的公开 TLS / PR Web 沙盒；M-Art 剩余（字体入包在一期收尾；皮肤池等 D-F9）；胶囊对胶囊仍线性。
 - 仍不做：把 locale 热切换做成产品设置页。
 
-里程碑归属：可玩性深化
+里程碑归属：M5
 是否绕过 placeholder_spec 散落几何/色板常量：否
 审查级别：常审
 隔离方式：当前 checkout

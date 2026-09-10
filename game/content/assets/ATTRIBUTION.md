@@ -49,7 +49,7 @@ CC0 允许个人、教育与**商业**用途，无署名义务。原始包内 `L
 
 ## 2.1 内部生成临时音频（无第三方许可）
 
-F 线 FB 测试期音效，目录 `game/content/audio/f_line_temp/`。**内部生成 WAV，无第三方许可。** 不是产品配乐，无 Music 总线。
+F 线 FB 测试期音效，目录 `game/content/audio/f_line_temp/`。**内部生成 WAV，无第三方许可。** 不是产品配乐。M5 A1 起走 `game/src/audio/` 内核与 Music/Sfx/Ui/Ambience 总线；本目录仍是那 8 个临时 WAV，正式 OGG 等 B2。
 
 | 资产 | 来源 | 许可 | 入库日期 |
 |---|---|---|---|

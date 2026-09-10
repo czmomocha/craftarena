@@ -15,7 +15,8 @@
 |---|---|
 | 分层 | L0–L9 见 §4。L1 World 门面 + query/move；L2 Bundle 门面 + decode/bags、拓扑编译门面 + bags/fields、Rule VM 门面 + opcodes/codec/compiler/dispatch/host/apply、ContentSign sidecar、ContentCatalog latest / P0P1 补丁 / latest 回滚；L3 灰盒门面 + layout/assemble/play、探针门面 + heuristic/search；L4 大厅门面 + chrome/net/sampler/stage/hud/director；L5 Preview 会话/映射/壳均已拆门面；编辑门面 + chrome/place/follow |
 | D4 数值落点 | `game/src/shared/placeholder_spec.gd`（唯一配置源） |
-| 资产目录 | `game/content/assets/`、`game/content/locale/` |
+| 资产目录 | `game/content/assets/`、`game/content/locale/`、`game/content/audio/` |
+| 音频模块 | `game/src/audio/`（自愿等同第二十三条；仅 `audio_backend.gd` 碰引擎音频类型） |
 | E9 | 生产路径全量 < 400 行（`game/src/**/*.gd` + `backend` 非测试 `*.ts`，C5 第 17 章门禁）。测试 / addons / GUT 不在本口径 |
 | 仍待 | OpenAPI、Rule VM 图 JSON、BASTION 面板、「我的内容」管理 |
 
@@ -115,6 +116,7 @@ repo/
 │  │  ├─ ugc/                    # compiler/validator/bytecode_vm/migration；Bundle 门面 `simulation_bundle.gd` + decode/bags；拓扑编译门面 `traprush_topology_compiler.gd` + bags/fields；Rule VM 门面 `rule_vm.gd` + opcodes/codec/compiler/dispatch/host/apply；内容签名 `content_sign.gd`；内容补丁 `content_patch.gd`；内容目录 `content_catalog.gd`
 │  │  ├─ server/                 # Godot Headless match/replication/result
 │  │  ├─ client/                 # platform/input/prediction/presentation；大厅门面 `match_lobby_shell.gd` + chrome/net/sampler/stage/hud/director；匹配门面 `match_join_session.gd` + codec/accept
+│  │  ├─ audio/                  # 游戏无关音频模块（自愿等同第二十三条）；仅 `audio_backend.gd` 碰 AudioServer / AudioStreamPlayer；玩法映射不在此目录
 │  │  ├─ creator/                # shared shell/edit_commands/preview；Preview 门面 `authoring_preview.gd` + bootstrap/intents/scan/view；Preview 映射门面 `authoring_preview_map.gd` + convert/occupancy/gizmos/overlay/player；Preview 窗口门面 `authoring_preview_shell.gd` + chrome/sampler/hud/play/view；编辑门面 `authoring_editor_shell.gd` + chrome/place/follow
 │  │  └─ games/
 │  │     ├─ traprush/            # 对局门面 `match_session.gd` + bootstrap/intents/scan/view/patch；灰盒门面 `graybox_course.gd` + layout/assemble/play；探针门面 `course_completion_probe.gd` + heuristic/search
@@ -123,6 +125,7 @@ repo/
 │  │  ├─ official/
 │  │  ├─ locale/                 # 本地化 CSV（`craft_arena.*` 键）；解析见 `shared/ui_copy.gd`
 │  │  ├─ assets/                 # 平台运行时资产（GLB）；准入见 CD-51 §5.1
+│  │  ├─ audio/                  # 平台音频；F 线临时 WAV 在 `f_line_temp/`
 │  │  ├─ schemas/
 │  │  └─ test_fixtures/
 │  └─ tests/
