@@ -17,6 +17,7 @@
 | 发布 | 自动公开已接受（测试期）；权利条款仍是阻断项 |
 | 资产版本 | `GameplayAsset` 四项分离已进 Schema（C4） |
 | 内容广场 | **已交**：发布自动进公共列表；无自由文本 |
+| 音频 cue | **A2 已交**：平台内置 id 清单 `audio_cue_catalog.gd`；UGC 只能引用已登记 id |
 | Fork / 「我的内容」管理 | 未做 |
 | 账号 / 云端草稿 | **本刀已交**：Guest + 注册登录 + 认领最新草稿；发布 HTTP 仍不绑账号 |
 
@@ -72,6 +73,8 @@
 - GameplayAsset 变化必须生成新内容版本，不能伪装成运行中 P0/P1 补丁。
 
 实现落点（[ADR-0006](../../docs/adr/0006-gameplay-asset-contract.md)，2026-08-29 拍板）：平台内置资产清单在 `game/src/shared/schema/gameplay_asset_catalog.gd`；创作者只能用 `gameplay_asset` 组件引用清单里的 `asset_id`，**不能自填尺寸**；权威碰撞随内容发布写进 SimulationBundle 的 `assets` 袋，所以已发布内容与旧回放按各自发布时的形状裁决。目录改几何时旧内容重编译失败，必须走新内容版本——这是本节第三条的机械保障。
+
+平台内置音效的 allowlist 是 `game/src/shared/schema/audio_cue_catalog.gd`（M5 A2）。创作者只能引用已登记 cue id；stream 与播放参数在 `game/content/audio/banks/`，由 `tools/content-validator/` 校验。加一条 cue 只改 catalog 与 bank JSON，不改 `game/src/audio/`。音效文件本身仍走 `latest`（本节第一条），不进权威。
 
 一期边界：占地由权威碰撞的 AABB 在格网上投影**派生**，不是独立字段；挂点只留字段位、仿真不消费；**不含导航**（无导航网格、无寻路），解冻 BASTION 时重开。视觉网格不进 bundle，客户端按 `latest` 解析（落点 `game/src/shared/visual_asset_catalog.gd`，2026-08-30），所以改视觉不产生新内容版本；解析不到时回退占位盒。资产文件本身的格式、目录与准入见 [CD-51 §5.1](../50-engineering/51-dev-environment.md)。一期可用 `ContentSign` 对编译后的 v2 wire 做 ContentHash 与 HMAC（sidecar，不改 Bundle 字段）；官方课开局锁定哈希、仍不要求信封。已签名版本经控制面发布切 `latest`，新房吃新版本；P0/P1 运行房补丁与 `latest` 回滚已交。公开内容广场已交（自动进列表；词库名；占用袋标签）。账号认领与云端最新草稿本刀已交。Fork 仍待。
 

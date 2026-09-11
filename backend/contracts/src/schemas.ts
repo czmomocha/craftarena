@@ -16,8 +16,11 @@ export const AUTHORING_SCHEMA_FILES = ["authoring_document.schema.json"] as cons
 export const AUTHORING_DOCUMENT_SCHEMA_VERSION = 1;
 export const SIMULATION_BUNDLE_SCHEMA_FILES = ["simulation_bundle.schema.json"] as const;
 export const SIMULATION_BUNDLE_SCHEMA_VERSION = 2;
+export const AUDIO_BANK_SCHEMA_FILES = ["audio_cue_bank.schema.json"] as const;
+export const AUDIO_BANK_SCHEMA_VERSION = 1;
 
 export type L0SchemaFile = (typeof L0_SCHEMA_FILES)[number];
 export type ComponentSchemaFile = (typeof COMPONENT_SCHEMA_FILES)[number];
 export type AuthoringSchemaFile = (typeof AUTHORING_SCHEMA_FILES)[number];
 export type SimulationBundleSchemaFile = (typeof SIMULATION_BUNDLE_SCHEMA_FILES)[number];
+export type AudioBankSchemaFile = (typeof AUDIO_BANK_SCHEMA_FILES)[number];

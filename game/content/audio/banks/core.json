@@ -1,0 +1,31 @@
+{
+	"schema_version": 1,
+	"cues": [
+		{
+			"id": "step",
+			"streams": ["res://content/audio/f_line_temp/step.wav"],
+			"bus": "sfx",
+			"gain_db": 0,
+			"pitch_min": 1,
+			"pitch_max": 1,
+			"spatial": false,
+			"loop": false,
+			"priority": 0,
+			"max_voices": 1,
+			"cooldown_ms": 150
+		},
+		{
+			"id": "pickup",
+			"streams": ["res://content/audio/f_line_temp/pickup.wav"],
+			"bus": "sfx",
+			"gain_db": 0,
+			"pitch_min": 1,
+			"pitch_max": 1,
+			"spatial": false,
+			"loop": false,
+			"priority": 0,
+			"max_voices": 2,
+			"cooldown_ms": 0
+		}
+	]
+}

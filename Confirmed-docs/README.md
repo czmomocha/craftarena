@@ -34,7 +34,7 @@
 | 调玩法数值、道具、机关、炮塔 | CD-00 | [CD-21 TRAPRUSH](20-gameplay/21-traprush.md) 或 [CD-22 BASTION](20-gameplay/22-bastion.md)、[CD-63 开发期决策清单](60-plan/63-open-decisions.md) |
 | 改仿真核心、定点数、System | CD-00 | [CD-41 架构](40-technical/41-architecture.md)、[CD-42 数据契约与 Rule VM](40-technical/42-contracts-and-rulevm.md)、[CD-53 测试与 CI](50-engineering/53-testing-and-ci.md) |
 | 改命令、快照、协议、回放 | CD-00 | [CD-43 网络与回放](40-technical/43-networking-and-replay.md)、CD-42 |
-| 改 Component Schema、Rule VM 节点 | CD-00 | CD-42、[CD-31 UGC 原则](30-ugc/31-ugc-principles.md) |
+| 改 Component Schema、Rule VM 节点、音频 cue bank | CD-00 | CD-42、[CD-31 UGC 原则](30-ugc/31-ugc-principles.md) |
 | 改编辑器、EditCommand、Preview | CD-00 | [CD-32 编辑器与预览](30-ugc/32-editor-and-preview.md)、CD-31 |
 | 改验证器、发布流水线、热生效 | CD-00 | [CD-33 热修改与热发布](30-ugc/33-hot-publish.md)、CD-31 |
 | 改账号、登录、离线、单局结算 | CD-00 | [CD-13 账号与会话](10-product/13-account-and-session.md) |
@@ -87,7 +87,7 @@
 | ID | 文档 | 内容 |
 |---|---|---|
 | CD-41 | [41-architecture.md](40-technical/41-architecture.md) | 总体架构、三种世界、L0–L9 分层、仓库目录 |
-| CD-42 | [42-contracts-and-rulevm.md](40-technical/42-contracts-and-rulevm.md) | Component Schema v1、Rule VM v1、命令模型与服务端处理管线 |
+| CD-42 | [42-contracts-and-rulevm.md](40-technical/42-contracts-and-rulevm.md) | Component Schema v1、Rule VM v1、命令模型与服务端处理管线、音频 cue bank v1 |
 | CD-43 | [43-networking-and-replay.md](40-technical/43-networking-and-replay.md) | 序列化分工、传输、回放与确定性边界 |
 | CD-44 | [44-deployment.md](40-technical/44-deployment.md) | 单区固定容量部署、会话租约、进程隔离、数据库所有权 |
 
@@ -132,7 +132,7 @@
 | 编辑器形态与预览行为 | CD-32 |
 | 热修改等级、发布流水线、回滚 | CD-33 |
 | 模块分层、目录结构、进程拓扑 | CD-41 |
-| Component Schema、Rule VM、命令字段 | CD-42 |
+| Component Schema、Rule VM、命令字段、音频 cue bank | CD-42 |
 | 协议编码、传输、回放内容 | CD-43 |
 | 容量、租约、部署形态、数据库所有权 | CD-44 |
 | 工具版本、安装步骤、项目设置、Godot 主 MCP 与其遥测开关 | CD-51 |

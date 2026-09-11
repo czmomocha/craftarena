@@ -1,0 +1,49 @@
+{
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"$id": "https://craftarena.local/contracts/audio_cue_bank.schema.json",
+	"title": "AudioCueBank",
+	"description": "Platform audio cue bank. Cue id allowlist owner: game/src/shared/schema/audio_cue_catalog.gd. Unknown keys fail. Adding a cue must not require changes under game/src/audio/.",
+	"type": "object",
+	"additionalProperties": false,
+	"required": ["schema_version", "cues"],
+	"properties": {
+		"schema_version": { "type": "integer", "const": 1 },
+		"cues": {
+			"type": "array",
+			"minItems": 1,
+			"items": { "$ref": "#/$defs/cue" }
+		}
+	},
+	"$defs": {
+		"cue": {
+			"type": "object",
+			"additionalProperties": false,
+			"required": ["id", "streams", "bus"],
+			"properties": {
+				"id": { "type": "string", "minLength": 1 },
+				"streams": {
+					"type": "array",
+					"minItems": 1,
+					"items": { "type": "string", "minLength": 1 }
+				},
+				"bus": { "type": "string", "enum": ["music", "sfx", "ui", "ambience"] },
+				"gain_db": { "type": "number" },
+				"pitch_min": { "type": "number" },
+				"pitch_max": { "type": "number" },
+				"spatial": { "type": "boolean" },
+				"loop": { "type": "boolean" },
+				"priority": { "type": "integer" },
+				"max_voices": { "type": "integer", "minimum": 1 },
+				"cooldown_ms": { "type": "integer", "minimum": 0 },
+				"max_distance": { "type": "number", "exclusiveMinimum": 0 }
+			},
+			"if": {
+				"properties": { "spatial": { "const": true } },
+				"required": ["spatial"]
+			},
+			"then": {
+				"required": ["max_distance"]
+			}
+		}
+	}
+}

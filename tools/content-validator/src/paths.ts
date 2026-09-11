@@ -21,6 +21,10 @@ export const COMPONENT_NAMES_PATH = join(SHARED_SRC_DIR, "schema/component_names
 export const COLLISION_SHAPE_KINDS_PATH = join(SHARED_SRC_DIR, "schema/collision_shape_kinds.gd");
 export const TOWER_TARGET_PRIORITIES_PATH = join(SHARED_SRC_DIR, "schema/tower_target_priorities.gd");
 export const COMPONENT_RECORD_PATH = join(SHARED_SRC_DIR, "schema/component_record.gd");
+export const AUDIO_CUE_CATALOG_PATH = join(SHARED_SRC_DIR, "schema/audio_cue_catalog.gd");
+export const AUDIO_CUE_PATH = join(REPO_ROOT, "game/src/audio/audio_cue.gd");
+export const AUDIO_BANK_PATH = join(REPO_ROOT, "game/src/audio/audio_bank.gd");
+export const AUDIO_BANKS_DIR = join(REPO_ROOT, "game/content/audio/banks");
 export const AUTHORING_DOCUMENT_PATH = join(CREATOR_SRC_DIR, "authoring_document.gd");
 export const SIMULATION_BUNDLE_PATH = join(UGC_SRC_DIR, "simulation_bundle.gd");
 
@@ -30,3 +34,4 @@ export const CANONICAL_SCHEMA_PATH = join(CONTRACTS_SCHEMA_DIR, "canonical_paylo
 export const COMPONENT_SCHEMA_PATH = join(CONTRACTS_SCHEMA_DIR, "component_record.schema.json");
 export const AUTHORING_DOCUMENT_SCHEMA_PATH = join(CONTRACTS_SCHEMA_DIR, "authoring_document.schema.json");
 export const SIMULATION_BUNDLE_SCHEMA_PATH = join(CONTRACTS_SCHEMA_DIR, "simulation_bundle.schema.json");
+export const AUDIO_BANK_SCHEMA_PATH = join(CONTRACTS_SCHEMA_DIR, "audio_cue_bank.schema.json");

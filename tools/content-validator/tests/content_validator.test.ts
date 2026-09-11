@@ -3,7 +3,7 @@ import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { describe, it } from "node:test";
 
-import { AUTHORING_SCHEMA_FILES, COMPONENT_SCHEMA_FILES, L0_SCHEMA_FILES, SIMULATION_BUNDLE_SCHEMA_FILES } from "../../../backend/contracts/src/schemas.ts";
+import { AUTHORING_SCHEMA_FILES, AUDIO_BANK_SCHEMA_FILES, COMPONENT_SCHEMA_FILES, L0_SCHEMA_FILES, SIMULATION_BUNDLE_SCHEMA_FILES } from "../../../backend/contracts/src/schemas.ts";
 import { collectGdscriptSchemaMismatches } from "../src/gdscript_sync.ts";
 import {
 	loadAuthoringFixtures,
@@ -13,6 +13,7 @@ import {
 	loadSimulationBundleFixtures,
 } from "../src/load_fixtures.ts";
 import {
+	AUDIO_BANK_SCHEMA_PATH,
 	AUTHORING_DOCUMENT_SCHEMA_PATH,
 	CANONICAL_SCHEMA_PATH,
 	COMPONENT_SCHEMA_PATH,
@@ -60,8 +61,17 @@ describe("SimulationBundle catalog", () => {
 	});
 });
 
+describe("Audio cue bank catalog", () => {
+	it("keeps every registered audio bank schema file on disk", () => {
+		for (const file of AUDIO_BANK_SCHEMA_FILES) {
+			assert.equal(existsSync(join(CONTRACTS_SCHEMA_DIR, file)), true, file);
+		}
+		assert.equal(existsSync(AUDIO_BANK_SCHEMA_PATH), true);
+	});
+});
+
 describe("GDScript and JSON Schema stay aligned", () => {
-	it("matches intent names, kind numbers, fields, depth, versions, component catalogs, authoring document fields, and simulation bundle fields", () => {
+	it("matches intent names, kind numbers, fields, depth, versions, component catalogs, authoring document fields, simulation bundle fields, and audio cue banks", () => {
 		assert.deepEqual(collectGdscriptSchemaMismatches(), []);
 	});
 });

@@ -1,0 +1,83 @@
+{
+	"schema_version": 1,
+	"cues": [
+		{
+			"id": "jump",
+			"streams": ["res://content/audio/f_line_temp/jump.wav"],
+			"bus": "sfx",
+			"gain_db": 0,
+			"pitch_min": 1,
+			"pitch_max": 1,
+			"spatial": false,
+			"loop": false,
+			"priority": 0,
+			"max_voices": 2,
+			"cooldown_ms": 0
+		},
+		{
+			"id": "land",
+			"streams": ["res://content/audio/f_line_temp/land.wav"],
+			"bus": "sfx",
+			"gain_db": 0,
+			"pitch_min": 1,
+			"pitch_max": 1,
+			"spatial": false,
+			"loop": false,
+			"priority": 0,
+			"max_voices": 2,
+			"cooldown_ms": 0
+		},
+		{
+			"id": "crate",
+			"streams": ["res://content/audio/f_line_temp/crate.wav"],
+			"bus": "sfx",
+			"gain_db": 0,
+			"pitch_min": 1,
+			"pitch_max": 1,
+			"spatial": false,
+			"loop": false,
+			"priority": 0,
+			"max_voices": 2,
+			"cooldown_ms": 0
+		},
+		{
+			"id": "hazard_warn",
+			"streams": ["res://content/audio/f_line_temp/hazard_warn.wav"],
+			"bus": "sfx",
+			"gain_db": 0,
+			"pitch_min": 1,
+			"pitch_max": 1,
+			"spatial": false,
+			"loop": false,
+			"priority": 2,
+			"max_voices": 4,
+			"cooldown_ms": 0
+		},
+		{
+			"id": "portal",
+			"streams": ["res://content/audio/f_line_temp/portal.wav"],
+			"bus": "sfx",
+			"gain_db": 0,
+			"pitch_min": 1,
+			"pitch_max": 1,
+			"spatial": false,
+			"loop": false,
+			"priority": 0,
+			"max_voices": 2,
+			"cooldown_ms": 0
+		},
+		{
+			"id": "finish",
+			"streams": ["res://content/audio/f_line_temp/finish.wav"],
+			"bus": "sfx",
+			"gain_db": 0,
+			"pitch_min": 1,
+			"pitch_max": 1,
+			"spatial": false,
+			"loop": false,
+			"priority": 3,
+			"max_voices": 1,
+			"cooldown_ms": 0
+		}
+	]
+}

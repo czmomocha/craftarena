@@ -1,8 +1,8 @@
 # CD-42 数据契约、Rule VM 与命令模型
 
 > 文档 ID：CD-42
-> 单一事实源：Component Schema v1、定点数与碰撞形状约束、Rule VM v1 节点与 gas、命令分类与字段、服务端命令处理管线
-> 加载建议：改动组件、Schema、规则节点、命令字段或服务端校验顺序时读取
+> 单一事实源：Component Schema v1、定点数与碰撞形状约束、Rule VM v1 节点与 gas、命令分类与字段、服务端命令处理管线、音频 cue bank v1
+> 加载建议：改动组件、Schema、规则节点、命令字段、音频 cue bank 或服务端校验顺序时读取
 > 上位约束：[CD-00 宪法](../00-constitution/CONSTITUTION.md) 第三、四、五、十七、十八条
 > 相关：[CD-41 架构](41-architecture.md)、[CD-43 网络与回放](43-networking-and-replay.md)、[CD-31 UGC 原则](../30-ugc/31-ugc-principles.md)
 > 派生自：初稿 v0.2 §34–§36
@@ -14,7 +14,7 @@
 | 项 | 当前口径 |
 |---|---|
 | 定点 | Q48.16，向零截断；数字只在 §1.1 |
-| Schema | Component v1 + Bundle v2（`gameplay_asset`） |
+| Schema | Component v1 + Bundle v2（`gameplay_asset`）+ 音频 cue bank v1 |
 | PLAYER 意图 | Move / Jump / Reset / UseItem / Shove / **SprintIntent（id=6）** |
 | 扫掠预算 | 单次最多 **256** 样本；超限拒绝整段，不粗化密度。数字在 §1.1 |
 | 静态盒阔相 | 均匀格桶 = `SCALE`；单盒超 125 格或溢出走全量窄相。ID 顺序与全量扫描相同。胶囊仍线性 |
@@ -113,6 +113,32 @@ components     以组件名为键的对象；未知键拒绝；允许空袋
 `zone.shape` 是**触发与查询区域**，不是权威碰撞。权威碰撞、占地与挂点由 `gameplay_asset` 引用的平台资产决定，并随内容发布写进 SimulationBundle 的 `assets` 袋；语义与边界的所有者是 [CD-31 §5](../30-ugc/31-ugc-principles.md)，决策记录见 [ADR-0006](../../docs/adr/0006-gameplay-asset-contract.md)。
 
 2026-08-29 之前不是这样：`zone.shape` 通过了 Schema 校验却被编译期丢弃，加载期一律用 `cell / 2` 当半长。字段被校验却不被采用，见 ADR-0006 §1.3。
+
+### 1.4 音频 Cue Bank v1
+
+表现层目录，**不进** `SimulationWorld` / `hash_state` / 协议帧。id allowlist 的所有者是 `game/src/shared/schema/audio_cue_catalog.gd`（创作者只能引用已登记 id，见 [CD-31 §5](../30-ugc/31-ugc-principles.md)）。bank JSON 在 `game/content/audio/banks/`。体积上限见 [CD-11 §8.3](../10-product/11-scope-and-platforms.md)，本表不复述数字。采样率 / 声道 / 时长属 M5 B2，本版不校验。
+
+```text
+schema_version = 1
+cues           非空数组；跨文件 id 并集必须恰好等于 catalog
+```
+
+整袋与每条 cue 都是 `additionalProperties = false`。未知键拒绝。`bus` ∈ `music` / `sfx` / `ui` / `ambience`（不是 `master`）。`spatial = true` 才要求 `max_distance > 0`；`spatial = false` 时禁止带该键。stream 路径必须以 `res://content/audio/` 开头且文件存在。
+
+| 字段 | 约束 |
+|---|---|
+| `id` | 非空字符串；必须已在 catalog |
+| `streams` | 非空字符串数组 |
+| `bus` | 上列四总线之一 |
+| `gain_db` | 可选 number |
+| `pitch_min` / `pitch_max` | 可选 number；`pitch_max` 不得小于 `pitch_min` |
+| `spatial` / `loop` | 可选 bool |
+| `priority` | 可选 integer |
+| `max_voices` | 可选 integer，≥ 1 |
+| `cooldown_ms` | 可选 integer，≥ 0 |
+| `max_distance` | 仅 `spatial = true` 时出现，> 0 |
+
+JSON Schema：`backend/contracts/schemas/audio_cue_bank.schema.json`。校验并入 `tools/content-validator/`（[CD-91](../90-reference/91-decision-log.md) `audio_bank_ci = content_validator`）。运行时加载：`game/src/audio/audio_bank_loader.gd`。
 
 ## 2. Rule VM v1
 
@@ -288,6 +314,9 @@ Undo / Redo 是会话内对成功命令派生的反向 payload（`place`↔`remo
 | 平台内置资产清单 | `game/src/shared/schema/gameplay_asset_catalog.gd`（编译期准入；已发布 bundle 不查它） |
 | 炮塔目标优先级 | `game/src/shared/schema/tower_target_priorities.gd` |
 | 实体袋校验 | `game/src/shared/schema/component_record.gd` |
+| 音频 cue id 清单 | `game/src/shared/schema/audio_cue_catalog.gd` |
+| 音频 cue / bank | `game/src/audio/audio_cue.gd`、`audio_bank.gd`、`audio_bank_loader.gd` |
+| 生产 bank JSON | `game/content/audio/banks/` |
 
 JSON Schema 落点：
 
@@ -299,6 +328,7 @@ JSON Schema 落点：
 | 组件袋 | `backend/contracts/schemas/component_record.schema.json` |
 | AuthoringDocument | `backend/contracts/schemas/authoring_document.schema.json` |
 | SimulationBundle | `backend/contracts/schemas/simulation_bundle.schema.json` |
+| 音频 cue bank | `backend/contracts/schemas/audio_cue_bank.schema.json` |
 | 正反例与校验 | `tools/content-validator/`（由根目录 `npm test` 收集） |
 
-`payload` 只允许 nil / bool / int / String / Array / Dictionary（字符串键）；禁止 float、Object、Callable。PLAYER 命令必须带白名单 `intent` 字符串。EDIT 命令必须带白名单 `op` 字符串，payload 形状见 [§3.3](#33-服务端处理管线)。SYSTEM 命令允许 `actor_id = 0`。Component Schema v1 字段见 [§1.2](#12-字段标识符v1)。AuthoringDocument 字段见 [CD-32 §1.4](../30-ugc/32-editor-and-preview.md#14-共同数据模型)。SimulationBundle **v2** 字段见本表与 [CD-32 §3](../30-ugc/32-editor-and-preview.md#3-从编辑到预览)「TRAPRUSH 拓扑编译」（含可空 `hazards` 与可空 `solids` 袋、可选 `movers` / `conveyors` / `launches` / `switches` / `gates` / `energy_walls` / `portal_switches` / `spikes` / `flames` / `crushers` 袋，以及 v2 的 `assets` 袋与每袋资产引用，见 [§1.3](#13-权威碰撞的载体v2-起)）。Preview 试玩、MoveIntent、检查点占用验收、传送占用落地、冲线占用、重置到检查点、UseItemIntent 可破坏占用、JumpIntent 接地跳跃与周期机关固体切换见 [CD-32 §3](../30-ugc/32-editor-and-preview.md#3-从编辑到预览)「Preview 试玩」。对局票据 HTTP JSON Schema 在 `backend/contracts/src/match_ticket.ts`，由控制面 Fastify 路由挂载（含 `POST /match-sessions/:matchId/tickets/reconnect`）。单局结算 HTTP JSON Schema 在 `backend/contracts/src/match_settlement.ts`。内容发布 HTTP JSON Schema 在 `backend/contracts/src/content_publish.ts`（信封五键 + `bundle`；控制面不重算 ContentHash）。Rule VM 图的 JSON Schema 仍未落地。OpenAPI 仍未落地。内容签名是 sidecar 信封，不改 SimulationBundle 字段；`GameplayAssetVersion` 的几何不可变仍靠字段与编译期准入，ContentHash 覆盖整份 v2 wire。`latest` 由控制面 `content_latest` 指向已签名版本；新房吃新版本，已开对局不改哈希。
+`payload` 只允许 nil / bool / int / String / Array / Dictionary（字符串键）；禁止 float、Object、Callable。PLAYER 命令必须带白名单 `intent` 字符串。EDIT 命令必须带白名单 `op` 字符串，payload 形状见 [§3.3](#33-服务端处理管线)。SYSTEM 命令允许 `actor_id = 0`。Component Schema v1 字段见 [§1.2](#12-字段标识符v1)。音频 cue bank v1 字段见 [§1.4](#14-音频-cue-bank-v1)。AuthoringDocument 字段见 [CD-32 §1.4](../30-ugc/32-editor-and-preview.md#14-共同数据模型)。SimulationBundle **v2** 字段见本表与 [CD-32 §3](../30-ugc/32-editor-and-preview.md#3-从编辑到预览)「TRAPRUSH 拓扑编译」（含可空 `hazards` 与可空 `solids` 袋、可选 `movers` / `conveyors` / `launches` / `switches` / `gates` / `energy_walls` / `portal_switches` / `spikes` / `flames` / `crushers` 袋，以及 v2 的 `assets` 袋与每袋资产引用，见 [§1.3](#13-权威碰撞的载体v2-起)）。Preview 试玩、MoveIntent、检查点占用验收、传送占用落地、冲线占用、重置到检查点、UseItemIntent 可破坏占用、JumpIntent 接地跳跃与周期机关固体切换见 [CD-32 §3](../30-ugc/32-editor-and-preview.md#3-从编辑到预览)「Preview 试玩」。对局票据 HTTP JSON Schema 在 `backend/contracts/src/match_ticket.ts`，由控制面 Fastify 路由挂载（含 `POST /match-sessions/:matchId/tickets/reconnect`）。单局结算 HTTP JSON Schema 在 `backend/contracts/src/match_settlement.ts`。内容发布 HTTP JSON Schema 在 `backend/contracts/src/content_publish.ts`（信封五键 + `bundle`；控制面不重算 ContentHash）。音频 cue bank Schema 已落地。Rule VM 图的 JSON Schema 仍未落地。OpenAPI 仍未落地。内容签名是 sidecar 信封，不改 SimulationBundle 字段；`GameplayAssetVersion` 的几何不可变仍靠字段与编译期准入，ContentHash 覆盖整份 v2 wire。`latest` 由控制面 `content_latest` 指向已签名版本；新房吃新版本，已开对局不改哈希。

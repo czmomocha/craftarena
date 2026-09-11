@@ -125,7 +125,7 @@ repo/
 │  │  ├─ official/
 │  │  ├─ locale/                 # 本地化 CSV（`craft_arena.*` 键）；解析见 `shared/ui_copy.gd`
 │  │  ├─ assets/                 # 平台运行时资产（GLB）；准入见 CD-51 §5.1
-│  │  ├─ audio/                  # 平台音频；F 线临时 WAV 在 `f_line_temp/`
+│  │  ├─ audio/                  # 平台音频；bank JSON 在 `banks/`；F 线临时 WAV 在 `f_line_temp/`
 │  │  ├─ schemas/
 │  │  └─ test_fixtures/
 │  └─ tests/

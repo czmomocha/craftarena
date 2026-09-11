@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { FIXTURES_DIR, OFFICIAL_CONTENT_DIR } from "./paths.ts";
 
 export type EnvelopeKind = "command" | "event";
-export type FixtureKind = EnvelopeKind | "component" | "authoring" | "simulation_bundle";
+export type FixtureKind = EnvelopeKind | "component" | "authoring" | "simulation_bundle" | "audio_bank";
 
 export type FixtureFile = {
 	readonly kind: FixtureKind;
@@ -28,6 +28,10 @@ export function loadAuthoringFixtures(): FixtureFile[] {
 
 export function loadSimulationBundleFixtures(): FixtureFile[] {
 	return loadKindFixtures("simulation_bundle");
+}
+
+export function loadAudioBankFixtures(): FixtureFile[] {
+	return loadKindFixtures("audio_bank");
 }
 
 export function loadOfficialAuthoringDocuments(): FixtureFile[] {

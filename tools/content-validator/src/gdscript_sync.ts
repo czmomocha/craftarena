@@ -1,6 +1,8 @@
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
+import { join } from "node:path";
 
 import {
+	AUDIO_BANK_SCHEMA_VERSION,
 	AUTHORING_DOCUMENT_SCHEMA_VERSION,
 	COMPONENT_SCHEMA_VERSION,
 	L0_CONTRACT_VERSION,
@@ -9,6 +11,11 @@ import {
 import { CANONICAL_MAX_DEPTH } from "./canonical_depth.ts";
 import { loadJsonFile } from "./json_schema.ts";
 import {
+	AUDIO_BANK_PATH,
+	AUDIO_BANK_SCHEMA_PATH,
+	AUDIO_BANKS_DIR,
+	AUDIO_CUE_CATALOG_PATH,
+	AUDIO_CUE_PATH,
 	AUTHORING_DOCUMENT_PATH,
 	AUTHORING_DOCUMENT_SCHEMA_PATH,
 	CANONICAL_PAYLOAD_PATH,
@@ -131,6 +138,24 @@ export function collectGdscriptSchemaMismatches(): SyncMismatch[] {
 		});
 	}
 
+	const audioBankSchema = loadJsonFile(AUDIO_BANK_SCHEMA_PATH);
+	const cueFields = parseVarNames(readFileSync(AUDIO_CUE_PATH, "utf8"));
+	const schemaCueFields = cuePropertyNames(audioBankSchema);
+	pushListMismatch(mismatches, "audio_cue_fields", cueFields, schemaCueFields);
+
+	const audioBankSchemaVersion = parseIntConstant(readFileSync(AUDIO_BANK_PATH, "utf8"), "SCHEMA_VERSION");
+	if (audioBankSchemaVersion !== AUDIO_BANK_SCHEMA_VERSION) {
+		mismatches.push({
+			name: "audio_bank_schema_version",
+			expected: String(AUDIO_BANK_SCHEMA_VERSION),
+			actual: String(audioBankSchemaVersion),
+		});
+	}
+
+	const catalogIds = parseStringConstants(readFileSync(AUDIO_CUE_CATALOG_PATH, "utf8"));
+	const bankIds = collectProductionBankIds();
+	pushListMismatch(mismatches, "audio_cue_catalog", [...catalogIds].sort(), [...bankIds].sort());
+
 	return mismatches;
 }
 
@@ -179,6 +204,34 @@ export function parseIntConstant(source: string, name: string): number | undefin
 	const match = source.match(new RegExp(`const\\s+${name}:\\s*int\\s*=\\s*(-?\\d+)`));
 	const raw = match?.[1];
 	return raw === undefined ? undefined : Number(raw);
+}
+
+function cuePropertyNames(schema: unknown): string[] {
+	const cue = property(property(schema, "$defs"), "cue");
+	return schemaPropertyNames(cue);
+}
+
+function collectProductionBankIds(): string[] {
+	const ids: string[] = [];
+	const seen = new Set<string>();
+	for (const name of readdirSync(AUDIO_BANKS_DIR).sort()) {
+		if (!name.endsWith(".json")) {
+			continue;
+		}
+		const instance = loadJsonFile(join(AUDIO_BANKS_DIR, name));
+		const cues = property(instance, "cues");
+		if (!Array.isArray(cues)) {
+			continue;
+		}
+		for (const item of cues) {
+			const cueId = property(item, "id");
+			if (typeof cueId === "string" && !seen.has(cueId)) {
+				seen.add(cueId);
+				ids.push(cueId);
+			}
+		}
+	}
+	return ids;
 }
 
 function commandPlayerIntentEnum(schema: unknown): string[] {

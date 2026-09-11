@@ -1,0 +1,12 @@
+{
+	"schema_version": 1,
+	"cues": [
+		{
+			"id": "step",
+			"streams": ["res://content/audio/f_line_temp/step.wav"],
+			"bus": "sfx",
+			"max_voices": 1,
+			"cooldown_ms": 150
+		}
+	]
+}
