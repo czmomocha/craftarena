@@ -24,7 +24,11 @@
 				"streams": {
 					"type": "array",
 					"minItems": 1,
-					"items": { "type": "string", "minLength": 1 }
+					"items": {
+						"type": "string",
+						"minLength": 1,
+						"pattern": "^res://content/audio/.+\\.ogg$"
+					}
 				},
 				"bus": { "type": "string", "enum": ["music", "sfx", "ui", "ambience"] },
 				"gain_db": { "type": "number" },

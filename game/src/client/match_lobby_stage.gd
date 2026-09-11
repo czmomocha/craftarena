@@ -278,6 +278,8 @@ func apply_snapshot(
 		standings.follow_slot = slot
 		standings.apply_players(players, pad_total)
 	_apply_solo_anim(offline_playing, play_moving, play_anim, offline_session)
+	if not offline_playing:
+		ClientAudioGd.pump_follow(follow, slot, map, map.camera_node() if map != null else null)
 	return true
 
 

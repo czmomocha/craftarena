@@ -258,6 +258,7 @@ func try_leave_play() -> bool:
 		return false
 	if host.net != null:
 		host.net.drop_gateway()
+	ClientAudioGd.clear_play()
 	host.last_sent_command = PackedByteArray()
 	host.stage.reset_interp()
 	host.stage.clear_play_overlay()

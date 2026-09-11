@@ -3,20 +3,21 @@
 	"cues": [
 		{
 			"id": "step",
-			"streams": ["res://content/audio/f_line_temp/step.wav"],
+			"streams": ["res://content/audio/sfx/step.ogg"],
 			"bus": "sfx",
 			"gain_db": 0,
 			"pitch_min": 1,
 			"pitch_max": 1,
-			"spatial": false,
+			"spatial": true,
 			"loop": false,
 			"priority": 0,
 			"max_voices": 1,
-			"cooldown_ms": 150
+			"cooldown_ms": 150,
+			"max_distance": 16
 		},
 		{
 			"id": "pickup",
-			"streams": ["res://content/audio/f_line_temp/pickup.wav"],
+			"streams": ["res://content/audio/sfx/pickup.ogg"],
 			"bus": "sfx",
 			"gain_db": 0,
 			"pitch_min": 1,
@@ -29,7 +30,7 @@
 		},
 		{
 			"id": "theme_idle",
-			"streams": ["res://content/audio/f_line_temp/theme_idle.wav"],
+			"streams": ["res://content/audio/music/theme_idle.ogg"],
 			"bus": "music",
 			"gain_db": 0,
 			"pitch_min": 1,
@@ -42,7 +43,7 @@
 		},
 		{
 			"id": "theme_run",
-			"streams": ["res://content/audio/f_line_temp/theme_run.wav"],
+			"streams": ["res://content/audio/music/theme_run.ogg"],
 			"bus": "music",
 			"gain_db": 0,
 			"pitch_min": 1,
@@ -55,7 +56,7 @@
 		},
 		{
 			"id": "theme_end",
-			"streams": ["res://content/audio/f_line_temp/theme_end.wav"],
+			"streams": ["res://content/audio/music/theme_end.ogg"],
 			"bus": "music",
 			"gain_db": 0,
 			"pitch_min": 1,
@@ -68,7 +69,7 @@
 		},
 		{
 			"id": "theme_edit",
-			"streams": ["res://content/audio/f_line_temp/theme_edit.wav"],
+			"streams": ["res://content/audio/music/theme_edit.ogg"],
 			"bus": "music",
 			"gain_db": 0,
 			"pitch_min": 1,
@@ -78,6 +79,41 @@
 			"priority": 0,
 			"max_voices": 1,
 			"cooldown_ms": 0
+		},
+		{
+			"id": "ui.select",
+			"streams": [
+				"res://content/audio/sfx/switch1.ogg",
+				"res://content/audio/sfx/switch2.ogg",
+				"res://content/audio/sfx/switch3.ogg"
+			],
+			"bus": "ui",
+			"gain_db": 0,
+			"pitch_min": 1,
+			"pitch_max": 1,
+			"spatial": false,
+			"loop": false,
+			"priority": 0,
+			"max_voices": 2,
+			"cooldown_ms": 40
+		},
+		{
+			"id": "ui.confirm",
+			"streams": [
+				"res://content/audio/sfx/click1.ogg",
+				"res://content/audio/sfx/click2.ogg",
+				"res://content/audio/sfx/click3.ogg",
+				"res://content/audio/sfx/click4.ogg"
+			],
+			"bus": "ui",
+			"gain_db": 0,
+			"pitch_min": 1,
+			"pitch_max": 1,
+			"spatial": false,
+			"loop": false,
+			"priority": 0,
+			"max_voices": 4,
+			"cooldown_ms": 30
 		}
 	]
 }

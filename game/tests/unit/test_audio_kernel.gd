@@ -9,7 +9,7 @@ const AudioVoicePoolGd := preload("res://src/audio/audio_voice_pool.gd")
 const ClientAudioGd := preload("res://src/client/client_audio.gd")
 
 const TONE: String = "tone"
-const STREAM: String = "res://content/audio/f_line_temp/step.wav"
+const STREAM: String = "res://content/audio/sfx/step.ogg"
 const LAYOUT: String = "res://default_bus_layout.tres"
 
 var _host: Node = null
@@ -169,7 +169,7 @@ func test_bus_layout_has_five_named_buses() -> void:
 func test_f_line_slots_register_on_the_host() -> void:
 	var mounted: AudioServiceGd = ClientAudioGd.ensure(_host)
 	assert_not_null(mounted)
-	assert_eq(ClientAudioGd.all_slots().size(), 33)
+	assert_eq(ClientAudioGd.all_slots().size(), 35)
 	for slot: String in ClientAudioGd.all_slots():
 		assert_true(mounted.has_cue(slot), slot)
 		assert_true(ClientAudioGd.has_slot(slot), slot)
@@ -195,4 +195,16 @@ func test_spatial_post_uses_3d_player_when_live() -> void:
 	var voice_id: int = _svc.try_post(TONE, {"x": 1.0, "y": 0.0, "z": 2.0})
 	assert_gt(voice_id, 0)
 	assert_true(_svc.has_voice(voice_id))
+
+
+func test_ogg_decode_cost_is_observed_not_gated() -> void:
+	assert_true(ResourceLoader.exists(STREAM), STREAM)
+	var started: int = Time.get_ticks_usec()
+	var i: int = 0
+	while i < 100:
+		var stream: Resource = ResourceLoader.load(STREAM, "", ResourceLoader.CACHE_MODE_IGNORE)
+		assert_not_null(stream)
+		i += 1
+	var elapsed_ms: float = float(Time.get_ticks_usec() - started) / 1000.0
+	print("ogg decode 100x step.ogg: %.2f ms (observation, not a gate)" % elapsed_ms)
 

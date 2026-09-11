@@ -47,24 +47,39 @@ CC0 允许个人、教育与**商业**用途，无署名义务。原始包内 `L
 | `pickups/pickup_dash.tscn` | 内部 Mesh 占位 | F 线 FC 冲刺 |
 | `spawns/spawn_marker.tscn` | 内部 Mesh 占位 | F 线 FC 出生点标记 |
 
-## 2.1 内部生成临时音频（无第三方许可）
+## 2.1 平台运行时音频（B2，2026-09-11）
 
-F 线 FB 测试期音效，目录 `game/content/audio/f_line_temp/`。**内部生成 WAV，无第三方许可。** 不是产品配乐。M5 A1 起走 `game/src/audio/` 内核与 Music/Sfx/Ui/Ambience 总线；本目录仍是那 8 个临时 WAV，正式 OGG 等 B2。
+人类 2026-09-11 确认本地音频授权可用于正式入库。运行时只收 **OGG Vorbis**（[CD-11 §8.3](../../../Confirmed-docs/10-product/11-scope-and-platforms.md)）。F 线临时 WAV 已转码后删除；授权源目录 `game/content/assets/_source_refs/audio_temp/` **不入库**。`choose_your_character` 超 2 s 未收；`you_lose` / `ready` 没有对应玩法，不发明机制。
 
 | 资产 | 来源 | 许可 | 入库日期 |
 |---|---|---|---|
-| `../../audio/f_line_temp/step.wav` | 内部生成 | 无第三方许可 | 2026-09-07 |
-| `../../audio/f_line_temp/jump.wav` | 内部生成 | 无第三方许可 | 2026-09-07 |
-| `../../audio/f_line_temp/land.wav` | 内部生成 | 无第三方许可 | 2026-09-07 |
-| `../../audio/f_line_temp/pickup.wav` | 内部生成 | 无第三方许可 | 2026-09-07 |
-| `../../audio/f_line_temp/crate.wav` | 内部生成 | 无第三方许可 | 2026-09-07 |
-| `../../audio/f_line_temp/hazard_warn.wav` | 内部生成 | 无第三方许可 | 2026-09-07 |
-| `../../audio/f_line_temp/portal.wav` | 内部生成 | 无第三方许可 | 2026-09-07 |
-| `../../audio/f_line_temp/finish.wav` | 内部生成 | 无第三方许可 | 2026-09-07 |
+| `../../audio/sfx/step.ogg` | F 线内部 WAV 转码 | 无第三方许可 | 2026-09-11 |
+| `../../audio/sfx/hazard_warn.ogg` | F 线内部 WAV 转码 | 无第三方许可 | 2026-09-11 |
+| `../../audio/sfx/jump.ogg` | 人类确认授权的本地素材转码 | 人类 2026-09-11 确认 | 2026-09-11 |
+| `../../audio/sfx/land.ogg` | 人类确认授权的本地素材转码 | 人类 2026-09-11 确认 | 2026-09-11 |
+| `../../audio/sfx/pickup.ogg` | 人类确认授权的本地素材转码 | 人类 2026-09-11 确认 | 2026-09-11 |
+| `../../audio/sfx/crate.ogg` | 人类确认授权的本地素材转码 | 人类 2026-09-11 确认 | 2026-09-11 |
+| `../../audio/sfx/portal.ogg` | 人类确认授权的本地素材转码 | 人类 2026-09-11 确认 | 2026-09-11 |
+| `../../audio/sfx/loop_mover.ogg` | 人类确认授权的本地素材转码 | 人类 2026-09-11 确认 | 2026-09-11 |
+| `../../audio/sfx/sprint.ogg` | 人类确认授权的本地素材转码 | 人类 2026-09-11 确认 | 2026-09-11 |
+| `../../audio/sfx/finish.ogg` | 人类确认授权的本地素材转码 | 人类 2026-09-11 确认 | 2026-09-11 |
+| `../../audio/sfx/settled.ogg` | 人类确认授权的本地素材转码 | 人类 2026-09-11 确认 | 2026-09-11 |
+| `../../audio/sfx/fail_hazard.ogg` | 人类确认授权的本地素材转码 | 人类 2026-09-11 确认 | 2026-09-11 |
+| `../../audio/sfx/click1.ogg` | 人类确认授权的本地素材转码 | 人类 2026-09-11 确认 | 2026-09-11 |
+| `../../audio/sfx/click2.ogg` | 人类确认授权的本地素材转码 | 人类 2026-09-11 确认 | 2026-09-11 |
+| `../../audio/sfx/click3.ogg` | 人类确认授权的本地素材转码 | 人类 2026-09-11 确认 | 2026-09-11 |
+| `../../audio/sfx/click4.ogg` | 人类确认授权的本地素材转码 | 人类 2026-09-11 确认 | 2026-09-11 |
+| `../../audio/sfx/switch1.ogg` | 人类确认授权的本地素材转码 | 人类 2026-09-11 确认 | 2026-09-11 |
+| `../../audio/sfx/switch2.ogg` | 人类确认授权的本地素材转码 | 人类 2026-09-11 确认 | 2026-09-11 |
+| `../../audio/sfx/switch3.ogg` | 人类确认授权的本地素材转码 | 人类 2026-09-11 确认 | 2026-09-11 |
+| `../../audio/music/theme_idle.ogg` | F 线内部 WAV 转码 | 无第三方许可 | 2026-09-11 |
+| `../../audio/music/theme_run.ogg` | F 线内部 WAV 转码 | 无第三方许可 | 2026-09-11 |
+| `../../audio/music/theme_end.ogg` | F 线内部 WAV 转码 | 无第三方许可 | 2026-09-11 |
+| `../../audio/music/theme_edit.ogg` | F 线内部 WAV 转码 | 无第三方许可 | 2026-09-11 |
 
 ## 3. 维护规则
 
 1. **入库即登记**。新增任何 `.glb` / 贴图 / 音频都要在本文件加一行，无论来源；
 2. **第三方资产必须记许可条款原文位置**，不能只写"CC0"；
-3. 所有资产仍须过 [CD-11 §8.1](../../../Confirmed-docs/10-product/11-scope-and-platforms.md) 的单资产预算（`npm run asset-budget`）；
+3. 所有 `.glb` 仍须过 [CD-11 §8.1](../../../Confirmed-docs/10-product/11-scope-and-platforms.md) 的单资产预算（`npm run asset-budget`）；音频过 [CD-11 §8.3](../../../Confirmed-docs/10-product/11-scope-and-platforms.md)（随 `npm test`）；
 4. 玩家上传模型、音频与贴图仍是 [CD-11 §5](../../../Confirmed-docs/10-product/11-scope-and-platforms.md) 的不做项，本文件不适用于 UGC。

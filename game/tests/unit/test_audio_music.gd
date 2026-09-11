@@ -11,9 +11,9 @@ const ClientAudioGd := preload("res://src/client/client_audio.gd")
 const MatchLobbyChromeGd := preload("res://src/client/match_lobby_chrome.gd")
 const MatchLobbyShellGd := preload("res://src/client/match_lobby_shell.gd")
 
-const STREAM_A: String = "res://content/audio/f_line_temp/theme_idle.wav"
-const STREAM_B: String = "res://content/audio/f_line_temp/theme_run.wav"
-const STREAM_C: String = "res://content/audio/f_line_temp/theme_end.wav"
+const STREAM_A: String = "res://content/audio/music/theme_idle.ogg"
+const STREAM_B: String = "res://content/audio/music/theme_run.ogg"
+const STREAM_C: String = "res://content/audio/music/theme_end.ogg"
 
 var _host: Node = null
 var _svc: AudioServiceGd = null

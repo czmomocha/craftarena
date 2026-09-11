@@ -115,7 +115,7 @@ repo/
 │  │  ├─ simulation/             # fixed-point world/systems/rng/spatial/replay；World 门面 `simulation_world.gd` + query/move
 │  │  ├─ ugc/                    # compiler/validator/bytecode_vm/migration；Bundle 门面 `simulation_bundle.gd` + decode/bags；拓扑编译门面 `traprush_topology_compiler.gd` + bags/fields；Rule VM 门面 `rule_vm.gd` + opcodes/codec/compiler/dispatch/host/apply；内容签名 `content_sign.gd`；内容补丁 `content_patch.gd`；内容目录 `content_catalog.gd`
 │  │  ├─ server/                 # Godot Headless match/replication/result
-│  │  ├─ client/                 # platform/input/prediction/presentation；大厅门面 `match_lobby_shell.gd` + chrome/net/sampler/stage/hud/director；匹配门面 `match_join_session.gd` + codec/accept
+│  │  ├─ client/                 # platform/input/prediction/presentation；大厅门面 `match_lobby_shell.gd` + chrome/net/sampler/stage/hud/director；匹配门面 `match_join_session.gd` + codec/accept；联机音频源 `match_audio_source.gd`
 │  │  ├─ audio/                  # 游戏无关音频模块（自愿等同第二十三条）；仅 `audio_backend.gd` 碰 AudioServer / AudioStreamPlayer / AudioStreamPlayer3D / AudioListener3D；`audio_music_director.gd` 交叉淡入淡出；玩法映射不在此目录
 │  │  ├─ creator/                # shared shell/edit_commands/preview；Preview 门面 `authoring_preview.gd` + bootstrap/intents/scan/view；Preview 映射门面 `authoring_preview_map.gd` + convert/occupancy/gizmos/overlay/player；Preview 窗口门面 `authoring_preview_shell.gd` + chrome/sampler/hud/play/view；编辑门面 `authoring_editor_shell.gd` + chrome/place/follow
 │  │  └─ games/
@@ -125,7 +125,7 @@ repo/
 │  │  ├─ official/
 │  │  ├─ locale/                 # 本地化 CSV（`craft_arena.*` 键）；解析见 `shared/ui_copy.gd`
 │  │  ├─ assets/                 # 平台运行时资产（GLB）；准入见 CD-51 §5.1
-│  │  ├─ audio/                  # 平台音频；bank JSON 在 `banks/`；F 线临时 WAV 在 `f_line_temp/`
+│  │  ├─ audio/                  # 平台音频；bank JSON 在 `banks/`；运行时 OGG 在 `sfx/` 与 `music/`（Git LFS）
 │  │  ├─ schemas/
 │  │  └─ test_fixtures/
 │  └─ tests/

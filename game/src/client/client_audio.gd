@@ -10,10 +10,13 @@ const AudioBankLoaderGd := preload("res://src/audio/audio_bank_loader.gd")
 const AudioMusicDirectorGd := preload("res://src/audio/audio_music_director.gd")
 const AudioServiceGd := preload("res://src/audio/audio_service.gd")
 const CatalogGd := preload("res://src/shared/schema/audio_cue_catalog.gd")
+const MatchAudioSourceGd := preload("res://src/client/match_audio_source.gd")
 const MatchPlayAudioGd := preload("res://src/client/match_play_audio.gd")
 const RouterGd := preload("res://src/games/traprush/traprush_audio_router.gd")
 
-const DIR: String = "res://content/audio/f_line_temp/"
+const SFX_DIR: String = "res://content/audio/sfx/"
+const MUSIC_DIR: String = "res://content/audio/music/"
+const DIR: String = SFX_DIR
 const CUE_STEP: String = CatalogGd.STEP
 const CUE_JUMP: String = CatalogGd.JUMP
 const CUE_LAND: String = CatalogGd.LAND
@@ -30,6 +33,7 @@ const STATE_EDIT: String = "edit"
 static var service: AudioServiceGd = null
 static var director: AudioMusicDirectorGd = null
 static var play_audio: MatchPlayAudioGd = null
+static var match_audio: MatchAudioSourceGd = null
 
 
 static func ensure(host: Node) -> AudioServiceGd:
@@ -44,6 +48,7 @@ static func ensure(host: Node) -> AudioServiceGd:
 	director.bind(service)
 	director.request(CatalogGd.THEME_IDLE)
 	play_audio = MatchPlayAudioGd.new()
+	match_audio = MatchAudioSourceGd.new()
 	return service
 
 
@@ -54,12 +59,17 @@ static func bind(next: AudioServiceGd) -> void:
 	director.bind(service)
 	if play_audio == null:
 		play_audio = MatchPlayAudioGd.new()
+	if match_audio == null:
+		match_audio = MatchAudioSourceGd.new()
 
 
 static func shutdown() -> void:
 	if play_audio != null and service != null:
 		play_audio.reset(service)
 	play_audio = null
+	if match_audio != null:
+		match_audio.reset()
+	match_audio = null
 	if director != null:
 		director.stop()
 	director = null
@@ -78,9 +88,15 @@ static func post_event(event: String, ctx: Dictionary = {}) -> bool:
 	return post(RouterGd.cue(event), ctx)
 
 
+static func post_ui_confirm() -> bool:
+	return post(CatalogGd.UI_CONFIRM)
+
+
 static func clear_play() -> void:
 	if play_audio != null:
 		play_audio.reset(service)
+	if match_audio != null:
+		match_audio.reset()
 
 
 static func pump_session(
@@ -98,6 +114,31 @@ static func pump_session(
 	var loops: Array[Dictionary] = play_audio.observe.loops_session(session)
 	var origin: Vector3 = MatchPlayAudioGd.pose_meters(session.player_pose(slot))
 	play_audio.pump(service, events, loops, map, ear, origin)
+
+
+static func pump_follow(
+	follow: MatchSnapshotFollow,
+	own_slot: int,
+	map: Node3D,
+	ear: Node3D
+) -> void:
+	if match_audio == null:
+		match_audio = MatchAudioSourceGd.new()
+	if service == null or follow == null:
+		return
+	service.set_space(map)
+	service.attach_listener(ear)
+	var rows: Array[Dictionary] = match_audio.collect(follow, own_slot)
+	for row: Dictionary in rows:
+		var cue_id: String = RouterGd.cue(_str_at(row, MatchAudioSourceGd.KEY_EVENT))
+		if cue_id == "":
+			continue
+		var ctx: Dictionary = {}
+		if _bool_at(row, MatchAudioSourceGd.KEY_REMOTE, false):
+			ctx[AudioServiceGd.KEY_X] = _float_at(row, MatchAudioSourceGd.KEY_X)
+			ctx[AudioServiceGd.KEY_Y] = _float_at(row, MatchAudioSourceGd.KEY_Y)
+			ctx[AudioServiceGd.KEY_Z] = _float_at(row, MatchAudioSourceGd.KEY_Z)
+		service.post(cue_id, ctx)
 
 
 static func request_state(state: String) -> bool:
@@ -133,7 +174,36 @@ static func has_slot(slot: String) -> bool:
 static func path_for(slot: String) -> String:
 	if not CatalogGd.has_id(slot):
 		return ""
-	return "%s%s.wav" % [DIR, slot]
+	if slot.begins_with("theme_"):
+		return "%s%s.ogg" % [MUSIC_DIR, slot]
+	return "%s%s.ogg" % [SFX_DIR, slot]
+
+
+static func _str_at(body: Dictionary, key: String) -> String:
+	var raw: Variant = body.get(key, "")
+	if typeof(raw) != TYPE_STRING:
+		return ""
+	var value: String = raw
+	return value
+
+
+static func _bool_at(body: Dictionary, key: String, fallback: bool) -> bool:
+	var raw: Variant = body.get(key, fallback)
+	if typeof(raw) != TYPE_BOOL:
+		return fallback
+	var flag: bool = raw
+	return flag
+
+
+static func _float_at(body: Dictionary, key: String) -> float:
+	var raw: Variant = body.get(key, 0.0)
+	if typeof(raw) == TYPE_FLOAT:
+		var f: float = raw
+		return f
+	if typeof(raw) == TYPE_INT:
+		var n: int = raw
+		return float(n)
+	return 0.0
 
 
 static func all_slots() -> PackedStringArray:

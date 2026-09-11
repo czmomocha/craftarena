@@ -9,6 +9,7 @@ extends RefCounted
 const FrameRateMeterGd := preload("res://src/client/frame_rate_meter.gd")
 const OfficialTraprushCoursesGd := preload("res://src/shared/official_traprush_courses.gd")
 const ServerEndpointGd := preload("res://src/client/server_endpoint.gd")
+const ClientAudioGd := preload("res://src/client/client_audio.gd")
 
 const TITLE: String = UiCopy.WINDOW_TRAPRUSH
 const WINDOW_SIZE: Vector2i = Vector2i(1280, 720)
@@ -319,7 +320,10 @@ func _add_button(row: BoxContainer, node_name: String, copy_key: String, handler
 	button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	button.focus_mode = Control.FOCUS_NONE
 	if handler.is_valid():
-		button.pressed.connect(handler)
+		button.pressed.connect(func() -> void:
+			ClientAudioGd.post_ui_confirm()
+			handler.call()
+		)
 	row.add_child(button)
 
 

@@ -116,14 +116,14 @@ components     以组件名为键的对象；未知键拒绝；允许空袋
 
 ### 1.4 音频 Cue Bank v1
 
-表现层目录，**不进** `SimulationWorld` / `hash_state` / 协议帧。id allowlist 的所有者是 `game/src/shared/schema/audio_cue_catalog.gd`（创作者只能引用已登记 id，见 [CD-31 §5](../30-ugc/31-ugc-principles.md)）。bank JSON 在 `game/content/audio/banks/`。体积上限见 [CD-11 §8.3](../10-product/11-scope-and-platforms.md)，本表不复述数字。采样率 / 声道 / 时长属 M5 B2，本版不校验。
+表现层目录，**不进** `SimulationWorld` / `hash_state` / 协议帧。id allowlist 的所有者是 `game/src/shared/schema/audio_cue_catalog.gd`（创作者只能引用已登记 id，见 [CD-31 §5](../30-ugc/31-ugc-principles.md)）。bank JSON 在 `game/content/audio/banks/`。体积、采样率、声道与时长上限见 [CD-11 §8.3](../10-product/11-scope-and-platforms.md)，本表不复述数字。stream 路径必须以 `res://content/audio/` 开头、以 `.ogg` 结尾，且文件存在。
 
 ```text
 schema_version = 1
 cues           非空数组；跨文件 id 并集必须恰好等于 catalog
 ```
 
-整袋与每条 cue 都是 `additionalProperties = false`。未知键拒绝。`bus` ∈ `music` / `sfx` / `ui` / `ambience`（不是 `master`）。`spatial = true` 才要求 `max_distance > 0`；`spatial = false` 时禁止带该键。stream 路径必须以 `res://content/audio/` 开头且文件存在。
+整袋与每条 cue 都是 `additionalProperties = false`。未知键拒绝。`bus` ∈ `music` / `sfx` / `ui` / `ambience`（不是 `master`）。`spatial = true` 才要求 `max_distance > 0`；`spatial = false` 时禁止带该键。
 
 | 字段 | 约束 |
 |---|---|
@@ -138,7 +138,7 @@ cues           非空数组；跨文件 id 并集必须恰好等于 catalog
 | `cooldown_ms` | 可选 integer，≥ 0 |
 | `max_distance` | 仅 `spatial = true` 时出现，> 0 |
 
-JSON Schema：`backend/contracts/schemas/audio_cue_bank.schema.json`。校验并入 `tools/content-validator/`（[CD-91](../90-reference/91-decision-log.md) `audio_bank_ci = content_validator`）。运行时加载：`game/src/audio/audio_bank_loader.gd`。
+JSON Schema：`backend/contracts/schemas/audio_cue_bank.schema.json`。校验并入 `tools/content-validator/`（[CD-91](../90-reference/91-decision-log.md) `audio_bank_ci = content_validator` / `match_audio_online = snapshot_diff_ogg_budget`）：生产 bank 查 catalog 完整性、缺文件、残留 WAV，以及 [CD-11 §8.3](../10-product/11-scope-and-platforms.md) 的格式 / 采样率 / 声道 / 时长 / 单文件 / 总量；0 个 `.ogg` 明确输出「什么都没查」。运行时加载：`game/src/audio/audio_bank_loader.gd`。
 
 ## 2. Rule VM v1
 

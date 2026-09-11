@@ -9,7 +9,7 @@ const AudioServiceGd := preload("res://src/audio/audio_service.gd")
 const CatalogGd := preload("res://src/shared/schema/audio_cue_catalog.gd")
 const ClientAudioGd := preload("res://src/client/client_audio.gd")
 
-const STREAM: String = "res://content/audio/f_line_temp/step.wav"
+const STREAM: String = "res://content/audio/sfx/step.ogg"
 
 var _host: Node = null
 
@@ -27,7 +27,7 @@ func after_each() -> void:
 
 
 func test_catalog_lists_platform_ids() -> void:
-	assert_eq(CatalogGd.all_ids().size(), 33)
+	assert_eq(CatalogGd.all_ids().size(), 35)
 	assert_true(CatalogGd.has_id(CatalogGd.STEP))
 	assert_true(CatalogGd.has_id(CatalogGd.THEME_IDLE))
 	assert_true(CatalogGd.has_id(CatalogGd.LOOP_CONVEYOR))
@@ -87,7 +87,7 @@ func test_loader_rejects_unknown_catalog_id_and_missing_file() -> void:
 	assert_false(CatalogGd.has_id(unknown.id))
 	var missing: AudioCueGd = AudioCueGd.from_dictionary({
 		"id": "step",
-		"streams": PackedStringArray(["res://content/audio/f_line_temp/missing.wav"]),
+		"streams": PackedStringArray(["res://content/audio/sfx/missing.ogg"]),
 		"bus": AudioCueGd.BUS_SFX,
 	})
 	assert_not_null(missing)
@@ -117,11 +117,15 @@ func test_production_banks_match_catalog_and_keep_a1_slot_params() -> void:
 	for cue_id: String in CatalogGd.all_ids():
 		assert_true(bank.has_id(cue_id), cue_id)
 		var cue: AudioCueGd = bank.get_cue(cue_id)
-		assert_eq(cue.streams.size(), 1)
-		assert_true(FileAccess.file_exists(cue.streams[0]), cue_id)
+		assert_gt(cue.streams.size(), 0)
+		for stream_path: String in cue.streams:
+			assert_true(FileAccess.file_exists(stream_path), "%s %s" % [cue_id, stream_path])
 		if named.has(cue_id):
+			assert_eq(cue.streams.size(), 1)
 			assert_eq(cue.streams[0], ClientAudioGd.path_for(cue_id))
-	assert_false(bank.get_cue(CatalogGd.STEP).spatial)
+	assert_true(CatalogGd.has_id(CatalogGd.UI_CONFIRM))
+	assert_true(bank.get_cue(CatalogGd.STEP).spatial)
+	assert_eq(bank.get_cue(CatalogGd.STEP).max_distance, 16.0)
 	assert_true(bank.get_cue(CatalogGd.LOOP_CONVEYOR).spatial)
 	assert_eq(bank.get_cue(CatalogGd.STEP).bus, AudioCueGd.BUS_SFX)
 	assert_false(bank.get_cue(CatalogGd.STEP).loop)

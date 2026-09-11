@@ -3,12 +3,12 @@
 	"cues": [
 		{
 			"id": "step",
-			"streams": ["res://content/audio/f_line_temp/step.wav"],
+			"streams": ["res://content/audio/sfx/step.ogg"],
 			"bus": "sfx"
 		},
 		{
 			"id": "step",
-			"streams": ["res://content/audio/f_line_temp/pickup.wav"],
+			"streams": ["res://content/audio/sfx/pickup.ogg"],
 			"bus": "sfx"
 		}
 	]

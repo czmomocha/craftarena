@@ -3,7 +3,7 @@
 	"cues": [
 		{
 			"id": "not_a_catalog_id",
-			"streams": ["res://content/audio/f_line_temp/step.wav"],
+			"streams": ["res://content/audio/sfx/step.ogg"],
 			"bus": "sfx"
 		}
 	]

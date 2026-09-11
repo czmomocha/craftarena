@@ -21,6 +21,8 @@ const THEME_IDLE: String = "theme_idle"
 const THEME_RUN: String = "theme_run"
 const THEME_END: String = "theme_end"
 const THEME_EDIT: String = "theme_edit"
+const UI_SELECT: String = "ui.select"
+const UI_CONFIRM: String = "ui.confirm"
 const SPRINT: String = "sprint"
 const SHOVE: String = "shove"
 const USE_ITEM: String = "use_item"
@@ -56,6 +58,8 @@ const ALL: PackedStringArray = [
 	THEME_RUN,
 	THEME_END,
 	THEME_EDIT,
+	UI_SELECT,
+	UI_CONFIRM,
 	SPRINT,
 	SHOVE,
 	USE_ITEM,

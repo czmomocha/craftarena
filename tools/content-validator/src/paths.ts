@@ -25,6 +25,9 @@ export const AUDIO_CUE_CATALOG_PATH = join(SHARED_SRC_DIR, "schema/audio_cue_cat
 export const AUDIO_CUE_PATH = join(REPO_ROOT, "game/src/audio/audio_cue.gd");
 export const AUDIO_BANK_PATH = join(REPO_ROOT, "game/src/audio/audio_bank.gd");
 export const AUDIO_BANKS_DIR = join(REPO_ROOT, "game/content/audio/banks");
+export const AUDIO_SFX_DIR = join(REPO_ROOT, "game/content/audio/sfx");
+export const AUDIO_MUSIC_DIR = join(REPO_ROOT, "game/content/audio/music");
+export const AUDIO_RUNTIME_DIR = join(REPO_ROOT, "game/content/audio");
 export const AUTHORING_DOCUMENT_PATH = join(CREATOR_SRC_DIR, "authoring_document.gd");
 export const SIMULATION_BUNDLE_PATH = join(UGC_SRC_DIR, "simulation_bundle.gd");
 
