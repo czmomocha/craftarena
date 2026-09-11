@@ -26,9 +26,10 @@ func after_each() -> void:
 	_host = null
 
 
-func test_catalog_lists_the_eight_platform_ids() -> void:
-	assert_eq(CatalogGd.all_ids().size(), 8)
+func test_catalog_lists_the_twelve_platform_ids() -> void:
+	assert_eq(CatalogGd.all_ids().size(), 12)
 	assert_true(CatalogGd.has_id(CatalogGd.STEP))
+	assert_true(CatalogGd.has_id(CatalogGd.THEME_IDLE))
 	assert_true(CatalogGd.has_id(ClientAudioGd.CUE_HAZARD_WARN))
 	assert_false(CatalogGd.has_id("nope"))
 
@@ -106,27 +107,29 @@ func test_budget_helpers_reject_oversize() -> void:
 func test_production_banks_match_a1_slot_params() -> void:
 	var bank: AudioBankGd = AudioBankLoaderGd.load_directory()
 	assert_not_null(bank)
-	assert_eq(bank.size(), 8)
+	assert_eq(bank.size(), 12)
 	for cue_id: String in CatalogGd.all_ids():
 		assert_true(bank.has_id(cue_id), cue_id)
 		var cue: AudioCueGd = bank.get_cue(cue_id)
-		assert_eq(cue.bus, AudioCueGd.BUS_SFX)
 		assert_eq(cue.streams.size(), 1)
 		assert_eq(cue.streams[0], ClientAudioGd.path_for(cue_id))
 		assert_false(cue.spatial)
-		assert_false(cue.loop)
+	assert_eq(bank.get_cue(CatalogGd.STEP).bus, AudioCueGd.BUS_SFX)
+	assert_false(bank.get_cue(CatalogGd.STEP).loop)
 	assert_eq(bank.get_cue(CatalogGd.STEP).max_voices, 1)
 	assert_eq(bank.get_cue(CatalogGd.STEP).cooldown_ms, 150)
 	assert_eq(bank.get_cue(CatalogGd.HAZARD_WARN).max_voices, 4)
 	assert_eq(bank.get_cue(CatalogGd.HAZARD_WARN).priority, 2)
 	assert_eq(bank.get_cue(CatalogGd.FINISH).max_voices, 1)
 	assert_eq(bank.get_cue(CatalogGd.FINISH).priority, 3)
+	assert_eq(bank.get_cue(CatalogGd.THEME_IDLE).bus, AudioCueGd.BUS_MUSIC)
+	assert_true(bank.get_cue(CatalogGd.THEME_IDLE).loop)
 
 
 func test_client_audio_loads_banks_on_the_host() -> void:
 	var mounted: AudioServiceGd = ClientAudioGd.ensure(_host)
 	assert_not_null(mounted)
-	assert_eq(ClientAudioGd.all_slots().size(), 8)
+	assert_eq(ClientAudioGd.all_slots().size(), 12)
 	for slot: String in ClientAudioGd.all_slots():
 		assert_true(mounted.has_cue(slot), slot)
 		assert_true(ClientAudioGd.has_slot(slot), slot)

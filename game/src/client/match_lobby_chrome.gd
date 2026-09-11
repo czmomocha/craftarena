@@ -23,6 +23,7 @@ const SPRINT_NAME: String = "Sprint"
 const CREATOR_NAME: String = "CreateCourse"
 const PLAZA_NAME: String = "ContentPlaza"
 const ACCOUNT_NAME: String = "Account"
+const SETTINGS_NAME: String = "Settings"
 const ROOM_NAME: String = "RoomCode"
 const COURSE_ID_NAME: String = "CourseId"
 const SEATS_NAME: String = "Seats"
@@ -105,6 +106,7 @@ func attach(parent: Node, handlers: Dictionary) -> Window:
 	_add_button(row, CREATOR_NAME, UiCopy.CREATE_COURSE, _handler(handlers, "creator"))
 	_add_button(row, PLAZA_NAME, UiCopy.PLAZA, _handler(handlers, "plaza"))
 	_add_button(row, ACCOUNT_NAME, UiCopy.ACCOUNT, _handler(handlers, "account"))
+	_add_button(row, SETTINGS_NAME, UiCopy.SETTINGS, _handler(handlers, "settings"))
 	var server_row: HBoxContainer = HBoxContainer.new()
 	server_row.name = "ServerActions"
 	root.add_child(server_row)

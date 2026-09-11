@@ -127,6 +127,14 @@ const ACCOUNT_GUEST: String = "craft_arena.ui.account_guest"
 const ACCOUNT_SIGNED_IN: String = "craft_arena.ui.account_signed_in"
 const ACCOUNT_USERNAME: String = "craft_arena.ui.account_username"
 const ACCOUNT_PASSWORD: String = "craft_arena.ui.account_password"
+const SETTINGS: String = "craft_arena.ui.settings"
+const WINDOW_SETTINGS: String = "craft_arena.ui.window_settings"
+const AUDIO_MUTE: String = "craft_arena.ui.audio_mute"
+const AUDIO_MASTER: String = "craft_arena.ui.audio_master"
+const AUDIO_MUSIC: String = "craft_arena.ui.audio_music"
+const AUDIO_SFX: String = "craft_arena.ui.audio_sfx"
+const AUDIO_UI: String = "craft_arena.ui.audio_ui"
+const AUDIO_AMBIENCE: String = "craft_arena.ui.audio_ambience"
 
 const ALL_KEYS: PackedStringArray = [
 	WINDOW_TRAPRUSH,
@@ -226,6 +234,14 @@ const ALL_KEYS: PackedStringArray = [
 	ACCOUNT_SIGNED_IN,
 	ACCOUNT_USERNAME,
 	ACCOUNT_PASSWORD,
+	SETTINGS,
+	WINDOW_SETTINGS,
+	AUDIO_MUTE,
+	AUDIO_MASTER,
+	AUDIO_MUSIC,
+	AUDIO_SFX,
+	AUDIO_UI,
+	AUDIO_AMBIENCE,
 ]
 
 static var _loaded: bool = false

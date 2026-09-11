@@ -26,6 +26,58 @@
 			"priority": 0,
 			"max_voices": 2,
 			"cooldown_ms": 0
+		},
+		{
+			"id": "theme_idle",
+			"streams": ["res://content/audio/f_line_temp/theme_idle.wav"],
+			"bus": "music",
+			"gain_db": 0,
+			"pitch_min": 1,
+			"pitch_max": 1,
+			"spatial": false,
+			"loop": true,
+			"priority": 0,
+			"max_voices": 1,
+			"cooldown_ms": 0
+		},
+		{
+			"id": "theme_run",
+			"streams": ["res://content/audio/f_line_temp/theme_run.wav"],
+			"bus": "music",
+			"gain_db": 0,
+			"pitch_min": 1,
+			"pitch_max": 1,
+			"spatial": false,
+			"loop": true,
+			"priority": 0,
+			"max_voices": 1,
+			"cooldown_ms": 0
+		},
+		{
+			"id": "theme_end",
+			"streams": ["res://content/audio/f_line_temp/theme_end.wav"],
+			"bus": "music",
+			"gain_db": 0,
+			"pitch_min": 1,
+			"pitch_max": 1,
+			"spatial": false,
+			"loop": true,
+			"priority": 0,
+			"max_voices": 1,
+			"cooldown_ms": 0
+		},
+		{
+			"id": "theme_edit",
+			"streams": ["res://content/audio/f_line_temp/theme_edit.wav"],
+			"bus": "music",
+			"gain_db": 0,
+			"pitch_min": 1,
+			"pitch_max": 1,
+			"spatial": false,
+			"loop": true,
+			"priority": 0,
+			"max_voices": 1,
+			"cooldown_ms": 0
 		}
 	]
 }

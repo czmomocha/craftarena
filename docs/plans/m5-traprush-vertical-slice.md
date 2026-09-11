@@ -2,7 +2,7 @@
 
 > 类型：实现级章节计划（`docs/plans/`），**不是所有者文档**。
 > 里程碑产出与退出条件的所有者是 [CD-61 §2 M5](../../Confirmed-docs/60-plan/61-milestones.md)；本文件只把 M5 拆成可审查的章。两者冲突以 CD-61 为准。
-> 日期：2026-09-10。状态：章节划分与音频模块基建已由人类拍板（§5.1）；**A1 已交**；**A2 Cue Bank 本刀**。
+> 日期：2026-09-10。状态：章节划分与音频模块基建已由人类拍板（§5.1）；**A1 / A2 已交**；**A3 音乐总监与设置窗本刀**。
 > 上位约束：[CD-00 宪法](../../Confirmed-docs/00-constitution/CONSTITUTION.md) 第一、三、四、五、九、十七、十八、十九、二十三条。
 
 ## 1. 能不能开工
@@ -221,7 +221,7 @@ cue 是数据，定义在 `game/content/audio/banks/*.json`，字段初稿：
 | 5 | 两个小目录：`tools/audio-bank/` 建不建、`tools/bot-runner/` 建还是从 CD-41 删 | A2（**已执行推荐项**）、C5 | A2 已把 bank 校验并入 `tools/content-validator/`，不新建 `tools/audio-bank/`。`tools/bot-runner/` 仍属 C5 |
 | 6 | 网络故障注入工具 | C6 | Windows 用 clumsy、Linux 用 `tc netem`；外部工具不入库，仍需点头 |
 
-**A2 本刀无阻断项。** 下一刀 A3 也无 §5.2 阻断。第 1 项在 B2 素材入库前必须有答案，其余在对应章开工前再定。
+**A3 本刀无阻断项。** 下一刀 B1 也无 §5.2 阻断。第 1 项在 B2 素材入库前必须有答案，其余在对应章开工前再定。
 
 ## 6. M5 退出条件
 

@@ -27,11 +27,11 @@ const CELL: int = 65536
 const COURSE_F: String = "res://content/official/traprush/course_f_playable.json"
 
 
-func test_headless_sfx_is_silent_and_eight_slots_exist() -> void:
+func test_headless_sfx_is_silent_and_twelve_slots_exist() -> void:
 	assert_true(ClientAudioGd.muted())
 	assert_false(ClientAudioGd.post(ClientAudioGd.CUE_JUMP))
 	var slots: PackedStringArray = ClientAudioGd.all_slots()
-	assert_eq(slots.size(), 8)
+	assert_eq(ClientAudioGd.all_slots().size(), 12)
 	for slot: String in slots:
 		assert_true(ClientAudioGd.has_slot(slot), slot)
 

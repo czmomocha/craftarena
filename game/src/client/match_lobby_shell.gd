@@ -62,6 +62,7 @@ var frame_rate: FrameRateMeter = null
 var creator: CreatorEntry = null
 var plaza: ContentPlazaEntry = null
 var account: AccountEntry = null
+var settings: AudioSettingsEntry = null
 var window: Window = null
 var live_io: bool = false
 var web_platform: bool = false
@@ -106,10 +107,8 @@ func show_window() -> bool:
 	chrome.show_window()
 	_refresh_status()
 	return true
-func hide_window() -> void:
-	chrome.hide_window()
-func is_window_visible() -> bool:
-	return chrome.is_visible()
+func hide_window() -> void: chrome.hide_window()
+func is_window_visible() -> bool: return chrome.is_visible()
 func room_code_text() -> String:
 	return chrome.room_code_text()
 func set_room_code_text(text: String) -> void:
@@ -170,6 +169,8 @@ func try_close_plaza() -> bool: return director.try_close_plaza()
 func try_solo_plaza(content_id: String = "") -> bool: return director.try_solo_plaza(content_id)
 func try_open_account() -> bool: return director.try_open_account()
 func try_close_account() -> bool: return director.try_close_account()
+func try_open_settings() -> bool: return director.try_open_settings()
+func try_close_settings() -> bool: return director.try_close_settings()
 func try_stop_offline() -> bool: return director.try_stop_offline()
 func try_cancel() -> bool: return director.try_cancel()
 func try_leave_play() -> bool: return director.try_leave_play()
@@ -280,8 +281,6 @@ func apply_course_document(path: String) -> void:
 	stage.apply_course(path)
 func apply_snapshot_map() -> void:
 	_apply_snapshot_map()
-
-
 func _apply_snapshot_map() -> void:
 	var follow: MatchSnapshotFollowGd = active_follow()
 	stage.sync_interp(follow)
@@ -308,6 +307,7 @@ func online_busy() -> bool:
 		return false
 	return play.state == MatchPlaySessionGd.STATE_CONNECTING or play.state == MatchPlaySessionGd.STATE_IN_MATCH
 func _process(delta: float) -> void:
+	director.sync_music()
 	if live_io and not offline_playing() and net != null:
 		net.poll_queue_clock(delta, queue_poll_s, join, offline_playing(), try_poll)
 		var follow: MatchSnapshotFollowGd = active_follow()
@@ -353,6 +353,7 @@ func _ensure_window() -> void:
 		"creator": try_open_creator,
 		"plaza": try_open_plaza,
 		"account": try_open_account,
+		"settings": try_open_settings,
 		"cancel": try_cancel,
 		"poll": try_poll,
 		"sprint": _on_sprint,

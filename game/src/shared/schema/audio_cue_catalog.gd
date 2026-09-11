@@ -17,6 +17,10 @@ const CRATE: String = "crate"
 const HAZARD_WARN: String = "hazard_warn"
 const PORTAL: String = "portal"
 const FINISH: String = "finish"
+const THEME_IDLE: String = "theme_idle"
+const THEME_RUN: String = "theme_run"
+const THEME_END: String = "theme_end"
+const THEME_EDIT: String = "theme_edit"
 
 const ALL: PackedStringArray = [
 	STEP,
@@ -27,6 +31,10 @@ const ALL: PackedStringArray = [
 	HAZARD_WARN,
 	PORTAL,
 	FINISH,
+	THEME_IDLE,
+	THEME_RUN,
+	THEME_END,
+	THEME_EDIT,
 ]
 
 

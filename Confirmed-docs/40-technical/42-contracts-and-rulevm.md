@@ -316,6 +316,7 @@ Undo / Redo 是会话内对成功命令派生的反向 payload（`place`↔`remo
 | 实体袋校验 | `game/src/shared/schema/component_record.gd` |
 | 音频 cue id 清单 | `game/src/shared/schema/audio_cue_catalog.gd` |
 | 音频 cue / bank | `game/src/audio/audio_cue.gd`、`audio_bank.gd`、`audio_bank_loader.gd` |
+| 音频音乐总监 | `game/src/audio/audio_music_director.gd` |
 | 生产 bank JSON | `game/content/audio/banks/` |
 
 JSON Schema 落点：

@@ -2,10 +2,12 @@ class_name ClientAudio
 extends RefCounted
 
 ## Presentation host for the audio module. Loads platform banks into the
-## kernel. Cue ids here may use gameplay names; game/src/audio/** must not.
+## kernel and maps product states to theme cue ids. Cue ids here may use
+## gameplay names; game/src/audio/** must not.
 
 const AudioBankGd := preload("res://src/audio/audio_bank.gd")
 const AudioBankLoaderGd := preload("res://src/audio/audio_bank_loader.gd")
+const AudioMusicDirectorGd := preload("res://src/audio/audio_music_director.gd")
 const AudioServiceGd := preload("res://src/audio/audio_service.gd")
 const CatalogGd := preload("res://src/shared/schema/audio_cue_catalog.gd")
 
@@ -18,8 +20,13 @@ const CUE_CRATE: String = CatalogGd.CRATE
 const CUE_HAZARD_WARN: String = CatalogGd.HAZARD_WARN
 const CUE_PORTAL: String = CatalogGd.PORTAL
 const CUE_FINISH: String = CatalogGd.FINISH
+const STATE_LOBBY: String = "lobby"
+const STATE_PLAY: String = "play"
+const STATE_RESULT: String = "result"
+const STATE_EDIT: String = "edit"
 
 static var service: AudioServiceGd = null
+static var director: AudioMusicDirectorGd = null
 
 
 static func ensure(host: Node) -> AudioServiceGd:
@@ -30,14 +37,23 @@ static func ensure(host: Node) -> AudioServiceGd:
 	var bank: AudioBankGd = AudioBankLoaderGd.load_directory()
 	if bank != null:
 		bank.apply_to(service)
+	director = AudioMusicDirectorGd.new()
+	director.bind(service)
+	director.request(CatalogGd.THEME_IDLE)
 	return service
 
 
 static func bind(next: AudioServiceGd) -> void:
 	service = next
+	if director == null:
+		director = AudioMusicDirectorGd.new()
+	director.bind(service)
 
 
 static func shutdown() -> void:
+	if director != null:
+		director.stop()
+	director = null
 	if service != null:
 		service.shutdown()
 	service = null
@@ -47,6 +63,20 @@ static func post(cue_id: String) -> bool:
 	if service == null:
 		return false
 	return service.post(cue_id)
+
+
+static func request_state(state: String) -> bool:
+	if director == null:
+		return false
+	var cue_id: String = _cue_for_state(state)
+	if cue_id == "":
+		return false
+	return director.request(cue_id)
+
+
+static func advance_music() -> void:
+	if director != null:
+		director.advance()
 
 
 static func muted() -> bool:
@@ -69,3 +99,17 @@ static func path_for(slot: String) -> String:
 
 static func all_slots() -> PackedStringArray:
 	return CatalogGd.all_ids()
+
+
+static func _cue_for_state(state: String) -> String:
+	match state:
+		STATE_LOBBY:
+			return CatalogGd.THEME_IDLE
+		STATE_PLAY:
+			return CatalogGd.THEME_RUN
+		STATE_RESULT:
+			return CatalogGd.THEME_END
+		STATE_EDIT:
+			return CatalogGd.THEME_EDIT
+		_:
+			return ""

@@ -169,7 +169,7 @@ func test_bus_layout_has_five_named_buses() -> void:
 func test_f_line_slots_register_on_the_host() -> void:
 	var mounted: AudioServiceGd = ClientAudioGd.ensure(_host)
 	assert_not_null(mounted)
-	assert_eq(ClientAudioGd.all_slots().size(), 8)
+	assert_eq(ClientAudioGd.all_slots().size(), 12)
 	for slot: String in ClientAudioGd.all_slots():
 		assert_true(mounted.has_cue(slot), slot)
 		assert_true(ClientAudioGd.has_slot(slot), slot)

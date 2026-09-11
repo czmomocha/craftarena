@@ -77,6 +77,37 @@ func has_cue(cue_id: String) -> bool:
 	return _cues.has(cue_id)
 
 
+func stream_path(cue_id: String) -> String:
+	if not _cues.has(cue_id):
+		return ""
+	var cue: Dictionary = _cues[cue_id]
+	var streams: PackedStringArray = _read_streams(cue.get(KEY_STREAMS, PackedStringArray()))
+	if streams.is_empty():
+		return ""
+	return streams[0]
+
+
+func cue_gain_db(cue_id: String) -> float:
+	if not _cues.has(cue_id):
+		return 0.0
+	var cue: Dictionary = _cues[cue_id]
+	return _float_at(cue, KEY_GAIN_DB, 0.0)
+
+
+func cue_bus(cue_id: String) -> String:
+	if not _cues.has(cue_id):
+		return DEFAULT_BUS
+	var cue: Dictionary = _cues[cue_id]
+	return _str_at(cue, KEY_BUS, DEFAULT_BUS)
+
+
+func cue_loops(cue_id: String) -> bool:
+	if not _cues.has(cue_id):
+		return false
+	var cue: Dictionary = _cues[cue_id]
+	return _bool_at(cue, KEY_LOOP, false)
+
+
 func post(cue_id: String, _ctx: Dictionary = {}) -> bool:
 	if settings.muted:
 		return false

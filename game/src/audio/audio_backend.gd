@@ -84,11 +84,22 @@ func play_2d(
 	player.volume_db = gain_db
 	player.pitch_scale = clampf(pitch, 0.01, 4.0)
 	player.name = _voice_name(voice_id)
-	if not loop:
+	if loop:
+		player.finished.connect(_on_loop_restart.bind(voice_id))
+	else:
 		player.finished.connect(_on_player_ended.bind(voice_id))
 	_container.add_child(player)
 	player.play()
 	return true
+
+
+func set_voice_gain(voice_id: int, gain_db: float) -> void:
+	if _container == null or not is_instance_valid(_container):
+		return
+	var node: Node = _container.get_node_or_null(_voice_name(voice_id))
+	if node is AudioStreamPlayer:
+		var player: AudioStreamPlayer = node
+		player.volume_db = gain_db
 
 
 func stop(voice_id: int) -> void:
@@ -139,6 +150,15 @@ func _ensure_container() -> void:
 	_container = Node.new()
 	_container.name = CONTAINER_NAME
 	host.add_child(_container)
+
+
+func _on_loop_restart(voice_id: int) -> void:
+	if _container == null or not is_instance_valid(_container):
+		return
+	var node: Node = _container.get_node_or_null(_voice_name(voice_id))
+	if node is AudioStreamPlayer:
+		var player: AudioStreamPlayer = node
+		player.play()
 
 
 func _on_player_ended(voice_id: int) -> void:

@@ -9,6 +9,8 @@ const MatchJoinSessionGd := preload("res://src/client/match_join_session.gd")
 const MatchLobbyHudGd := preload("res://src/client/match_lobby_hud.gd")
 const MatchPlaySessionGd := preload("res://src/client/match_play_session.gd")
 const OfficialTraprushCoursesGd := preload("res://src/shared/official_traprush_courses.gd")
+const ClientAudioGd := preload("res://src/client/client_audio.gd")
+const AudioSettingsEntryGd := preload("res://src/client/audio_settings_entry.gd")
 
 var host: MatchLobbyShell = null
 
@@ -130,6 +132,49 @@ func try_close_account() -> bool:
 	if host.account == null:
 		return false
 	return host.account.try_close()
+
+
+func try_open_settings() -> bool:
+	host.chrome.release_focus()
+	host.settings = AudioSettingsEntryGd.ensure(host, host.settings)
+	if host.settings == null:
+		return false
+	return host.settings.try_open()
+
+
+func try_close_settings() -> bool:
+	if host.settings == null:
+		return false
+	return host.settings.try_close()
+
+
+func sync_music() -> void:
+	ClientAudioGd.advance_music()
+	ClientAudioGd.request_state(_music_state())
+
+
+func _music_state() -> String:
+	if host.creator != null and host.creator.is_open():
+		return ClientAudioGd.STATE_EDIT
+	if host.offline_playing() or _in_live_match():
+		if _own_finished():
+			return ClientAudioGd.STATE_RESULT
+		return ClientAudioGd.STATE_PLAY
+	return ClientAudioGd.STATE_LOBBY
+
+
+func _in_live_match() -> bool:
+	if host.play == null:
+		return false
+	return host.play.state == MatchPlaySessionGd.STATE_IN_MATCH
+
+
+func _own_finished() -> bool:
+	var follow: MatchSnapshotFollow = host.active_follow()
+	if follow == null or not follow.has_snapshot:
+		return false
+	var slot: int = host.stage.camera_follow_slot(host.offline_playing(), host.play)
+	return MatchLobbyHudGd.own_player_int(follow.players, slot, "finish_tick", false) >= 0
 
 
 func try_solo_plaza(content_id: String = "") -> bool:
