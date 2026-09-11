@@ -20,15 +20,21 @@ export interface RegisterMatchSessionRequest {
 	readonly upstreamUrl: string;
 	/** 本场席位。省略时控制面按 TRAPRUSH 上限 8 记，不是默认开局人数。 */
 	readonly seats?: number;
-	/** 官方赛道 id。省略时 `course_01`。不接受 `res://` 路径或 UGC 课。 */
+	/** 官方赛道 id。省略且无 `content` 时 `course_01`。与 `content` 互斥。 */
 	readonly course?: string;
+	/** 已签名 UGC。与 `course` 互斥；建房钉死 version。 */
+	readonly content?: { readonly id: string; readonly version: number };
+	/** UGC 开局锁定的 ContentHash。官方课省略。 */
+	readonly content_hash?: string;
 }
 
 export interface RegisterMatchSessionResponse {
 	readonly matchId: string;
 	readonly upstreamUrl: string;
 	readonly seats: number;
-	readonly course: string;
+	readonly course: string | null;
+	readonly content?: { readonly id: string; readonly version: number };
+	readonly content_hash?: string;
 }
 
 export interface UnregisterMatchSessionResponse {
@@ -85,6 +91,21 @@ export const registerMatchSessionBodySchema = {
 		upstreamUrl: { type: "string", minLength: 1, maxLength: 512 },
 		seats: { type: "integer", minimum: 1, maximum: 8 },
 		course: { type: "string", minLength: 1, maxLength: 32 },
+		content: {
+			type: "object",
+			additionalProperties: false,
+			required: ["id", "version"],
+			properties: {
+				id: { type: "string", minLength: 1, maxLength: 64, pattern: "^[A-Za-z0-9._-]+$" },
+				version: { type: "integer", minimum: 1, maximum: 1_000_000 },
+			},
+		},
+		content_hash: {
+			type: "string",
+			minLength: 64,
+			maxLength: 64,
+			pattern: "^[0-9a-f]{64}$",
+		},
 	},
 } as const;
 

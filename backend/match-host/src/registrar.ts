@@ -6,13 +6,16 @@
  * 在 MatchHost 里加一句 SQL。
  */
 
+import type { MatchContentRef } from "../../contracts/src/match_body.ts";
 import type { MatchSettlementResponse, RecordMatchSettlementRequest } from "../../contracts/src/match_settlement.ts";
 
 export interface MatchSessionRegisterSpec {
 	readonly matchId: string;
 	readonly upstreamUrl: string;
 	readonly seats: number;
-	readonly course: string;
+	readonly course?: string;
+	readonly content?: MatchContentRef;
+	readonly content_hash?: string;
 }
 
 export interface MatchSessionRegistrar {
@@ -90,7 +93,9 @@ export class ControlPlaneMatchSessionRegistrar implements MatchSessionRegistrar 
 					matchId: spec.matchId,
 					upstreamUrl: spec.upstreamUrl,
 					seats: spec.seats,
-					course: spec.course,
+					...(spec.content === undefined
+						? { course: spec.course }
+						: { content: spec.content, content_hash: spec.content_hash }),
 				}),
 				signal: AbortSignal.timeout(this.#timeoutMs),
 			});

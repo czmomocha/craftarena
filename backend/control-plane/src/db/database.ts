@@ -93,7 +93,10 @@ export interface MatchSessionRecord {
 	readonly createdAt: string;
 	readonly roomCode: string | undefined;
 	readonly seats: number;
-	readonly course: OfficialTraprushCourseId;
+	readonly course: OfficialTraprushCourseId | null;
+	readonly contentId?: string | undefined;
+	readonly contentVersion?: number | undefined;
+	readonly contentHash?: string | undefined;
 }
 
 export interface IssuedTicket {
@@ -155,8 +158,10 @@ export interface MatchQueueRecord {
 	readonly ticket: string | undefined;
 	readonly ticketExpiresAt: string | undefined;
 	readonly error: string | undefined;
-	readonly course: OfficialTraprushCourseId;
+	readonly course: OfficialTraprushCourseId | null;
 	readonly seats: number;
+	readonly contentId?: string | undefined;
+	readonly contentVersion?: number | undefined;
 }
 
 export interface EnqueuedMatch {
@@ -250,6 +255,9 @@ export class ControlPlaneDatabase {
 		readonly now: Date;
 		readonly seats?: number | undefined;
 		readonly course?: OfficialTraprushCourseId | undefined;
+		readonly contentId?: string | undefined;
+		readonly contentVersion?: number | undefined;
+		readonly contentHash?: string | undefined;
 	}): MatchSessionRecord {
 		return this.#sessions.insertMatchSession(input);
 	}
@@ -285,6 +293,11 @@ export class ControlPlaneDatabase {
 		course: OfficialTraprushCourseId = DEFAULT_OFFICIAL_TRAPRUSH_COURSE,
 		seats: number = DEFAULT_MATCHMAKING_SEATS,
 	): MatchSessionRecord | undefined { return this.#sessions.findOldestOpenRoom(course, seats); }
+	findOldestOpenContentRoom(
+		contentId: string, version: number, seats: number = DEFAULT_MATCHMAKING_SEATS,
+	): MatchSessionRecord | undefined {
+		return this.#sessions.findOldestOpenContentRoom(contentId, version, seats);
+	}
 	assignRoomCode(matchId: string, roomCode: string): string { return this.#sessions.assignRoomCode(matchId, roomCode); }
 	assignGeneratedRoomCode(matchId: string, generate: () => string, attempts = 8): string {
 		return this.#sessions.assignGeneratedRoomCode(matchId, generate, attempts);
@@ -296,9 +309,10 @@ export class ControlPlaneDatabase {
 	}
 	enqueue(
 		kind: MatchQueueKind, now: Date, ttlMs: number,
-		course: OfficialTraprushCourseId = DEFAULT_OFFICIAL_TRAPRUSH_COURSE,
+		course: OfficialTraprushCourseId | "" = DEFAULT_OFFICIAL_TRAPRUSH_COURSE,
 		seats: number = DEFAULT_MATCHMAKING_SEATS,
-	): EnqueuedMatch { return this.#queue.enqueue(kind, now, ttlMs, course, seats); }
+		contentId?: string, contentVersion?: number,
+	): EnqueuedMatch { return this.#queue.enqueue(kind, now, ttlMs, course, seats, contentId, contentVersion); }
 	getQueueByToken(token: string, now: Date): MatchQueueRecord | undefined {
 		return this.#queue.getQueueByToken(token, now);
 	}

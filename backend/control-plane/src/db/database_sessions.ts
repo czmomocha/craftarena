@@ -17,6 +17,11 @@ import {
 	type MatchSettlementRecord,
 } from "./database.ts";
 
+const SESSION_COLUMNS =
+	"match_id, upstream_url, created_at, room_code, seats, course, content_id, content_version, content_hash";
+const SESSION_COLUMNS_S =
+	"s.match_id, s.upstream_url, s.created_at, s.room_code, s.seats, s.course, s.content_id, s.content_version, s.content_hash";
+
 export class ControlPlaneSessionStore {
 	readonly db: DatabaseSync;
 
@@ -30,18 +35,34 @@ export class ControlPlaneSessionStore {
 		readonly now: Date;
 		readonly seats?: number | undefined;
 		readonly course?: OfficialTraprushCourseId | undefined;
+		readonly contentId?: string | undefined;
+		readonly contentVersion?: number | undefined;
+		readonly contentHash?: string | undefined;
 	}): MatchSessionRecord {
 		const matchId = input.matchId ?? randomUUID();
 		const createdAt = input.now.toISOString();
 		const seats = input.seats ?? DEFAULT_MATCH_SEATS;
-		const course = input.course ?? DEFAULT_OFFICIAL_TRAPRUSH_COURSE;
+		const hasContent =
+			input.contentId !== undefined &&
+			input.contentVersion !== undefined &&
+			input.contentHash !== undefined;
+		const storedCourse: OfficialTraprushCourseId | null = hasContent
+			? null
+			: (input.course ?? DEFAULT_OFFICIAL_TRAPRUSH_COURSE);
+		const course = storedCourse ?? "";
+		const contentId = hasContent ? input.contentId : null;
+		const contentVersion = hasContent ? input.contentVersion : null;
+		const contentHash = hasContent ? input.contentHash : null;
 
 		try {
 			this.db
 				.prepare(
-					"INSERT INTO match_sessions (match_id, upstream_url, created_at, room_code, seats, course) VALUES (?, ?, ?, NULL, ?, ?)",
+					`INSERT INTO match_sessions (
+						match_id, upstream_url, created_at, room_code, seats, course,
+						content_id, content_version, content_hash
+					) VALUES (?, ?, ?, NULL, ?, ?, ?, ?, ?)`,
 				)
-				.run(matchId, input.upstreamUrl, createdAt, seats, course);
+				.run(matchId, input.upstreamUrl, createdAt, seats, course, contentId, contentVersion, contentHash);
 		} catch (error) {
 			if (isUniqueConstraint(error)) {
 				throw new MatchSessionExistsError(matchId);
@@ -49,7 +70,17 @@ export class ControlPlaneSessionStore {
 			throw error;
 		}
 
-		return { matchId, upstreamUrl: input.upstreamUrl, createdAt, roomCode: undefined, seats, course };
+		return {
+			matchId,
+			upstreamUrl: input.upstreamUrl,
+			createdAt,
+			roomCode: undefined,
+			seats,
+			course: storedCourse,
+			contentId: hasContent ? input.contentId : undefined,
+			contentVersion: hasContent ? input.contentVersion : undefined,
+			contentHash: hasContent ? input.contentHash : undefined,
+		};
 	}
 
 	deleteMatchSession(matchId: string): MatchSessionRecord {
@@ -136,18 +167,14 @@ export class ControlPlaneSessionStore {
 
 	getMatchSession(matchId: string): MatchSessionRecord | undefined {
 		const row = this.db
-			.prepare(
-				"SELECT match_id, upstream_url, created_at, room_code, seats, course FROM match_sessions WHERE match_id = ?",
-			)
+			.prepare(`SELECT ${SESSION_COLUMNS} FROM match_sessions WHERE match_id = ?`)
 			.get(matchId);
 		return row === undefined ? undefined : sessionFromRow(row);
 	}
 
 	getMatchSessionByRoomCode(roomCode: string): MatchSessionRecord | undefined {
 		const row = this.db
-			.prepare(
-				"SELECT match_id, upstream_url, created_at, room_code, seats, course FROM match_sessions WHERE room_code = ?",
-			)
+			.prepare(`SELECT ${SESSION_COLUMNS} FROM match_sessions WHERE room_code = ?`)
 			.get(roomCode);
 		return row === undefined ? undefined : sessionFromRow(row);
 	}
@@ -162,7 +189,7 @@ export class ControlPlaneSessionStore {
 	): MatchSessionRecord | undefined {
 		const row = this.db
 			.prepare(
-				`SELECT s.match_id, s.upstream_url, s.created_at, s.room_code, s.seats, s.course
+				`SELECT ${SESSION_COLUMNS_S}
 				 FROM match_sessions s
 				 WHERE s.room_code IS NOT NULL
 				 AND s.course = ?
@@ -175,6 +202,30 @@ export class ControlPlaneSessionStore {
 				 LIMIT 1`,
 			)
 			.get(course, seats);
+		return row === undefined ? undefined : sessionFromRow(row);
+	}
+
+	findOldestOpenContentRoom(
+		contentId: string,
+		version: number,
+		seats: number = DEFAULT_MATCHMAKING_SEATS,
+	): MatchSessionRecord | undefined {
+		const row = this.db
+			.prepare(
+				`SELECT ${SESSION_COLUMNS_S}
+				 FROM match_sessions s
+				 WHERE s.room_code IS NOT NULL
+				 AND s.content_id = ?
+				 AND s.content_version = ?
+				 AND s.seats = ?
+				 AND (
+					SELECT COUNT(DISTINCT t.seat) FROM match_tickets t
+					WHERE t.match_id = s.match_id AND t.superseded_at IS NULL
+				 ) < s.seats
+				 ORDER BY s.created_at ASC
+				 LIMIT 1`,
+			)
+			.get(contentId, version, seats);
 		return row === undefined ? undefined : sessionFromRow(row);
 	}
 

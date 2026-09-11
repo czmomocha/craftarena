@@ -27,8 +27,10 @@ export function queueFromRow(row: Record<string, unknown>): MatchQueueRecord {
 		ticketExpiresAt:
 			ticketExpiresAt === null || ticketExpiresAt === undefined ? undefined : String(ticketExpiresAt),
 		error: error === null || error === undefined ? undefined : String(error),
-		course: officialCourseFromRow(row["course"]),
+		course: courseFromRow(row["course"]),
 		seats: Number(row["seats"]),
+		contentId: optionalText(row["content_id"]),
+		contentVersion: optionalInt(row["content_version"]),
 	};
 }
 
@@ -59,12 +61,41 @@ export function sessionFromRow(row: Record<string, unknown>): MatchSessionRecord
 		createdAt: String(row["created_at"]),
 		roomCode: roomCode === null || roomCode === undefined ? undefined : String(roomCode),
 		seats: Number(row["seats"]),
-		course: officialCourseFromRow(row["course"]),
+		course: courseFromRow(row["course"]),
+		contentId: optionalText(row["content_id"]),
+		contentVersion: optionalInt(row["content_version"]),
+		contentHash: optionalText(row["content_hash"]),
 	};
 }
 
+export function courseFromRow(value: unknown): OfficialTraprushCourseId | null {
+	if (isOfficialTraprushCourseId(value)) {
+		return value;
+	}
+	if (value === "" || value === null || value === undefined) {
+		return null;
+	}
+	return DEFAULT_OFFICIAL_TRAPRUSH_COURSE;
+}
+
 export function officialCourseFromRow(value: unknown): OfficialTraprushCourseId {
-	return isOfficialTraprushCourseId(value) ? value : DEFAULT_OFFICIAL_TRAPRUSH_COURSE;
+	return courseFromRow(value) ?? DEFAULT_OFFICIAL_TRAPRUSH_COURSE;
+}
+
+function optionalText(value: unknown): string | undefined {
+	if (value === null || value === undefined) {
+		return undefined;
+	}
+	const text = String(value);
+	return text === "" ? undefined : text;
+}
+
+function optionalInt(value: unknown): number | undefined {
+	if (value === null || value === undefined) {
+		return undefined;
+	}
+	const number = Number(value);
+	return Number.isInteger(number) ? number : undefined;
 }
 
 export function isUniqueConstraint(error: unknown): boolean {

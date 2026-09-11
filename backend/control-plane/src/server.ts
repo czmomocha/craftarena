@@ -5,7 +5,6 @@ import {
 	TICKET_REJECT_REASONS,
 	isReady,
 	verifyMatchTicketBodySchema,
-	readOfficialMatchBody,
 	type CancelMatchQueueResponse,
 	type HealthPayload,
 	type ReadinessCheck,
@@ -29,6 +28,7 @@ import {
 	hasRequestBody,
 	hasUnexpectedKeys,
 	launchOrEnqueue,
+	resolveMatchSpec,
 	viewQueue,
 } from "./server_matchmaking.ts";
 import { registerContentRoutes } from "./server_content.ts";
@@ -135,13 +135,20 @@ export function buildServer(options: BuildServerOptions): FastifyInstance {
 	registerAccountRoutes(app, options);
 
 	app.post("/matchmaking/quick", async (request, reply) => {
-		const matchResult = readOfficialMatchBody(request.body);
+		const matchResult = resolveMatchSpec(options.database, request.body);
 		if (!matchResult.ok) {
 			reply.code(400);
 			return { error: matchResult.error };
 		}
 
-		const open = options.database.findOldestOpenRoom(matchResult.course, matchResult.seats);
+		const open =
+			matchResult.spec.kind === "content"
+				? options.database.findOldestOpenContentRoom(
+						matchResult.spec.content.id,
+						matchResult.spec.content.version,
+						matchResult.spec.seats,
+					)
+				: options.database.findOldestOpenRoom(matchResult.spec.course, matchResult.spec.seats);
 		if (open !== undefined) {
 			try {
 				reply.code(201);
@@ -161,14 +168,13 @@ export function buildServer(options: BuildServerOptions): FastifyInstance {
 			queueTtlMs,
 			queueSlotEstimateMs,
 			"quick",
-			matchResult.course,
-			matchResult.seats,
+			matchResult.spec,
 			runDrain,
 		);
 	});
 
 	app.post("/matchmaking/rooms", async (request, reply) => {
-		const matchResult = readOfficialMatchBody(request.body);
+		const matchResult = resolveMatchSpec(options.database, request.body);
 		if (!matchResult.ok) {
 			reply.code(400);
 			return { error: matchResult.error };
@@ -182,8 +188,7 @@ export function buildServer(options: BuildServerOptions): FastifyInstance {
 			queueTtlMs,
 			queueSlotEstimateMs,
 			"create_room",
-			matchResult.course,
-			matchResult.seats,
+			matchResult.spec,
 			runDrain,
 		);
 	});

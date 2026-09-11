@@ -1,11 +1,9 @@
-import { randomUUID } from "node:crypto";
-
 import {
 	DEFAULT_OFFICIAL_TRAPRUSH_COURSE,
 	isOfficialTraprushCourseId,
-	officialTraprushCoursePath,
 	type OfficialTraprushCourseId,
 } from "../../contracts/src/official_courses.ts";
+import type { MatchContentRef } from "../../contracts/src/match_body.ts";
 import { createLease, evaluateLease, renewLease, type Lease, type LeaseExpiryReason } from "./lease.ts";
 import { PortAllocator } from "./ports.ts";
 import type { LaunchedProcess, MatchExit, ProcessLauncher } from "./launcher.ts";
@@ -13,11 +11,12 @@ import { type MatchListenProbe } from "./listen_probe.ts";
 import {
 	MatchSessionSettlementError,
 	MatchSessionUnregisterError,
-	buildMatchUpstreamUrl,
 	type MatchSessionRegistrar,
 } from "./registrar.ts";
+import type { ContentEnvelopeFetcher } from "./content_envelope.ts";
+import { removeMatchEnvelopeFile } from "./content_envelope.ts";
+import { launchRegisteredMatch } from "./registry_start.ts";
 import { parseMatchTickSettlement, parseMatchTickValidInputTick } from "./settlement.ts";
-import { toStartFailure, waitUntilListening } from "./registry_launch.ts";
 
 export type MatchState = "running" | "stopped";
 
@@ -33,7 +32,9 @@ export interface MatchRecord {
 	/** 已交给控制面的对局 WebSocket 上游。listen 或登记失败的场次不会出现在注册表里。 */
 	readonly upstreamUrl: string;
 	readonly seats: number;
-	readonly course: string;
+	readonly course: OfficialTraprushCourseId | null;
+	readonly content?: MatchContentRef | undefined;
+	readonly contentHash?: string | undefined;
 	readonly stopReason?: MatchStopReason | undefined;
 	readonly exit?: MatchExit | undefined;
 }
@@ -49,6 +50,8 @@ export interface MatchRegistryOptions {
 	readonly seats: number;
 	/** 空 POST /matches 时使用的官方赛道。省略时 `course_01`。 */
 	readonly defaultCourse?: string;
+	/** 拉 UGC 信封。省略时 `startContent` 失败。MatchHost 仍不查库。 */
+	readonly contentEnvelope?: ContentEnvelopeFetcher | undefined;
 	readonly portRangeMin: number;
 	readonly portRangeMax: number;
 	readonly leaseDurationMs: number;
@@ -88,6 +91,7 @@ interface MatchEntry {
 	settlementPosted: boolean;
 	/** 该场上次已用来续租的 valid_input_tick。同一 tick 不重复续。 */
 	lastRenewedValidInputTick: number;
+	envelopePath?: string | undefined;
 }
 
 /**
@@ -115,16 +119,14 @@ export class MatchRegistry {
 		course: OfficialTraprushCourseId = this.#defaultCourse(),
 		seats: number = this.#options.seats,
 	): Promise<MatchRecord> {
-		if (this.occupiedCount() >= this.#options.maxConcurrentMatches) {
-			throw new MatchCapacityError(this.#options.maxConcurrentMatches);
-		}
+		return this.#startPlan({ kind: "official", course, seats });
+	}
 
-		this.#reservations += 1;
-		try {
-			return await this.#launchAndRegister(course, seats);
-		} finally {
-			this.#reservations -= 1;
-		}
+	async startContent(
+		content: MatchContentRef,
+		seats: number = this.#options.seats,
+	): Promise<MatchRecord> {
+		return this.#startPlan({ kind: "content", content, seats });
 	}
 
 	#defaultCourse(): OfficialTraprushCourseId {
@@ -133,76 +135,71 @@ export class MatchRegistry {
 			: DEFAULT_OFFICIAL_TRAPRUSH_COURSE;
 	}
 
-	async #launchAndRegister(course: OfficialTraprushCourseId, seats: number): Promise<MatchRecord> {
-		const matchId = randomUUID();
-		const port = this.#ports.allocate();
-		let process: LaunchedProcess | undefined;
-		let upstreamUrl: string;
-		try {
-			upstreamUrl = buildMatchUpstreamUrl(this.#options.upstreamHost, port);
-			process = this.#options.launcher.launch({
-				matchId,
-				port,
-				course: officialTraprushCoursePath(course),
-				players: seats,
-			});
-			await waitUntilListening(this.#options.listenProbe, process, port);
-			await this.#options.registrar.register({
-				matchId,
-				upstreamUrl,
-				seats,
-				course,
-			});
-		} catch (error) {
-			const recentOutput = process?.recentOutput() ?? [];
-			process?.kill();
-			this.#ports.release(port);
-			const failure = toStartFailure(error, process !== undefined);
-			// 失败的场次进不了注册表，也就永远不会触发 `stopped` 事件——不在这里发一条，
-			// CD-44 §3 的"尽力保留日志"就只覆盖跑起来过的对局，起不来的那种一个字都不留。
-			this.#options.onEvent?.({
-				type: "start_failed",
-				matchId,
-				port,
-				message: failure.message,
-				recentOutput,
-			});
-			throw failure;
+	async #startPlan(
+		plan:
+			| { readonly kind: "official"; readonly course: OfficialTraprushCourseId; readonly seats: number }
+			| { readonly kind: "content"; readonly content: MatchContentRef; readonly seats: number },
+	): Promise<MatchRecord> {
+		if (this.occupiedCount() >= this.#options.maxConcurrentMatches) {
+			throw new MatchCapacityError(this.#options.maxConcurrentMatches);
 		}
 
-		const now = this.#now();
-
-		const record: MatchRecord = {
-			matchId,
-			port,
-			pid: process.pid,
-			state: "running",
-			startedAt: now,
-			lease: createLease(now, this.#options.leaseDurationMs),
-			upstreamUrl,
-			seats,
-			course,
-		};
-
-		this.#entries.set(matchId, {
-			record,
-			process,
-			settlementPosted: false,
-			lastRenewedValidInputTick: -1,
-		});
-		this.#options.onEvent?.({ type: "started", matchId, port });
-
-		// 进程自己退出（崩溃或正常结束）时同步状态并注销，不然注册表会一直显示 running，
-		// 控制面也会继续给已死场签发票据。
-		void process.exited.then(async (exit) => {
-			try {
-				await this.#finalize(matchId, "process_exited", exit);
-			} catch {
-				// 本地已经停了。控制面注销失败不能再抛，否则变成未处理拒绝。
-			}
-		});
-
-		return record;
+		this.#reservations += 1;
+		try {
+			const started = await launchRegisteredMatch(
+				{
+					launcher: this.#options.launcher,
+					registrar: this.#options.registrar,
+					listenProbe: this.#options.listenProbe,
+					contentEnvelope: this.#options.contentEnvelope,
+					upstreamHost: this.#options.upstreamHost,
+					ports: this.#ports,
+					now: this.#now,
+					onStartFailed: (event) => {
+						this.#options.onEvent?.({
+							type: "start_failed",
+							matchId: event.matchId,
+							port: event.port,
+							message: event.message,
+							recentOutput: event.recentOutput,
+						});
+					},
+				},
+				plan,
+			);
+			const now = this.#now();
+			const record: MatchRecord = {
+				matchId: started.matchId,
+				port: started.port,
+				pid: started.pid,
+				state: "running",
+				startedAt: now,
+				lease: createLease(now, this.#options.leaseDurationMs),
+				upstreamUrl: started.upstreamUrl,
+				seats: started.seats,
+				course: started.course,
+				content: started.content,
+				contentHash: started.contentHash,
+			};
+			this.#entries.set(started.matchId, {
+				record,
+				process: started.process,
+				settlementPosted: false,
+				lastRenewedValidInputTick: -1,
+				envelopePath: started.envelopePath,
+			});
+			this.#options.onEvent?.({ type: "started", matchId: started.matchId, port: started.port });
+			void started.process.exited.then(async (exit) => {
+				try {
+					await this.#finalize(started.matchId, "process_exited", exit);
+				} catch {
+					// 本地已经停了。控制面注销失败不能再抛，否则变成未处理拒绝。
+				}
+			});
+			return record;
+		} finally {
+			this.#reservations -= 1;
+		}
 	}
 
 	get(matchId: string): MatchRecord | undefined {
@@ -345,6 +342,7 @@ export class MatchRegistry {
 		}
 
 		this.#ports.release(entry.record.port);
+		removeMatchEnvelopeFile(entry.envelopePath);
 		entry.record = {
 			...entry.record,
 			state: "stopped",

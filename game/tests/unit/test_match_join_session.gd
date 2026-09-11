@@ -5,6 +5,8 @@ extends GutTest
 
 const MatchJoinSession := preload("res://src/client/match_join_session.gd")
 
+const _HASH: String = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+
 
 func test_quick_play_201_becomes_ready_with_ticket() -> void:
 	var session: MatchJoinSession = MatchJoinSession.create()
@@ -285,6 +287,41 @@ func test_quick_and_create_send_official_course_and_reject_paths() -> void:
 	assert_false(seats.has_pending())
 
 
+func test_content_quick_and_create_pin_id_version_and_hash() -> void:
+	var session: MatchJoinSession = MatchJoinSession.create()
+	assert_false(session.try_quick_content("course_01", 1, 2))
+	assert_false(session.try_create_room_content("course_f_playable", 1, 2))
+	assert_false(session.try_create_room_content("res://secret.json", 1, 2))
+	assert_false(session.try_quick_content("ugc_aabbccddeeff00112233445566778899", 0, 2))
+	assert_false(session.has_pending())
+	assert_true(session.try_create_room_content("ugc_aabbccddeeff00112233445566778899", 2, 4))
+	assert_eq(session.pending_path(), "/matchmaking/rooms")
+	assert_true(session.pending_body().contains("ugc_aabbccddeeff00112233445566778899"))
+	assert_true(session.pending_body().contains("\"version\":2"))
+	assert_false(session.pending_body().contains("course"))
+	assert_true(session.accept_http(201, _join_content("ABCD23", "ticket-ugc", 2)))
+	assert_eq(session.state, MatchJoinSession.STATE_READY)
+	assert_eq(session.course, "")
+	assert_eq(session.content_id, "ugc_aabbccddeeff00112233445566778899")
+	assert_eq(session.content_version, 2)
+	assert_eq(session.content_hash, _HASH)
+	assert_eq(session.seats, 4)
+	var missing_hash: MatchJoinSession = MatchJoinSession.create()
+	assert_true(missing_hash.try_quick_content("ugc_aabbccddeeff00112233445566778899", 1, 2))
+	var body: Dictionary = _join_content("ABCD23", "ticket-no-hash", 1)
+	body.erase("content_hash")
+	assert_true(missing_hash.accept_http(201, body))
+	assert_eq(missing_hash.error, "parse_error")
+	var waiting: MatchJoinSession = MatchJoinSession.create()
+	assert_true(waiting.try_create_room_content("ugc_aabbccddeeff00112233445566778899", 1, 2))
+	assert_true(waiting.accept_http(202, _waiting_content("queue-token-eeeeeeeeeeeeeeee", 1, 30000)))
+	assert_eq(waiting.state, MatchJoinSession.STATE_WAITING)
+	assert_eq(waiting.course, "")
+	assert_eq(waiting.content_id, "ugc_aabbccddeeff00112233445566778899")
+	assert_eq(waiting.content_version, 1)
+	assert_eq(waiting.content_hash, "")
+
+
 func test_join_rejects_missing_or_unknown_course() -> void:
 	var missing: MatchJoinSession = MatchJoinSession.create()
 	assert_true(missing.try_quick())
@@ -404,6 +441,34 @@ func _join(
 		"issued": 1,
 		"seat": seat,
 		"course": course,
+	}
+
+
+func _join_content(room_code: String, ticket: String, version: int) -> Dictionary:
+	return {
+		"roomCode": room_code,
+		"ticket": ticket,
+		"matchId": "match-1",
+		"expiresAt": "2026-08-25T03:00:00.000Z",
+		"seats": 4 if version == 2 else 2,
+		"issued": 1,
+		"seat": 0,
+		"course": null,
+		"content": {"id": "ugc_aabbccddeeff00112233445566778899", "version": version},
+		"content_hash": _HASH,
+	}
+
+
+func _waiting_content(token: String, position: int, estimated_wait_ms: int) -> Dictionary:
+	return {
+		"status": "waiting",
+		"queueToken": token,
+		"position": position,
+		"estimatedWaitMs": estimated_wait_ms,
+		"expiresAt": "2026-08-25T02:10:00.000Z",
+		"course": null,
+		"seats": 2,
+		"content": {"id": "ugc_aabbccddeeff00112233445566778899", "version": 1},
 	}
 
 

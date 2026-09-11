@@ -8,6 +8,7 @@ import { loadConfig } from "./config.ts";
 import { GodotProcessLauncher } from "./launcher.ts";
 import { TcpMatchListenProbe } from "./listen_probe.ts";
 import { ControlPlaneMatchSessionRegistrar } from "./registrar.ts";
+import { ControlPlaneContentEnvelopeFetcher } from "./content_envelope.ts";
 import { MatchRegistry } from "./registry.ts";
 import { buildMatchHost } from "./server.ts";
 
@@ -26,6 +27,7 @@ const registry = new MatchRegistry({
 		players: config.matchPlayers,
 	}),
 	registrar: new ControlPlaneMatchSessionRegistrar(config.controlPlaneUrl),
+	contentEnvelope: new ControlPlaneContentEnvelopeFetcher(config.controlPlaneUrl),
 	listenProbe: new TcpMatchListenProbe({
 		timeoutMs: config.listenTimeoutMs,
 		intervalMs: config.listenPollMs,

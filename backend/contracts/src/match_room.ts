@@ -8,6 +8,7 @@
  * OpenAPI 仍未生成。
  */
 
+import type { MatchContentRef } from "./match_body.ts";
 import type { OfficialTraprushCourseId } from "./official_courses.ts";
 
 export interface MatchmakingJoinResponse {
@@ -19,7 +20,10 @@ export interface MatchmakingJoinResponse {
 	readonly issued: number;
 	/** 本张入场票占用的席位（0 起）。客户端用来做本席移动预测，不是 `issued`。 */
 	readonly seat: number;
-	readonly course: OfficialTraprushCourseId;
+	/** 官方课 id。UGC 房为 `null`，此时带 `content` 与 `content_hash`。 */
+	readonly course: OfficialTraprushCourseId | null;
+	readonly content?: MatchContentRef;
+	readonly content_hash?: string;
 }
 
 export type MatchQueueKind = "quick" | "create_room";
@@ -30,8 +34,10 @@ export interface MatchmakingQueueWaitingResponse {
 	readonly position: number;
 	readonly estimatedWaitMs: number;
 	readonly expiresAt: string;
-	readonly course: OfficialTraprushCourseId;
+	readonly course: OfficialTraprushCourseId | null;
 	readonly seats: number;
+	readonly content?: MatchContentRef;
+	readonly content_hash?: string;
 }
 
 export interface MatchmakingQueueReadyResponse extends MatchmakingJoinResponse {

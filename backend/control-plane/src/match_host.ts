@@ -1,4 +1,5 @@
 import { isMatchId } from "./tickets.ts";
+import type { MatchContentRef } from "../../contracts/src/match_body.ts";
 import {
 	DEFAULT_MATCHMAKING_SEATS,
 	DEFAULT_OFFICIAL_TRAPRUSH_COURSE,
@@ -12,6 +13,7 @@ export interface MatchLaunchResult {
 export interface MatchLaunchRequest {
 	readonly course?: OfficialTraprushCourseId;
 	readonly seats?: number;
+	readonly content?: MatchContentRef;
 }
 
 export interface MatchLauncher {
@@ -48,14 +50,17 @@ export class MatchHostHttpLauncher implements MatchLauncher {
 	}
 
 	async launch(request: MatchLaunchRequest = {}): Promise<MatchLaunchResult> {
-		const course = request.course ?? DEFAULT_OFFICIAL_TRAPRUSH_COURSE;
 		const seats = request.seats ?? DEFAULT_MATCHMAKING_SEATS;
+		const payload =
+			request.content === undefined
+				? { course: request.course ?? DEFAULT_OFFICIAL_TRAPRUSH_COURSE, seats }
+				: { content: request.content, seats };
 		let response: Response;
 		try {
 			response = await fetch(`${this.#baseUrl}/matches`, {
 				method: "POST",
 				headers: { "content-type": "application/json" },
-				body: JSON.stringify({ course, seats }),
+				body: JSON.stringify(payload),
 				signal: AbortSignal.timeout(this.#timeoutMs),
 			});
 		} catch (error) {

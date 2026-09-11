@@ -3,8 +3,10 @@ import { spawn } from "node:child_process";
 export interface MatchLaunchSpec {
 	readonly matchId: string;
 	readonly port: number;
-	/** Godot `--course=` 路径。省略时用启动器默认。 */
+	/** Godot `--course=` 路径。与 `contentEnvelopePath` 互斥。 */
 	readonly course?: string;
+	/** Godot `--content-envelope=` 路径。与 `course` 互斥。 */
+	readonly contentEnvelopePath?: string;
 	/** Godot `--players=`。省略时用启动器默认。 */
 	readonly players?: number;
 }
@@ -58,7 +60,7 @@ export class GodotProcessLauncher implements ProcessLauncher {
 	/** 纯函数参数构造，不 spawn 进程，方便在无 Godot 的机器上断言。 */
 	buildArgs(spec: MatchLaunchSpec): string[] {
 		// `--` 之后的参数引擎不解释，由 OS.get_cmdline_user_args() 交给场景脚本。
-		return [
+		const args = [
 			"--headless",
 			"--path",
 			this.#options.projectPath,
@@ -67,9 +69,14 @@ export class GodotProcessLauncher implements ProcessLauncher {
 			"--",
 			`--match-id=${spec.matchId}`,
 			`--port=${spec.port}`,
-			`--course=${spec.course ?? this.#options.course}`,
 			`--players=${spec.players ?? this.#options.players}`,
 		];
+		if (spec.contentEnvelopePath !== undefined) {
+			args.push(`--content-envelope=${spec.contentEnvelopePath}`);
+			return args;
+		}
+		args.push(`--course=${spec.course ?? this.#options.course}`);
+		return args;
 	}
 
 	launch(spec: MatchLaunchSpec): LaunchedProcess {

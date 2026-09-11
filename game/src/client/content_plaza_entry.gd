@@ -13,6 +13,7 @@ const WINDOW_NAME: String = "PlazaWindow"
 const TAB_ROW_NAME: String = "PlazaTabs"
 const LIST_NAME: String = "PlazaList"
 const SOLO_NAME: String = "PlazaSolo"
+const CREATE_ROOM_NAME: String = "PlazaCreateRoom"
 const EMPTY_NAME: String = "PlazaEmpty"
 const CLOSE_NAME: String = "PlazaClose"
 const NEWEST_NAME: String = "PlazaNewest"
@@ -29,6 +30,7 @@ var items: Array = []
 var selected_id: String = ""
 var bundles: Dictionary = {}
 var on_solo: Callable = Callable()
+var on_create_room: Callable = Callable()
 var on_tab: Callable = Callable()
 var live_io: bool = false
 var control_plane_base: String = ""
@@ -142,6 +144,26 @@ func selected_content_id() -> String:
 	return selected_id
 
 
+func selected_version() -> int:
+	if selected_id == "":
+		return 0
+	for raw: Variant in items:
+		if typeof(raw) != TYPE_DICTIONARY:
+			continue
+		var item: Dictionary = raw
+		if str(item.get("content_id", "")) != selected_id:
+			continue
+		var version_raw: Variant = item.get("version", 0)
+		if typeof(version_raw) == TYPE_INT:
+			return version_raw
+		if typeof(version_raw) == TYPE_FLOAT:
+			var number: float = version_raw
+			if number == floor(number):
+				return int(number)
+		return 0
+	return 0
+
+
 func try_select_tab(next_tab: String) -> bool:
 	if not PlazaGd.is_tab(next_tab):
 		return false
@@ -169,6 +191,13 @@ func try_solo_selected() -> bool:
 	if selected_id == "" or not on_solo.is_valid():
 		return false
 	var raw: Variant = on_solo.call(selected_id)
+	return raw == true
+
+
+func try_create_room_selected() -> bool:
+	if selected_id == "" or not on_create_room.is_valid():
+		return false
+	var raw: Variant = on_create_room.call(selected_id, selected_version())
 	return raw == true
 
 
@@ -211,6 +240,7 @@ func _ensure_window() -> void:
 	actions.name = "PlazaActions"
 	root.add_child(actions)
 	_add_button(actions, SOLO_NAME, UiCopy.PLAZA_SOLO, try_solo_selected)
+	_add_button(actions, CREATE_ROOM_NAME, UiCopy.PLAZA_CREATE_ROOM, try_create_room_selected)
 	_add_button(actions, CLOSE_NAME, UiCopy.BACK_TO_LOBBY, try_close)
 	add_child(window)
 

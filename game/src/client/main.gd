@@ -57,8 +57,14 @@ func _ready() -> void:
 	lobby.open()
 	# `?edit=1`（或桌面 `-- --edit`）直接落在创作上：把链接发给外人时，
 	# 「来做一张课」和「来玩一局」应该是两条链接，而不是一条链接加一句口头说明。
-	if WebLaunchArgsGd.wants_edit(user_args, str(page.get("search", ""))):
+	var search: String = str(page.get("search", ""))
+	if WebLaunchArgsGd.wants_edit(user_args, search):
 		lobby.try_open_creator()
+	else:
+		var room: String = WebLaunchArgsGd.room_code(search)
+		if room != "":
+			lobby.set_room_code_text(room)
+			lobby.try_join_room(room)
 
 
 static func _format_log_line(event: String, fields: Dictionary) -> String:

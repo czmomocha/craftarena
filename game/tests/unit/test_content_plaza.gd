@@ -201,6 +201,32 @@ func test_plaza_http_list_and_latest_bundle_start_solo() -> void:
 	assert_true(_shell.try_stop_offline())
 
 
+func test_plaza_create_room_sends_pinned_content() -> void:
+	_shell = _open_shell()
+	var bundle: SimulationBundleGd = _compile(OfficialTraprushCoursesGd.COURSE_02)
+	assert_true(_shell.try_open_plaza())
+	var create: Button = _shell.plaza.window.get_node("VBoxContainer/PlazaActions/%s" % ContentPlazaEntryGd.CREATE_ROOM_NAME) as Button
+	assert_not_null(create)
+	assert_eq(create.text, UiCopy.text(UiCopy.PLAZA_CREATE_ROOM))
+	_shell.plaza.bind_bundle(PIPE_ID, bundle)
+	_shell.plaza.apply_list(ContentPlazaGd.TAB_NEWEST, [{
+		"content_id": PIPE_ID,
+		"version": 3,
+		"display_name": ContentPlazaGd.display_name(PIPE_ID),
+		"tags": ContentPlazaGd.tags_from_bundle(bundle),
+		"verified": false,
+	}])
+	assert_true(_shell.plaza.try_select_id(PIPE_ID))
+	assert_eq(_shell.plaza.selected_version(), 3)
+	assert_true(_shell.plaza.try_create_room_selected())
+	assert_eq(_shell.join.pending_path(), "/matchmaking/rooms")
+	assert_true(_shell.join.pending_body().contains(PIPE_ID))
+	assert_true(_shell.join.pending_body().contains("\"version\":3"))
+	assert_false(_shell.join.pending_body().contains("course"))
+	assert_false(_shell.plaza.is_open())
+	assert_true(_shell.window.visible)
+
+
 func _open_shell() -> MatchLobbyShellGd:
 	var shell: MatchLobbyShellGd = MatchLobbyShellGd.create()
 	add_child(shell)

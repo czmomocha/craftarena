@@ -51,6 +51,18 @@ export {
 	type OfficialTraprushCourseId,
 } from "./official_courses.ts";
 export {
+	CONTENT_ID_RE,
+	DEMO_TRAPRUSH_COURSE_ID,
+	isMatchContentId,
+	isMatchContentVersion,
+	isReservedMatchContentId,
+	readMatchBody,
+	readMatchContentRef,
+	type MatchBodyError,
+	type MatchBodyResult,
+	type MatchContentRef,
+} from "./match_body.ts";
+export {
 	recordMatchSettlementBodySchema,
 	type MatchSettlementResponse,
 	type MatchSettlementRow,

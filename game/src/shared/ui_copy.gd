@@ -117,8 +117,10 @@ const PLAZA_RATING: String = "craft_arena.ui.plaza_rating"
 const PLAZA_PLAYS: String = "craft_arena.ui.plaza_plays"
 const PLAZA_VERIFIED: String = "craft_arena.ui.plaza_verified"
 const PLAZA_SOLO: String = "craft_arena.ui.plaza_solo"
+const PLAZA_CREATE_ROOM: String = "craft_arena.ui.plaza_create_room"
 const PLAZA_UNVERIFIED: String = "craft_arena.ui.plaza_unverified"
 const PLAZA_EMPTY: String = "craft_arena.ui.plaza_empty"
+const COPY_INVITE: String = "craft_arena.ui.copy_invite"
 const ACCOUNT: String = "craft_arena.ui.account"
 const WINDOW_ACCOUNT: String = "craft_arena.ui.window_account"
 const ACCOUNT_REGISTER: String = "craft_arena.ui.account_register"
@@ -225,8 +227,10 @@ const ALL_KEYS: PackedStringArray = [
 	PLAZA_PLAYS,
 	PLAZA_VERIFIED,
 	PLAZA_SOLO,
+	PLAZA_CREATE_ROOM,
 	PLAZA_UNVERIFIED,
 	PLAZA_EMPTY,
+	COPY_INVITE,
 	ACCOUNT,
 	WINDOW_ACCOUNT,
 	ACCOUNT_REGISTER,

@@ -68,7 +68,7 @@
 4. 现有 `POST /content/publish` **保留**，仅测试 / 持钥工具；玩家按钮永不调用。
 5. P0/P1 补丁仍用同一把钥；**本决策不动补丁接口**。
 
-诚实边界：ContentHash 规范编码只在 Godot `StateHasher`；控制面代签时信任客户端上报的 hash。对局进程加载必须再算一遍，对不上拒绝开局。C3 **不把 StateHasher 搬到 TypeScript**。HTTP 字段形状见 [CD-42 §3.5](../40-technical/42-contracts-and-rulevm.md#35-匹配与玩家发布-httpc3-已接线c4-已拍未接线)。账号绑定见 [CD-13](../10-product/13-account-and-session.md)。编辑外壳发布按钮与广场 `GET /content/plaza` 已接线；匹配 HTTP 扩表仍属 C4。
+诚实边界：ContentHash 规范编码只在 Godot `StateHasher`；控制面代签时信任客户端上报的 hash。对局进程加载必须再算一遍，对不上拒绝开局。C3 **不把 StateHasher 搬到 TypeScript**。HTTP 字段形状见 [CD-42 §3.5](../40-technical/42-contracts-and-rulevm.md#35-匹配与玩家发布-httpc3-已接线c4-已接线)。账号绑定见 [CD-13](../10-product/13-account-and-session.md)。编辑外壳发布按钮与广场 `GET /content/plaza` 已接线；匹配 HTTP 扩表已交（M5 C4）。
 
 ## 3. 热生效边界
 

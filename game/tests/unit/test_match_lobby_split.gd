@@ -13,6 +13,7 @@ const E9_LINE_CAP: int = 400
 const COLLABORATOR_PATHS: PackedStringArray = [
 	"res://src/client/match_lobby_chrome.gd",
 	"res://src/client/match_lobby_director.gd",
+	"res://src/client/match_lobby_director_join.gd",
 	"res://src/client/match_lobby_hud.gd",
 	"res://src/client/match_lobby_net.gd",
 	"res://src/client/match_lobby_sampler.gd",

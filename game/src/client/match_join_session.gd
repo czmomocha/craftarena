@@ -39,6 +39,9 @@ var seats: int = 0
 var issued: int = 0
 var seat: int = -1
 var course: String = ""
+var content_id: String = ""
+var content_version: int = 0
+var content_hash: String = ""
 var settlement_line: String = ""
 var has_settlement: bool = false
 var settlement_rows: Array = []
@@ -98,6 +101,20 @@ func try_create_room(
 	seat_count: int = OfficialTraprushCoursesGd.DEFAULT_SEATS
 ) -> bool:
 	var payload: String = MatchJoinCodecGd.match_body(course_id, seat_count)
+	if payload == "":
+		return false
+	return _begin_request("POST", "/matchmaking/rooms", payload)
+
+
+func try_quick_content(content_id: String, version: int, seat_count: int) -> bool:
+	var payload: String = MatchJoinCodecGd.match_body_content(content_id, version, seat_count)
+	if payload == "":
+		return false
+	return _begin_request("POST", "/matchmaking/quick", payload)
+
+
+func try_create_room_content(content_id: String, version: int, seat_count: int) -> bool:
+	var payload: String = MatchJoinCodecGd.match_body_content(content_id, version, seat_count)
 	if payload == "":
 		return false
 	return _begin_request("POST", "/matchmaking/rooms", payload)
@@ -203,6 +220,9 @@ func status_view() -> Dictionary:
 		"issued": issued,
 		"seat": seat,
 		"course": course,
+		"content_id": content_id,
+		"content_version": content_version,
+		"content_hash": content_hash,
 		"settlement_line": settlement_line,
 		"has_settlement": has_settlement,
 		"settlement_rows": settlement_rows,
@@ -230,6 +250,9 @@ func reset_match_fields() -> void:
 	clear_queue_fields()
 	clear_ready_fields()
 	course = ""
+	content_id = ""
+	content_version = 0
+	content_hash = ""
 	seats = 0
 
 

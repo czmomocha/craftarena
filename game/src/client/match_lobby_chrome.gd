@@ -28,11 +28,14 @@ const SETTINGS_NAME: String = "Settings"
 const ROOM_NAME: String = "RoomCode"
 const COURSE_ID_NAME: String = "CourseId"
 const SEATS_NAME: String = "Seats"
+const INVITE_NAME: String = "Invite"
+const COPY_INVITE_NAME: String = "CopyInvite"
 const SERVER_NAME: String = "ServerHost"
 const APPLY_SERVER_NAME: String = "ApplyServer"
 const FPS_NAME: String = "Fps"
 const STATUS_NAME: String = "Status"
 const OverlayGd := preload("res://src/shared/play_hud_overlay.gd")
+const MatchInviteGd := preload("res://src/client/match_invite.gd")
 
 var window: Window = null
 var frame_rate: FrameRateMeterGd = null
@@ -40,6 +43,7 @@ var status: Label = null
 var room_edit: LineEdit = null
 var course_edit: LineEdit = null
 var seats_edit: LineEdit = null
+var invite_edit: LineEdit = null
 var server_edit: LineEdit = null
 var play_hud: OverlayGd = OverlayGd.new()
 var _on_camera_zoom: Callable = Callable()
@@ -135,6 +139,15 @@ func attach(parent: Node, handlers: Dictionary) -> Window:
 		on_submit
 	)
 	root.add_child(seats_edit)
+	var invite_row: HBoxContainer = HBoxContainer.new()
+	invite_row.name = "InviteActions"
+	root.add_child(invite_row)
+	invite_edit = _make_edit(INVITE_NAME, "", 80, "", Callable())
+	invite_edit.editable = false
+	invite_edit.focus_mode = Control.FOCUS_NONE
+	invite_edit.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	invite_row.add_child(invite_edit)
+	_add_button(invite_row, COPY_INVITE_NAME, UiCopy.COPY_INVITE, _handler(handlers, "copy_invite"))
 	play_hud.attach(window, root)
 	return window
 
@@ -222,6 +235,27 @@ func fps_text() -> String:
 
 func sync_play_hud(view: Dictionary) -> void:
 	play_hud.apply(view)
+	sync_invite(view)
+
+
+func sync_invite(view: Dictionary) -> void:
+	if invite_edit == null:
+		return
+	var room: String = str(view.get("room_code", ""))
+	if OS.has_feature("web"):
+		invite_edit.text = MatchInviteGd.web_query(room)
+	else:
+		invite_edit.text = MatchInviteGd.desktop_text(
+			str(view.get("server_host", "")),
+			room
+		)
+
+
+func try_copy_invite() -> bool:
+	if invite_edit == null or invite_edit.text == "":
+		return false
+	DisplayServer.clipboard_set(invite_edit.text)
+	return true
 
 
 func clock_text() -> String:
@@ -285,7 +319,7 @@ func _handle_mouse_motion(motion: InputEventMouseMotion) -> void:
 
 
 func click_hits_line_edit(point: Vector2) -> bool:
-	for edit: LineEdit in [server_edit, room_edit, course_edit, seats_edit]:
+	for edit: LineEdit in [server_edit, room_edit, course_edit, seats_edit, invite_edit]:
 		if edit == null:
 			continue
 		if edit.get_global_rect().has_point(point):

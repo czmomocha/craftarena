@@ -31,6 +31,8 @@ const SPLIT_FILES = [
 	"backend/control-plane/src/db/database_accounts.ts",
 	"backend/match-host/src/registry.ts",
 	"backend/match-host/src/registry_launch.ts",
+	"backend/match-host/src/registry_start.ts",
+	"backend/match-host/src/content_envelope.ts",
 ] as const;
 
 function lineCount(relativePath: string): number {

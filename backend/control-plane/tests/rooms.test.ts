@@ -1,6 +1,5 @@
 import assert from "node:assert/strict";
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
-import { randomUUID } from "node:crypto";
 import { describe, test } from "node:test";
 
 import type { FastifyInstance } from "fastify";
@@ -17,54 +16,11 @@ import {
 	MatchHostCapacityError,
 	MatchHostHttpLauncher,
 	MatchHostLaunchError,
-	type MatchLauncher,
 } from "../src/match_host.ts";
 import { ROOM_CODE_PATTERN, generateRoomCode, normalizeRoomCode } from "../src/rooms.ts";
 import { buildServer } from "../src/server.ts";
 import { isMatchId } from "../src/tickets.ts";
-
-class FakeMatchLauncher implements MatchLauncher {
-	readonly launched: string[] = [];
-	readonly launchedCourses: string[] = [];
-	seats = 2;
-	failWith: Error | undefined;
-	#app: FastifyInstance | undefined;
-	#nextPort = 19000;
-
-	bind(app: FastifyInstance): void {
-		this.#app = app;
-	}
-
-	async launch(request: { course?: string; seats?: number } = {}): Promise<{ matchId: string }> {
-		if (this.failWith !== undefined) {
-			throw this.failWith;
-		}
-		if (this.#app === undefined) {
-			throw new Error("fake launcher is not bound");
-		}
-
-		const course = request.course ?? "course_01";
-		const seats = request.seats ?? this.seats;
-		const matchId = randomUUID();
-		const registered = await this.#app.inject({
-			method: "POST",
-			url: "/match-sessions",
-			payload: {
-				matchId,
-				upstreamUrl: `ws://127.0.0.1:${this.#nextPort}`,
-				seats,
-				course,
-			},
-		});
-		this.#nextPort += 1;
-		if (registered.statusCode !== 201) {
-			throw new Error(`fake register failed: ${registered.statusCode}`);
-		}
-		this.launched.push(matchId);
-		this.launchedCourses.push(course);
-		return { matchId };
-	}
-}
+import { FakeMatchLauncher } from "./fake_match_launcher.ts";
 
 describe("room code helpers", () => {
 	test("generates uppercase codes that omit confusing characters", () => {

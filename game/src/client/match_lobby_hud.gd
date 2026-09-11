@@ -127,6 +127,7 @@ static func build_view(
 		"ticket": join_view.get("ticket", ""),
 		"course": join_view.get("course", ""),
 		"course_id": selected_course_id,
+		"content_id": join_view.get("content_id", ""),
 		"seats": join_view.get("seats", 0),
 		"selected_seats": selected_seats,
 		"seat": join_view.get("seat", -1),
@@ -200,11 +201,14 @@ static func format_line(view: Dictionary) -> String:
 	var room_code: String = str(view.get("room_code", ""))
 	if room_code != "":
 		parts.append("room=%s" % room_code)
+	var shown_content: String = str(view.get("content_id", ""))
 	var shown_course: String = str(view.get("course", ""))
-	if shown_course == "":
+	if shown_course == "" and shown_content == "":
 		shown_course = str(view.get("course_id", ""))
 	if shown_course != "":
 		parts.append("course_id=%s" % shown_course)
+	if shown_content != "" and shown_course == "":
+		parts.append("content=%s" % shown_content)
 	var shown_seats: int = view.get("seats", 0)
 	if shown_seats < 1:
 		shown_seats = view.get("selected_seats", 0)

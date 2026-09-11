@@ -22,6 +22,10 @@ static func latest_path(content_id: String) -> String:
 	return "/content/%s/latest" % content_id
 
 
+static func version_path(content_id: String, version: int) -> String:
+	return "/content/%s/versions/%d" % [content_id, version]
+
+
 static func fetch_list(
 	base: String,
 	tab: String,
@@ -40,6 +44,18 @@ static func fetch_latest(
 ) -> Dictionary:
 	var exchanged: Dictionary = HttpGd.get_json(
 		base, latest_path(content_id), PackedStringArray(), transport
+	)
+	return _body_or_error(exchanged)
+
+
+static func fetch_version(
+	base: String,
+	content_id: String,
+	version: int,
+	transport: Callable = Callable()
+) -> Dictionary:
+	var exchanged: Dictionary = HttpGd.get_json(
+		base, version_path(content_id, version), PackedStringArray(), transport
 	)
 	return _body_or_error(exchanged)
 

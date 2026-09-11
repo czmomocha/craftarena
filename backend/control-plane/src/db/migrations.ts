@@ -237,4 +237,15 @@ export const MIGRATIONS: readonly Migration[] = [
 			) STRICT`,
 		],
 	},
+	{
+		id: "0014_match_signed_content",
+		statements: [
+			// UGC 房钉死 content_id + version + hash。官方房这些列为 NULL，course 仍是官方 id。
+			`ALTER TABLE match_sessions ADD COLUMN content_id TEXT`,
+			`ALTER TABLE match_sessions ADD COLUMN content_version INTEGER`,
+			`ALTER TABLE match_sessions ADD COLUMN content_hash TEXT`,
+			`ALTER TABLE match_queue ADD COLUMN content_id TEXT`,
+			`ALTER TABLE match_queue ADD COLUMN content_version INTEGER`,
+		],
+	},
 ];

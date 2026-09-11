@@ -11,6 +11,7 @@ extends GutTest
 
 const AuthoringDocument := preload("res://src/creator/authoring_document.gd")
 const AuthoringWorld := preload("res://src/creator/authoring_world.gd")
+const ContentSignGd := preload("res://src/ugc/content_sign.gd")
 const Fixed := preload("res://src/shared/fixed/fixed.gd")
 const MatchFrameCodec := preload("res://src/shared/protocol/match_frame_codec.gd")
 const MatchRealtime := preload("res://src/server/match_realtime.gd")
@@ -230,6 +231,78 @@ func test_heartbeat_line_reports_valid_input_tick() -> void:
 	var event: Dictionary = parsed
 	var valid_input_tick: int = event.get("valid_input_tick", -1)
 	assert_eq(valid_input_tick, 4)
+
+
+func test_boot_config_rejects_both_course_and_envelope() -> void:
+	var both_ok: bool = MatchServer._boot_config({
+		"match-id": "m1",
+		"port": "42000",
+		"course": COURSE_01_PATH,
+		"content-envelope": COURSE_01_PATH,
+		"players": "2",
+	}).get("ok", true)
+	assert_false(both_ok)
+
+
+func test_boot_session_from_signed_envelope_locks_hash() -> void:
+	var world: AuthoringWorld = AuthoringDocument.load_from_path(COURSE_01_PATH)
+	assert_not_null(world)
+	var bundle: SimulationBundle = TraprushTopologyCompiler.compile(world)
+	assert_not_null(bundle)
+	var signed: Dictionary = ContentSignGd.sign("ugc_test_01", 1, bundle, ContentSignGd.dev_key())
+	var signed_ok: bool = signed.get(ContentSignGd.KEY_OK, false)
+	assert_true(signed_ok)
+	var path: String = "user://c4_envelope_ok.json"
+	_write_envelope(path, signed, bundle)
+	var config: Dictionary = MatchServer._boot_config({
+		"match-id": "m1",
+		"port": "42000",
+		"content-envelope": path,
+		"players": "2",
+	})
+	var config_ok: bool = config.get("ok", false)
+	assert_true(config_ok)
+	var session: TraprushMatchSession = MatchServer.boot_session(config)
+	assert_not_null(session)
+	assert_eq(session.player_count(), 2)
+	assert_eq(session.content_hash, str(signed.get(ContentSignGd.KEY_CONTENT_HASH, "")))
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
+
+
+func test_boot_session_rejects_tampered_envelope_signature() -> void:
+	var world: AuthoringWorld = AuthoringDocument.load_from_path(COURSE_01_PATH)
+	var bundle: SimulationBundle = TraprushTopologyCompiler.compile(world)
+	var signed: Dictionary = ContentSignGd.sign("ugc_test_01", 1, bundle, ContentSignGd.dev_key())
+	var signature: String = str(signed.get(ContentSignGd.KEY_SIGNATURE, ""))
+	var last: String = signature.substr(signature.length() - 1)
+	signed[ContentSignGd.KEY_SIGNATURE] = signature.substr(0, signature.length() - 1) + ("0" if last != "0" else "1")
+	var path: String = "user://c4_envelope_bad.json"
+	_write_envelope(path, signed, bundle)
+	var config: Dictionary = MatchServer._boot_config({
+		"match-id": "m1",
+		"port": "42000",
+		"content-envelope": path,
+		"players": "2",
+	})
+	var envelope_ok: bool = config.get("ok", false)
+	assert_true(envelope_ok)
+	assert_null(MatchServer.boot_session(config))
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
+
+
+func _write_envelope(path: String, signed: Dictionary, bundle: SimulationBundle) -> void:
+	var envelope: Dictionary = {
+		ContentSignGd.KEY_SCHEMA_VERSION: signed[ContentSignGd.KEY_SCHEMA_VERSION],
+		ContentSignGd.KEY_CONTENT_ID: signed[ContentSignGd.KEY_CONTENT_ID],
+		ContentSignGd.KEY_VERSION: signed[ContentSignGd.KEY_VERSION],
+		ContentSignGd.KEY_CONTENT_HASH: signed[ContentSignGd.KEY_CONTENT_HASH],
+		ContentSignGd.KEY_SIGNATURE: signed[ContentSignGd.KEY_SIGNATURE],
+		"bundle": bundle.to_dictionary(),
+	}
+	var file: FileAccess = FileAccess.open(path, FileAccess.WRITE)
+	assert_not_null(file, path)
+	file.store_string(JSON.stringify(envelope))
+	file.close()
 
 
 func test_same_boot_same_hash_after_ticks() -> void:

@@ -1,8 +1,9 @@
 /**
  * 一期官方 TRAPRUSH 赛道标识与匹配 JSON 人数。
  *
- * HTTP JSON 只走这些 id，不接受 `res://` 路径或 UGC 课。Godot 对局进程
- * 仍用 `res://content/official/traprush/{id}.json` 读 AuthoringDocument。
+ * HTTP JSON 的官方课只走这些 id，不接受 `res://` 路径。已签名 UGC 走互斥的
+ * `content: { id, version }`（见 `match_body.ts` / CD-42 §3.5）。Godot 对局
+ * 进程仍用 `res://content/official/traprush/{id}.json` 读 AuthoringDocument。
  * `seats` 是本场人数（1～8），不是 `players` 别名。OpenAPI 仍未生成。
  */
 

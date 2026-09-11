@@ -18,7 +18,7 @@
 | 传输 | 测试机明文；正式公开运营前 TLS |
 | Web 试玩包 | 可选 `CRAFTARENA_WEB_ROOT` 挂控制面 `/play/`；浏览器 CORS `*` 是测试期入口 |
 | SQLite | 仅控制面直连 |
-| UGC 开局 | **已拍未接线（M5 C4）**：控制面 launch 带 content 引用；MatchHost 用控制面 HTTP 取该 version 信封，**仍不查库**。开局验签并重算 hash。字段见 [CD-42 §3.5](42-contracts-and-rulevm.md#35-匹配与玩家发布-httpc3-已接线c4-已拍未接线) |
+| UGC 开局 | **已交（M5 C4）**：控制面 launch 带 content 引用；MatchHost 用控制面 HTTP 取该 version 信封，**仍不查库**。开局验签并重算 hash。字段见 [CD-42 §3.5](42-contracts-and-rulevm.md#35-匹配与玩家发布-httpc3-已接线c4-已接线) |
 
 ## 1. 部署形态
 

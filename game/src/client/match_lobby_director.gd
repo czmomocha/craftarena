@@ -11,6 +11,7 @@ const MatchPlaySessionGd := preload("res://src/client/match_play_session.gd")
 const OfficialTraprushCoursesGd := preload("res://src/shared/official_traprush_courses.gd")
 const ClientAudioGd := preload("res://src/client/client_audio.gd")
 const AudioSettingsEntryGd := preload("res://src/client/audio_settings_entry.gd")
+const MatchLobbyDirectorJoinGd := preload("res://src/client/match_lobby_director_join.gd")
 
 var host: MatchLobbyShell = null
 
@@ -111,6 +112,7 @@ func try_open_plaza() -> bool:
 	if host.plaza == null:
 		return false
 	host.plaza.on_solo = try_solo_plaza
+	host.plaza.on_create_room = try_create_room_plaza
 	host.plaza.live_io = host.live_io
 	host.plaza.control_plane_base = host.control_plane_base
 	return host.plaza.try_open()
@@ -348,15 +350,12 @@ func try_fetch_settlement() -> bool:
 	return true
 
 
+func try_create_room_plaza(content_id: String = "", version: int = 0) -> bool:
+	return MatchLobbyDirectorJoinGd.try_create_room_plaza(host, content_id, version)
+
+
 func after_join_http() -> void:
-	if host.join != null and host.join.course != "":
-		var path: String = OfficialTraprushCoursesGd.document_path(host.join.course)
-		if path != "":
-			host.apply_course_document(path)
-	if host.join != null and host.join.state == MatchJoinSessionGd.STATE_READY and host.play != null:
-		if host.play.state == MatchPlaySessionGd.STATE_IDLE or host.play.state == MatchPlaySessionGd.STATE_CLOSED:
-			try_begin_play()
-	host.refresh_status()
+	MatchLobbyDirectorJoinGd.after_join_http(host, try_begin_play)
 
 
 func _join_action(action: Callable) -> bool:

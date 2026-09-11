@@ -86,8 +86,10 @@ craft_arena.ui.plaza_rating,Rating,评分
 craft_arena.ui.plaza_plays,Plays,游玩次数
 craft_arena.ui.plaza_verified,Verified,已验证
 craft_arena.ui.plaza_solo,Solo play,单人试玩
+craft_arena.ui.plaza_create_room,Create room,创建房间
 craft_arena.ui.plaza_unverified,(unverified),（未验证）
 craft_arena.ui.plaza_empty,No public courses yet,还没有公开课程
+craft_arena.ui.copy_invite,Copy invite,复制邀请
 craft_arena.ui.account,Account,账号
 craft_arena.ui.window_account,Account,账号
 craft_arena.ui.account_register,Register,注册

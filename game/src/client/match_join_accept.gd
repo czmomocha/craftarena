@@ -42,7 +42,7 @@ func apply(session: MatchJoinSession, status_code: int, body: Dictionary) -> boo
 
 
 func _accept_join(session: MatchJoinSession, body: Dictionary) -> bool:
-	if not MatchJoinCodecGd.keys_only(body, MatchJoinCodecGd.JOIN_KEYS):
+	if not MatchJoinCodecGd.is_join_body(body):
 		return session.fail_reason("parse_error")
 	if not _copy_join_fields(session, body):
 		return session.fail_reason("parse_error")
@@ -120,7 +120,7 @@ func _accept_settlement(session: MatchJoinSession, body: Dictionary) -> bool:
 
 
 func _accept_waiting(session: MatchJoinSession, body: Dictionary) -> bool:
-	if not MatchJoinCodecGd.keys_only(body, MatchJoinCodecGd.WAITING_KEYS):
+	if not MatchJoinCodecGd.is_waiting_body(body):
 		return session.fail_reason("parse_error")
 	if body.get("status", "") != "waiting":
 		return session.fail_reason("parse_error")
@@ -137,7 +137,7 @@ func _accept_queue_view(session: MatchJoinSession, body: Dictionary) -> bool:
 	if status_name == "waiting":
 		return _accept_waiting(session, body)
 	if status_name == "ready":
-		if not MatchJoinCodecGd.keys_only(body, MatchJoinCodecGd.READY_KEYS):
+		if not MatchJoinCodecGd.is_ready_body(body):
 			return session.fail_reason("parse_error")
 		if not _copy_join_fields(session, body):
 			return session.fail_reason("parse_error")
@@ -191,8 +191,7 @@ func _copy_join_fields(session: MatchJoinSession, body: Dictionary) -> bool:
 	var seat_value: int = next_seat.get("value", -1)
 	if seat_value < 0 or seat_value > 7 or seat_value >= seats_value:
 		return false
-	var next_course: String = OfficialTraprushCoursesGd.normalize_id(str(body.get("course", "")))
-	if next_course == "":
+	if not _copy_identity(session, body, true):
 		return false
 	session.room_code = next_room
 	session.ticket = next_ticket
@@ -201,7 +200,6 @@ func _copy_join_fields(session: MatchJoinSession, body: Dictionary) -> bool:
 	session.seats = seats_value
 	session.issued = issued_value
 	session.seat = seat_value
-	session.course = next_course
 	return true
 
 
@@ -218,9 +216,6 @@ func _copy_waiting_fields(session: MatchJoinSession, body: Dictionary) -> bool:
 	var wait_value: int = next_wait.get("value", -1)
 	if position_value < 1 or wait_value < 0:
 		return false
-	var next_course: String = OfficialTraprushCoursesGd.normalize_id(str(body.get("course", "")))
-	if next_course == "":
-		return false
 	var next_seats: Dictionary = MatchJoinCodecGd.read_int(body, "seats")
 	var seats_ok: bool = next_seats.get("ok", false)
 	if not seats_ok:
@@ -228,10 +223,52 @@ func _copy_waiting_fields(session: MatchJoinSession, body: Dictionary) -> bool:
 	var seats_value: int = next_seats.get("value", 0)
 	if OfficialTraprushCoursesGd.normalize_seats(seats_value) == 0:
 		return false
+	if not _copy_identity(session, body, false):
+		return false
 	session.queue_token = next_token
 	session.queue_expires_at = next_expires
 	session.position = position_value
 	session.estimated_wait_ms = wait_value
-	session.course = next_course
 	session.seats = seats_value
+	return true
+
+
+func _copy_identity(session: MatchJoinSession, body: Dictionary, require_hash: bool) -> bool:
+	var course_raw: Variant = body.get("course", null)
+	if typeof(course_raw) == TYPE_NIL:
+		var content_raw: Variant = body.get("content", null)
+		if typeof(content_raw) != TYPE_DICTIONARY:
+			return false
+		var content: Dictionary = content_raw
+		if not MatchJoinCodecGd.keys_only(content, PackedStringArray(["id", "version"])):
+			return false
+		var content_id: String = str(content.get("id", "")).strip_edges()
+		if not MatchJoinCodecGd.is_match_content_id(content_id):
+			return false
+		var version_read: Dictionary = MatchJoinCodecGd.read_int(content, "version")
+		var version_ok: bool = version_read.get("ok", false)
+		if not version_ok:
+			return false
+		var version: int = version_read.get("value", 0)
+		if not MatchJoinCodecGd.version_ok(version):
+			return false
+		var content_hash: String = ""
+		if require_hash or body.has("content_hash"):
+			content_hash = str(body.get("content_hash", "")).strip_edges()
+			if not MatchJoinCodecGd.is_content_hash(content_hash):
+				return false
+		session.course = ""
+		session.content_id = content_id
+		session.content_version = version
+		session.content_hash = content_hash
+		return true
+	if body.has("content") or body.has("content_hash"):
+		return false
+	var next_course: String = OfficialTraprushCoursesGd.normalize_id(str(course_raw))
+	if next_course == "":
+		return false
+	session.course = next_course
+	session.content_id = ""
+	session.content_version = 0
+	session.content_hash = ""
 	return true

@@ -8,6 +8,8 @@ extends RefCounted
 ## from the control plane at `/play/` can pin the host from the page URL
 ## when nothing else named a server.
 
+const MatchInviteGd := preload("res://src/client/match_invite.gd")
+
 const SERVER_FLAG: String = "--server="
 const CONTROL_PLANE_FLAG: String = "--control-plane="
 const GATEWAY_FLAG: String = "--gateway="
@@ -15,6 +17,7 @@ const QUERY_SERVER: String = "server"
 const QUERY_CONTROL_PLANE: String = "control-plane"
 const QUERY_GATEWAY: String = "gateway"
 const QUERY_EDIT: String = "edit"
+const QUERY_ROOM: String = "room"
 const EDIT_FLAG: String = "--edit"
 const PLAY_PATH_PREFIX: String = "/play"
 ## `?edit=0` / `?edit=false` 明确关掉。其余任何值（含 `?edit`）都是开。
@@ -51,6 +54,7 @@ static func parse_search(search: String) -> Dictionary:
 			and key != QUERY_CONTROL_PLANE
 			and key != QUERY_GATEWAY
 			and key != QUERY_EDIT
+			and key != QUERY_ROOM
 		):
 			continue
 		parsed[key] = raw_value.uri_decode()
@@ -67,6 +71,13 @@ static func wants_edit(user_args: PackedStringArray, search: String) -> bool:
 	if not query.has(QUERY_EDIT):
 		return false
 	return not _EDIT_OFF.has(str(query[QUERY_EDIT]).strip_edges().to_lower())
+
+
+static func room_code(search: String) -> String:
+	var query: Dictionary = parse_search(search)
+	if not query.has(QUERY_ROOM):
+		return ""
+	return MatchInviteGd.parse_room(str(query[QUERY_ROOM]))
 
 
 static func has_flag(args: PackedStringArray, flag: String) -> bool:

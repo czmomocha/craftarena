@@ -2,7 +2,7 @@
 
 > 类型：实现级章节计划（`docs/plans/`），**不是所有者文档**。
 > 里程碑产出与退出条件的所有者是 [CD-61 §2 M5](../../Confirmed-docs/60-plan/61-milestones.md)；本文件只把 M5 拆成可审查的章。两者冲突以 CD-61 为准。
-> 日期：2026-09-10。状态：章节划分与音频模块基建已由人类拍板（§5.1）；**A1 / A2 / A3 / B1 / B2 / C1 / C2 / C3 / C5 已交**；**C4 已拍未接线**；下一实现刀 C4。
+> 日期：2026-09-10。状态：章节划分与音频模块基建已由人类拍板（§5.1）；**A1 / A2 / A3 / B1 / B2 / C1 / C2 / C3 / C4 / C5 已交**；下一实现刀 C6（待 §5.2 问题 6）。
 > 上位约束：[CD-00 宪法](../../Confirmed-docs/00-constitution/CONSTITUTION.md) 第一、三、四、五、九、十七、十八、十九、二十三条。
 
 ## 1. 能不能开工
@@ -40,9 +40,9 @@ CD-61 §2 的五项产出，加人类 2026-09-10 拍板挂入本号的第六项�
 
 1. **创作 → 发布**：编辑外壳「发布」按钮走 `POST /content/submit`（C3 已接线）。后端代签入库。
 2. **发布 → 广场**：`ContentPlazaEntry` 在 `live_io` 时拉 `GET /content/plaza`；Solo 缺 bundle 再拉 latest（C3 已接线）。
-3. **已签名 UGC → 联机**：现行匹配 HTTP 只认 `course_01`…`course_05` 五个 enum，自制课只能 Solo。扩表已拍为可选 `content: { id, version }`（§5.2 问题 4），未接线（C4）。
+3. **已签名 UGC → 联机**：**C4 已接线**。匹配 HTTP 可选 `content: { id, version }`（与 `course` 互斥）。自制课可从广场创建房间并邀请他人。
 
-「邀请」不算断——房间码建房 / 按码加入已通，缺的是可分享的邀请串与产品化提示。
+「邀请」：房间码建房 / 按码加入已通；可分享邀请串（Web `?room=`、桌面 host:port + 码 + 复制）已接线（C4）。内容引用不进 URL。
 
 ## 3. 音频系统初步设计
 
@@ -176,15 +176,15 @@ cue 是数据，定义在 `game/content/audio/banks/*.json`，字段初稿：
 
 - **交付（已交）**：编辑外壳「发布」按钮——验证器全绿才允许 → 编译 bundle → 用 `ContentSign.hash_hex` 算 hash → `POST /content/submit`（bundle + hash，不带 signature）→ 回显 id / version / latest，失败码可读；`ContentPlazaEntry` 改走真 `GET /content/plaza`，四标签排序生效，列表项能直接 Solo 试玩。
 - **审查**：**深审**（安全边界）。
-- **已拍口径**（2026-09-11）：平台 HMAC 密钥不进玩家包；控制面在会话鉴权后代签。禁止两跳「先取 signature 再 publish」。现有 `POST /content/publish` 仅测试 / 持钥工具。所有者：[CD-33 §2.2](../../Confirmed-docs/30-ugc/33-hot-publish.md#22-玩家发布路径已交m5-c3)、[CD-13](../../Confirmed-docs/10-product/13-account-and-session.md)、[CD-42 §3.5](../../Confirmed-docs/40-technical/42-contracts-and-rulevm.md#35-匹配与玩家发布-httpc3-已接线c4-已拍未接线)。
+- **已拍口径**（2026-09-11）：平台 HMAC 密钥不进玩家包；控制面在会话鉴权后代签。禁止两跳「先取 signature 再 publish」。现有 `POST /content/publish` 仅测试 / 持钥工具。所有者：[CD-33 §2.2](../../Confirmed-docs/30-ugc/33-hot-publish.md#22-玩家发布路径已交m5-c3)、[CD-13](../../Confirmed-docs/10-product/13-account-and-session.md)、[CD-42 §3.5](../../Confirmed-docs/40-technical/42-contracts-and-rulevm.md#35-匹配与玩家发布-httpc3-已接线c4-已接线)。
 - **窗口**：`npm run dev` → 创作课程 → 验证绿 → 发布 → 广场看见 → Solo。
 
 ### C4 邀请与已签名 UGC 联机
 
-- **交付**：可分享邀请（Web `?room=`、桌面显示 `host:port` + 房间码 + 一键复制）；匹配 HTTP 增加可选 `content: { id, version }`（与 `course` 互斥；都不带仍默认 `course_01`）；MatchHost 经控制面 HTTP 取该 version 信封，不查库；MatchServer 验签并重算 hash 后开局锁 `content_hash`；结算 payload 带上该哈希（结算 HTTP 不改）。
+- **交付（已交）**：可分享邀请（Web `?room=`、桌面显示 `host:port` + 房间码 + 一键复制）；匹配 HTTP 增加可选 `content: { id, version }`（与 `course` 互斥；都不带仍默认 `course_01`）；MatchHost 经控制面 HTTP 取该 version 信封，不查库；MatchServer 验签并重算 hash 后开局锁 `content_hash`；结算 payload 带上该哈希（结算 HTTP 不改）。
 - **审查**：**深审**。协议不兼容变更（匹配 HTTP 请求体）已于 2026-09-11 人类批准。
-- **已拍口径**：加字段，不把 `course` 塞成 `id@version`。建房钉死 version。官方响应仍只回 `course`；UGC 回 `course: null` + `content` + `content_hash`。内容引用不进邀请 URL。所有者：[CD-42 §3.5](../../Confirmed-docs/40-technical/42-contracts-and-rulevm.md#35-匹配与玩家发布-httpc3-已接线c4-已拍未接线)、[CD-12](../../Confirmed-docs/10-product/12-product-structure.md)、[CD-44](../../Confirmed-docs/40-technical/44-deployment.md)。
-- **窗口**：A 发布自制课 → 复制邀请 → B 加入 → 两人跑完 → 结算写库带 `content_hash`。
+- **已拍口径**：加字段，不把 `course` 塞成 `id@version`。建房钉死 version。官方响应仍只回 `course`；UGC 回 `course: null` + `content` + `content_hash`。内容引用不进邀请 URL。所有者：[CD-42 §3.5](../../Confirmed-docs/40-technical/42-contracts-and-rulevm.md#35-匹配与玩家发布-httpc3-已接线c4-已接线)、[CD-12](../../Confirmed-docs/10-product/12-product-structure.md)、[CD-44](../../Confirmed-docs/40-technical/44-deployment.md)。
+- **窗口**：A 发布自制课 → 广场创建房间 → 复制邀请 → B 加入 → 两人跑完 → 结算写库带 `content_hash`。
 
 ### C5 BotRunner 可达性正式化
 
@@ -222,7 +222,7 @@ cue 是数据，定义在 `game/content/audio/banks/*.json`，字段初稿：
 | 5 | 两个小目录：`tools/audio-bank/` 建不建、`tools/bot-runner/` 建还是从 CD-41 删 | A2（**已执行推荐项**）、C5（**已建薄壳**） | A2 已把 bank 校验并入 `tools/content-validator/`，不新建 `tools/audio-bank/`。C5 把 `tools/bot-runner/` 建成薄壳，不从 CD-41 删 |
 | 6 | 网络故障注入工具 | C6 | Windows 用 clumsy、Linux 用 `tc netem`；外部工具不入库，仍需点头 |
 
-**C3 已接线。** 下一实现刀 **C4**（深审）。C6 仍待问题 6。
+**C4 已接线。** 下一实现刀 **C6**（仍待问题 6）。
 
 ## 6. M5 退出条件
 

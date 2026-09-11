@@ -38,8 +38,10 @@ export class ControlPlaneQueueStore {
 		kind: MatchQueueKind,
 		now: Date,
 		ttlMs: number,
-		course: OfficialTraprushCourseId = DEFAULT_OFFICIAL_TRAPRUSH_COURSE,
+		course: OfficialTraprushCourseId | "" = DEFAULT_OFFICIAL_TRAPRUSH_COURSE,
 		seats: number = DEFAULT_MATCHMAKING_SEATS,
+		contentId?: string,
+		contentVersion?: number,
 	): EnqueuedMatch {
 		const token = generateQueueToken();
 		const createdAt = now.toISOString();
@@ -47,17 +49,27 @@ export class ControlPlaneQueueStore {
 		this.db
 			.prepare(
 				`INSERT INTO match_queue (
-					token_hash, kind, status, created_at, expires_at, match_id, ticket, ticket_expires_at, error, course, seats
-				) VALUES (?, ?, 'waiting', ?, ?, NULL, NULL, NULL, NULL, ?, ?)`,
+					token_hash, kind, status, created_at, expires_at, match_id, ticket, ticket_expires_at, error,
+					course, seats, content_id, content_version
+				) VALUES (?, ?, 'waiting', ?, ?, NULL, NULL, NULL, NULL, ?, ?, ?, ?)`,
 			)
-			.run(hashQueueToken(token), kind, createdAt, expiresAt, course, seats);
+			.run(
+				hashQueueToken(token),
+				kind,
+				createdAt,
+				expiresAt,
+				course,
+				seats,
+				contentId ?? null,
+				contentVersion ?? null,
+			);
 		return { token, createdAt, expiresAt };
 	}
 
 	getQueueByToken(token: string, now: Date): MatchQueueRecord | undefined {
 		const row = this.db
 			.prepare(
-				`SELECT rowid, token_hash, kind, status, created_at, expires_at, match_id, ticket, ticket_expires_at, error, course, seats
+				`SELECT rowid, token_hash, kind, status, created_at, expires_at, match_id, ticket, ticket_expires_at, error, course, seats, content_id, content_version
 				 FROM match_queue WHERE token_hash = ?`,
 			)
 			.get(hashQueueToken(token));
@@ -79,7 +91,7 @@ export class ControlPlaneQueueStore {
 		const nowIso = now.toISOString();
 		return this.db
 			.prepare(
-				`SELECT rowid, token_hash, kind, status, created_at, expires_at, match_id, ticket, ticket_expires_at, error, course, seats
+				`SELECT rowid, token_hash, kind, status, created_at, expires_at, match_id, ticket, ticket_expires_at, error, course, seats, content_id, content_version
 				 FROM match_queue
 				 WHERE status = 'waiting' AND expires_at > ?
 				 ORDER BY rowid ASC`,
@@ -113,7 +125,7 @@ export class ControlPlaneQueueStore {
 		try {
 			const row = this.db
 				.prepare(
-					`SELECT rowid, token_hash, kind, status, created_at, expires_at, match_id, ticket, ticket_expires_at, error, course, seats
+					`SELECT rowid, token_hash, kind, status, created_at, expires_at, match_id, ticket, ticket_expires_at, error, course, seats, content_id, content_version
 					 FROM match_queue WHERE token_hash = ?`,
 				)
 				.get(tokenHash);
@@ -125,7 +137,13 @@ export class ControlPlaneQueueStore {
 				throw new MatchQueueNotWaitingError(tokenHash);
 			}
 			const session = this.sessions.getMatchSession(matchId);
-			if (session === undefined || session.course !== record.course || session.seats !== record.seats) {
+			if (
+				session === undefined ||
+				session.seats !== record.seats ||
+				session.course !== record.course ||
+				(session.contentId ?? "") !== (record.contentId ?? "") ||
+				(session.contentVersion ?? 0) !== (record.contentVersion ?? 0)
+			) {
 				throw new MatchSessionFullError(matchId);
 			}
 

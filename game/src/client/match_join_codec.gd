@@ -18,6 +18,18 @@ const JOIN_KEYS: PackedStringArray = [
 	"seat",
 	"course",
 ]
+const JOIN_KEYS_CONTENT: PackedStringArray = [
+	"roomCode",
+	"ticket",
+	"matchId",
+	"expiresAt",
+	"seats",
+	"issued",
+	"seat",
+	"course",
+	"content",
+	"content_hash",
+]
 const WAITING_KEYS: PackedStringArray = [
 	"status",
 	"queueToken",
@@ -37,6 +49,40 @@ const READY_KEYS: PackedStringArray = [
 	"issued",
 	"seat",
 	"course",
+]
+const READY_KEYS_CONTENT: PackedStringArray = [
+	"status",
+	"roomCode",
+	"ticket",
+	"matchId",
+	"expiresAt",
+	"seats",
+	"issued",
+	"seat",
+	"course",
+	"content",
+	"content_hash",
+]
+const WAITING_KEYS_CONTENT: PackedStringArray = [
+	"status",
+	"queueToken",
+	"position",
+	"estimatedWaitMs",
+	"expiresAt",
+	"course",
+	"seats",
+	"content",
+]
+const WAITING_KEYS_CONTENT_HASH: PackedStringArray = [
+	"status",
+	"queueToken",
+	"position",
+	"estimatedWaitMs",
+	"expiresAt",
+	"course",
+	"seats",
+	"content",
+	"content_hash",
 ]
 const QUEUE_FAILED_KEYS: PackedStringArray = ["status", "error"]
 const ERROR_KEYS: PackedStringArray = ["error", "message"]
@@ -103,6 +149,63 @@ static func match_body(course_id: String, seat_count: int) -> String:
 	if id == "" or not OfficialTraprushCoursesGd.is_id(id) or seats_value == 0:
 		return ""
 	return JSON.stringify({"course": id, "seats": seats_value})
+
+
+static func match_body_content(content_id: String, version: int, seat_count: int) -> String:
+	if not is_match_content_id(content_id):
+		return ""
+	var seats_value: int = OfficialTraprushCoursesGd.normalize_seats(seat_count)
+	if seats_value == 0 or not version_ok(version):
+		return ""
+	return JSON.stringify({"content": {"id": content_id, "version": version}, "seats": seats_value})
+
+
+static func is_join_body(body: Dictionary) -> bool:
+	return keys_only(body, JOIN_KEYS) or keys_only(body, JOIN_KEYS_CONTENT)
+
+
+static func is_ready_body(body: Dictionary) -> bool:
+	return keys_only(body, READY_KEYS) or keys_only(body, READY_KEYS_CONTENT)
+
+
+static func is_waiting_body(body: Dictionary) -> bool:
+	if keys_only(body, WAITING_KEYS):
+		return true
+	if keys_only(body, WAITING_KEYS_CONTENT):
+		return true
+	return keys_only(body, WAITING_KEYS_CONTENT_HASH)
+
+
+static func is_match_content_id(content_id: String) -> bool:
+	if content_id.is_empty() or content_id.length() > 64:
+		return false
+	if OfficialTraprushCoursesGd.is_id(content_id) or content_id == "course_f_playable":
+		return false
+	for index: int in range(content_id.length()):
+		var code: int = content_id.unicode_at(index)
+		var is_digit: bool = code >= 48 and code <= 57
+		var is_upper: bool = code >= 65 and code <= 90
+		var is_lower: bool = code >= 97 and code <= 122
+		var extra: bool = code == 46 or code == 95 or code == 45
+		if not is_digit and not is_upper and not is_lower and not extra:
+			return false
+	return true
+
+
+static func version_ok(version: int) -> bool:
+	return version >= 1 and version <= 1000000
+
+
+static func is_content_hash(text: String) -> bool:
+	if text.length() != 64:
+		return false
+	for index: int in range(text.length()):
+		var code: int = text.unicode_at(index)
+		var is_digit: bool = code >= 48 and code <= 57
+		var is_hex: bool = code >= 97 and code <= 102
+		if not is_digit and not is_hex:
+			return false
+	return true
 
 
 static func error_name(body: Dictionary) -> String:

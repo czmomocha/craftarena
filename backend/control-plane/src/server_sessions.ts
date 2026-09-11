@@ -12,6 +12,7 @@ import {
 	type RegisterMatchSessionResponse,
 	type UnregisterMatchSessionResponse,
 	isOfficialTraprushCourseId,
+	readMatchContentRef,
 	type VerifyMatchTicketRequest,
 } from "../../contracts/src/index.ts";
 import {
@@ -37,7 +38,7 @@ export function registerSessionRoutes(
 		"/match-sessions",
 		{ schema: { body: registerMatchSessionBodySchema } },
 		async (request, reply) => {
-			if (hasUnexpectedKeys(request.body, ["upstreamUrl", "matchId", "seats", "course"])) {
+			if (hasUnexpectedKeys(request.body, ["upstreamUrl", "matchId", "seats", "course", "content", "content_hash"])) {
 				reply.code(400);
 				return { error: "unexpected_request_body" };
 			}
@@ -61,6 +62,52 @@ export function registerSessionRoutes(
 			}
 
 			const requestedCourse = request.body.course;
+			const requestedContent = request.body.content;
+			const requestedHash = request.body.content_hash;
+			if (requestedCourse !== undefined && requestedContent !== undefined) {
+				reply.code(400);
+				return { error: "unexpected_request_body" };
+			}
+			if (requestedContent !== undefined || requestedHash !== undefined) {
+				const content = readMatchContentRef(requestedContent);
+				if (content === undefined || !isContentHash(requestedHash)) {
+					reply.code(400);
+					return { error: "invalid_content" };
+				}
+				const stored = options.database.getContentVersion(content.id, content.version);
+				if (stored === undefined || stored.contentHash !== requestedHash) {
+					reply.code(400);
+					return { error: "invalid_content" };
+				}
+				try {
+					const record = options.database.insertMatchSession({
+						matchId: requestedMatchId,
+						upstreamUrl,
+						now: now(),
+						seats: requestedSeats,
+						contentId: content.id,
+						contentVersion: content.version,
+						contentHash: requestedHash,
+					});
+					reply.code(201);
+					const body: RegisterMatchSessionResponse = {
+						matchId: record.matchId,
+						upstreamUrl: record.upstreamUrl,
+						seats: record.seats,
+						course: null,
+						content,
+						content_hash: requestedHash,
+					};
+					return body;
+				} catch (error) {
+					if (error instanceof MatchSessionExistsError) {
+						reply.code(409);
+						return { error: "match_already_exists" };
+					}
+					throw error;
+				}
+			}
+
 			if (requestedCourse !== undefined && !isOfficialTraprushCourseId(requestedCourse)) {
 				reply.code(400);
 				return { error: "invalid_course" };
@@ -292,4 +339,8 @@ export function registerSessionRoutes(
 		},
 	);
 
+}
+
+function isContentHash(value: unknown): value is string {
+	return typeof value === "string" && /^[0-9a-f]{64}$/.test(value);
 }

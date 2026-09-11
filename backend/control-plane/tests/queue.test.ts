@@ -1,5 +1,4 @@
 import assert from "node:assert/strict";
-import { randomUUID } from "node:crypto";
 import { describe, test } from "node:test";
 
 import type { FastifyInstance } from "fastify";
@@ -14,9 +13,7 @@ import type {
 import { loadConfig } from "../src/config.ts";
 import { ControlPlaneDatabase } from "../src/db/database.ts";
 import {
-	MatchHostCapacityError,
 	MatchHostLaunchError,
-	type MatchLauncher,
 } from "../src/match_host.ts";
 import {
 	DEFAULT_QUEUE_SLOT_ESTIMATE_MS,
@@ -26,54 +23,7 @@ import {
 import { ROOM_CODE_PATTERN } from "../src/rooms.ts";
 import { buildServer } from "../src/server.ts";
 import { isMatchId } from "../src/tickets.ts";
-
-class FakeMatchLauncher implements MatchLauncher {
-	readonly launched: string[] = [];
-	readonly launchedCourses: string[] = [];
-	seats = 2;
-	remainingCapacity = 100;
-	failWith: Error | undefined;
-	#app: FastifyInstance | undefined;
-	#nextPort = 21000;
-
-	bind(app: FastifyInstance): void {
-		this.#app = app;
-	}
-
-	async launch(request: { course?: string; seats?: number } = {}): Promise<{ matchId: string }> {
-		if (this.failWith !== undefined) {
-			throw this.failWith;
-		}
-		if (this.remainingCapacity <= 0) {
-			throw new MatchHostCapacityError("match host is at capacity");
-		}
-		if (this.#app === undefined) {
-			throw new Error("fake launcher is not bound");
-		}
-
-		const course = request.course ?? "course_01";
-		const seats = request.seats ?? this.seats;
-		const matchId = randomUUID();
-		const registered = await this.#app.inject({
-			method: "POST",
-			url: "/match-sessions",
-			payload: {
-				matchId,
-				upstreamUrl: `ws://127.0.0.1:${this.#nextPort}`,
-				seats,
-				course,
-			},
-		});
-		this.#nextPort += 1;
-		if (registered.statusCode !== 201) {
-			throw new Error(`fake register failed: ${registered.statusCode}`);
-		}
-		this.remainingCapacity -= 1;
-		this.launched.push(matchId);
-		this.launchedCourses.push(course);
-		return { matchId };
-	}
-}
+import { FakeMatchLauncher } from "./fake_match_launcher.ts";
 
 describe("queue token helpers", () => {
 	test("hashes queue tokens so the plaintext is not a lookup key", () => {

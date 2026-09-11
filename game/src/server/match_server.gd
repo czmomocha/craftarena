@@ -22,14 +22,10 @@ extends Node
 ## 动作数值（跳跃/支撑/下落/道具伤害与触达/推击）与出界 AABB 半宽来自
 ## TraprushPlayStubs，本进程不再自带副本。
 
-const AuthoringDocument := preload("res://src/creator/authoring_document.gd")
-const AuthoringWorld := preload("res://src/creator/authoring_world.gd")
 const MatchRealtime := preload("res://src/server/match_realtime.gd")
-const SimulationBundle := preload("res://src/ugc/simulation_bundle.gd")
-const PlayStubs := preload("res://src/games/traprush/play_stubs.gd")
 const TraprushMatchSession := preload("res://src/games/traprush/match_session.gd")
 const TraprushMatchSettlement := preload("res://src/games/traprush/match_settlement.gd")
-const TraprushTopologyCompiler := preload("res://src/ugc/traprush_topology_compiler.gd")
+const MatchServerBootGd := preload("res://src/server/match_server_boot.gd")
 
 const BOOT_EVENT: String = "match_server_boot"
 const LISTEN_EVENT: String = "match_listen"
@@ -40,10 +36,6 @@ const ERROR_EVENT: String = "match_server_error"
 const HEARTBEAT_EVERY_TICKS: int = 60
 ## 占位快照广播节奏（每 2 个 tick 一帧），不是产品快照频率（CD-43 §4）。
 const SNAPSHOT_EVERY_TICKS: int = 2
-## 占位出生间隔，不锁产品出生布局。胶囊尺寸来自 TraprushPlayStubs。
-const SPAWN_STRIDE: int = PlaceholderSpec.SPAWN_STRIDE
-## 占位仿真种子；对局种子由控制面下发是后续章节。
-const MATCH_SEED: int = 1
 
 var _session: TraprushMatchSession = null
 var _realtime: MatchRealtime = null
@@ -212,7 +204,14 @@ static func _boot_config(options: Dictionary) -> Dictionary:
 	if port < 1 or port > 65535:
 		return failed
 	var course: String = options.get("course", "")
-	if course.is_empty() or not FileAccess.file_exists(course):
+	var envelope: String = options.get("content-envelope", "")
+	var has_course: bool = not course.is_empty()
+	var has_envelope: bool = not envelope.is_empty()
+	if has_course == has_envelope:
+		return failed
+	if has_course and not FileAccess.file_exists(course):
+		return failed
+	if has_envelope and not FileAccess.file_exists(envelope):
 		return failed
 	var players_raw: String = options.get("players", "")
 	var players: int = _parse_int(players_raw, -1)
@@ -232,44 +231,19 @@ static func _boot_config(options: Dictionary) -> Dictionary:
 		"match_id": match_id,
 		"port": port,
 		"course": course,
+		"content_envelope": envelope,
 		"players": players,
 		"max_ticks": max_ticks,
 		"bind": bind,
 	}
 
 
-## 从已校验配置启动对局会话。出生偏移为占位环：slot i 向 -Z 退 i * SPAWN_STRIDE。
 static func boot_session(config: Dictionary) -> TraprushMatchSession:
-	if not config.get("ok", false):
-		return null
-	var course: String = config.get("course", "")
-	var players: int = config.get("players", 0)
-	var world: AuthoringWorld = AuthoringDocument.load_from_path(course)
-	if world == null:
-		return null
-	var bundle: SimulationBundle = TraprushTopologyCompiler.compile(world)
-	if bundle == null:
-		return null
-	var session: TraprushMatchSession = TraprushMatchSession.create(
-		bundle,
-		MATCH_SEED,
-		players,
-		_spawn_offsets(players),
-		PlayStubs.CAPSULE_RADIUS,
-		PlayStubs.CAPSULE_HEIGHT
-	)
-	if session == null:
-		return null
-	## 动作占位数值与出界半宽都来自单一配置源；本进程不再自带一份副本。
-	PlayStubs.apply_match(session)
-	return session
+	return MatchServerBootGd.boot_session(config)
 
 
 static func _spawn_offsets(players: int) -> Array[Dictionary]:
-	var offsets: Array[Dictionary] = []
-	for slot: int in range(players):
-		offsets.append({"dx": 0, "dy": 0, "dz": -slot * SPAWN_STRIDE})
-	return offsets
+	return MatchServerBootGd._spawn_offsets(players)
 
 
 static func _heartbeat_line(

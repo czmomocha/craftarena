@@ -251,6 +251,7 @@ func try_camera_zoom(steps: int) -> bool:
 	return map != null and map.try_zoom(steps)
 func try_camera_pan(relative: Vector2) -> bool:
 	return map != null and map.try_pan(relative)
+func try_copy_invite() -> bool: return chrome.try_copy_invite()
 func refresh_status() -> void:
 	_refresh_status()
 
@@ -362,6 +363,7 @@ func _ensure_window() -> void:
 		"window_input": handle_window_input,
 		"camera_zoom": try_camera_zoom,
 		"camera_pan": try_camera_pan,
+		"copy_invite": try_copy_invite,
 	})
 	stage.mount(window)
 	stage.bind_facade(self)
