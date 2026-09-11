@@ -1,0 +1,1019 @@
+[gd_scene load_steps=16 format=3]
+
+[ext_resource type="Theme" path="res://content/ui/theme/craft_arena.tres" id="1_theme"]
+[ext_resource type="Script" path="res://src/client/ui/scripts/press_feedback.gd" id="2_press"]
+[ext_resource type="Script" path="res://src/client/ui/scripts/s2_matchmaking.gd" id="3_s2"]
+[ext_resource type="Script" path="res://src/client/ui/scripts/spinner.gd" id="12_spinner"]
+[ext_resource type="Texture2D" path="res://content/ui/assets/logo_mark.png" id="4_logo"]
+[ext_resource type="Texture2D" path="res://content/ui/assets/topbar_guest_chip.png" id="5_chip"]
+[ext_resource type="Texture2D" path="res://content/ui/assets/track_gear_gallery.png" id="6_t1"]
+[ext_resource type="Texture2D" path="res://content/ui/assets/track_lava_belt.png" id="7_t2"]
+[ext_resource type="Texture2D" path="res://content/ui/assets/track_sky_hops.png" id="8_t3"]
+[ext_resource type="Texture2D" path="res://content/ui/assets/track_sawmill_run.png" id="9_t4"]
+[ext_resource type="Texture2D" path="res://content/ui/assets/track_mirror_hall.png" id="10_t5"]
+[ext_resource type="Texture2D" path="res://content/ui/assets/track_glowmine.png" id="11_t6"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_avatar"]
+bg_color = Color(0.541176, 0.568627, 0.627451, 1)
+corner_radius_top_left = 28
+corner_radius_top_right = 28
+corner_radius_bottom_right = 28
+corner_radius_bottom_left = 28
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_check"]
+bg_color = Color(0.239216, 0.85098, 0.482353, 1)
+corner_radius_top_left = 60
+corner_radius_top_right = 60
+corner_radius_bottom_right = 60
+corner_radius_bottom_left = 60
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_segment"]
+bg_color = Color(0.239216, 0.85098, 0.482353, 1)
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+corner_radius_bottom_right = 4
+corner_radius_bottom_left = 4
+
+[node name="S2Matchmaking" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme = ExtResource("1_theme")
+script = ExtResource("3_s2")
+
+[node name="Background" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0.12549, 0.141176, 0.184314, 1)
+
+[node name="Layout" type="VBoxContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_constants/separation = 0
+
+[node name="TopBar" type="PanelContainer" parent="Layout"]
+custom_minimum_size = Vector2(0, 72)
+layout_mode = 2
+
+[node name="Row" type="HBoxContainer" parent="Layout/TopBar"]
+layout_mode = 2
+theme_override_constants/separation = 16
+
+[node name="Back" type="Button" parent="Layout/TopBar/Row"]
+custom_minimum_size = Vector2(48, 48)
+layout_mode = 2
+size_flags_vertical = 4
+theme_type_variation = &"ButtonGhost"
+text = "<"
+script = ExtResource("2_press")
+
+[node name="Logo" type="TextureRect" parent="Layout/TopBar/Row"]
+custom_minimum_size = Vector2(40, 40)
+layout_mode = 2
+size_flags_vertical = 4
+mouse_filter = 2
+texture = ExtResource("4_logo")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="TitleBox" type="VBoxContainer" parent="Layout/TopBar/Row"]
+layout_mode = 2
+size_flags_vertical = 4
+mouse_filter = 2
+theme_override_constants/separation = 0
+
+[node name="Title" type="Label" parent="Layout/TopBar/Row/TitleBox"]
+layout_mode = 2
+theme_type_variation = &"PageTitle"
+text = "TRAPRUSH 机关狂奔"
+
+[node name="Subtitle" type="Label" parent="Layout/TopBar/Row/TitleBox"]
+layout_mode = 2
+theme_type_variation = &"NavSubtitle"
+text = "匹配 MATCHMAKING"
+
+[node name="Spacer" type="Control" parent="Layout/TopBar/Row"]
+layout_mode = 2
+size_flags_horizontal = 3
+mouse_filter = 2
+
+[node name="Avatar" type="Panel" parent="Layout/TopBar/Row"]
+custom_minimum_size = Vector2(56, 56)
+layout_mode = 2
+size_flags_vertical = 4
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_avatar")
+
+[node name="IdentityBox" type="VBoxContainer" parent="Layout/TopBar/Row"]
+layout_mode = 2
+size_flags_vertical = 4
+mouse_filter = 2
+theme_override_constants/separation = 2
+
+[node name="Nickname" type="Label" parent="Layout/TopBar/Row/IdentityBox"]
+layout_mode = 2
+theme_type_variation = &"NavTitle"
+text = "Maker_042"
+
+[node name="GuestChip" type="TextureRect" parent="Layout/TopBar/Row/IdentityBox"]
+custom_minimum_size = Vector2(153, 33)
+layout_mode = 2
+size_flags_horizontal = 0
+mouse_filter = 2
+texture = ExtResource("5_chip")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="SoloBanner" type="PanelContainer" parent="Layout"]
+visible = false
+layout_mode = 2
+theme_type_variation = &"OfflineBanner"
+
+[node name="Label" type="Label" parent="Layout/SoloBanner"]
+layout_mode = 2
+theme_type_variation = &"ChipLabel"
+theme_override_colors/font_color = Color(0.12549, 0.141176, 0.184314, 1)
+text = "⚠ 离线试玩，成绩不上传 · SOLO MODE — RESULTS NOT UPLOADED"
+
+[node name="Main" type="MarginContainer" parent="Layout"]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_constants/margin_left = 64
+theme_override_constants/margin_top = 24
+theme_override_constants/margin_right = 64
+theme_override_constants/margin_bottom = 24
+
+[node name="Columns" type="HBoxContainer" parent="Layout/Main"]
+layout_mode = 2
+theme_override_constants/separation = 24
+
+[node name="Left" type="VBoxContainer" parent="Layout/Main/Columns"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_stretch_ratio = 56.0
+theme_override_constants/separation = 16
+
+[node name="SectionTitle" type="Label" parent="Layout/Main/Columns/Left"]
+layout_mode = 2
+theme_type_variation = &"CardTitle"
+text = "选择赛道 SELECT TRACK"
+
+[node name="SearchRow" type="HBoxContainer" parent="Layout/Main/Columns/Left"]
+layout_mode = 2
+theme_override_constants/separation = 16
+
+[node name="Search" type="LineEdit" parent="Layout/Main/Columns/Left/SearchRow"]
+custom_minimum_size = Vector2(0, 48)
+layout_mode = 2
+size_flags_horizontal = 3
+theme_type_variation = &"InputDark"
+placeholder_text = "搜索赛道…"
+
+[node name="TabOfficial" type="Button" parent="Layout/Main/Columns/Left/SearchRow"]
+custom_minimum_size = Vector2(180, 48)
+layout_mode = 2
+theme_type_variation = &"TabChipActive"
+text = "官方 OFFICIAL"
+script = ExtResource("2_press")
+
+[node name="TabCommunity" type="Button" parent="Layout/Main/Columns/Left/SearchRow"]
+custom_minimum_size = Vector2(240, 48)
+layout_mode = 2
+disabled = true
+theme_type_variation = &"TabChipDisabled"
+text = "社区 COMMUNITY · 即将上线"
+
+[node name="TrackList" type="VBoxContainer" parent="Layout/Main/Columns/Left"]
+layout_mode = 2
+size_flags_vertical = 0
+theme_override_constants/separation = 12
+
+[node name="Track1" type="Button" parent="Layout/Main/Columns/Left/TrackList"]
+custom_minimum_size = Vector2(0, 84)
+layout_mode = 2
+theme_type_variation = &"TrackRowSelected"
+script = ExtResource("2_press")
+
+[node name="Row" type="HBoxContainer" parent="Layout/Main/Columns/Left/TrackList/Track1"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_constants/separation = 16
+
+[node name="Thumb" type="TextureRect" parent="Layout/Main/Columns/Left/TrackList/Track1/Row"]
+custom_minimum_size = Vector2(64, 64)
+layout_mode = 2
+size_flags_vertical = 4
+mouse_filter = 2
+texture = ExtResource("6_t1")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="Texts" type="VBoxContainer" parent="Layout/Main/Columns/Left/TrackList/Track1/Row"]
+layout_mode = 2
+size_flags_vertical = 4
+mouse_filter = 2
+theme_override_constants/separation = 0
+
+[node name="Zh" type="Label" parent="Layout/Main/Columns/Left/TrackList/Track1/Row/Texts"]
+layout_mode = 2
+theme_type_variation = &"NavTitle"
+text = "齿轮回廊"
+
+[node name="En" type="Label" parent="Layout/Main/Columns/Left/TrackList/Track1/Row/Texts"]
+layout_mode = 2
+theme_type_variation = &"NavSubtitle"
+text = "GEAR GALLERY"
+
+[node name="Tags" type="HBoxContainer" parent="Layout/Main/Columns/Left/TrackList/Track1/Row"]
+layout_mode = 2
+size_flags_vertical = 4
+mouse_filter = 2
+theme_override_constants/separation = 8
+
+[node name="Tag1" type="PanelContainer" parent="Layout/Main/Columns/Left/TrackList/Track1/Row/Tags"]
+layout_mode = 2
+mouse_filter = 2
+theme_type_variation = &"TagChip"
+
+[node name="L" type="Label" parent="Layout/Main/Columns/Left/TrackList/Track1/Row/Tags/Tag1"]
+layout_mode = 2
+theme_type_variation = &"ChipLabel"
+text = "新手"
+
+[node name="Tag2" type="PanelContainer" parent="Layout/Main/Columns/Left/TrackList/Track1/Row/Tags"]
+layout_mode = 2
+mouse_filter = 2
+theme_type_variation = &"TagChip"
+
+[node name="L" type="Label" parent="Layout/Main/Columns/Left/TrackList/Track1/Row/Tags/Tag2"]
+layout_mode = 2
+theme_type_variation = &"ChipLabel"
+text = "短程"
+
+[node name="RowSpacer" type="Control" parent="Layout/Main/Columns/Left/TrackList/Track1/Row"]
+layout_mode = 2
+size_flags_horizontal = 3
+mouse_filter = 2
+
+[node name="State" type="PanelContainer" parent="Layout/Main/Columns/Left/TrackList/Track1/Row"]
+layout_mode = 2
+size_flags_vertical = 4
+mouse_filter = 2
+theme_type_variation = &"StateChip"
+
+[node name="L" type="Label" parent="Layout/Main/Columns/Left/TrackList/Track1/Row/State"]
+layout_mode = 2
+theme_type_variation = &"ChipLabel"
+theme_override_colors/font_color = Color(0.12549, 0.141176, 0.184314, 1)
+text = "已选择"
+
+[node name="Track2" type="Button" parent="Layout/Main/Columns/Left/TrackList"]
+custom_minimum_size = Vector2(0, 84)
+layout_mode = 2
+theme_type_variation = &"TrackRow"
+script = ExtResource("2_press")
+
+[node name="Row" type="HBoxContainer" parent="Layout/Main/Columns/Left/TrackList/Track2"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_constants/separation = 16
+
+[node name="Thumb" type="TextureRect" parent="Layout/Main/Columns/Left/TrackList/Track2/Row"]
+custom_minimum_size = Vector2(64, 64)
+layout_mode = 2
+size_flags_vertical = 4
+mouse_filter = 2
+texture = ExtResource("7_t2")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="Texts" type="VBoxContainer" parent="Layout/Main/Columns/Left/TrackList/Track2/Row"]
+layout_mode = 2
+size_flags_vertical = 4
+mouse_filter = 2
+theme_override_constants/separation = 0
+
+[node name="Zh" type="Label" parent="Layout/Main/Columns/Left/TrackList/Track2/Row/Texts"]
+layout_mode = 2
+theme_type_variation = &"NavTitle"
+text = "熔岩传送带"
+
+[node name="En" type="Label" parent="Layout/Main/Columns/Left/TrackList/Track2/Row/Texts"]
+layout_mode = 2
+theme_type_variation = &"NavSubtitle"
+text = "LAVA BELT"
+
+[node name="Tags" type="HBoxContainer" parent="Layout/Main/Columns/Left/TrackList/Track2/Row"]
+layout_mode = 2
+size_flags_vertical = 4
+mouse_filter = 2
+theme_override_constants/separation = 8
+
+[node name="Tag1" type="PanelContainer" parent="Layout/Main/Columns/Left/TrackList/Track2/Row/Tags"]
+layout_mode = 2
+mouse_filter = 2
+theme_type_variation = &"TagChip"
+
+[node name="L" type="Label" parent="Layout/Main/Columns/Left/TrackList/Track2/Row/Tags/Tag1"]
+layout_mode = 2
+theme_type_variation = &"ChipLabel"
+text = "中阶"
+
+[node name="Tag2" type="PanelContainer" parent="Layout/Main/Columns/Left/TrackList/Track2/Row/Tags"]
+layout_mode = 2
+mouse_filter = 2
+theme_type_variation = &"TagChip"
+
+[node name="L" type="Label" parent="Layout/Main/Columns/Left/TrackList/Track2/Row/Tags/Tag2"]
+layout_mode = 2
+theme_type_variation = &"ChipLabel"
+text = "破坏"
+
+[node name="RowSpacer" type="Control" parent="Layout/Main/Columns/Left/TrackList/Track2/Row"]
+layout_mode = 2
+size_flags_horizontal = 3
+mouse_filter = 2
+
+[node name="Track3" type="Button" parent="Layout/Main/Columns/Left/TrackList"]
+custom_minimum_size = Vector2(0, 84)
+layout_mode = 2
+theme_type_variation = &"TrackRow"
+script = ExtResource("2_press")
+
+[node name="Row" type="HBoxContainer" parent="Layout/Main/Columns/Left/TrackList/Track3"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_constants/separation = 16
+
+[node name="Thumb" type="TextureRect" parent="Layout/Main/Columns/Left/TrackList/Track3/Row"]
+custom_minimum_size = Vector2(64, 64)
+layout_mode = 2
+size_flags_vertical = 4
+mouse_filter = 2
+texture = ExtResource("8_t3")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="Texts" type="VBoxContainer" parent="Layout/Main/Columns/Left/TrackList/Track3/Row"]
+layout_mode = 2
+size_flags_vertical = 4
+mouse_filter = 2
+theme_override_constants/separation = 0
+
+[node name="Zh" type="Label" parent="Layout/Main/Columns/Left/TrackList/Track3/Row/Texts"]
+layout_mode = 2
+theme_type_variation = &"NavTitle"
+text = "云端跳板"
+
+[node name="En" type="Label" parent="Layout/Main/Columns/Left/TrackList/Track3/Row/Texts"]
+layout_mode = 2
+theme_type_variation = &"NavSubtitle"
+text = "SKY HOPS"
+
+[node name="Tags" type="HBoxContainer" parent="Layout/Main/Columns/Left/TrackList/Track3/Row"]
+layout_mode = 2
+size_flags_vertical = 4
+mouse_filter = 2
+theme_override_constants/separation = 8
+
+[node name="Tag1" type="PanelContainer" parent="Layout/Main/Columns/Left/TrackList/Track3/Row/Tags"]
+layout_mode = 2
+mouse_filter = 2
+theme_type_variation = &"TagChip"
+
+[node name="L" type="Label" parent="Layout/Main/Columns/Left/TrackList/Track3/Row/Tags/Tag1"]
+layout_mode = 2
+theme_type_variation = &"ChipLabel"
+text = "跳跃"
+
+[node name="Tag2" type="PanelContainer" parent="Layout/Main/Columns/Left/TrackList/Track3/Row/Tags"]
+layout_mode = 2
+mouse_filter = 2
+theme_type_variation = &"TagChip"
+
+[node name="L" type="Label" parent="Layout/Main/Columns/Left/TrackList/Track3/Row/Tags/Tag2"]
+layout_mode = 2
+theme_type_variation = &"ChipLabel"
+text = "传送"
+
+[node name="RowSpacer" type="Control" parent="Layout/Main/Columns/Left/TrackList/Track3/Row"]
+layout_mode = 2
+size_flags_horizontal = 3
+mouse_filter = 2
+
+[node name="Ugc" type="PanelContainer" parent="Layout/Main/Columns/Left/TrackList/Track3/Row"]
+layout_mode = 2
+size_flags_vertical = 4
+mouse_filter = 2
+theme_type_variation = &"UgcChip"
+
+[node name="L" type="Label" parent="Layout/Main/Columns/Left/TrackList/Track3/Row/Ugc"]
+layout_mode = 2
+theme_type_variation = &"ChipLabel"
+theme_override_colors/font_color = Color(0.12549, 0.141176, 0.184314, 1)
+text = "含 UGC"
+
+[node name="Track4" type="Button" parent="Layout/Main/Columns/Left/TrackList"]
+custom_minimum_size = Vector2(0, 84)
+layout_mode = 2
+theme_type_variation = &"TrackRow"
+script = ExtResource("2_press")
+
+[node name="Row" type="HBoxContainer" parent="Layout/Main/Columns/Left/TrackList/Track4"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_constants/separation = 16
+
+[node name="Thumb" type="TextureRect" parent="Layout/Main/Columns/Left/TrackList/Track4/Row"]
+custom_minimum_size = Vector2(64, 64)
+layout_mode = 2
+size_flags_vertical = 4
+mouse_filter = 2
+texture = ExtResource("9_t4")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="Texts" type="VBoxContainer" parent="Layout/Main/Columns/Left/TrackList/Track4/Row"]
+layout_mode = 2
+size_flags_vertical = 4
+mouse_filter = 2
+theme_override_constants/separation = 0
+
+[node name="Zh" type="Label" parent="Layout/Main/Columns/Left/TrackList/Track4/Row/Texts"]
+layout_mode = 2
+theme_type_variation = &"NavTitle"
+text = "锯齿工厂"
+
+[node name="En" type="Label" parent="Layout/Main/Columns/Left/TrackList/Track4/Row/Texts"]
+layout_mode = 2
+theme_type_variation = &"NavSubtitle"
+text = "SAWMILL RUN"
+
+[node name="Tags" type="HBoxContainer" parent="Layout/Main/Columns/Left/TrackList/Track4/Row"]
+layout_mode = 2
+size_flags_vertical = 4
+mouse_filter = 2
+theme_override_constants/separation = 8
+
+[node name="Tag1" type="PanelContainer" parent="Layout/Main/Columns/Left/TrackList/Track4/Row/Tags"]
+layout_mode = 2
+mouse_filter = 2
+theme_type_variation = &"TagChip"
+
+[node name="L" type="Label" parent="Layout/Main/Columns/Left/TrackList/Track4/Row/Tags/Tag1"]
+layout_mode = 2
+theme_type_variation = &"ChipLabel"
+text = "高阶"
+
+[node name="Tag2" type="PanelContainer" parent="Layout/Main/Columns/Left/TrackList/Track4/Row/Tags"]
+layout_mode = 2
+mouse_filter = 2
+theme_type_variation = &"TagChip"
+
+[node name="L" type="Label" parent="Layout/Main/Columns/Left/TrackList/Track4/Row/Tags/Tag2"]
+layout_mode = 2
+theme_type_variation = &"ChipLabel"
+text = "机关"
+
+[node name="RowSpacer" type="Control" parent="Layout/Main/Columns/Left/TrackList/Track4/Row"]
+layout_mode = 2
+size_flags_horizontal = 3
+mouse_filter = 2
+
+[node name="Track5" type="Button" parent="Layout/Main/Columns/Left/TrackList"]
+custom_minimum_size = Vector2(0, 84)
+layout_mode = 2
+theme_type_variation = &"TrackRow"
+script = ExtResource("2_press")
+
+[node name="Row" type="HBoxContainer" parent="Layout/Main/Columns/Left/TrackList/Track5"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_constants/separation = 16
+
+[node name="Thumb" type="TextureRect" parent="Layout/Main/Columns/Left/TrackList/Track5/Row"]
+custom_minimum_size = Vector2(64, 64)
+layout_mode = 2
+size_flags_vertical = 4
+mouse_filter = 2
+texture = ExtResource("10_t5")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="Texts" type="VBoxContainer" parent="Layout/Main/Columns/Left/TrackList/Track5/Row"]
+layout_mode = 2
+size_flags_vertical = 4
+mouse_filter = 2
+theme_override_constants/separation = 0
+
+[node name="Zh" type="Label" parent="Layout/Main/Columns/Left/TrackList/Track5/Row/Texts"]
+layout_mode = 2
+theme_type_variation = &"NavTitle"
+text = "镜廊"
+
+[node name="En" type="Label" parent="Layout/Main/Columns/Left/TrackList/Track5/Row/Texts"]
+layout_mode = 2
+theme_type_variation = &"NavSubtitle"
+text = "MIRROR HALL"
+
+[node name="Tags" type="HBoxContainer" parent="Layout/Main/Columns/Left/TrackList/Track5/Row"]
+layout_mode = 2
+size_flags_vertical = 4
+mouse_filter = 2
+theme_override_constants/separation = 8
+
+[node name="Tag1" type="PanelContainer" parent="Layout/Main/Columns/Left/TrackList/Track5/Row/Tags"]
+layout_mode = 2
+mouse_filter = 2
+theme_type_variation = &"TagChip"
+
+[node name="L" type="Label" parent="Layout/Main/Columns/Left/TrackList/Track5/Row/Tags/Tag1"]
+layout_mode = 2
+theme_type_variation = &"ChipLabel"
+text = "迷惑"
+
+[node name="Tag2" type="PanelContainer" parent="Layout/Main/Columns/Left/TrackList/Track5/Row/Tags"]
+layout_mode = 2
+mouse_filter = 2
+theme_type_variation = &"TagChip"
+
+[node name="L" type="Label" parent="Layout/Main/Columns/Left/TrackList/Track5/Row/Tags/Tag2"]
+layout_mode = 2
+theme_type_variation = &"ChipLabel"
+text = "传送"
+
+[node name="RowSpacer" type="Control" parent="Layout/Main/Columns/Left/TrackList/Track5/Row"]
+layout_mode = 2
+size_flags_horizontal = 3
+mouse_filter = 2
+
+[node name="Ugc" type="PanelContainer" parent="Layout/Main/Columns/Left/TrackList/Track5/Row"]
+layout_mode = 2
+size_flags_vertical = 4
+mouse_filter = 2
+theme_type_variation = &"UgcChip"
+
+[node name="L" type="Label" parent="Layout/Main/Columns/Left/TrackList/Track5/Row/Ugc"]
+layout_mode = 2
+theme_type_variation = &"ChipLabel"
+theme_override_colors/font_color = Color(0.12549, 0.141176, 0.184314, 1)
+text = "含 UGC"
+
+[node name="Track6" type="Button" parent="Layout/Main/Columns/Left/TrackList"]
+custom_minimum_size = Vector2(0, 84)
+layout_mode = 2
+theme_type_variation = &"TrackRow"
+script = ExtResource("2_press")
+
+[node name="Row" type="HBoxContainer" parent="Layout/Main/Columns/Left/TrackList/Track6"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_constants/separation = 16
+
+[node name="Thumb" type="TextureRect" parent="Layout/Main/Columns/Left/TrackList/Track6/Row"]
+custom_minimum_size = Vector2(64, 64)
+layout_mode = 2
+size_flags_vertical = 4
+mouse_filter = 2
+texture = ExtResource("11_t6")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="Texts" type="VBoxContainer" parent="Layout/Main/Columns/Left/TrackList/Track6/Row"]
+layout_mode = 2
+size_flags_vertical = 4
+mouse_filter = 2
+theme_override_constants/separation = 0
+
+[node name="Zh" type="Label" parent="Layout/Main/Columns/Left/TrackList/Track6/Row/Texts"]
+layout_mode = 2
+theme_type_variation = &"NavTitle"
+text = "夜光矿道"
+
+[node name="En" type="Label" parent="Layout/Main/Columns/Left/TrackList/Track6/Row/Texts"]
+layout_mode = 2
+theme_type_variation = &"NavSubtitle"
+text = "GLOWMINE"
+
+[node name="Tags" type="HBoxContainer" parent="Layout/Main/Columns/Left/TrackList/Track6/Row"]
+layout_mode = 2
+size_flags_vertical = 4
+mouse_filter = 2
+theme_override_constants/separation = 8
+
+[node name="Tag1" type="PanelContainer" parent="Layout/Main/Columns/Left/TrackList/Track6/Row/Tags"]
+layout_mode = 2
+mouse_filter = 2
+theme_type_variation = &"TagChip"
+
+[node name="L" type="Label" parent="Layout/Main/Columns/Left/TrackList/Track6/Row/Tags/Tag1"]
+layout_mode = 2
+theme_type_variation = &"ChipLabel"
+text = "中阶"
+
+[node name="Tag2" type="PanelContainer" parent="Layout/Main/Columns/Left/TrackList/Track6/Row/Tags"]
+layout_mode = 2
+mouse_filter = 2
+theme_type_variation = &"TagChip"
+
+[node name="L" type="Label" parent="Layout/Main/Columns/Left/TrackList/Track6/Row/Tags/Tag2"]
+layout_mode = 2
+theme_type_variation = &"ChipLabel"
+text = "竞速"
+
+[node name="RowSpacer" type="Control" parent="Layout/Main/Columns/Left/TrackList/Track6/Row"]
+layout_mode = 2
+size_flags_horizontal = 3
+mouse_filter = 2
+
+[node name="Right" type="VBoxContainer" parent="Layout/Main/Columns"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_stretch_ratio = 40.0
+theme_override_constants/separation = 20
+
+[node name="MethodSection" type="VBoxContainer" parent="Layout/Main/Columns/Right"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="SectionTitle" type="Label" parent="Layout/Main/Columns/Right/MethodSection"]
+layout_mode = 2
+theme_type_variation = &"CardTitle"
+text = "匹配方式 MATCHMAKING MODE"
+
+[node name="QuickPlay" type="Button" parent="Layout/Main/Columns/Right/MethodSection"]
+custom_minimum_size = Vector2(0, 72)
+layout_mode = 2
+theme_type_variation = &"MatchMethodPrimary"
+text = "快速游戏 QUICK PLAY"
+script = ExtResource("2_press")
+
+[node name="CreateRoom" type="Button" parent="Layout/Main/Columns/Right/MethodSection"]
+custom_minimum_size = Vector2(0, 56)
+layout_mode = 2
+theme_type_variation = &"MatchMethodSelected"
+text = "创建房间 CREATE ROOM"
+script = ExtResource("2_press")
+
+[node name="JoinRow" type="HBoxContainer" parent="Layout/Main/Columns/Right/MethodSection"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="Join" type="Button" parent="Layout/Main/Columns/Right/MethodSection/JoinRow"]
+custom_minimum_size = Vector2(0, 56)
+layout_mode = 2
+size_flags_horizontal = 3
+theme_type_variation = &"MatchMethod"
+text = "按房间码加入 JOIN BY CODE"
+script = ExtResource("2_press")
+
+[node name="Code" type="LineEdit" parent="Layout/Main/Columns/Right/MethodSection/JoinRow"]
+custom_minimum_size = Vector2(220, 48)
+layout_mode = 2
+theme_type_variation = &"InputDark"
+placeholder_text = "输入房间码"
+
+[node name="Solo" type="Button" parent="Layout/Main/Columns/Right/MethodSection"]
+custom_minimum_size = Vector2(0, 56)
+layout_mode = 2
+theme_type_variation = &"ButtonGhost"
+text = "单人试玩 SOLO"
+script = ExtResource("2_press")
+
+[node name="PlayerCountSection" type="VBoxContainer" parent="Layout/Main/Columns/Right"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="SectionTitle" type="Label" parent="Layout/Main/Columns/Right/PlayerCountSection"]
+layout_mode = 2
+theme_type_variation = &"CardTitle"
+text = "本场人数 PLAYERS"
+
+[node name="Row" type="HBoxContainer" parent="Layout/Main/Columns/Right/PlayerCountSection"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="Minus" type="Button" parent="Layout/Main/Columns/Right/PlayerCountSection/Row"]
+custom_minimum_size = Vector2(48, 48)
+layout_mode = 2
+theme_type_variation = &"StepperButton"
+text = "-"
+script = ExtResource("2_press")
+
+[node name="Count" type="Label" parent="Layout/Main/Columns/Right/PlayerCountSection/Row"]
+custom_minimum_size = Vector2(64, 0)
+layout_mode = 2
+size_flags_vertical = 4
+theme_type_variation = &"CardTitle"
+text = "4"
+horizontal_alignment = 1
+
+[node name="Plus" type="Button" parent="Layout/Main/Columns/Right/PlayerCountSection/Row"]
+custom_minimum_size = Vector2(48, 48)
+layout_mode = 2
+theme_type_variation = &"StepperButton"
+text = "+"
+script = ExtResource("2_press")
+
+[node name="Segments" type="HBoxContainer" parent="Layout/Main/Columns/Right/PlayerCountSection/Row"]
+layout_mode = 2
+size_flags_vertical = 4
+theme_override_constants/separation = 4
+
+[node name="S1" type="Panel" parent="Layout/Main/Columns/Right/PlayerCountSection/Row/Segments"]
+custom_minimum_size = Vector2(12, 28)
+layout_mode = 2
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_segment")
+
+[node name="S2" type="Panel" parent="Layout/Main/Columns/Right/PlayerCountSection/Row/Segments"]
+custom_minimum_size = Vector2(12, 28)
+layout_mode = 2
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_segment")
+
+[node name="S3" type="Panel" parent="Layout/Main/Columns/Right/PlayerCountSection/Row/Segments"]
+custom_minimum_size = Vector2(12, 28)
+layout_mode = 2
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_segment")
+
+[node name="S4" type="Panel" parent="Layout/Main/Columns/Right/PlayerCountSection/Row/Segments"]
+custom_minimum_size = Vector2(12, 28)
+layout_mode = 2
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_segment")
+
+[node name="S5" type="Panel" parent="Layout/Main/Columns/Right/PlayerCountSection/Row/Segments"]
+custom_minimum_size = Vector2(12, 28)
+layout_mode = 2
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_segment")
+
+[node name="S6" type="Panel" parent="Layout/Main/Columns/Right/PlayerCountSection/Row/Segments"]
+custom_minimum_size = Vector2(12, 28)
+layout_mode = 2
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_segment")
+
+[node name="S7" type="Panel" parent="Layout/Main/Columns/Right/PlayerCountSection/Row/Segments"]
+custom_minimum_size = Vector2(12, 28)
+layout_mode = 2
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_segment")
+
+[node name="S8" type="Panel" parent="Layout/Main/Columns/Right/PlayerCountSection/Row/Segments"]
+custom_minimum_size = Vector2(12, 28)
+layout_mode = 2
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_segment")
+
+[node name="Hint" type="Label" parent="Layout/Main/Columns/Right/PlayerCountSection/Row"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 4
+theme_type_variation = &"StatusCaption"
+text = "人 · 可设 1-8"
+horizontal_alignment = 2
+
+[node name="WaitingPanel" type="PanelContainer" parent="Layout/Main/Columns/Right"]
+layout_mode = 2
+theme_type_variation = &"QueuePanel"
+
+[node name="VBox" type="VBoxContainer" parent="Layout/Main/Columns/Right/WaitingPanel"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="SectionTitle" type="Label" parent="Layout/Main/Columns/Right/WaitingPanel/VBox"]
+layout_mode = 2
+theme_type_variation = &"CardTitle"
+text = "匹配等待 WAITING"
+
+[node name="SearchingRow" type="HBoxContainer" parent="Layout/Main/Columns/Right/WaitingPanel/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="Spinner" type="Control" parent="Layout/Main/Columns/Right/WaitingPanel/VBox/SearchingRow"]
+custom_minimum_size = Vector2(28, 28)
+layout_mode = 2
+size_flags_vertical = 4
+mouse_filter = 2
+script = ExtResource("12_spinner")
+
+[node name="Label" type="Label" parent="Layout/Main/Columns/Right/WaitingPanel/VBox/SearchingRow"]
+layout_mode = 2
+size_flags_vertical = 4
+theme_type_variation = &"BodyText"
+text = "正在匹配玩家…"
+
+[node name="Slot1" type="PanelContainer" parent="Layout/Main/Columns/Right/WaitingPanel/VBox"]
+layout_mode = 2
+theme_type_variation = &"PlayerSlot"
+
+[node name="L" type="Label" parent="Layout/Main/Columns/Right/WaitingPanel/VBox/Slot1"]
+layout_mode = 2
+theme_type_variation = &"BodyText"
+text = "Maker_042（我）"
+
+[node name="Slot2" type="PanelContainer" parent="Layout/Main/Columns/Right/WaitingPanel/VBox"]
+layout_mode = 2
+theme_type_variation = &"PlayerSlot"
+
+[node name="L" type="Label" parent="Layout/Main/Columns/Right/WaitingPanel/VBox/Slot2"]
+layout_mode = 2
+theme_type_variation = &"BodyText"
+text = "Nova"
+
+[node name="SlotEmpty" type="PanelContainer" parent="Layout/Main/Columns/Right/WaitingPanel/VBox"]
+layout_mode = 2
+theme_type_variation = &"PlayerSlotEmpty"
+
+[node name="L" type="Label" parent="Layout/Main/Columns/Right/WaitingPanel/VBox/SlotEmpty"]
+layout_mode = 2
+theme_type_variation = &"StatusCaption"
+text = "等待加入…"
+
+[node name="QueueInfo" type="Label" parent="Layout/Main/Columns/Right/WaitingPanel/VBox"]
+layout_mode = 2
+theme_type_variation = &"StatusCaption"
+text = "队列位次 #2 · 预计等待 00:25"
+horizontal_alignment = 1
+
+[node name="Cancel" type="Button" parent="Layout/Main/Columns/Right/WaitingPanel/VBox"]
+custom_minimum_size = Vector2(0, 56)
+layout_mode = 2
+disabled = true
+text = "取消匹配 CANCEL"
+
+[node name="FoundPanel" type="VBoxContainer" parent="Layout/Main/Columns/Right"]
+visible = false
+layout_mode = 2
+theme_override_constants/separation = 16
+
+[node name="Header" type="PanelContainer" parent="Layout/Main/Columns/Right/FoundPanel"]
+layout_mode = 2
+theme_type_variation = &"MatchFoundHeader"
+
+[node name="L" type="Label" parent="Layout/Main/Columns/Right/FoundPanel/Header"]
+layout_mode = 2
+theme_type_variation = &"CardTitle"
+theme_override_colors/font_color = Color(0.12549, 0.141176, 0.184314, 1)
+text = "匹配成功 MATCH FOUND"
+horizontal_alignment = 1
+
+[node name="Check" type="Panel" parent="Layout/Main/Columns/Right/FoundPanel"]
+custom_minimum_size = Vector2(120, 120)
+layout_mode = 2
+size_flags_horizontal = 4
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_check")
+
+[node name="Mark" type="Label" parent="Layout/Main/Columns/Right/FoundPanel/Check"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_type_variation = &"DisplayTimer"
+theme_override_colors/font_color = Color(0.12549, 0.141176, 0.184314, 1)
+theme_override_font_sizes/font_size = 64
+text = "✓"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="Title" type="Label" parent="Layout/Main/Columns/Right/FoundPanel"]
+layout_mode = 2
+theme_type_variation = &"CardTitle"
+text = "组队完成！"
+horizontal_alignment = 1
+
+[node name="Slots" type="VBoxContainer" parent="Layout/Main/Columns/Right/FoundPanel"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="Slot1" type="PanelContainer" parent="Layout/Main/Columns/Right/FoundPanel/Slots"]
+layout_mode = 2
+theme_type_variation = &"PlayerSlot"
+
+[node name="L" type="Label" parent="Layout/Main/Columns/Right/FoundPanel/Slots/Slot1"]
+layout_mode = 2
+theme_type_variation = &"BodyText"
+text = "Maker_042（我）"
+
+[node name="Slot2" type="PanelContainer" parent="Layout/Main/Columns/Right/FoundPanel/Slots"]
+layout_mode = 2
+theme_type_variation = &"PlayerSlot"
+
+[node name="L" type="Label" parent="Layout/Main/Columns/Right/FoundPanel/Slots/Slot2"]
+layout_mode = 2
+theme_type_variation = &"BodyText"
+text = "Nova"
+
+[node name="Slot3" type="PanelContainer" parent="Layout/Main/Columns/Right/FoundPanel/Slots"]
+layout_mode = 2
+theme_type_variation = &"PlayerSlot"
+
+[node name="L" type="Label" parent="Layout/Main/Columns/Right/FoundPanel/Slots/Slot3"]
+layout_mode = 2
+theme_type_variation = &"BodyText"
+text = "阿凯"
+
+[node name="Slot4" type="PanelContainer" parent="Layout/Main/Columns/Right/FoundPanel/Slots"]
+layout_mode = 2
+theme_type_variation = &"PlayerSlot"
+
+[node name="L" type="Label" parent="Layout/Main/Columns/Right/FoundPanel/Slots/Slot4"]
+layout_mode = 2
+theme_type_variation = &"BodyText"
+text = "Sprite"
+
+[node name="Info" type="Label" parent="Layout/Main/Columns/Right/FoundPanel"]
+layout_mode = 2
+theme_type_variation = &"StatusCaption"
+text = "所有玩家已就位 4/4 · 齿轮回廊"
+horizontal_alignment = 1
+
+[node name="Countdown" type="PanelContainer" parent="Layout/Main/Columns/Right/FoundPanel"]
+layout_mode = 2
+size_flags_horizontal = 4
+theme_type_variation = &"CountdownChip"
+
+[node name="L" type="Label" parent="Layout/Main/Columns/Right/FoundPanel/Countdown"]
+layout_mode = 2
+theme_type_variation = &"ChipLabel"
+theme_override_colors/font_color = Color(0.12549, 0.141176, 0.184314, 1)
+text = "开局倒计时 0:05"
+
+[node name="Enter" type="Button" parent="Layout/Main/Columns/Right/FoundPanel"]
+custom_minimum_size = Vector2(0, 72)
+layout_mode = 2
+theme_type_variation = &"MatchMethodPrimary"
+text = "进入赛道 ENTER"
+script = ExtResource("2_press")
+
+[node name="DevBar" type="PanelContainer" parent="Layout"]
+custom_minimum_size = Vector2(0, 32)
+layout_mode = 2
+theme_type_variation = &"DevBar"
+
+[node name="Row" type="HBoxContainer" parent="Layout/DevBar"]
+layout_mode = 2
+
+[node name="Info" type="Label" parent="Layout/DevBar/Row"]
+layout_mode = 2
+theme_type_variation = &"MonoCaption"
+text = "DEV · ● 在线 ONLINE · ROOM AB3K-7Q3Z · ping 32ms"
+
+[node name="Spacer" type="Control" parent="Layout/DevBar/Row"]
+layout_mode = 2
+size_flags_horizontal = 3
+mouse_filter = 2
+
+[node name="Version" type="Label" parent="Layout/DevBar/Row"]
+layout_mode = 2
+theme_type_variation = &"MonoCaption"
+text = "v0.2.1-dev · build 1042"

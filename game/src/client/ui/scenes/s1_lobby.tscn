@@ -1,0 +1,659 @@
+[gd_scene load_steps=22 format=3]
+
+[ext_resource type="Theme" path="res://content/ui/theme/craft_arena.tres" id="1_theme"]
+[ext_resource type="Script" path="res://src/client/ui/scripts/rounded_gradient.gd" id="2_grad"]
+[ext_resource type="Shader" path="res://content/ui/shaders/rounded_gradient.gdshader" id="3_shader"]
+[ext_resource type="Texture2D" path="res://content/ui/assets/logo_mark.png" id="4_logo"]
+[ext_resource type="Texture2D" path="res://content/ui/assets/topbar_guest_chip.png" id="5_chip"]
+[ext_resource type="Texture2D" path="res://content/ui/assets/topbar_gear.png" id="6_gear"]
+[ext_resource type="Texture2D" path="res://content/ui/assets/channel_card_traprush_art.png" id="7_art"]
+[ext_resource type="Texture2D" path="res://content/ui/assets/nav_icon_character.png" id="8_navchar"]
+[ext_resource type="Texture2D" path="res://content/ui/assets/nav_icon_mycontent.png" id="9_navmine"]
+[ext_resource type="Texture2D" path="res://content/ui/assets/nav_icon_workshop.png" id="10_navshop"]
+[ext_resource type="Texture2D" path="res://content/ui/assets/nav_icon_settings.png" id="11_navset"]
+[ext_resource type="Shader" path="res://content/ui/shaders/feather_left.gdshader" id="12_feather"]
+[ext_resource type="Script" path="res://src/client/ui/scripts/press_feedback.gd" id="13_press"]
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_art"]
+shader = ExtResource("12_feather")
+shader_parameter/feather = 0.18
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_grad"]
+shader = ExtResource("3_shader")
+shader_parameter/color_from = Color(0.85098, 0.211765, 0.419608, 1)
+shader_parameter/color_to = Color(0.949019, 0.47451, 0.184314, 1)
+shader_parameter/angle_deg = 115.0
+shader_parameter/corner_radius = 16.0
+shader_parameter/rect_size = Vector2(1296, 300)
+shader_parameter/edge_softness = 1.0
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_avatar"]
+bg_color = Color(0.541176, 0.568627, 0.627451, 1)
+corner_radius_top_left = 28
+corner_radius_top_right = 28
+corner_radius_bottom_right = 28
+corner_radius_bottom_left = 28
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_chip_dark"]
+content_margin_left = 16.0
+content_margin_top = 6.0
+content_margin_right = 16.0
+content_margin_bottom = 6.0
+bg_color = Color(0.094118, 0.105882, 0.137255, 0.45)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_bastion"]
+bg_color = Color(0.345098, 0.537255, 0.584314, 1)
+corner_radius_top_left = 16
+corner_radius_top_right = 16
+corner_radius_bottom_right = 16
+corner_radius_bottom_left = 16
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_disabled_overlay"]
+bg_color = Color(0.12549, 0.141176, 0.184314, 0.35)
+corner_radius_top_left = 16
+corner_radius_top_right = 16
+corner_radius_bottom_right = 16
+corner_radius_bottom_left = 16
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_count_chip"]
+content_margin_left = 10.0
+content_margin_top = 4.0
+content_margin_right = 10.0
+content_margin_bottom = 4.0
+bg_color = Color(0.094118, 0.105882, 0.137255, 0.6)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_hint"]
+content_margin_left = 24.0
+content_margin_top = 4.0
+content_margin_right = 24.0
+content_margin_bottom = 4.0
+bg_color = Color(0.094118, 0.105882, 0.137255, 1)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+
+[node name="S1Lobby" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme = ExtResource("1_theme")
+
+[node name="Background" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0.12549, 0.141176, 0.184314, 1)
+
+[node name="Layout" type="VBoxContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_constants/separation = 0
+
+[node name="TopBar" type="PanelContainer" parent="Layout"]
+custom_minimum_size = Vector2(0, 72)
+layout_mode = 2
+
+[node name="Row" type="HBoxContainer" parent="Layout/TopBar"]
+layout_mode = 2
+theme_override_constants/separation = 16
+
+[node name="Logo" type="TextureRect" parent="Layout/TopBar/Row"]
+custom_minimum_size = Vector2(40, 40)
+layout_mode = 2
+size_flags_vertical = 4
+mouse_filter = 2
+texture = ExtResource("4_logo")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="TitleBox" type="VBoxContainer" parent="Layout/TopBar/Row"]
+layout_mode = 2
+size_flags_vertical = 4
+mouse_filter = 2
+theme_override_constants/separation = 0
+
+[node name="Title" type="Label" parent="Layout/TopBar/Row/TitleBox"]
+layout_mode = 2
+theme_type_variation = &"PageTitle"
+text = "Craft Arena"
+
+[node name="Subtitle" type="Label" parent="Layout/TopBar/Row/TitleBox"]
+layout_mode = 2
+theme_type_variation = &"NavSubtitle"
+text = "工坊竞技场"
+
+[node name="Spacer" type="Control" parent="Layout/TopBar/Row"]
+layout_mode = 2
+size_flags_horizontal = 3
+mouse_filter = 2
+
+[node name="Avatar" type="Panel" parent="Layout/TopBar/Row"]
+custom_minimum_size = Vector2(56, 56)
+layout_mode = 2
+size_flags_vertical = 4
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_avatar")
+
+[node name="IdentityBox" type="VBoxContainer" parent="Layout/TopBar/Row"]
+layout_mode = 2
+size_flags_vertical = 4
+mouse_filter = 2
+theme_override_constants/separation = 2
+
+[node name="Nickname" type="Label" parent="Layout/TopBar/Row/IdentityBox"]
+layout_mode = 2
+theme_type_variation = &"NavTitle"
+text = "Maker_042"
+
+[node name="GuestChip" type="TextureRect" parent="Layout/TopBar/Row/IdentityBox"]
+custom_minimum_size = Vector2(153, 33)
+layout_mode = 2
+size_flags_horizontal = 0
+mouse_filter = 2
+texture = ExtResource("5_chip")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="Gear" type="Button" parent="Layout/TopBar/Row"]
+custom_minimum_size = Vector2(56, 56)
+layout_mode = 2
+size_flags_vertical = 4
+theme_type_variation = &"IconButton"
+icon = ExtResource("6_gear")
+expand_icon = true
+script = ExtResource("13_press")
+
+[node name="Main" type="MarginContainer" parent="Layout"]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_constants/margin_left = 64
+theme_override_constants/margin_top = 24
+theme_override_constants/margin_right = 64
+theme_override_constants/margin_bottom = 24
+
+[node name="Columns" type="HBoxContainer" parent="Layout/Main"]
+layout_mode = 2
+theme_override_constants/separation = 24
+
+[node name="Left" type="VBoxContainer" parent="Layout/Main/Columns"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 24
+
+[node name="TraprushCard" type="Button" parent="Layout/Main/Columns/Left"]
+custom_minimum_size = Vector2(0, 300)
+layout_mode = 2
+focus_mode = 0
+mouse_default_cursor_shape = 2
+flat = true
+script = ExtResource("13_press")
+hover_brightness = 1.06
+press_brightness = 0.94
+
+[node name="Gradient" type="ColorRect" parent="Layout/Main/Columns/Left/TraprushCard"]
+material = SubResource("ShaderMaterial_grad")
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("2_grad")
+
+[node name="Art" type="TextureRect" parent="Layout/Main/Columns/Left/TraprushCard"]
+material = SubResource("ShaderMaterial_art")
+layout_mode = 1
+anchor_left = 0.55
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = ExtResource("7_art")
+expand_mode = 1
+stretch_mode = 6
+
+[node name="Content" type="MarginContainer" parent="Layout/Main/Columns/Left/TraprushCard"]
+layout_mode = 1
+anchor_right = 0.55
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_constants/margin_left = 36
+theme_override_constants/margin_top = 28
+theme_override_constants/margin_right = 24
+theme_override_constants/margin_bottom = 28
+
+[node name="VBox" type="VBoxContainer" parent="Layout/Main/Columns/Left/TraprushCard/Content"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 12
+
+[node name="ChipRow" type="HBoxContainer" parent="Layout/Main/Columns/Left/TraprushCard/Content/VBox"]
+layout_mode = 2
+mouse_filter = 2
+
+[node name="ChipSpacer" type="Control" parent="Layout/Main/Columns/Left/TraprushCard/Content/VBox/ChipRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+mouse_filter = 2
+
+[node name="OpenChip" type="PanelContainer" parent="Layout/Main/Columns/Left/TraprushCard/Content/VBox/ChipRow"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_chip_dark")
+
+[node name="Label" type="Label" parent="Layout/Main/Columns/Left/TraprushCard/Content/VBox/ChipRow/OpenChip"]
+layout_mode = 2
+theme_type_variation = &"ChipLabel"
+text = "开放中 OPEN"
+
+[node name="Title" type="Label" parent="Layout/Main/Columns/Left/TraprushCard/Content/VBox"]
+layout_mode = 2
+theme_type_variation = &"DisplayChannelTitle"
+text = "TRAPRUSH 机关狂奔"
+
+[node name="Desc" type="Label" parent="Layout/Main/Columns/Left/TraprushCard/Content/VBox"]
+layout_mode = 2
+theme_type_variation = &"BodyText"
+text = "穿越机关与道具，破坏障碍，抢占传送网络的最快路线"
+
+[node name="CardSpacer" type="Control" parent="Layout/Main/Columns/Left/TraprushCard/Content/VBox"]
+layout_mode = 2
+size_flags_vertical = 3
+mouse_filter = 2
+
+[node name="CTA" type="Button" parent="Layout/Main/Columns/Left/TraprushCard/Content/VBox"]
+custom_minimum_size = Vector2(220, 56)
+layout_mode = 2
+size_flags_horizontal = 0
+theme_type_variation = &"ButtonOnGradient"
+text = "进入频道 ENTER"
+script = ExtResource("13_press")
+
+[node name="BastionCard" type="Button" parent="Layout/Main/Columns/Left"]
+custom_minimum_size = Vector2(0, 300)
+layout_mode = 2
+focus_mode = 0
+flat = true
+disabled = true
+script = ExtResource("13_press")
+
+[node name="Base" type="Panel" parent="Layout/Main/Columns/Left/BastionCard"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_bastion")
+
+[node name="Content" type="MarginContainer" parent="Layout/Main/Columns/Left/BastionCard"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_constants/margin_left = 36
+theme_override_constants/margin_top = 28
+theme_override_constants/margin_right = 36
+theme_override_constants/margin_bottom = 28
+
+[node name="VBox" type="VBoxContainer" parent="Layout/Main/Columns/Left/BastionCard/Content"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 12
+
+[node name="ChipRow" type="HBoxContainer" parent="Layout/Main/Columns/Left/BastionCard/Content/VBox"]
+layout_mode = 2
+mouse_filter = 2
+
+[node name="ChipSpacer" type="Control" parent="Layout/Main/Columns/Left/BastionCard/Content/VBox/ChipRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+mouse_filter = 2
+
+[node name="ComingChip" type="PanelContainer" parent="Layout/Main/Columns/Left/BastionCard/Content/VBox/ChipRow"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_chip_dark")
+
+[node name="Label" type="Label" parent="Layout/Main/Columns/Left/BastionCard/Content/VBox/ChipRow/ComingChip"]
+layout_mode = 2
+theme_type_variation = &"ChipLabel"
+text = "即将推出 COMING SOON 🔒"
+
+[node name="Title" type="Label" parent="Layout/Main/Columns/Left/BastionCard/Content/VBox"]
+layout_mode = 2
+theme_type_variation = &"DisplayChannelTitle"
+text = "BASTION + 双塔要塞"
+
+[node name="Desc" type="Label" parent="Layout/Main/Columns/Left/BastionCard/Content/VBox"]
+layout_mode = 2
+theme_type_variation = &"BodyText"
+text = "赛前互设障碍布阵，赛中建造炮塔，先破对方双塔者胜"
+
+[node name="CardSpacer" type="Control" parent="Layout/Main/Columns/Left/BastionCard/Content/VBox"]
+layout_mode = 2
+size_flags_vertical = 3
+mouse_filter = 2
+
+[node name="CTA" type="Button" parent="Layout/Main/Columns/Left/BastionCard/Content/VBox"]
+custom_minimum_size = Vector2(220, 56)
+layout_mode = 2
+size_flags_horizontal = 0
+disabled = true
+text = "尚未开放"
+
+[node name="Overlay" type="Panel" parent="Layout/Main/Columns/Left/BastionCard"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_disabled_overlay")
+
+[node name="NavColumn" type="VBoxContainer" parent="Layout/Main/Columns"]
+custom_minimum_size = Vector2(472, 0)
+layout_mode = 2
+theme_override_constants/separation = 16
+
+[node name="NavCharacter" type="Button" parent="Layout/Main/Columns/NavColumn"]
+custom_minimum_size = Vector2(0, 96)
+layout_mode = 2
+theme_type_variation = &"NavItemCharacter"
+script = ExtResource("13_press")
+
+[node name="Row" type="HBoxContainer" parent="Layout/Main/Columns/NavColumn/NavCharacter"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_constants/separation = 16
+
+[node name="Icon" type="TextureRect" parent="Layout/Main/Columns/NavColumn/NavCharacter/Row"]
+custom_minimum_size = Vector2(66, 66)
+layout_mode = 2
+size_flags_vertical = 4
+mouse_filter = 2
+texture = ExtResource("8_navchar")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="Texts" type="VBoxContainer" parent="Layout/Main/Columns/NavColumn/NavCharacter/Row"]
+layout_mode = 2
+size_flags_vertical = 4
+mouse_filter = 2
+theme_override_constants/separation = 0
+
+[node name="Zh" type="Label" parent="Layout/Main/Columns/NavColumn/NavCharacter/Row/Texts"]
+layout_mode = 2
+theme_type_variation = &"NavTitle"
+text = "角色选择"
+
+[node name="En" type="Label" parent="Layout/Main/Columns/NavColumn/NavCharacter/Row/Texts"]
+layout_mode = 2
+theme_type_variation = &"NavSubtitle"
+text = "CHARACTER"
+
+[node name="RowSpacer" type="Control" parent="Layout/Main/Columns/NavColumn/NavCharacter/Row"]
+layout_mode = 2
+size_flags_horizontal = 3
+mouse_filter = 2
+
+[node name="Chevron" type="Label" parent="Layout/Main/Columns/NavColumn/NavCharacter/Row"]
+layout_mode = 2
+size_flags_vertical = 4
+theme_type_variation = &"NavSubtitle"
+text = ">"
+
+[node name="NavMyContent" type="Button" parent="Layout/Main/Columns/NavColumn"]
+custom_minimum_size = Vector2(0, 96)
+layout_mode = 2
+theme_type_variation = &"NavItemMyContent"
+script = ExtResource("13_press")
+
+[node name="Row" type="HBoxContainer" parent="Layout/Main/Columns/NavColumn/NavMyContent"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_constants/separation = 16
+
+[node name="Icon" type="TextureRect" parent="Layout/Main/Columns/NavColumn/NavMyContent/Row"]
+custom_minimum_size = Vector2(66, 66)
+layout_mode = 2
+size_flags_vertical = 4
+mouse_filter = 2
+texture = ExtResource("9_navmine")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="Texts" type="VBoxContainer" parent="Layout/Main/Columns/NavColumn/NavMyContent/Row"]
+layout_mode = 2
+size_flags_vertical = 4
+mouse_filter = 2
+theme_override_constants/separation = 0
+
+[node name="Zh" type="Label" parent="Layout/Main/Columns/NavColumn/NavMyContent/Row/Texts"]
+layout_mode = 2
+theme_type_variation = &"NavTitle"
+text = "我的内容"
+
+[node name="En" type="Label" parent="Layout/Main/Columns/NavColumn/NavMyContent/Row/Texts"]
+layout_mode = 2
+theme_type_variation = &"NavSubtitle"
+text = "MY CONTENT"
+
+[node name="Chips" type="VBoxContainer" parent="Layout/Main/Columns/NavColumn/NavMyContent/Row"]
+layout_mode = 2
+size_flags_vertical = 4
+mouse_filter = 2
+theme_override_constants/separation = 4
+
+[node name="Draft" type="PanelContainer" parent="Layout/Main/Columns/NavColumn/NavMyContent/Row/Chips"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_count_chip")
+
+[node name="L" type="Label" parent="Layout/Main/Columns/NavColumn/NavMyContent/Row/Chips/Draft"]
+layout_mode = 2
+theme_type_variation = &"ChipLabel"
+text = "草稿 2"
+
+[node name="Published" type="PanelContainer" parent="Layout/Main/Columns/NavColumn/NavMyContent/Row/Chips"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_count_chip")
+
+[node name="L" type="Label" parent="Layout/Main/Columns/NavColumn/NavMyContent/Row/Chips/Published"]
+layout_mode = 2
+theme_type_variation = &"ChipLabel"
+text = "已发布 1"
+
+[node name="RowSpacer" type="Control" parent="Layout/Main/Columns/NavColumn/NavMyContent/Row"]
+layout_mode = 2
+size_flags_horizontal = 3
+mouse_filter = 2
+
+[node name="Chevron" type="Label" parent="Layout/Main/Columns/NavColumn/NavMyContent/Row"]
+layout_mode = 2
+size_flags_vertical = 4
+theme_type_variation = &"NavSubtitle"
+text = ">"
+
+[node name="NavWorkshop" type="Button" parent="Layout/Main/Columns/NavColumn"]
+custom_minimum_size = Vector2(0, 96)
+layout_mode = 2
+theme_type_variation = &"NavItemWorkshop"
+script = ExtResource("13_press")
+
+[node name="Row" type="HBoxContainer" parent="Layout/Main/Columns/NavColumn/NavWorkshop"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_constants/separation = 16
+
+[node name="Icon" type="TextureRect" parent="Layout/Main/Columns/NavColumn/NavWorkshop/Row"]
+custom_minimum_size = Vector2(66, 66)
+layout_mode = 2
+size_flags_vertical = 4
+mouse_filter = 2
+texture = ExtResource("10_navshop")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="Texts" type="VBoxContainer" parent="Layout/Main/Columns/NavColumn/NavWorkshop/Row"]
+layout_mode = 2
+size_flags_vertical = 4
+mouse_filter = 2
+theme_override_constants/separation = 0
+
+[node name="Zh" type="Label" parent="Layout/Main/Columns/NavColumn/NavWorkshop/Row/Texts"]
+layout_mode = 2
+theme_type_variation = &"NavTitle"
+text = "公共内容广场"
+
+[node name="En" type="Label" parent="Layout/Main/Columns/NavColumn/NavWorkshop/Row/Texts"]
+layout_mode = 2
+theme_type_variation = &"NavSubtitle"
+text = "WORKSHOP"
+
+[node name="RowSpacer" type="Control" parent="Layout/Main/Columns/NavColumn/NavWorkshop/Row"]
+layout_mode = 2
+size_flags_horizontal = 3
+mouse_filter = 2
+
+[node name="Chevron" type="Label" parent="Layout/Main/Columns/NavColumn/NavWorkshop/Row"]
+layout_mode = 2
+size_flags_vertical = 4
+theme_type_variation = &"NavSubtitle"
+text = ">"
+
+[node name="NavSettings" type="Button" parent="Layout/Main/Columns/NavColumn"]
+custom_minimum_size = Vector2(0, 96)
+layout_mode = 2
+theme_type_variation = &"NavItemSettings"
+script = ExtResource("13_press")
+
+[node name="Row" type="HBoxContainer" parent="Layout/Main/Columns/NavColumn/NavSettings"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_constants/separation = 16
+
+[node name="Icon" type="TextureRect" parent="Layout/Main/Columns/NavColumn/NavSettings/Row"]
+custom_minimum_size = Vector2(66, 66)
+layout_mode = 2
+size_flags_vertical = 4
+mouse_filter = 2
+texture = ExtResource("11_navset")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="Texts" type="VBoxContainer" parent="Layout/Main/Columns/NavColumn/NavSettings/Row"]
+layout_mode = 2
+size_flags_vertical = 4
+mouse_filter = 2
+theme_override_constants/separation = 0
+
+[node name="Zh" type="Label" parent="Layout/Main/Columns/NavColumn/NavSettings/Row/Texts"]
+layout_mode = 2
+theme_type_variation = &"NavTitle"
+text = "设置"
+
+[node name="En" type="Label" parent="Layout/Main/Columns/NavColumn/NavSettings/Row/Texts"]
+layout_mode = 2
+theme_type_variation = &"NavSubtitle"
+text = "SETTINGS"
+
+[node name="RowSpacer" type="Control" parent="Layout/Main/Columns/NavColumn/NavSettings/Row"]
+layout_mode = 2
+size_flags_horizontal = 3
+mouse_filter = 2
+
+[node name="Chevron" type="Label" parent="Layout/Main/Columns/NavColumn/NavSettings/Row"]
+layout_mode = 2
+size_flags_vertical = 4
+theme_type_variation = &"NavSubtitle"
+text = ">"
+
+[node name="DevBar" type="PanelContainer" parent="Layout"]
+custom_minimum_size = Vector2(0, 32)
+layout_mode = 2
+theme_type_variation = &"DevBar"
+
+[node name="Row" type="HBoxContainer" parent="Layout/DevBar"]
+layout_mode = 2
+
+[node name="Online" type="Label" parent="Layout/DevBar/Row"]
+layout_mode = 2
+theme_type_variation = &"OnlineCaption"
+text = "● 在线 ONLINE"
+
+[node name="Spacer1" type="Control" parent="Layout/DevBar/Row"]
+layout_mode = 2
+size_flags_horizontal = 3
+mouse_filter = 2
+
+[node name="HintBox" type="PanelContainer" parent="Layout/DevBar/Row"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_hint")
+
+[node name="Label" type="Label" parent="Layout/DevBar/Row/HintBox"]
+layout_mode = 2
+theme_type_variation = &"StatusCaption"
+text = "离线提示位"
+
+[node name="Spacer2" type="Control" parent="Layout/DevBar/Row"]
+layout_mode = 2
+size_flags_horizontal = 3
+mouse_filter = 2
+
+[node name="Version" type="Label" parent="Layout/DevBar/Row"]
+layout_mode = 2
+theme_type_variation = &"MonoCaption"
+text = "v0.2.1-dev · build 1042"

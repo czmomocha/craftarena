@@ -1,0 +1,206 @@
+[gd_scene load_steps=7 format=3]
+
+[ext_resource type="Theme" path="res://content/ui/theme/craft_arena.tres" id="1_theme"]
+[ext_resource type="Script" path="res://src/client/ui/scripts/press_feedback.gd" id="2_press"]
+[ext_resource type="Script" path="res://src/client/ui/scripts/s3_workshop.gd" id="3_s3"]
+[ext_resource type="Texture2D" path="res://content/ui/assets/logo_mark.png" id="4_logo"]
+[ext_resource type="Texture2D" path="res://content/ui/assets/topbar_guest_chip.png" id="5_chip"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_avatar"]
+bg_color = Color(0.541176, 0.568627, 0.627451, 1)
+corner_radius_top_left = 28
+corner_radius_top_right = 28
+corner_radius_bottom_right = 28
+corner_radius_bottom_left = 28
+
+[node name="S3Workshop" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme = ExtResource("1_theme")
+script = ExtResource("3_s3")
+
+[node name="Background" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0.12549, 0.141176, 0.184314, 1)
+
+[node name="Layout" type="VBoxContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_constants/separation = 0
+
+[node name="TopBar" type="PanelContainer" parent="Layout"]
+custom_minimum_size = Vector2(0, 72)
+layout_mode = 2
+
+[node name="Row" type="HBoxContainer" parent="Layout/TopBar"]
+layout_mode = 2
+theme_override_constants/separation = 16
+
+[node name="Back" type="Button" parent="Layout/TopBar/Row"]
+custom_minimum_size = Vector2(48, 48)
+layout_mode = 2
+size_flags_vertical = 4
+theme_type_variation = &"ButtonGhost"
+text = "<"
+script = ExtResource("2_press")
+
+[node name="Logo" type="TextureRect" parent="Layout/TopBar/Row"]
+custom_minimum_size = Vector2(40, 40)
+layout_mode = 2
+size_flags_vertical = 4
+mouse_filter = 2
+texture = ExtResource("4_logo")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="TitleBox" type="VBoxContainer" parent="Layout/TopBar/Row"]
+layout_mode = 2
+size_flags_vertical = 4
+mouse_filter = 2
+theme_override_constants/separation = 0
+
+[node name="Title" type="Label" parent="Layout/TopBar/Row/TitleBox"]
+layout_mode = 2
+theme_type_variation = &"PageTitle"
+text = "公共内容广场"
+
+[node name="Subtitle" type="Label" parent="Layout/TopBar/Row/TitleBox"]
+layout_mode = 2
+theme_type_variation = &"NavSubtitle"
+text = "WORKSHOP"
+
+[node name="Spacer" type="Control" parent="Layout/TopBar/Row"]
+layout_mode = 2
+size_flags_horizontal = 3
+mouse_filter = 2
+
+[node name="Avatar" type="Panel" parent="Layout/TopBar/Row"]
+custom_minimum_size = Vector2(56, 56)
+layout_mode = 2
+size_flags_vertical = 4
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_avatar")
+
+[node name="IdentityBox" type="VBoxContainer" parent="Layout/TopBar/Row"]
+layout_mode = 2
+size_flags_vertical = 4
+mouse_filter = 2
+theme_override_constants/separation = 2
+
+[node name="Nickname" type="Label" parent="Layout/TopBar/Row/IdentityBox"]
+layout_mode = 2
+theme_type_variation = &"NavTitle"
+text = "Maker_042"
+
+[node name="GuestChip" type="TextureRect" parent="Layout/TopBar/Row/IdentityBox"]
+custom_minimum_size = Vector2(153, 33)
+layout_mode = 2
+size_flags_horizontal = 0
+mouse_filter = 2
+texture = ExtResource("5_chip")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="Main" type="MarginContainer" parent="Layout"]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_constants/margin_left = 64
+theme_override_constants/margin_top = 24
+theme_override_constants/margin_right = 64
+theme_override_constants/margin_bottom = 24
+
+[node name="VBox" type="VBoxContainer" parent="Layout/Main"]
+layout_mode = 2
+theme_override_constants/separation = 16
+
+[node name="FilterRow" type="HBoxContainer" parent="Layout/Main/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 16
+
+[node name="Tabs" type="HBoxContainer" parent="Layout/Main/VBox/FilterRow"]
+layout_mode = 2
+size_flags_vertical = 4
+theme_override_constants/separation = 8
+
+[node name="Latest" type="Button" parent="Layout/Main/VBox/FilterRow/Tabs"]
+custom_minimum_size = Vector2(150, 44)
+layout_mode = 2
+theme_type_variation = &"TabChipActive"
+text = "最新 LATEST"
+script = ExtResource("2_press")
+
+[node name="Rating" type="Button" parent="Layout/Main/VBox/FilterRow/Tabs"]
+custom_minimum_size = Vector2(150, 44)
+layout_mode = 2
+theme_type_variation = &"TabChip"
+text = "评分 RATING"
+script = ExtResource("2_press")
+
+[node name="Plays" type="Button" parent="Layout/Main/VBox/FilterRow/Tabs"]
+custom_minimum_size = Vector2(180, 44)
+layout_mode = 2
+theme_type_variation = &"TabChip"
+text = "游玩次数 PLAYS"
+script = ExtResource("2_press")
+
+[node name="Verified" type="Button" parent="Layout/Main/VBox/FilterRow/Tabs"]
+custom_minimum_size = Vector2(180, 44)
+layout_mode = 2
+theme_type_variation = &"TabChip"
+text = "已验证 VERIFIED"
+script = ExtResource("2_press")
+
+[node name="Spacer" type="Control" parent="Layout/Main/VBox/FilterRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+mouse_filter = 2
+
+[node name="Sort" type="Button" parent="Layout/Main/VBox/FilterRow"]
+custom_minimum_size = Vector2(160, 44)
+layout_mode = 2
+size_flags_vertical = 4
+theme_type_variation = &"Dropdown"
+text = "排序：综合 ▾"
+script = ExtResource("2_press")
+
+[node name="TagFilter" type="Button" parent="Layout/Main/VBox/FilterRow"]
+custom_minimum_size = Vector2(160, 44)
+layout_mode = 2
+size_flags_vertical = 4
+theme_type_variation = &"Dropdown"
+text = "标签：全部 ▾"
+script = ExtResource("2_press")
+
+[node name="Search" type="LineEdit" parent="Layout/Main/VBox/FilterRow"]
+custom_minimum_size = Vector2(300, 44)
+layout_mode = 2
+size_flags_vertical = 4
+theme_type_variation = &"InputDark"
+placeholder_text = "搜索名称或标签…"
+
+[node name="Note" type="Label" parent="Layout/Main/VBox"]
+layout_mode = 2
+theme_type_variation = &"StatusCaption"
+text = "标题由系统词库生成 · 不含自由文本 · 未验证内容不进入已验证筛选"
+
+[node name="Grid" type="GridContainer" parent="Layout/Main/VBox"]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_constants/h_separation = 24
+theme_override_constants/v_separation = 32
+columns = 4

@@ -1,0 +1,163 @@
+[gd_scene load_steps=7 format=3]
+
+[ext_resource type="Script" path="res://src/client/ui/scripts/content_card.gd" id="1_card"]
+[ext_resource type="Script" path="res://src/client/ui/scripts/press_feedback.gd" id="2_press"]
+[ext_resource type="Shader" path="res://content/ui/shaders/rounded_texture.gdshader" id="3_rtex"]
+[ext_resource type="Script" path="res://src/client/ui/scripts/rounded_gradient.gd" id="4_rsync"]
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_thumb"]
+shader = ExtResource("3_rtex")
+shader_parameter/corner_radius = 12.0
+shader_parameter/rect_size = Vector2(376, 153)
+shader_parameter/edge_softness = 1.0
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_dot"]
+bg_color = Color(0.55, 0.568627, 0.627451, 1)
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_right = 10
+corner_radius_bottom_left = 10
+
+[node name="ContentCard" type="Button"]
+custom_minimum_size = Vector2(280, 0)
+size_flags_horizontal = 3
+theme_type_variation = &"ContentCard"
+script = ExtResource("1_card")
+
+[node name="Margin" type="MarginContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_constants/margin_left = 20
+theme_override_constants/margin_top = 16
+theme_override_constants/margin_right = 20
+theme_override_constants/margin_bottom = 16
+
+[node name="VBox" type="VBoxContainer" parent="Margin"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 8
+
+[node name="ThumbWrap" type="Control" parent="Margin/VBox"]
+custom_minimum_size = Vector2(0, 153)
+layout_mode = 2
+mouse_filter = 2
+
+[node name="Thumb" type="TextureRect" parent="Margin/VBox/ThumbWrap"]
+material = SubResource("ShaderMaterial_thumb")
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+expand_mode = 1
+stretch_mode = 6
+script = ExtResource("4_rsync")
+
+[node name="Dim" type="ColorRect" parent="Margin/VBox/ThumbWrap"]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0.12549, 0.141176, 0.184314, 0.55)
+
+[node name="Badge" type="PanelContainer" parent="Margin/VBox/ThumbWrap"]
+visible = false
+layout_mode = 1
+anchor_left = 1.0
+anchor_top = 0.0
+anchor_right = 1.0
+anchor_bottom = 0.0
+offset_left = -200.0
+offset_top = 10.0
+offset_right = -10.0
+offset_bottom = 46.0
+grow_horizontal = 0
+grow_vertical = 0
+mouse_filter = 2
+theme_type_variation = &"UnverifiedBadge"
+
+[node name="L" type="Label" parent="Margin/VBox/ThumbWrap/Badge"]
+layout_mode = 2
+theme_type_variation = &"ChipLabel"
+theme_override_colors/font_color = Color(0.12549, 0.141176, 0.184314, 1)
+text = "未验证可完成 ?"
+
+[node name="Title" type="Label" parent="Margin/VBox"]
+layout_mode = 2
+theme_type_variation = &"CardTitle"
+clip_text = true
+text = "标题"
+
+[node name="Tags" type="HBoxContainer" parent="Margin/VBox"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 8
+
+[node name="Footer" type="HBoxContainer" parent="Margin/VBox"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 8
+
+[node name="Dot" type="Panel" parent="Margin/VBox/Footer"]
+custom_minimum_size = Vector2(20, 20)
+layout_mode = 2
+size_flags_vertical = 4
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_dot")
+
+[node name="Author" type="Label" parent="Margin/VBox/Footer"]
+layout_mode = 2
+size_flags_vertical = 4
+theme_type_variation = &"StatusCaption"
+text = "作者"
+
+[node name="Spacer" type="Control" parent="Margin/VBox/Footer"]
+layout_mode = 2
+size_flags_horizontal = 3
+mouse_filter = 2
+
+[node name="Action" type="Button" parent="Margin/VBox/Footer"]
+layout_mode = 2
+size_flags_vertical = 4
+theme_type_variation = &"CardActionButton"
+text = "编辑/复用"
+script = ExtResource("2_press")
+
+[node name="Stats" type="HBoxContainer" parent="Margin/VBox"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 8
+
+[node name="Stars" type="Label" parent="Margin/VBox/Stats"]
+layout_mode = 2
+size_flags_vertical = 4
+theme_type_variation = &"GuestCaption"
+text = "★★★★★"
+
+[node name="Score" type="Label" parent="Margin/VBox/Stats"]
+layout_mode = 2
+size_flags_vertical = 4
+theme_type_variation = &"BodyText"
+text = "0.0"
+
+[node name="Spacer" type="Control" parent="Margin/VBox/Stats"]
+layout_mode = 2
+size_flags_horizontal = 3
+mouse_filter = 2
+
+[node name="Plays" type="Label" parent="Margin/VBox/Stats"]
+layout_mode = 2
+size_flags_vertical = 4
+theme_type_variation = &"StatusCaption"
+text = "0 次游玩"
