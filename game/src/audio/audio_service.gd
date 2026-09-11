@@ -18,6 +18,11 @@ const KEY_PRIORITY: String = "priority"
 const KEY_MAX_VOICES: String = "max_voices"
 const KEY_COOLDOWN_MS: String = "cooldown_ms"
 const KEY_LOOP: String = "loop"
+const KEY_SPATIAL: String = "spatial"
+const KEY_MAX_DISTANCE: String = "max_distance"
+const KEY_X: String = "x"
+const KEY_Y: String = "y"
+const KEY_Z: String = "z"
 const DEFAULT_BUS: String = AudioSettingsGd.BUS_SFX
 const DEFAULT_MAX_VOICES: int = 8
 
@@ -69,6 +74,8 @@ func register_cue(cue: Dictionary) -> bool:
 		KEY_MAX_VOICES: max_voices,
 		KEY_COOLDOWN_MS: cooldown_ms,
 		KEY_LOOP: _bool_at(cue, KEY_LOOP, false),
+		KEY_SPATIAL: _bool_at(cue, KEY_SPATIAL, false),
+		KEY_MAX_DISTANCE: _float_at(cue, KEY_MAX_DISTANCE, 0.0),
 	}
 	return true
 
@@ -108,13 +115,31 @@ func cue_loops(cue_id: String) -> bool:
 	return _bool_at(cue, KEY_LOOP, false)
 
 
-func post(cue_id: String, _ctx: Dictionary = {}) -> bool:
-	if settings.muted:
-		return false
-	if backend.is_silent():
-		return false
+func cue_spatial(cue_id: String) -> bool:
 	if not _cues.has(cue_id):
 		return false
+	var cue: Dictionary = _cues[cue_id]
+	return _bool_at(cue, KEY_SPATIAL, false)
+
+
+func cue_max_distance(cue_id: String) -> float:
+	if not _cues.has(cue_id):
+		return 0.0
+	var cue: Dictionary = _cues[cue_id]
+	return _float_at(cue, KEY_MAX_DISTANCE, 0.0)
+
+
+func post(cue_id: String, ctx: Dictionary = {}) -> bool:
+	return try_post(cue_id, ctx) > 0
+
+
+func try_post(cue_id: String, ctx: Dictionary = {}) -> int:
+	if settings.muted:
+		return 0
+	if backend.is_silent():
+		return 0
+	if not _cues.has(cue_id):
+		return 0
 	var cue: Dictionary = _cues[cue_id]
 	var now_ms: int = _clock_ms()
 	var reserved: Dictionary = pool.try_reserve(
@@ -125,31 +150,65 @@ func post(cue_id: String, _ctx: Dictionary = {}) -> bool:
 		now_ms
 	)
 	if not pool.reserved_ok(reserved):
-		return false
+		return 0
 	var evict_id: int = pool.reserved_evict_id(reserved)
 	if evict_id >= 0:
 		backend.stop(evict_id)
 	var voice_id: int = pool.reserved_voice_id(reserved)
 	var path: String = _pick_stream(cue)
 	var pitch: float = _pick_pitch(cue)
-	if not backend.play_2d(
-		voice_id,
-		path,
-		_str_at(cue, KEY_BUS, DEFAULT_BUS),
-		_float_at(cue, KEY_GAIN_DB, 0.0),
-		pitch,
-		_bool_at(cue, KEY_LOOP, false)
-	):
+	var bus: String = _str_at(cue, KEY_BUS, DEFAULT_BUS)
+	var gain: float = _float_at(cue, KEY_GAIN_DB, 0.0)
+	var loop: bool = _bool_at(cue, KEY_LOOP, false)
+	var played: bool = false
+	if _bool_at(cue, KEY_SPATIAL, false) and ctx.has(KEY_X):
+		played = backend.play_3d(
+			voice_id,
+			path,
+			bus,
+			gain,
+			pitch,
+			loop,
+			_float_at(ctx, KEY_X, 0.0),
+			_float_at(ctx, KEY_Y, 0.0),
+			_float_at(ctx, KEY_Z, 0.0),
+			_float_at(cue, KEY_MAX_DISTANCE, 1.0)
+		)
+	else:
+		played = backend.play_2d(voice_id, path, bus, gain, pitch, loop)
+	if not played:
 		pool.release(voice_id)
-		return false
-	return true
+		return 0
+	return voice_id
 
 
 func stop(cue_id: String) -> void:
 	var ids: PackedInt32Array = pool.ids_for(cue_id)
 	for voice_id: int in ids:
-		backend.stop(voice_id)
-		pool.release(voice_id)
+		stop_voice(voice_id)
+
+
+func stop_voice(voice_id: int) -> void:
+	if voice_id < 1:
+		return
+	backend.stop(voice_id)
+	pool.release(voice_id)
+
+
+func has_voice(voice_id: int) -> bool:
+	return backend.has_voice(voice_id)
+
+
+func set_space(world: Node3D) -> void:
+	backend.set_space(world)
+
+
+func attach_listener(anchor: Node3D) -> void:
+	backend.attach_listener(anchor)
+
+
+func move_voice(voice_id: int, pos_x: float, pos_y: float, pos_z: float) -> void:
+	backend.set_voice_position(voice_id, pos_x, pos_y, pos_z)
 
 
 func set_bus_db(bus: String, db: float) -> bool:

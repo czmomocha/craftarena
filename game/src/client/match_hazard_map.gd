@@ -21,6 +21,7 @@ const TraprushTopologyCompilerGd := preload("res://src/ugc/traprush_topology_com
 const WarnGd := preload("res://src/client/match_hazard_warn.gd")
 const ClientAudioGd := preload("res://src/client/client_audio.gd")
 const OccupancyGadgetGd := preload("res://src/shared/occupancy_gadget.gd")
+const TraprushAudioRouterGd := preload("res://src/games/traprush/traprush_audio_router.gd")
 
 const HAZARD_PREFIX: String = "hazard_"
 const VISUAL_NAME: String = "visual"
@@ -235,7 +236,7 @@ func _rebuild() -> void:
 			warn_wanted[WarnGd.warn_name(entity_id)] = true
 			_ensure_warn(entity_id, pose)
 			if not _warned.has(entity_id):
-				ClientAudioGd.post(ClientAudioGd.CUE_HAZARD_WARN)
+				ClientAudioGd.post_event(TraprushAudioRouterGd.EVENT_HAZARD_WARN)
 			next_warned[entity_id] = true
 	_despawn_hazards_except(wanted)
 	_despawn_warns_except(warn_wanted)

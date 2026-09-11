@@ -82,10 +82,11 @@ func reset_play_if_out_of_range(preview: AuthoringPreview) -> bool:
 		preview._play_launch_supported.erase(preview.player_id)
 		preview._portal_latch = {}
 		preview._play_stun_remaining = preview.play_respawn_stun_ticks
+		preview.play_setback_reason = PlaySetback.OUT_OF_RANGE
 	return reset
 
 
-func reset_play_to_pad(preview: AuthoringPreview) -> bool:
+func reset_play_to_pad(preview: AuthoringPreview, reason: String = PlaySetback.CRUSHED) -> bool:
 	if not preview.is_playing() or preview.play_spawn == null or preview.play_track == null:
 		return false
 	var respawn: Dictionary = preview.play_spawn.pose_for(preview.play_track)
@@ -111,6 +112,7 @@ func reset_play_to_pad(preview: AuthoringPreview) -> bool:
 	preview._portal_latch = {}
 	preview._play_stun_remaining = preview.play_respawn_stun_ticks
 	preview.play_setback_count += 1
+	preview.play_setback_reason = reason
 	return true
 
 
@@ -132,6 +134,7 @@ func resolve_play_hazards(preview: AuthoringPreview) -> bool:
 	if reset:
 		preview._portal_latch = {}
 		preview._play_stun_remaining = preview.play_respawn_stun_ticks
+		preview.play_setback_reason = PlaySetback.HAZARD
 		return true
 	return apply_play_spikes_and_flames(preview)
 
@@ -178,7 +181,7 @@ func apply_play_spikes_and_flames(preview: AuthoringPreview) -> bool:
 	)
 	if spikes.is_empty() and flames.is_empty():
 		return false
-	reset_play_to_pad(preview)
+	reset_play_to_pad(preview, PlaySetback.HAZARD)
 	return true
 
 

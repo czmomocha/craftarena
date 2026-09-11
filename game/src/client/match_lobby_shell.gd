@@ -337,9 +337,9 @@ func _physics_process(_delta: float) -> void:
 	if not offline_playing() or window == null or not window.visible:
 		return
 	offline.try_advance()
-	if chrome.edit_has_focus():
-		return
-	sampler.drive_keyboard(self)
+	if not chrome.edit_has_focus():
+		sampler.drive_keyboard(self)
+	stage.pump_play_audio(offline)
 func _take_sample(sample: Dictionary) -> PackedByteArray:
 	return sampler.take(sample, _note_command, _apply_snapshot_map)
 func _ensure_window() -> void:

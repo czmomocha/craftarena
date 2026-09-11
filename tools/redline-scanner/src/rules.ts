@@ -93,6 +93,7 @@ export const AUDIO_ENGINE_TOKENS: readonly string[] = [
 	"AudioServer",
 	"AudioStreamPlayer",
 	"AudioStreamPlayer3D",
+	"AudioListener3D",
 	"AudioStream",
 ];
 

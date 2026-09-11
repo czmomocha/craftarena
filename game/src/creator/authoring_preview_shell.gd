@@ -1,20 +1,7 @@
 class_name AuthoringPreviewShell
 extends Node
 
-## Independent Preview window host (CD-32 §4). AuthoringSession stays open.
-## Collaborators are chrome / sampler / hud / play / view so this file stays
-## under E9 400 lines. Public API stays on this type.
-## Creates a Godot Window in code and maps preview transforms to 1 m boxes,
-## portal gizmos, checkpoint-order labels, and reachability-issue overlay.
-## Play compiles the connected Preview world into a SimulationBundle, loads
-## it, and draws the player pose as a presentation stub. While playing and
-## visible, PlayInput maps WASD / analog to a world-space MoveIntent;
-## play_move_step is a presentation stub, not a product speed.
-## Tab host is reserved and refused. Buttons use FOCUS_NONE so Space stays
-## jump. Re-open raises the existing window and rebuilds if the native
-## instance was freed. UI scales from the D4 1920×1080 base on the **main**
-## window; this embedded sub-window must not set `content_scale_*`.
-## Never HTTP settlement. FA draws a local results table after finish.
+## Independent Preview window host (CD-32 §4). Facade + chrome/sampler/hud/play/view/audio.
 
 const OutOfRangeReset := preload("res://src/games/traprush/out_of_range_reset.gd")
 const PlayStubs := preload("res://src/games/traprush/play_stubs.gd")
@@ -23,6 +10,7 @@ const HudGd := preload("res://src/creator/authoring_preview_shell_hud.gd")
 const PlayGd := preload("res://src/creator/authoring_preview_shell_play.gd")
 const SamplerGd := preload("res://src/creator/authoring_preview_shell_sampler.gd")
 const ViewGd := preload("res://src/creator/authoring_preview_shell_view.gd")
+const AudioGd := preload("res://src/creator/authoring_preview_shell_audio.gd")
 const PlayClockGd := preload("res://src/shared/play_clock.gd")
 const PlaySplitTrackerGd := preload("res://src/shared/play_split_tracker.gd")
 
@@ -68,6 +56,7 @@ var chrome: ChromeGd = ChromeGd.new()
 var sampler: SamplerGd = SamplerGd.new()
 var play: PlayGd = PlayGd.new()
 var view: ViewGd = ViewGd.new()
+var audio: AudioGd = AudioGd.new()
 var split_tracker: PlaySplitTrackerGd = PlaySplitTrackerGd.new()
 var _play_view_busy: bool = false
 
@@ -191,6 +180,7 @@ static func move_payload_from_axes(
 func try_apply_play_intent(payload: Dictionary) -> bool:
 	if preview == null or _play_view_busy:
 		return false
+	audio.note_intent(payload)
 	return _run_play_verb(func() -> bool: return preview.try_apply_play_intent(payload))
 
 
@@ -390,5 +380,6 @@ func _run_play_verb(verb: Callable) -> bool:
 	var ok: bool = verb.call()
 	_rebuild_map()
 	_refresh_status()
+	audio.pump(self)
 	_play_view_busy = false
 	return ok

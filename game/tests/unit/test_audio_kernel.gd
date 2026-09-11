@@ -169,9 +169,30 @@ func test_bus_layout_has_five_named_buses() -> void:
 func test_f_line_slots_register_on_the_host() -> void:
 	var mounted: AudioServiceGd = ClientAudioGd.ensure(_host)
 	assert_not_null(mounted)
-	assert_eq(ClientAudioGd.all_slots().size(), 12)
+	assert_eq(ClientAudioGd.all_slots().size(), 33)
 	for slot: String in ClientAudioGd.all_slots():
 		assert_true(mounted.has_cue(slot), slot)
 		assert_true(ClientAudioGd.has_slot(slot), slot)
 	assert_true(mounted.backend.is_silent())
 	assert_false(ClientAudioGd.post(ClientAudioGd.CUE_STEP))
+
+
+func test_spatial_post_uses_3d_player_when_live() -> void:
+	var world: Node3D = Node3D.new()
+	_host.add_child(world)
+	_svc = _make_service()
+	_svc.backend.force_live = true
+	_svc.mount(_host)
+	_svc.backend.set_space(world)
+	assert_true(_svc.register_cue({
+		"id": TONE,
+		"streams": PackedStringArray([STREAM]),
+		"bus": AudioSettingsGd.BUS_SFX,
+		"spatial": true,
+		"max_distance": 8.0,
+		"max_voices": 1,
+	}))
+	var voice_id: int = _svc.try_post(TONE, {"x": 1.0, "y": 0.0, "z": 2.0})
+	assert_gt(voice_id, 0)
+	assert_true(_svc.has_voice(voice_id))
+

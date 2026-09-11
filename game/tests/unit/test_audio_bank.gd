@@ -26,10 +26,11 @@ func after_each() -> void:
 	_host = null
 
 
-func test_catalog_lists_the_twelve_platform_ids() -> void:
-	assert_eq(CatalogGd.all_ids().size(), 12)
+func test_catalog_lists_platform_ids() -> void:
+	assert_eq(CatalogGd.all_ids().size(), 33)
 	assert_true(CatalogGd.has_id(CatalogGd.STEP))
 	assert_true(CatalogGd.has_id(CatalogGd.THEME_IDLE))
+	assert_true(CatalogGd.has_id(CatalogGd.LOOP_CONVEYOR))
 	assert_true(CatalogGd.has_id(ClientAudioGd.CUE_HAZARD_WARN))
 	assert_false(CatalogGd.has_id("nope"))
 
@@ -104,16 +105,24 @@ func test_budget_helpers_reject_oversize() -> void:
 	assert_false(AudioBankLoaderGd.total_ok(AudioBankLoaderGd.TOTAL_MAX_BYTES + 1))
 
 
-func test_production_banks_match_a1_slot_params() -> void:
+func test_production_banks_match_catalog_and_keep_a1_slot_params() -> void:
 	var bank: AudioBankGd = AudioBankLoaderGd.load_directory()
 	assert_not_null(bank)
-	assert_eq(bank.size(), 12)
+	assert_eq(bank.size(), CatalogGd.all_ids().size())
+	var named: PackedStringArray = PackedStringArray([
+		CatalogGd.STEP, CatalogGd.JUMP, CatalogGd.LAND, CatalogGd.PICKUP,
+		CatalogGd.CRATE, CatalogGd.HAZARD_WARN, CatalogGd.PORTAL, CatalogGd.FINISH,
+		CatalogGd.THEME_IDLE, CatalogGd.THEME_RUN, CatalogGd.THEME_END, CatalogGd.THEME_EDIT,
+	])
 	for cue_id: String in CatalogGd.all_ids():
 		assert_true(bank.has_id(cue_id), cue_id)
 		var cue: AudioCueGd = bank.get_cue(cue_id)
 		assert_eq(cue.streams.size(), 1)
-		assert_eq(cue.streams[0], ClientAudioGd.path_for(cue_id))
-		assert_false(cue.spatial)
+		assert_true(FileAccess.file_exists(cue.streams[0]), cue_id)
+		if named.has(cue_id):
+			assert_eq(cue.streams[0], ClientAudioGd.path_for(cue_id))
+	assert_false(bank.get_cue(CatalogGd.STEP).spatial)
+	assert_true(bank.get_cue(CatalogGd.LOOP_CONVEYOR).spatial)
 	assert_eq(bank.get_cue(CatalogGd.STEP).bus, AudioCueGd.BUS_SFX)
 	assert_false(bank.get_cue(CatalogGd.STEP).loop)
 	assert_eq(bank.get_cue(CatalogGd.STEP).max_voices, 1)
@@ -129,7 +138,7 @@ func test_production_banks_match_a1_slot_params() -> void:
 func test_client_audio_loads_banks_on_the_host() -> void:
 	var mounted: AudioServiceGd = ClientAudioGd.ensure(_host)
 	assert_not_null(mounted)
-	assert_eq(ClientAudioGd.all_slots().size(), 12)
+	assert_eq(ClientAudioGd.all_slots().size(), CatalogGd.all_ids().size())
 	for slot: String in ClientAudioGd.all_slots():
 		assert_true(mounted.has_cue(slot), slot)
 		assert_true(ClientAudioGd.has_slot(slot), slot)

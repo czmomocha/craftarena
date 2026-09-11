@@ -6,6 +6,7 @@ extends RefCounted
 const HazardCycle := preload("res://src/games/traprush/hazard_cycle.gd")
 const LaunchCycle := preload("res://src/games/traprush/launch_cycle.gd")
 const GateCycle := preload("res://src/games/traprush/gate_cycle.gd")
+const ObserveGd := preload("res://src/games/traprush/traprush_audio_observe.gd")
 static func connect_from(preview: AuthoringPreview, session: AuthoringSession) -> bool:
 	if session == null or session.world == null:
 		return false
@@ -102,6 +103,7 @@ static func try_start_play(
 	preview.play_finish_ids = finish_ids
 	preview.play_destructible_ids = crate_ids
 	preview.play_destructible_health = crate_health
+	preview.play_destructible_kinds = ObserveGd.kinds_from_bundle(bundle)
 	preview.play_hazard_ids = hazard_ids
 	preview.play_hazard_cycle = cycle
 	var mover_cycle: Array[Dictionary] = TraprushMoverCycle.entries_from(bundle.movers, solid_ids)
@@ -169,6 +171,7 @@ static func clear_play(preview: AuthoringPreview) -> void:
 	preview.play_finish_ids = {}
 	preview.play_destructible_ids = {}
 	preview.play_destructible_health = {}
+	preview.play_destructible_kinds = {}
 	preview.play_hazard_ids = {}
 	preview.play_hazard_cycle = []
 	preview.play_mover_cycle = []
@@ -183,6 +186,7 @@ static func clear_play(preview: AuthoringPreview) -> void:
 	preview.play_crusher_cycle = []
 	preview.play_pendulum_cycle = []
 	preview.play_setback_count = 0
+	preview.play_setback_reason = ""
 	preview._play_launch_supported = {}
 	preview.play_solid_ids = {}
 	preview.play_pickup_ids = {}
@@ -200,7 +204,6 @@ static func clear_play(preview: AuthoringPreview) -> void:
 	preview._play_finish_tick = -1
 	preview._play_stun_remaining = 0
 
-
 static func pickup_kinds_from_bundle(bundle: SimulationBundle) -> Dictionary:
 	var kinds: Dictionary = {}
 	if bundle == null:
@@ -208,7 +211,6 @@ static func pickup_kinds_from_bundle(bundle: SimulationBundle) -> Dictionary:
 	for item: Dictionary in bundle.pickups:
 		kinds[item["entity_id"]] = item["kind"]
 	return kinds
-
 
 static func destructible_ledgers(bundle: SimulationBundle, crate_ids: Dictionary) -> Dictionary:
 	var ledgers: Dictionary = {}
@@ -227,7 +229,6 @@ static func destructible_ledgers(bundle: SimulationBundle, crate_ids: Dictionary
 		ledgers[crate_id] = crate
 	return ledgers
 
-
 static func durable_crate_count(bundle: SimulationBundle) -> int:
 	if bundle == null:
 		return 0
@@ -236,7 +237,6 @@ static func durable_crate_count(bundle: SimulationBundle) -> int:
 		if item["durability"] >= 1:
 			count += 1
 	return count
-
 
 static func ordered_checkpoint_ids(bundle: SimulationBundle) -> PackedInt32Array:
 	var pads: Array[Dictionary] = []

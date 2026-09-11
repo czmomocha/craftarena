@@ -12,6 +12,8 @@ const MatchCrateMapGd := preload("res://src/client/match_crate_map.gd")
 const MatchHazardMapGd := preload("res://src/client/match_hazard_map.gd")
 const OccupancyGadget := preload("res://src/shared/occupancy_gadget.gd")
 const ClientAudioGd := preload("res://src/client/client_audio.gd")
+const AudioBankLoaderGd := preload("res://src/audio/audio_bank_loader.gd")
+const AudioBankGd := preload("res://src/audio/audio_bank.gd")
 const OfficialCoursesGd := preload("res://src/shared/official_traprush_courses.gd")
 const SharedComponentRecordGd := preload("res://src/shared/schema/component_record.gd")
 const SimulationBundleGd := preload("res://src/ugc/simulation_bundle.gd")
@@ -27,13 +29,15 @@ const CELL: int = 65536
 const COURSE_F: String = "res://content/official/traprush/course_f_playable.json"
 
 
-func test_headless_sfx_is_silent_and_twelve_slots_exist() -> void:
+func test_headless_sfx_is_silent_and_catalog_slots_exist() -> void:
 	assert_true(ClientAudioGd.muted())
 	assert_false(ClientAudioGd.post(ClientAudioGd.CUE_JUMP))
 	var slots: PackedStringArray = ClientAudioGd.all_slots()
-	assert_eq(ClientAudioGd.all_slots().size(), 12)
+	assert_eq(slots.size(), 33)
+	var bank: AudioBankGd = AudioBankLoaderGd.load_directory()
+	assert_not_null(bank)
 	for slot: String in slots:
-		assert_true(ClientAudioGd.has_slot(slot), slot)
+		assert_true(bank.has_id(slot), slot)
 
 
 func test_hazard_warn_is_presentation_only() -> void:

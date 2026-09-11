@@ -17,6 +17,8 @@ const MatchSnapshotMapGd := preload("res://src/client/match_snapshot_map.gd")
 const MatchSolidMapGd := preload("res://src/client/match_solid_map.gd")
 const MatchStandingMapGd := preload("res://src/client/match_standing_map.gd")
 const GateCycleGd := preload("res://src/games/traprush/gate_cycle.gd")
+const ClientAudioGd := preload("res://src/client/client_audio.gd")
+const MatchOfflineSessionGd := preload("res://src/client/match_offline_session.gd")
 
 const MAP_NAME: String = "SnapshotMap"
 const COURSE_NAME: String = "CourseMap"
@@ -376,3 +378,15 @@ func _apply_solo_anim(
 		session.player_broke_this_tick(0)
 	)
 	map.set_anim_state(0, play_anim.resolve(facts))
+
+
+func pump_play_audio(offline: MatchOfflineSessionGd) -> void:
+	if offline == null or offline.session == null:
+		return
+	var ear: Node3D = null
+	if map != null:
+		ear = map.camera_node()
+	var kinds: Dictionary = {}
+	if crates != null:
+		kinds = crates.break_kinds()
+	ClientAudioGd.pump_session(offline.session, 0, map, ear, offline.last_intent, kinds)

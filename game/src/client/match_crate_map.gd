@@ -99,6 +99,22 @@ func crate_count() -> int:
 	return _crate_count
 
 
+func break_kinds() -> Dictionary:
+	var kinds: Dictionary = {}
+	_fill_kind(kinds, _energy_wall_ids, "wall")
+	_fill_kind(kinds, _rubble_ids, "rubble")
+	_fill_kind(kinds, _core_ids, "core")
+	return kinds
+
+
+static func _fill_kind(kinds: Dictionary, ids: Dictionary, kind: String) -> void:
+	for key: Variant in ids.keys():
+		if typeof(key) != TYPE_INT:
+			continue
+		var entity_id: int = key
+		kinds[entity_id] = kind
+
+
 func hazard_node_count() -> int:
 	return 0
 

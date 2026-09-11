@@ -35,6 +35,7 @@ var state: String = STATE_IDLE
 var course_path: String = ""
 var last_error: String = ""
 var last_command: PackedByteArray = PackedByteArray()
+var last_intent: String = ""
 var follow: MatchSnapshotFollowGd = MatchSnapshotFollowGd.new()
 var session: TraprushMatchSessionGd = null
 var play_jump_dy: int = 0
@@ -126,6 +127,7 @@ func _attach(bundle: SimulationBundle) -> bool:
 	session = created
 	follow = MatchSnapshotFollowGd.new()
 	last_command = PackedByteArray()
+	last_intent = ""
 	state = STATE_PLAYING
 	last_error = ""
 	return _publish()
@@ -137,6 +139,7 @@ func try_stop() -> bool:
 	session = null
 	follow = MatchSnapshotFollowGd.new()
 	last_command = PackedByteArray()
+	last_intent = ""
 	course_path = ""
 	state = STATE_IDLE
 	last_error = ""
@@ -159,6 +162,7 @@ func try_encode_intent(intent_name: String, dx: int, dz: int, yaw_bam: int) -> P
 	if not try_apply_command(bytes):
 		return PackedByteArray()
 	last_command = bytes
+	last_intent = intent_name
 	return bytes
 
 

@@ -30,6 +30,7 @@ var play_portal_ids: Dictionary = {}
 var play_finish_ids: Dictionary = {}
 var play_destructible_ids: Dictionary = {}
 var play_destructible_health: Dictionary = {}
+var play_destructible_kinds: Dictionary = {}
 var play_hazard_ids: Dictionary = {}
 var play_hazard_cycle: Array[Dictionary] = []
 var play_mover_cycle: Array[Dictionary] = []
@@ -84,6 +85,7 @@ var _portal_latch: Dictionary = {}
 var _play_finish_tick: int = -1
 var _play_stun_remaining: int = 0
 var play_setback_count: int = 0
+var play_setback_reason: String = ""
 var _play_launch_supported: Dictionary = {}
 
 var intents: AuthoringPreviewIntentsGd = AuthoringPreviewIntentsGd.new()
@@ -113,8 +115,6 @@ func leave_tick() -> void:
 
 func allows_settlement() -> bool:
 	return false
-
-
 func allows_online_writes() -> bool:
 	return false
 
@@ -364,8 +364,6 @@ func _apply_decoded(decoded: EditPayload) -> bool:
 
 func _reset_play_if_out_of_range() -> bool:
 	return scan.reset_play_if_out_of_range(self)
-
-
 func _reset_play_to_pad() -> bool:
 	return scan.reset_play_to_pad(self)
 

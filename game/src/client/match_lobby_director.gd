@@ -221,6 +221,7 @@ func try_stop_offline() -> bool:
 		return false
 	if not host.offline.try_stop():
 		return false
+	ClientAudioGd.clear_play()
 	host.stage.reset_interp()
 	host.sampler.reset_motion()
 	host.play_anim.reset()

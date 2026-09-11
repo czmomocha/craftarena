@@ -21,6 +21,27 @@ const THEME_IDLE: String = "theme_idle"
 const THEME_RUN: String = "theme_run"
 const THEME_END: String = "theme_end"
 const THEME_EDIT: String = "theme_edit"
+const SPRINT: String = "sprint"
+const SHOVE: String = "shove"
+const USE_ITEM: String = "use_item"
+const BREAK_RUBBLE: String = "break_rubble"
+const BREAK_CORE: String = "break_core"
+const BREAK_WALL: String = "break_wall"
+const CHECKPOINT: String = "checkpoint"
+const RESET: String = "reset"
+const FAIL_HAZARD: String = "fail_hazard"
+const FAIL_RANGE: String = "fail_range"
+const FAIL_CRUSH: String = "fail_crush"
+const SETTLED: String = "settled"
+const LOOP_CONVEYOR: String = "loop_conveyor"
+const LOOP_MOVER: String = "loop_mover"
+const LOOP_FLAME: String = "loop_flame"
+const LOOP_ROLLER: String = "loop_roller"
+const LOOP_CRUSHER: String = "loop_crusher"
+const LOOP_PENDULUM: String = "loop_pendulum"
+const LOOP_GATE: String = "loop_gate"
+const LOOP_ICE: String = "loop_ice"
+const LOOP_PORTAL: String = "loop_portal"
 
 const ALL: PackedStringArray = [
 	STEP,
@@ -35,6 +56,27 @@ const ALL: PackedStringArray = [
 	THEME_RUN,
 	THEME_END,
 	THEME_EDIT,
+	SPRINT,
+	SHOVE,
+	USE_ITEM,
+	BREAK_RUBBLE,
+	BREAK_CORE,
+	BREAK_WALL,
+	CHECKPOINT,
+	RESET,
+	FAIL_HAZARD,
+	FAIL_RANGE,
+	FAIL_CRUSH,
+	SETTLED,
+	LOOP_CONVEYOR,
+	LOOP_MOVER,
+	LOOP_FLAME,
+	LOOP_ROLLER,
+	LOOP_CRUSHER,
+	LOOP_PENDULUM,
+	LOOP_GATE,
+	LOOP_ICE,
+	LOOP_PORTAL,
 ]
 
 

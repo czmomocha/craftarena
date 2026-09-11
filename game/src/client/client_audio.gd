@@ -10,6 +10,8 @@ const AudioBankLoaderGd := preload("res://src/audio/audio_bank_loader.gd")
 const AudioMusicDirectorGd := preload("res://src/audio/audio_music_director.gd")
 const AudioServiceGd := preload("res://src/audio/audio_service.gd")
 const CatalogGd := preload("res://src/shared/schema/audio_cue_catalog.gd")
+const MatchPlayAudioGd := preload("res://src/client/match_play_audio.gd")
+const RouterGd := preload("res://src/games/traprush/traprush_audio_router.gd")
 
 const DIR: String = "res://content/audio/f_line_temp/"
 const CUE_STEP: String = CatalogGd.STEP
@@ -27,6 +29,7 @@ const STATE_EDIT: String = "edit"
 
 static var service: AudioServiceGd = null
 static var director: AudioMusicDirectorGd = null
+static var play_audio: MatchPlayAudioGd = null
 
 
 static func ensure(host: Node) -> AudioServiceGd:
@@ -40,6 +43,7 @@ static func ensure(host: Node) -> AudioServiceGd:
 	director = AudioMusicDirectorGd.new()
 	director.bind(service)
 	director.request(CatalogGd.THEME_IDLE)
+	play_audio = MatchPlayAudioGd.new()
 	return service
 
 
@@ -48,9 +52,14 @@ static func bind(next: AudioServiceGd) -> void:
 	if director == null:
 		director = AudioMusicDirectorGd.new()
 	director.bind(service)
+	if play_audio == null:
+		play_audio = MatchPlayAudioGd.new()
 
 
 static func shutdown() -> void:
+	if play_audio != null and service != null:
+		play_audio.reset(service)
+	play_audio = null
 	if director != null:
 		director.stop()
 	director = null
@@ -59,10 +68,36 @@ static func shutdown() -> void:
 	service = null
 
 
-static func post(cue_id: String) -> bool:
+static func post(cue_id: String, ctx: Dictionary = {}) -> bool:
 	if service == null:
 		return false
-	return service.post(cue_id)
+	return service.post(cue_id, ctx)
+
+
+static func post_event(event: String, ctx: Dictionary = {}) -> bool:
+	return post(RouterGd.cue(event), ctx)
+
+
+static func clear_play() -> void:
+	if play_audio != null:
+		play_audio.reset(service)
+
+
+static func pump_session(
+	session: TraprushMatchSession,
+	slot: int,
+	map: Node3D,
+	ear: Node3D,
+	intent: String = "",
+	kinds: Dictionary = {}
+) -> void:
+	if play_audio == null or service == null or session == null:
+		return
+	var sample: Dictionary = play_audio.observe.sample_session(session, slot, intent, kinds)
+	var events: PackedStringArray = play_audio.observe.collect(sample)
+	var loops: Array[Dictionary] = play_audio.observe.loops_session(session)
+	var origin: Vector3 = MatchPlayAudioGd.pose_meters(session.player_pose(slot))
+	play_audio.pump(service, events, loops, map, ear, origin)
 
 
 static func request_state(state: String) -> bool:
@@ -88,6 +123,10 @@ static func muted() -> bool:
 static func has_slot(slot: String) -> bool:
 	if not CatalogGd.has_id(slot):
 		return false
+	if service != null:
+		var bank_path: String = service.stream_path(slot)
+		if bank_path != "":
+			return FileAccess.file_exists(bank_path)
 	return FileAccess.file_exists(path_for(slot))
 
 
