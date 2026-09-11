@@ -17,6 +17,7 @@
 | D4 数值落点 | `game/src/shared/placeholder_spec.gd`（唯一配置源） |
 | 资产目录 | `game/content/assets/`、`game/content/locale/`、`game/content/audio/` |
 | 音频模块 | `game/src/audio/`（自愿等同第二十三条；仅 `audio_backend.gd` 碰引擎音频类型） |
+| BotRunner | `tools/bot-runner/` 薄壳（C5）；引擎侧仍是 `--bot-run`；报告经 `--report=` 写出 |
 | E9 | 生产路径全量 < 400 行（`game/src/**/*.gd` + `backend` 非测试 `*.ts`，C5 第 17 章门禁）。测试 / addons / GUT 不在本口径 |
 | 仍待 | OpenAPI、Rule VM 图 JSON、BASTION 面板、「我的内容」管理 |
 
@@ -141,7 +142,7 @@ repo/
 │  └─ contracts/                 # JSON Schema / OpenAPI / match schema
 ├─ tools/
 │  ├─ dev-launcher/
-│  ├─ bot-runner/
+│  ├─ bot-runner/               # `npm run bot-run`：薄壳调 Godot `--bot-run`，写可达性报告
 │  ├─ asset-budget/
 │  ├─ content-validator/
 │  ├─ godot-project-settings/

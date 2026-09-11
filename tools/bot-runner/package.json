@@ -1,0 +1,8 @@
+{
+	"name": "@craftarena/bot-runner",
+	"version": "0.0.0",
+	"private": true,
+	"type": "module",
+	"description": "Thin Node shell around Godot --bot-run. Writes the reachability report artifact. Does not search itself. No extra runtime dependencies.",
+	"license": "UNLICENSED"
+}

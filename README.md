@@ -100,18 +100,19 @@ export GODOT_AI_DISABLE_TELEMETRY=true
 
 ### 赛道能不能走通（BotRunner）
 
-`--bot-run` 让一个 bot 在权威仿真上真的走一遍官方赛道，每张课打印一行 JSON，最后一行汇总，任一张走不通就 exit 1。
+产品入口是 `npm run bot-run`（`tools/bot-runner/`）。它调同一条 Godot `--bot-run`，每张课打印一行 JSON，最后一行汇总，任一张走不通就 exit 1。加 `--report=` 会再写出一份报告 JSON：每课可否完成、步数、搜索预算用量、退出码。0 条 `bot_run_*` 行也 exit 1（「什么都没查」）。
 
 ```powershell
-& $env:GODOT4_CONSOLE --headless --path game -- --bot-run                       # 匹配白名单课（course_01 走 +X 捷径）
-& $env:GODOT4_CONSOLE --headless --path game -- --bot-run --course=course_f_playable  # F 线示范课（不是 M5 官方第 4 张）
-& $env:GODOT4_CONSOLE --headless --path game -- --bot-run --course=course_01 --route=safe   # 封掉 entity 10，走安全路
-& $env:GODOT4_CONSOLE --headless --path game -- --bot-run --max-ticks=6000      # 放宽预算
+npm run bot-run                                                              # 匹配白名单课（course_01 走 +X 捷径）
+npm run bot-run -- --report=artifacts/bot-run-default.json                   # 同上，并写报告
+npm run bot-run -- --course=course_f_playable                                # F 线示范课（不是 M5 官方第 4 张）
+npm run bot-run -- --course=course_01 --route=safe --report=artifacts/bot-run-safe.json
+& $env:GODOT4_CONSOLE --headless --path game -- --bot-run                    # 仍可直接调引擎；薄壳不改搜索
 ```
 
 `outcome=completable` 时同时给出走通用的动作序列，可以照着重放复验。**`not_completable` 不等于「人也过不去」**：bot 的动作集是离散的（八向各走一整格、跳、用道具、等一 tick），`reason` 会说明是搜索穷尽（`search_exhausted`，较强）还是预算先用完（`budget_exhausted`，只说明没搜完）。完整边界见 `game/src/games/traprush/course_completion_probe.gd` 文件头。
 
-`--route=safe` **只接受** `course_01`：搜索前拿掉 +X 捷径上楼 two_way（entity 10），再重放 C3 第 5 章已经走通的四向安全路。其它课没有这条语义，带这个旗就 exit 1。默认 `--bot-run` 仍走捷径、仍用完整动作集搜索。`--bot-run` **不进 PR CI**，但自 2026-09-01 起每天由 `.github/workflows/nightly.yml` 跑一次。
+`--route=safe` **只接受** `course_01`：搜索前拿掉 +X 捷径上楼 two_way（entity 10），再重放 C3 第 5 章已经走通的四向安全路。其它课没有这条语义，带这个旗就 exit 1。默认 `--bot-run` 仍走捷径、仍用完整动作集搜索。`--bot-run` **不进 PR CI**，但自 2026-09-01 起每天由 `.github/workflows/nightly.yml` 跑一次；C5 起 nightly 经 `npm run bot-run` 写报告并 upload-artifact。
 
 C3 第 2 章沿路地板后（2026-08-27，Windows 开发机）：三张课均为 `completable`（`course_01` / `course_02` 各 5 步；`course_03` 12 步）。C3 第 5 章给 `course_01` 加了更长安全路之后，默认探针仍走捷径。C3 第 7 章用 `--route=safe` 在封掉捷径门后重放那条更长安全路，证明它也能完赛。
 
@@ -147,6 +148,7 @@ macOS 把 `& $env:GODOT4_CONSOLE` 换成 `"$GODOT4"`。包内自检也能对源�
 | 查 `game/project.godot` 有没有本机 Godot AI 脏写入 | `npm run godot-settings:check`（脏则退出码 1；`--staged` 查索引副本） |
 | 还原那两处脏写入（[CD-51 §7.3](Confirmed-docs/50-engineering/51-dev-environment.md)） | `npm run godot-settings:scrub`（幂等；只摘 `_mcp_game_helper` 与 `addons/godot_ai` 启用项） |
 | 平台音频预算（[CD-11 §8.3](Confirmed-docs/10-product/11-scope-and-platforms.md)） | 随 `npm test`（`tools/content-validator`）；0 个 `.ogg` 明确输出「什么都没查」 |
+| 官方课可达性（BotRunner） | `npm run bot-run`（可选 `--report=`）；`--bot-run` 不进 PR CI，每日 nightly 写报告 artifact |
 | 单资产预算门禁（[CD-11 §8.1](Confirmed-docs/10-product/11-scope-and-platforms.md)） | `npm run asset-budget`（扫 `game/`）／ `npm run asset-budget <file>.glb` |
 | 资产烘焙（开发机，压到预算内） | `npx --yes @gltf-transform/cli@4.5.0 resize in.glb out.glb --width 512 --height 512`（见 [runbook](docs/runbooks/asset-bake.md)；**不要用 4.4.2**，它在 Windows 上必失败，根因与实测矩阵写在 runbook §2） |
 | 手动补跑 worktree setup | `npm run setup-worktree` |
@@ -196,7 +198,7 @@ DevLauncher 只管本地开发编排，不做守护、重启和资源限制；�
 
 `.github/workflows/ci.yml` 在推送 `main` 和所有 PR 上运行两个 job：`backend`（`npm run typecheck` + `npm run redline-scan` + `npm run asset-budget` + `npm test`）与 `godot`（导入、逐文件 `--check-only`、Headless 启动烟测、GUT 四个目录全量）。用的都是上面表里那些命令，本地跑一遍就能复现 CI 的结论。两个 job 都带 `lfs: true`：资产预算必须读到真 `.glb`，读到 LFS 指针会被判为失败。
 
-`.github/workflows/nightly.yml` 每天 02:00（Asia/Shanghai）跑 `--bot-run` 匹配白名单课与 `--course=course_01 --route=safe`，也可以 `workflow_dispatch` 手动触发。`--bot-run` 不进 PR CI 是 C2 第一章拍板的，与 GUT 分层无关。
+`.github/workflows/nightly.yml` 每天 02:00（Asia/Shanghai）经 `npm run bot-run` 跑匹配白名单课与 `--course=course_01 --route=safe`，写出报告 JSON 并 upload-artifact；也可以 `workflow_dispatch` 手动触发。`--bot-run` 不进 PR CI 是 C2 第一章拍板的，与 GUT 分层无关。
 
 CI 当前实际启用了哪些门禁、哪些还没实现，以 [CD-53 §4.1](Confirmed-docs/50-engineering/53-testing-and-ci.md) 的「当前实现状态」表为准。§4.2–§4.4 的每日 / 每周 / 发布候选清单同样有状态列。`tests/content/` 与 `tests/security/` 仍空，不进 CI（C2 不做 UGC 安全全集）。
 

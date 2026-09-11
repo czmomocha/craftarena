@@ -7,8 +7,9 @@ extends RefCounted
 ##     godot --headless --path game -- --bot-run --course=course_03
 ##     godot --headless --path game -- --bot-run --course=course_01 --route=safe
 ##
-## 每张课打印一行 JSON，最后打印一行汇总，任一张走不通就 exit 1。所以外层
-## （`tools/bot-runner`、CI、人）只要看退出码，不用去读一屏日志找结论。
+## 每张课打印一行 JSON，最后打印一行汇总，任一张走不通就 exit 1。产品入口是
+## `npm run bot-run`（`tools/bot-runner/` 薄壳）：把这些行收成报告 JSON。外层
+## 只要看退出码，不用去读一屏日志找结论。
 ##
 ## 只接受官方课 id，不接受 res:// 路径：这条命令将来会被自动化调用，路径参数
 ## 等于给了它读任意文件的口子，而 UGC 永远不可信（宪法第三条）。
@@ -125,6 +126,8 @@ static func run_and_print(user_args: PackedStringArray) -> int:
 		line["course"] = course_id
 		line["route"] = route
 		line["action_count"] = action_count
+		line["max_ticks"] = max_ticks
+		line["max_depth"] = max_depth
 		line["wall_ms"] = Time.get_ticks_msec() - course_started
 		print(JSON.stringify(line))
 

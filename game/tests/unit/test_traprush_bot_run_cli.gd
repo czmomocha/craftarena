@@ -63,14 +63,27 @@ func test_forbid_portal_rejects_junk() -> void:
 
 
 func test_default_courses_are_the_official_match_ids() -> void:
-	assert_eq(
-		BotRunCli.resolve_courses(PackedStringArray()),
-		OfficialTraprushCourses.all_match_ids()
-	)
+	var ids: PackedStringArray = BotRunCli.resolve_courses(PackedStringArray())
+	assert_eq(ids.size(), 5)
+	assert_eq(ids, OfficialTraprushCourses.all_match_ids())
+	assert_eq(ids[0], OfficialTraprushCourses.COURSE_01)
+	assert_eq(ids[4], OfficialTraprushCourses.COURSE_05)
 	assert_eq(
 		BotRunCli.resolve_courses(PackedStringArray(["--course=course_f_playable"])),
 		PackedStringArray([OfficialTraprushCourses.COURSE_F_PLAYABLE])
 	)
+
+
+func test_res_path_is_rejected_as_a_course_id() -> void:
+	assert_eq(
+		BotRunCli.resolve_courses(PackedStringArray(["--course=res://secret.json"])),
+		PackedStringArray()
+	)
+	var code: int = BotRunCli.run_and_print(PackedStringArray([
+		"--bot-run",
+		"--course=res://secret.json",
+	]))
+	assert_eq(code, 1)
 
 
 func test_safe_route_on_course_02_exits_1_without_searching() -> void:

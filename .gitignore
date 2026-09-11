@@ -28,6 +28,9 @@
 # 逐项规则（含为什么保留 MANIFEST.md）写在**该目录自己的 .gitignore 里**——
 # 规则随目录走，目录改名后不会静默失配。别把这里改成一行目录级忽略。
 
+# BotRunner 可达性报告（C5）。nightly 写到仓库根 artifacts/ 再 upload-artifact，不入库。
+/artifacts/
+
 # 导出与构建产物
 /build/
 /export/

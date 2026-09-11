@@ -54,44 +54,44 @@ Worktree 端口偏移见 README「并行工作区」；本文件不复述端口�
 
 ---
 
-## 本刀：M5 B2 联机对局音频与正式 OGG
+## 本刀：M5 C5 BotRunner 可达性正式化
 
-需要三后端。按「共用启动」0.1 起 `npm run dev`，再 0.2 开**两个**窗口化主场景。
+本章无开发机可见行为。BotRunner 是命令行工具（`npm run bot-run`），不改大厅 / Solo / Preview 窗口，不需要三后端，也不要开主场景。
 
-正式音效与床垫已换成 OGG（`content/audio/sfx/` 与 `music/`）。联机动作音从相邻权威快照 diff 派生：远端玩家带坐标走 3D。大厅按钮有 `ui.confirm`。Solo / Preview 仍走 B1 本地会话。
+人类抽查按下面编号做；自动化证据是 `npm test`（薄壳正反例）与 `test_traprush_bot_run_cli.gd`（缺省五张课、拒 `res://`）。`--bot-run` 仍不进 PR CI。
 
-**诚实边界：** v1 快照没有 `vy` / `stun` / 事件字段。跳是 y 上升沿近似，电梯升降会误触发跳/落；会漏播也会误播。联机听不到 shove / sprint / fail / pickup / portal latch（快照没有）。碎箱只能播 `crate`（快照无袋类型）。Headless / CI 静默。OGG 短音效每次播放都解码；Headless 对 `step.ogg` 100 次忽略缓存加载观察值 **57.69 ms**（约 0.58 ms/次，不是性能门禁）。
+### 1. 默认五张官方课写出报告
 
-### 1. 两席同房
+操作：仓库根（不需要 `npm run dev`）：
 
-操作：窗口 A 课程 id 用默认 `course_01`、人数 `2`，点 **创建房间**。窗口 B 填同一房间码，点 **加入房间**。
+```powershell
+npm run bot-run -- --report=artifacts/bot-run-default.json
+```
 
-预期：两人进同一局，看到彼此胶囊；大厅曲已是循环短 OGG。失败：加入被拒、各开各的课、或完全无声（先排除系统静音）。
+预期：进程 exit 0；`artifacts/bot-run-default.json` 的 `ok` 为 true、`exit_code` 为 0、`courses` 正好五条且 id 为 `course_01`…`course_05`；每课 `completable` 为 true，并带 `steps` 与 `search_ticks`。失败：exit 非 0，或 `empty` 为 true，或缺课、或某课 `completable` 为 false。
 
-### 2. 听远端走路 / 跳跃
+### 2. 安全路仍只接受 course_01
 
-操作：窗口 A 按住 W 走几步，再空格跳一下。窗口 B 听。然后对调：B 走和跳，A 听。
+操作：
 
-预期：对面能听见脚步（节流，不是每帧一响）和起跳；声像大致跟远端位置走，不是贴在自己耳朵上。失败：本席有声、远端完全静音；或按住 W 机关枪爆音。
+```powershell
+npm run bot-run -- --course=course_01 --route=safe --report=artifacts/bot-run-safe.json
+```
 
-### 3. 听远端碎箱或冲线（二选一）
-
-操作：其中一席走到出生点箱子前按 Q 打碎；或沿 +X 冲线。另一席听。
-
-预期：碎箱或冲线对面能听见一声。失败：自己做动作有声、对面完全静音。
-
-### 4. 大厅按钮确认音
-
-操作：任一窗口点 **取消** 回大厅，再点 **设置** 或 **创建房间**（不必真开成）。
-
-预期：点击有短促 UI 音。失败：按钮完全无声，且对局里 SFX 是有的。
+预期：exit 0；报告 `route` 为 `safe`、`courses[0].course` 为 `course_01`。失败：exit 非 0，或把 `--route=safe` 接到 `course_02` 却悄悄当 any 跑（那条必须 exit 1）。
 
 ### 本刀不测
 
-- 把 `course_f_playable` 填进创建房间（匹配 HTTP 仍拒）；
-- 联机 shove / sprint / 环境失败音（快照没有这些字段）；
+- 打开大厅窗口听音或跑课；
+- 把 `--bot-run` 放进 PR CI；
 - C3 发布按钮 / C4 已签名 UGC 联机；
 - 改爆破半径 / 推击力度 / 道具重生。
+
+---
+
+## 上一刀（已合入）：M5 B2 联机对局音频与正式 OGG
+
+需要三后端。正式音效与床垫已换成 OGG。联机动作音从相邻权威快照 diff 派生：远端玩家带坐标走 3D。诚实边界：v1 快照没有 `vy` / `stun` / 事件字段，跳是 y 上升沿近似。
 
 ---
 

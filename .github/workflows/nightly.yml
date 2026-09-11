@@ -1,10 +1,12 @@
 name: Nightly
 
-# `--bot-run` 的定时兜底。
+# `--bot-run` 的定时兜底。C5 起走 `npm run bot-run` 薄壳：仍调同一条 Godot
+# `--bot-run`，但把每课可否完成 / 步数 / 搜索预算 / 退出码写成报告 JSON，
+# 作为本 job 的 artifact 留下。
 #
 # `--bot-run` 与 GUT 的 slow 层有重叠但不是同一件事：GUT 那边断言「探针说可完成，
 # 且给出的动作序列能被独立重放到终点」，这里跑的是真正的 CLI 入口，连参数解析、
-# 逐课 JSON 输出与汇总行一起验，任一张课走不通它自己 exit 1。
+# 逐课 JSON 输出、汇总行与报告产物一起验，任一张课走不通它自己 exit 1。
 #
 # 它**不进 PR CI**，这是 C2 第一章就拍过的事，本文件没有改变它。GUT 的 slow 层
 # （`tests/slow`）相反，**是**每次 PR 的门禁——2026-09-01 定点数快路径把它压到
@@ -24,6 +26,7 @@ concurrency:
 env:
   # 版本的所有者是 CD-51 §1，升级引擎必须同时改那里和本行。
   GODOT_VERSION: 4.7.2
+  NODE_VERSION: 24
 
 jobs:
   bot-run:
@@ -37,16 +40,31 @@ jobs:
         with:
           lfs: true
 
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - run: npm ci
+
       - uses: ./.github/actions/setup-godot
         with:
           version: ${{ env.GODOT_VERSION }}
 
       - name: Bot run the default route on all official courses
-        run: '"$GODOT4" --headless --path game -- --bot-run'
+        run: npm run bot-run -- --report=artifacts/bot-run-default.json
 
       # 默认探针会走 +X 捷径。安全路线是另一条代码路径（封掉捷径传送源），
       # 只在这里跑。`if: always()` 是为了上一步失败时仍能看到这条的结论——
       # 两条路线一起红和只有一条红，指向的原因完全不同。
       - name: Bot run the safe route on course_01
         if: always()
-        run: '"$GODOT4" --headless --path game -- --bot-run --course=course_01 --route=safe'
+        run: npm run bot-run -- --course=course_01 --route=safe --report=artifacts/bot-run-safe.json
+
+      - name: Upload bot-run reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: bot-run-reports
+          path: artifacts/bot-run-*.json
+          if-no-files-found: error

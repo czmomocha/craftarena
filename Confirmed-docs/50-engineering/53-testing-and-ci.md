@@ -17,7 +17,7 @@
 | 合入 `main` | 人类授权后直推；GitHub **不**要求 PR；禁止 force push / 删除 `main` |
 | PR Web 预览 | **未实现**。Web 导出已有；人类 2026-09-03 拍板推迟到 M5 之后开工 |
 | 可玩性签署 | **E6 已签：好玩**（2026-09-02，非外部测试）。M5 / 发布候选清单仍未签 |
-| `--bot-run` | 不进 PR CI |
+| `--bot-run` | 不进 PR CI。每日 nightly 经 `npm run bot-run` 写报告 artifact |
 
 ## 1. 测试原则
 
@@ -213,6 +213,7 @@ AI 生成代码必须比普通手写代码有**更强的自动化证据**，因�
 - M5 C1 第 4 张官方课：`course_04` 垂直塔（电梯 + 弹射 + 压板）；AuthoringDocument 编译非 null、发布可达零问题码；匹配 HTTP 接受 `course_04`，仍拒 `course_f_playable` 与 `res://` 路径；`bot_run_cli` 缺省覆盖白名单四张；GUT slow 探针可完成；人类真机步骤见 [开发机窗口验收](../../docs/runbooks/dev-window-check.md) 本刀（人工检查，非 CI 门禁）；
 - M5 C2 第 5 张官方课：`course_05` 双路线竞速（安全长路 vs 打碎能量墙短路）；AuthoringDocument 编译非 null、发布可达零问题码；匹配 HTTP 接受 `course_05`，仍拒 `course_f_playable` 与 `res://` 路径；`bot_run_cli` 缺省覆盖白名单五张；`--route=safe` 仍只对 `course_01`；GUT slow 探针可完成；人类真机步骤见 [开发机窗口验收](../../docs/runbooks/dev-window-check.md) 本刀（人工检查，非 CI 门禁）；
 - M5 B2 联机音频与正式 OGG：`match_audio_source.gd` 从相邻权威快照 diff 派生跳 / 落 / 步 / 检查点 / 冲线 / 碎箱 / 结算；坏帧 / 乱序 / 重复 tick 不播；远端带米制坐标走 3D。运行时流文件为 OGG Vorbis（`sfx/` + `music/`，Git LFS）；`tools/content-validator` 按 [CD-11 §8.3](../10-product/11-scope-and-platforms.md) 查格式 / 采样率 / 声道 / 时长 / 体积，0 个文件明确输出「什么都没查」。人类 2026-09-11 确认本地音频授权。不改快照帧。人类真机步骤见 [开发机窗口验收](../../docs/runbooks/dev-window-check.md) 本刀（人工检查，非 CI 门禁）；
+- M5 C5 BotRunner 可达性正式化：`tools/bot-runner/` 薄壳（`npm run bot-run`）调已有 Godot `--bot-run`；`--report=` 写出每课 `completable` / `steps` / `search_ticks` / 退出码；0 条 `bot_run_*` 行 exit 1；缺省覆盖匹配白名单五张；`res://` 路径仍拒；nightly 写 `artifacts/bot-run-*.json` 并 upload-artifact。`--bot-run` 仍不进 PR CI。本章无开发机可见行为；
 - 官方赛道立足固体与 Jump：三张官方课各加 entity 80（出生点正下一格 `y = -cell` 始终固体，不挡 +X）；对局 / Solo / Preview 壳 `support_dy = -Fixed.SCALE`；`jump_dy` 为 `Fixed.SCALE / 4` 占位桩（避免 `course_01` 上楼传送盒）；出生点 Jump 接地 hop；大厅 HUD `solids=2/2`；在线 overlay `play_jump_dy` 仍为 0；不锁产品跳跃高度；GUT 940/940、`npm test` 323；人类真机步骤见 [开发机窗口验收](../../docs/runbooks/dev-window-check.md) 本刀（人工检查，非 CI 门禁）；
 - 权威下落接到对局 / Solo / Preview：`fall_dy` 默认 0 时 `commit_tick` 保持出生 y；boot / Solo 占位 `-Fixed.SCALE / 16`，Preview 壳占位 `-Fixed.SCALE`；立足盒上 settle 后 Jump hop，再 commit/advance 落回 rest_y；走离立足盒 y 下降，继续下落会触发出界复位弹回出生点；`MatchRealtime` 先下落再意图再 tick，settle 不续租、hop 续租；Solo `_process` 先 advance 再采样空格；Preview 意图不下落，Advance tick 才落；零 `fall_dy` 的 advance 保持 hop；不锁产品重力加速度、不铺官方沿路地板；GUT 949/949、`npm test` 323；人类真机步骤见 [开发机窗口验收](../../docs/runbooks/dev-window-check.md) 本刀（人工检查，非 CI 门禁）；
 - 本地草稿恢复：成功写入落 `latest` 且文件非空；空会话打开恢复；恢复后工具条下一个 Place 使用新 id；编辑器 `plugin.gd` `@tool` 落盘；`world_committed`；失败写入不改草稿；损坏 / 多余键拒绝；拒绝写入 `res://`；检查点最多 30；不结算；
@@ -333,12 +334,12 @@ AI 生成代码必须比普通手写代码有**更强的自动化证据**，因�
 
 #### 当前实现状态
 
-上面是目标清单。仓库自 2026-09-01 起有一条每日 cron（`.github/workflows/nightly.yml`，18:00 UTC = 次日 02:00 Asia/Shanghai，可 `workflow_dispatch` 手动触发），只跑 `--bot-run`。下面每项由谁覆盖，以本表为准。按宪法第二十四条，未标「已启用」的不得描述为已覆盖。
+上面是目标清单。仓库自 2026-09-01 起有一条每日 cron（`.github/workflows/nightly.yml`，18:00 UTC = 次日 02:00 Asia/Shanghai，可 `workflow_dispatch` 手动触发），跑 `--bot-run`。C5 起入口是 `npm run bot-run`（`tools/bot-runner/`），并把报告 JSON 作为 artifact 上传。下面每项由谁覆盖，以本表为准。按宪法第二十四条，未标「已启用」的不得描述为已覆盖。
 
 | 门禁项 | 状态 | 实现方式 |
 |---|---|---|
 | 全量 GUT | 已启用（每次 PR，不是每日定时） | [§4.1](#41-每次变更) 的同一个 GUT 步骤，目录为 `unit` + `integration` + `replay` + `slow`。2026-09-01 起分了 fast / slow 两层，但**两层都在每次 PR 跑**；分层理由与实测数字见 [§4.1 的「GUT 分层」](#gut-分层2026-09-01-起人类拍板) |
-| UGC 可完成性（`--bot-run`） | 已启用（每日，**不进 PR**） | `nightly.yml` 跑 `--bot-run` 匹配白名单课与 `--course=course_01 --route=safe`。任一张走不通就 exit 1。PR 上一次都不跑（C2 第一章拍板）。它与 `tests/slow` 的 GUT 断言重叠但不等价：这里验的是 CLI 入口本身（参数解析、逐课 JSON、汇总行） |
+| UGC 可完成性（`--bot-run`） | 已启用（每日，**不进 PR**） | `nightly.yml` 经 `npm run bot-run` 跑匹配白名单课与 `--course=course_01 --route=safe`，写出 `artifacts/bot-run-*.json`（每课 `completable` / `steps` / `search_ticks` / 退出码）并 upload-artifact。0 条 `bot_run_*` 行 exit 1。任一张走不通就 exit 1。PR 上一次都不跑（C2 第一章拍板）。它与 `tests/slow` 的 GUT 断言重叠但不等价：这里验的是 CLI 入口本身（参数解析、逐课 JSON、汇总行、报告产物） |
 | Headless 多客户端集成 | 部分 | `game/tests/integration/test_traprush_authoring_to_match.gd` 用进程内 `MatchRealtime` 跑官方 `course_01` 双人冲线。不是两个 OS 客户端、不是真 WebSocket。真多机仍是 [§2.5](#25-网络仿真人工清单非门禁) 人工清单 |
 | 固定回放 | 部分 | `game/tests/replay/test_traprush_official_tape_replay.gd`：同课同种子同磁带 → 同 `hash_state` 与同快照字节。没有独立回放文件格式；`SimSnapshotRing` 只存哈希，不能恢复执行 |
 | UGC Golden Content | 未实现 | 官方课有 unit 解码 / 编译断言，没有独立 `tests/content/` golden 门禁。`--bot-run` 自 2026-09-01 起进 `nightly.yml`，仍不进 PR CI |
