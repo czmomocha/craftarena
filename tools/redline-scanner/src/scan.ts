@@ -31,7 +31,8 @@ const GODOT3_CALLS: readonly { readonly pattern: RegExp; readonly label: string 
 	{ pattern: /\bfuncref\s*\(/, label: "funcref(" },
 	{ pattern: /\bEngine\.editor_hint\b/, label: "Engine.editor_hint" },
 	{ pattern: /\bmove_and_slide_with_snap\b/, label: "move_and_slide_with_snap" },
-	{ pattern: /\bonready\s+var\b/, label: "onready var" },
+	// Godot 3 was `onready var`. Godot 4 is `@onready var`; do not flag the annotation.
+	{ pattern: /(?<!@)onready\s+var\b/, label: "onready var" },
 	{ pattern: /\bexport\s*\(/, label: "export(" },
 	{ pattern: /\bsetget\b/, label: "setget" },
 	{ pattern: /^\s*tool\b/, label: "tool" },

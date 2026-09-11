@@ -9,9 +9,11 @@ extends GutTest
 ## 最后两条扫源码，防止下一章又在某个 map 里写回一个 Color(...)——
 ## 散落一次不会报错，只会让 Preview 和对局慢慢变成两套配色。
 
-const MatchServerGd := preload("res://src/server/match_server.gd")
+const MatchServerBootGd := preload("res://src/server/match_server_boot.gd")
 
 const SCAN_DIRS: Array[String] = ["res://src/client", "res://src/creator"]
+## 产品 UI（theme / 卡片）不是占位色板。大厅与 Preview 表现映射仍必须读 spec。
+const SCAN_SKIP_PREFIXES: Array[String] = ["res://src/client/ui/"]
 ## 包内材质自检要构造一个与色板无关的颜色再读回来，见 package_check.gd。
 const COLOR_LITERAL_ALLOWED: Array[String] = ["res://src/client/package_check.gd"]
 ## C4 第 6 章接线前那个 AI 自选偏移 Vector3(6, 8, 6) 的长度 √136。D4 只给了
@@ -100,7 +102,7 @@ func test_preview_map_reads_the_same_spec_as_the_match_maps() -> void:
 func test_authoritative_geometry_reads_the_spec() -> void:
 	assert_eq(TraprushPlayStubs.CAPSULE_RADIUS, PlaceholderSpec.CHARACTER_RADIUS)
 	assert_eq(TraprushPlayStubs.CAPSULE_HEIGHT, PlaceholderSpec.CHARACTER_HEIGHT)
-	assert_eq(MatchServerGd.SPAWN_STRIDE, PlaceholderSpec.SPAWN_STRIDE)
+	assert_eq(MatchServerBootGd.SPAWN_STRIDE, PlaceholderSpec.SPAWN_STRIDE)
 
 
 ## 脚底偏移从胶囊柱高/半径推导，不是 1 米盒底。改高度只改 PlaceholderSpec
@@ -163,7 +165,7 @@ func _scan(pattern: RegEx, allowed: Array[String]) -> Array[String]:
 	var offenders: Array[String] = []
 	for dir_path: String in SCAN_DIRS:
 		for file_path: String in _gd_files(dir_path):
-			if allowed.has(file_path):
+			if allowed.has(file_path) or _skip_scan(file_path):
 				continue
 			var file: FileAccess = FileAccess.open(file_path, FileAccess.READ)
 			assert_not_null(file, "读不到 %s" % file_path)
@@ -175,6 +177,13 @@ func _scan(pattern: RegEx, allowed: Array[String]) -> Array[String]:
 				if pattern.search(lines[index]) != null:
 					offenders.append("%s:%d" % [file_path, index + 1])
 	return offenders
+
+
+func _skip_scan(file_path: String) -> bool:
+	for prefix: String in SCAN_SKIP_PREFIXES:
+		if file_path.begins_with(prefix):
+			return true
+	return false
 
 
 func _gd_files(dir_path: String) -> Array[String]:
