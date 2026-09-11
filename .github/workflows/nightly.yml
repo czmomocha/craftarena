@@ -29,7 +29,7 @@ jobs:
   bot-run:
     name: Bot run over the official courses
     runs-on: ubuntu-latest
-    # 定时任务不抢关键路径。开发机实测四张课应仍在数秒量级（2026-09-01 三张
+    # 定时任务不抢关键路径。开发机实测五张课应仍在数秒量级（2026-09-01 三张
     # 合计 5.7 s；此前 108.6 s），给足余量；超时就是真出事了。
     timeout-minutes: 25
     steps:

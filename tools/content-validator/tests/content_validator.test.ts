@@ -149,6 +149,7 @@ describe("official authoring documents", () => {
 		assert.ok(documents.some((document) => document.name === "course_02.json"));
 		assert.ok(documents.some((document) => document.name === "course_03.json"));
 		assert.ok(documents.some((document) => document.name === "course_04.json"));
+		assert.ok(documents.some((document) => document.name === "course_05.json"));
 	});
 
 	for (const document of documents) {

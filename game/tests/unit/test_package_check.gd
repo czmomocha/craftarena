@@ -65,7 +65,7 @@ func test_packed_only_checks_are_reported_but_do_not_fail_a_source_run() -> void
 func test_report_names_official_and_f_line_courses() -> void:
 	var report: Dictionary = PackageCheckGd.report()
 	var paths: PackedStringArray = report["course_paths"]
-	assert_eq(paths.size(), 5)
+	assert_eq(paths.size(), 6)
 	for path: String in paths:
 		assert_true(path.begins_with("res://content/official/traprush/"), path)
 		assert_true(path.ends_with(".json"), path)

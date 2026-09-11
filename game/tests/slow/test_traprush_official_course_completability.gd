@@ -28,6 +28,7 @@ const COURSE_01: String = "res://content/official/traprush/course_01.json"
 const COURSE_02: String = "res://content/official/traprush/course_02.json"
 const COURSE_03: String = "res://content/official/traprush/course_03.json"
 const COURSE_04: String = "res://content/official/traprush/course_04.json"
+const COURSE_05: String = "res://content/official/traprush/course_05.json"
 const SHORTCUT_PORTAL: int = 10
 
 
@@ -37,6 +38,7 @@ func test_official_courses_are_completable_on_the_authority() -> void:
 	_assert_completable(COURSE_02)
 	_assert_completable(COURSE_03)
 	_assert_completable(COURSE_04)
+	_assert_completable(COURSE_05)
 
 
 ## 原 `tests/unit/test_traprush_course_completion_probe.gd`（纠偏 C2 第 1 章）。

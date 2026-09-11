@@ -11,6 +11,7 @@ export const OFFICIAL_TRAPRUSH_COURSE_IDS = [
 	"course_02",
 	"course_03",
 	"course_04",
+	"course_05",
 ] as const;
 
 export type OfficialTraprushCourseId = (typeof OFFICIAL_TRAPRUSH_COURSE_IDS)[number];
