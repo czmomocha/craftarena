@@ -20,9 +20,9 @@ describe("official match body", () => {
 			course: "course_01",
 			seats: 2,
 		});
-		assert.deepEqual(readOfficialMatchBody({ course: "course_03" }), {
+		assert.deepEqual(readOfficialMatchBody({ course: "course_04" }), {
 			ok: true,
-			course: "course_03",
+			course: "course_04",
 			seats: 2,
 		});
 		assert.deepEqual(readOfficialMatchBody({ seats: 8 }), {
@@ -34,6 +34,10 @@ describe("official match body", () => {
 
 	test("rejects paths, unknown ids, out-of-range seats, and extra fields", () => {
 		assert.equal(readOfficialMatchBody({ course: "course_99" }).ok, false);
+		assert.equal(
+			(readOfficialMatchBody({ course: "course_f_playable" }) as { error: string }).error,
+			"invalid_course",
+		);
 		assert.equal(
 			(readOfficialMatchBody({ course: "res://content/official/traprush/course_01.json" }) as { error: string })
 				.error,

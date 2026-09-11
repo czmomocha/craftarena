@@ -1,7 +1,7 @@
 extends GutTest
 
 ## 可玩性深化第十八批：新机关接到官方 01–03 的侧廊，不挡 +X 捷径 / 安全路脚本。
-## 官方 01/02 不加额外可破坏（出生点 Q 仍只清那一只箱）。匹配 HTTP 仍只认这三张。
+## 官方课 01/02 不加额外可破坏（出生点 Q 仍只清那一只箱）。匹配 HTTP 认 01–04。
 ## 不改协议，不接线 InteractIntent。
 
 const AuthoringDocumentGd := preload("res://src/creator/authoring_document.gd")

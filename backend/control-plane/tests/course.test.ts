@@ -187,6 +187,22 @@ describe("control plane official course select", () => {
 			assert.equal(path.statusCode, 400);
 			assert.equal(path.json<{ error: string }>().error, "invalid_course");
 
+			const playable = await app.inject({
+				method: "POST",
+				url: "/matchmaking/quick",
+				payload: { course: "course_f_playable" },
+			});
+			assert.equal(playable.statusCode, 400);
+			assert.equal(playable.json<{ error: string }>().error, "invalid_course");
+
+			const fourth = await app.inject({
+				method: "POST",
+				url: "/matchmaking/rooms",
+				payload: { course: "course_04" },
+			});
+			assert.equal(fourth.statusCode, 201);
+			assert.equal(fourth.json<MatchmakingJoinResponse>().course, "course_04");
+
 			const extra = await app.inject({
 				method: "POST",
 				url: "/matchmaking/quick",

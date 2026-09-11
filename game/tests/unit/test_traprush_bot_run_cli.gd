@@ -62,14 +62,10 @@ func test_forbid_portal_rejects_junk() -> void:
 	assert_false(zero_ok)
 
 
-func test_default_courses_are_the_official_three() -> void:
+func test_default_courses_are_the_official_match_ids() -> void:
 	assert_eq(
 		BotRunCli.resolve_courses(PackedStringArray()),
-		PackedStringArray([
-			OfficialTraprushCourses.COURSE_01,
-			OfficialTraprushCourses.COURSE_02,
-			OfficialTraprushCourses.COURSE_03,
-		])
+		OfficialTraprushCourses.all_match_ids()
 	)
 	assert_eq(
 		BotRunCli.resolve_courses(PackedStringArray(["--course=course_f_playable"])),

@@ -117,13 +117,7 @@ static func _body(checks: Dictionary, failures: Array[String]) -> Dictionary:
 
 static func _course_paths() -> PackedStringArray:
 	var paths: PackedStringArray = PackedStringArray()
-	var ids: Array[String] = [
-		OfficialTraprushCoursesGd.COURSE_01,
-		OfficialTraprushCoursesGd.COURSE_02,
-		OfficialTraprushCoursesGd.COURSE_03,
-		OfficialTraprushCoursesGd.COURSE_F_PLAYABLE,
-	]
-	for id: String in ids:
+	for id: String in OfficialTraprushCoursesGd.all_document_ids():
 		paths.append(OfficialTraprushCoursesGd.document_path(id))
 	return paths
 

@@ -6,7 +6,12 @@
  * `seats` 是本场人数（1～8），不是 `players` 别名。OpenAPI 仍未生成。
  */
 
-export const OFFICIAL_TRAPRUSH_COURSE_IDS = ["course_01", "course_02", "course_03"] as const;
+export const OFFICIAL_TRAPRUSH_COURSE_IDS = [
+	"course_01",
+	"course_02",
+	"course_03",
+	"course_04",
+] as const;
 
 export type OfficialTraprushCourseId = (typeof OFFICIAL_TRAPRUSH_COURSE_IDS)[number];
 

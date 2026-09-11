@@ -140,16 +140,12 @@ static func run_and_print(user_args: PackedStringArray) -> int:
 	return 0 if completable == total else 1
 
 
-## 缺省跑全部官方课。`--course=` 接一个 id 或逗号分隔的多个；出现任何一个不认识
-## 的 id 就整体判非法，而不是悄悄跳过——静默跳过会让「三张全绿」这句话失真。
+## 缺省跑全部匹配白名单课。`--course=` 接一个 id 或逗号分隔的多个；出现任何一个
+## 不认识的 id 就整体判非法，而不是悄悄跳过——静默跳过会让「官方课全绿」失真。
 static func resolve_courses(user_args: PackedStringArray) -> PackedStringArray:
 	var raw: String = _raw_value(user_args, COURSE_FLAG)
 	if raw == "":
-		return PackedStringArray([
-			OfficialTraprushCourses.COURSE_01,
-			OfficialTraprushCourses.COURSE_02,
-			OfficialTraprushCourses.COURSE_03,
-		])
+		return OfficialTraprushCourses.all_match_ids()
 	var resolved: PackedStringArray = PackedStringArray()
 	for piece: String in raw.split(",", false):
 		var course_id: String = OfficialTraprushCourses.normalize_id(piece)

@@ -1,5 +1,9 @@
 import { resolve } from "node:path";
 
+import {
+	DEFAULT_OFFICIAL_TRAPRUSH_COURSE,
+	officialTraprushCoursePath,
+} from "../../contracts/src/official_courses.ts";
 import { MATCH_LISTEN_PROBE_HOST } from "./listen_probe.ts";
 import { buildMatchUpstreamUrl } from "./registrar.ts";
 
@@ -65,7 +69,6 @@ const DEFAULT_LISTEN_POLL_MS = 50;
  * 映射成 `res://content/official/traprush/{id}.json`，并把人数交给 `--players=`。
  * 空 POST /matches 仍用这些默认。人数上限 8 与 CD-21 的 TRAPRUSH 房间规模一致。
  */
-const DEFAULT_MATCH_COURSE = "res://content/official/traprush/course_01.json";
 const DEFAULT_MATCH_PLAYERS = 2;
 const MAX_MATCH_PLAYERS = 8;
 
@@ -94,7 +97,7 @@ export function loadConfig(
 		idleTimeoutMs: parseInteger(env["MATCH_HOST_IDLE_MS"], DEFAULT_IDLE_TIMEOUT_MS, "MATCH_HOST_IDLE_MS"),
 		reclaimIntervalMs: parseInteger(env["MATCH_HOST_RECLAIM_MS"], DEFAULT_RECLAIM_INTERVAL_MS, "MATCH_HOST_RECLAIM_MS"),
 		maxConcurrentMatches: parseInteger(env["MATCH_HOST_MAX_MATCHES"], portCapacity, "MATCH_HOST_MAX_MATCHES"),
-		matchCourse: env["MATCH_HOST_COURSE"] ?? DEFAULT_MATCH_COURSE,
+		matchCourse: env["MATCH_HOST_COURSE"] ?? officialTraprushCoursePath(DEFAULT_OFFICIAL_TRAPRUSH_COURSE),
 		matchPlayers: parsePlayers(env["MATCH_HOST_PLAYERS"]),
 		controlPlaneUrl: (env["CONTROL_PLANE_URL"] ?? "http://127.0.0.1:8080").replace(/\/+$/, ""),
 		upstreamHost: parseUpstreamHost(env["MATCH_HOST_UPSTREAM_HOST"]),

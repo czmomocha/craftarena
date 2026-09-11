@@ -167,7 +167,7 @@ AI 生成代码必须比普通手写代码有**更强的自动化证据**，因�
 - 对局命令门禁与双人 Headless 冲线：同槽同 tick 第二条命令拒绝且位姿只 +1 格；断开丢弃排队，重入后 commit 不继承旧 Move；快照帧不能当命令；两槽各一条 FIFO；官方 course_01 两槽经 MatchRealtime 各 5 步后 `finish_tick=4` 且 MVP 为 slot 0；同磁带同快照字节与状态哈希；冲线后 `allows_settlement` 为 true；`allows_online_writes` 为 false；不插值、不预测、不锁墙钟速率；
 - 机关狂奔单局结算写库：未全员冲线拒绝生成；course_01 两槽冲线后 payload 含 `finish_tick=4` / `pad_total=3` / `mvp_slot=0`；同磁带同哈希；心跳未完成无 settlement、完成后带上；离线冲线后 `allows_settlement` 仍为 false；控制面 POST 一次 201、第二次 409；注销会话后 GET 仍在；未知场 / `mmr` 多余字段 / 未完成 `finishTick` 拒绝；MatchHost 活场心跳或停止前从心跳 POST，无记录则不写，写失败不注销；不生成 MMR、不锁限时未全员结算；
 - 断线重连补票：入场票绑定席位，校验返回 `seat`；网关上游 URL 带 `slot=`；`occupy_slot` 占用指定席，非法/已占拒绝；断开丢排队、同槽再占恢复位姿；已消费票补发同席位新票且不占额外席；未消费/已作废/错场/未知票/多余字段拒绝；注销后不能补票；客户端 READY 补票换票，大厅 `IN_MATCH` 关闭后自动补票并跟从新快照；大厅 Cancel 本地离开不补票；不锁账号绑定、插值/预测、离开对局 HTTP；
-- 官方赛道选择：HTTP JSON 只用 `course_01` / `course_02` / `course_03`；空 body 默认 `course_01`；快速游戏只进同一赛道未满房；队列记住 `course` 且不占邻课余席；按码加入拒绝 body 并回该房课程；未知课 / `res://` 路径 / 多余字段 400；MatchHost 按 id 映射 `--course=` 并登记；大厅跟从响应编译同一赛道，Solo 复用选择器；不锁账号绑定、插值/预测；
+- 官方赛道选择：HTTP JSON 只用 `course_01` / `course_02` / `course_03` / `course_04`；空 body 默认 `course_01`；快速游戏只进同一赛道未满房；队列记住 `course` 且不占邻课余席；按码加入拒绝 body 并回该房课程；未知课 / `course_f_playable` / `res://` 路径 / 多余字段 400；MatchHost 按 id 映射 `--course=` 并登记；大厅跟从响应编译同一赛道，Solo 复用选择器；不锁账号绑定、插值/预测；
 - 人数按场下发：HTTP JSON `seats` 为 1～8；空 body 默认 2；快速游戏只进同课同人数未满房；队列记住 `seats` 且不占邻人数余席；按码加入拒绝 body 并回该房人数；0 / 9 / `players` 别名 400；MatchHost 按场 `--players=` 并登记；大厅选人数；Solo 仍为 1 人；不锁账号绑定、插值/预测；
 - 对局快照插值：tick 前进保留上一份玩家位姿；无上一份贴最新；`t=0` 亚格子显示上一份且进度取最新、`t=SCALE/2` 中点、`t=SCALE` 显示最新；yaw 最短弧；≥1 格立即贴最新；畸形最新拒绝；新槽贴最新；大厅亚格子两步到最新且隐藏不推进；箱子耐久跟最新权威；1 格跳仍贴最新；大厅 Cancel 停 in_match（清盒、后续快照不跟、不补票）；不预测、不锁插值窗口；
 - 对局本席移动预测：入场就绪 JSON 带 `seat`（0 起，须 < `seats`）；补票回同一席且错席拒绝；`MatchLocalPredict` 把 Move/Jump overlay 叠在最新权威本席位姿上，本席不插值、远端仍插值；更新 tick 硬贴并清 overlay；同 tick 不清；溢出贴最新；未绑定/越界席位不叠；畸形最新拒绝；大厅 WASD 立即移动本席盒，下份快照硬贴；Solo 不叠 overlay；箱子/赛道不预测；大厅 Cancel 停 in_match；不锁远端外推碰撞、平滑对账、插值窗口；
@@ -209,7 +209,8 @@ AI 生成代码必须比普通手写代码有**更强的自动化证据**，因�
 - 可玩性深化第十四批：楼层着色。普通固体按 `y/cell` 上层偏绿、下层偏品红；机关占位不染色；人类真机步骤见 [开发机窗口验收](../../docs/runbooks/dev-window-check.md) 本刀（人工检查，非 CI 门禁）；
 - 可玩性深化第十五批：压板 / 摆锤预警脉冲。gadget 按 tick 缩放；Preview 开玩后打碎的箱子隐藏；人类真机步骤见 [开发机窗口验收](../../docs/runbooks/dev-window-check.md) 本刀（人工检查，非 CI 门禁）；
 - 可玩性深化第十六批：示范课 `course_f_playable` revision 11 从侧廊展览改成有路线选择的一局。能量墙挡在 z=0 主路 x=1；喷火 / 滚柱 / 摆锤 / 压板在主路上；安全路沿 z=+2，途中下到检查点 1。`test_course_f_playable_routes.gd` 钉两路脚本都能冲线且安全路 Move 更多；`--bot-run --course=course_f_playable` 重放危险捷径脚本。不改协议、不进匹配 HTTP；人类真机步骤见 [开发机窗口验收](../../docs/runbooks/dev-window-check.md) 本刀（人工检查，非 CI 门禁）；
-- 可玩性深化第十八批：示范课 revision 12 把周期机关移出 z=0 主路，捷径脚本不再 `wait`；官方 01–03 侧廊接上深化段新机关且不挡既有捷径 / 安全路脚本。`test_course_f_playable_routes.gd` 与 `test_official_course_gadgets.gd` 守住。不改协议、匹配 HTTP 仍只三张；人类真机步骤见 [开发机窗口验收](../../docs/runbooks/dev-window-check.md) 本刀（人工检查，非 CI 门禁）；
+- 可玩性深化第十八批：示范课 revision 12 把周期机关移出 z=0 主路，捷径脚本不再 `wait`；官方 01–03 侧廊接上深化段新机关且不挡既有捷径 / 安全路脚本。`test_course_f_playable_routes.gd` 与 `test_official_course_gadgets.gd` 守住。不改协议、匹配 HTTP 当时只三张；人类真机步骤见 [开发机窗口验收](../../docs/runbooks/dev-window-check.md) 本刀（人工检查，非 CI 门禁）；
+- M5 C1 第 4 张官方课：`course_04` 垂直塔（电梯 + 弹射 + 压板）；AuthoringDocument 编译非 null、发布可达零问题码；匹配 HTTP 接受 `course_04`，仍拒 `course_f_playable` 与 `res://` 路径；`bot_run_cli` 缺省覆盖白名单四张；GUT slow 探针可完成；人类真机步骤见 [开发机窗口验收](../../docs/runbooks/dev-window-check.md) 本刀（人工检查，非 CI 门禁）；
 - 官方赛道立足固体与 Jump：三张官方课各加 entity 80（出生点正下一格 `y = -cell` 始终固体，不挡 +X）；对局 / Solo / Preview 壳 `support_dy = -Fixed.SCALE`；`jump_dy` 为 `Fixed.SCALE / 4` 占位桩（避免 `course_01` 上楼传送盒）；出生点 Jump 接地 hop；大厅 HUD `solids=2/2`；在线 overlay `play_jump_dy` 仍为 0；不锁产品跳跃高度；GUT 940/940、`npm test` 323；人类真机步骤见 [开发机窗口验收](../../docs/runbooks/dev-window-check.md) 本刀（人工检查，非 CI 门禁）；
 - 权威下落接到对局 / Solo / Preview：`fall_dy` 默认 0 时 `commit_tick` 保持出生 y；boot / Solo 占位 `-Fixed.SCALE / 16`，Preview 壳占位 `-Fixed.SCALE`；立足盒上 settle 后 Jump hop，再 commit/advance 落回 rest_y；走离立足盒 y 下降，继续下落会触发出界复位弹回出生点；`MatchRealtime` 先下落再意图再 tick，settle 不续租、hop 续租；Solo `_process` 先 advance 再采样空格；Preview 意图不下落，Advance tick 才落；零 `fall_dy` 的 advance 保持 hop；不锁产品重力加速度、不铺官方沿路地板；GUT 949/949、`npm test` 323；人类真机步骤见 [开发机窗口验收](../../docs/runbooks/dev-window-check.md) 本刀（人工检查，非 CI 门禁）；
 - 本地草稿恢复：成功写入落 `latest` 且文件非空；空会话打开恢复；恢复后工具条下一个 Place 使用新 id；编辑器 `plugin.gd` `@tool` 落盘；`world_committed`；失败写入不改草稿；损坏 / 多余键拒绝；拒绝写入 `res://`；检查点最多 30；不结算；
@@ -335,10 +336,10 @@ AI 生成代码必须比普通手写代码有**更强的自动化证据**，因�
 | 门禁项 | 状态 | 实现方式 |
 |---|---|---|
 | 全量 GUT | 已启用（每次 PR，不是每日定时） | [§4.1](#41-每次变更) 的同一个 GUT 步骤，目录为 `unit` + `integration` + `replay` + `slow`。2026-09-01 起分了 fast / slow 两层，但**两层都在每次 PR 跑**；分层理由与实测数字见 [§4.1 的「GUT 分层」](#gut-分层2026-09-01-起人类拍板) |
-| UGC 可完成性（`--bot-run`） | 已启用（每日，**不进 PR**） | `nightly.yml` 跑 `--bot-run` 三张官方课与 `--course=course_01 --route=safe`。任一张走不通就 exit 1。PR 上一次都不跑（C2 第一章拍板）。它与 `tests/slow` 的 GUT 断言重叠但不等价：这里验的是 CLI 入口本身（参数解析、逐课 JSON、汇总行） |
+| UGC 可完成性（`--bot-run`） | 已启用（每日，**不进 PR**） | `nightly.yml` 跑 `--bot-run` 匹配白名单课与 `--course=course_01 --route=safe`。任一张走不通就 exit 1。PR 上一次都不跑（C2 第一章拍板）。它与 `tests/slow` 的 GUT 断言重叠但不等价：这里验的是 CLI 入口本身（参数解析、逐课 JSON、汇总行） |
 | Headless 多客户端集成 | 部分 | `game/tests/integration/test_traprush_authoring_to_match.gd` 用进程内 `MatchRealtime` 跑官方 `course_01` 双人冲线。不是两个 OS 客户端、不是真 WebSocket。真多机仍是 [§2.5](#25-网络仿真人工清单非门禁) 人工清单 |
 | 固定回放 | 部分 | `game/tests/replay/test_traprush_official_tape_replay.gd`：同课同种子同磁带 → 同 `hash_state` 与同快照字节。没有独立回放文件格式；`SimSnapshotRing` 只存哈希，不能恢复执行 |
-| UGC Golden Content | 未实现 | 官方三张课有 unit 解码 / 编译断言，没有独立 `tests/content/` golden 门禁。`--bot-run` 自 2026-09-01 起进 `nightly.yml`，仍不进 PR CI |
+| UGC Golden Content | 未实现 | 官方课有 unit 解码 / 编译断言，没有独立 `tests/content/` golden 门禁。`--bot-run` 自 2026-09-01 起进 `nightly.yml`，仍不进 PR CI |
 
 ### 4.3 每周
 
