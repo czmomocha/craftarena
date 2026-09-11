@@ -111,6 +111,8 @@ AI 生成代码必须比普通手写代码有**更强的自动化证据**，因�
 
 香港真实环境形成样本后，再根据 P90/P95 数据决定是否建立自动门禁，以及是否为 TRAPRUSH 引入 ENet/WebRTC。当前选择只保证"有检查清单"，**不保证稳定回归覆盖**。
 
+注入工具（2026-09-12 拍板）：**Windows 用 clumsy，Linux 用 `tc netem`**，macOS 开发机用 `dnctl` + `pfctl`。三者都是**外部工具，不入库、不进 CI、不写成 npm script**；仓库里只有 `docs/runbooks/network-fault-check.md` 的编号步骤引用它们的命令行。清单本身仍以本节为所有者，runbook 只写"怎么执行"。
+
 ### 2.6 UGC 安全测试
 
 - 超大实体数；

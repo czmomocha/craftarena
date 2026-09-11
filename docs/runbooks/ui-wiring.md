@@ -1,5 +1,14 @@
 # Craft Arena UI 基础包 · 接线说明
 
+> **状态（2026-09-12）：资产已落库，运行时尚未接线，且本文件部分内容已失真。**
+>
+> - **排期已定，见 [CD-61 §2 M-Art](../../Confirmed-docs/60-plan/61-milestones.md#m-art表现与美术)**（所有者）。三批：S3 广场（M5 退出后）→ S1 主大厅（M6 主大厅壳章内）→ S2 / S4 / S5 / S6。**M5 C6 期间不得接任何一屏。**
+> - 第一批四项前置：**字体入包**（[CD-11 §8.2 第 3 条](../../Confirmed-docs/10-product/11-scope-and-platforms.md)）、文案迁 `UiCopy`（三个场景现有 106 处硬编码中文，零处走键）、`validate_theme.gd` / `validate_scene.gd` 进 CI、本文件按仓库实际落点重写。
+> - **下面第 1–5 节仍是源项目 `testUI` 的视角**：`F:\study\craftarena` 路径、`godot/scenes/...` 目录、`C:\Tools\Godot_v4.7.2-stable_win64_console.exe` 命令都与本仓库实际不符。实际落点是 `game/src/client/ui/scenes/`、`game/src/client/ui/scripts/`、`game/content/ui/`；命令以 [README.md](../../README.md) 为准。重写排在第一批接线那一刀（宪法第十九条）。
+> - 第 6 节（关键实现约定）与 7.2 文案语义锁定**现在就有效**，不受上述失真影响。
+
+---
+
 > 本项目（`testUI`）是 **纯 UI 项目**，产出将合入 UGC 游戏项目 **Craft Arena**（`F:\study\craftarena`），作为游戏 UI 基础。
 > 本文档描述交付物、接入步骤、维护流程与已知问题。
 

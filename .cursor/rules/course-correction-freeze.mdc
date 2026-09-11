@@ -18,14 +18,18 @@ alwaysApply: true
   → F 线（已收口）
   → Web 游玩分发（第一刀已收口）
   → 可玩性深化（已收口）
-  → M-Art 剩余已拍板项（字体入包仍推迟）→ M4a（已收口）→ M4b（已收口）→ M5
-  → 公开 TLS / PR Web 沙盒 → M6 / M7
-  → 一期收尾：字体入包、Android / iOS 烟测、触控 UI
+  → M-Art 剩余已拍板项 → M4a（已收口）→ M4b（已收口）→ M5
+  → 字体入包 → UI 接线第一批（S3 广场）
+  → 公开 TLS / PR Web 沙盒 → M6 / M7（含 UI 接线第二批 S1 主大厅壳）
+  → UI 接线第三批（S2 / S4 / S5 / S6）
+  → 一期收尾：Android / iOS 烟测、触控 UI
 ```
 
-- **现在可以开工**：M5。A1–B2 / C1 / C2 / C3 / C4 / C5 已交。下一实现刀是 C6（仍待 [M5 计划](docs/plans/m5-traprush-vertical-slice.md) §5.2 问题 6）。Web 游玩分发第一刀已交。F 线 FA–FH 已收口。可玩性深化 / M4a / M4b 已收口。
-- **现在不得开工**：Android / iOS 烟测（**一期收尾**；不是风险项）；公开 TLS / PR Web 沙盒（M5 之后）；M6 / M7（BASTION）。它们不是冻结，是 CD-61 还没轮到。F 线示范课 `course_f_playable` 不是 M5 官方第 4 张。C6 在问题 6 未拍前不开实现。
-- **推迟到一期收尾**：字体入包（思源黑体 / Noto Sans SC）；Android / iOS 导出烟测；触控 UI（D7）。接受玩家任意中文缺字。不挡 Web 分发 / M4a。
+- **现在可以开工**：M5。A1–B2 / C1 / C2 / C3 / C4 / C5 已交。下一实现刀是 C6，**阻断已解除**（[M5 计划](docs/plans/m5-traprush-vertical-slice.md) §5.2 问题 6 于 2026-09-12 拍板：clumsy / `tc netem` / `dnctl`，外部工具不入库）。Web 游玩分发第一刀已交。F 线 FA–FH 已收口。可玩性深化 / M4a / M4b 已收口。
+- **现在不得开工**：Android / iOS 烟测（**一期收尾**；不是风险项）；公开 TLS / PR Web 沙盒（M5 之后）；M6 / M7（BASTION）；**产品 UI 接线任何一批**（M5 退出后才排第一批）。它们不是冻结，是 CD-61 还没轮到。F 线示范课 `course_f_playable` 不是 M5 官方第 4 张。
+- **已从一期收尾提前**（2026-09-12）：字体入包（思源黑体 / Noto Sans SC）排到 **M5 退出之后、UI 接线第一批之前**，因为它是产品 UI 的阻断前置。入包完成前仍接受任意中文缺字。许可证与子集范围仍须人类确认（宪法第十八条）。
+- **仍推迟到一期收尾**：Android / iOS 导出烟测；触控 UI（D7）。
+- **UI 接线三批**（2026-09-12 拍板，不发明新里程碑号）：第一批 S3 广场（M5 退出后）→ 第二批 S1 主大厅（M6 主大厅壳章内）→ 第三批 S2 / S4 / S5 / S6。一批一刀。**C6 期间不得接任何一屏**。口径见 [CD-61 §2 M-Art](Confirmed-docs/60-plan/61-milestones.md)。
 
 禁止发明 M8。禁止用 ICMP 或一场协议层样本改已锁的 Tick / 快照 / 插值数字。
 

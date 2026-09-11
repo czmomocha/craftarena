@@ -2,7 +2,7 @@
 
 > 类型：实现级章节计划（`docs/plans/`），**不是所有者文档**。
 > 里程碑产出与退出条件的所有者是 [CD-61 §2 M5](../../Confirmed-docs/60-plan/61-milestones.md)；本文件只把 M5 拆成可审查的章。两者冲突以 CD-61 为准。
-> 日期：2026-09-10。状态：章节划分与音频模块基建已由人类拍板（§5.1）；**A1 / A2 / A3 / B1 / B2 / C1 / C2 / C3 / C4 / C5 已交**；下一实现刀 C6（待 §5.2 问题 6）。
+> 日期：2026-09-10（2026-09-12 更新）。状态：章节划分与音频模块基建已由人类拍板（§5.1）；**A1 / A2 / A3 / B1 / B2 / C1 / C2 / C3 / C4 / C5 已交**；下一实现刀 C6，**§5.2 问题 6 已于 2026-09-12 拍板，阻断解除**。
 > 上位约束：[CD-00 宪法](../../Confirmed-docs/00-constitution/CONSTITUTION.md) 第一、三、四、五、九、十七、十八、十九、二十三条。
 
 ## 1. 能不能开工
@@ -195,7 +195,7 @@ cue 是数据，定义在 `game/content/audio/banks/*.json`，字段初稿：
 
 - **交付**：`docs/runbooks/network-fault-check.md`（延迟 / 抖动 / 丢包 / 乱序 / 重复包 / 短时断线重连 / 恶意高频 / 篡改帧的编号步骤，只写"怎么执行"，清单本身仍归 [CD-53 §2.5](../../Confirmed-docs/50-engineering/53-testing-and-ci.md)）；`docs/runbooks/playability-signoff-traprush.md`（项目负责人逐项签署：操作手感、机关可读性、路线选择、失败反馈、**音频反馈**、结算清晰度、创作流畅度、外人 5 分钟上手）；全闭环走查一次；CD-61 M5 退出回写 + CD-53 变更记录 + 两份 `.cursor/rules` 指向下一动。
 - **审查**：轻审 + 人类签署。
-- **待拍板**：网络故障注入工具选型（§5.2 问题 6）。
+- **工具**（2026-09-12 已拍）：Windows clumsy / Linux `tc netem` / macOS `dnctl`+`pfctl`，外部工具不入库、不进 CI。所有者 [CD-53 §2.5](../../Confirmed-docs/50-engineering/53-testing-and-ci.md)。
 
 ## 5. 拍板状态
 
@@ -220,9 +220,9 @@ cue 是数据，定义在 `game/content/audio/banks/*.json`，字段初稿：
 | 3 | 发布签名密钥去向（**阻断项**） | C3（**已交**，2026-09-11 拍 / 接线） | **控制面代签**：`POST /content/submit`；玩家不持密钥；禁止两跳取签。持钥 `POST /content/publish` 仅测试 / 工具 |
 | 4 | 匹配 HTTP 扩到已签名 UGC（**阻断项**） | C4（**已拍**，2026-09-11） | **加 `content: { id, version }` 对象**，不把 `course` 塞成字符串联合；建房钉死 version；与 `course` 互斥 |
 | 5 | 两个小目录：`tools/audio-bank/` 建不建、`tools/bot-runner/` 建还是从 CD-41 删 | A2（**已执行推荐项**）、C5（**已建薄壳**） | A2 已把 bank 校验并入 `tools/content-validator/`，不新建 `tools/audio-bank/`。C5 把 `tools/bot-runner/` 建成薄壳，不从 CD-41 删 |
-| 6 | 网络故障注入工具 | C6 | Windows 用 clumsy、Linux 用 `tc netem`；外部工具不入库，仍需点头 |
+| 6 | 网络故障注入工具 | C6（**已拍**，2026-09-12） | 人类采纳 AI 推荐：Windows 用 clumsy、Linux 用 `tc netem`、macOS 用 `dnctl` + `pfctl`。外部工具不入库、不进 CI，仓库里只有 runbook 引用命令行。所有者仍是 [CD-53 §2.5](../../Confirmed-docs/50-engineering/53-testing-and-ci.md) |
 
-**C4 已接线。** 下一实现刀 **C6**（仍待问题 6）。
+**C4 / C5 已接线。下一实现刀 C6，阻断已全部解除**（问题 6 于 2026-09-12 拍板）。
 
 ## 6. M5 退出条件
 
@@ -240,5 +240,5 @@ CD-61 §2 M5 的验收句不变：完整完成"编辑—预览—邀请—发布
 - 不碰 BASTION（M6 / M7）；
 - 不改推击力度、爆破半径、道具重生（D-F4 / D-F5 / D-F6 保持现值）；
 - 不改 Tick / 快照 / 心跳 / 插值数字（E3 已锁）；
-- 不做字体入包、Android / iOS 烟测、触控 UI（一期收尾）；
+- 不做字体入包与产品 UI 接线（2026-09-12 已排期，落在 **M5 退出之后**，见 [CD-61 §2 M-Art](../../Confirmed-docs/60-plan/61-milestones.md#m-art表现与美术)；**C6 期间尤其不得接任何一屏**，否则刚签的可玩性清单当场作废）、Android / iOS 烟测、触控 UI（一期收尾）；
 - 不发明 M8。

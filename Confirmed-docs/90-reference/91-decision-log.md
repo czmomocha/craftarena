@@ -252,6 +252,9 @@
 
 ## D.9 明确延期或跳过
 
+- `font_packaging = before_ui_wiring`（2026-09-12）覆盖 `font_packaging = defer_to_phase1_end`（2026-09-03）：字体入包从一期收尾**提前**到 M5 退出之后、产品 UI 接线第一批之前。理由是 2026-09-11 落库的 UI 基础包主题未内置字体，中文靠引擎回退，不入包则任何一屏产品 UI 都无法验收。选型不变（思源黑体 / Noto Sans SC，子集化）；**许可证已由人类于 2026-09-12 确认**（均为 SIL OFL 1.1，允许嵌入 / 子集化 / 再分发），宪法第十八条这一项关闭；子集范围仍未拍板，AI 不得自选。不覆盖本地化键口径（`ui_copy = csv_keys_zh_en_no_font` 的键表与 locale 归一仍生效）。口径见 [CD-11 §8.2 第 3 条](../10-product/11-scope-and-platforms.md#82-表现规格d42026-08-26-拍板当前生效值) 与 [CD-61 §2 M-Art](../60-plan/61-milestones.md#m-art表现与美术)。
+- `ui_wiring = three_batches_s3_s1_rest`（2026-09-12）：2026-09-11 落库的产品 UI 基础包分**三批**接线——第一批 S3 广场（M5 退出后），第二批 S1 主大厅（M6 主大厅壳章内，随 BASTION 双玩法入口），第三批 S2 / S4 / S5 / S6。一批一刀，不合并、不提前、**不在 M5 C6 期间接任何一屏**（C6 要签的可玩性清单描述的是现有自绘大厅）。第一批四项前置：字体入包、文案迁 `UiCopy`、`validate_theme.gd` / `validate_scene.gd` 进 CI、`ui-wiring.md` 按仓库实际落点重写。S4 / S5 / S6 尚未设计。不发明新里程碑号。口径见 [CD-61 §2 M-Art](../60-plan/61-milestones.md#m-art表现与美术)。
+- `net_fault_tooling = clumsy_netem_external`（2026-09-12）解除 [M5 计划](../../docs/plans/m5-traprush-vertical-slice.md) §5.2 问题 6 对 C6 的阻断：Windows 用 clumsy、Linux 用 `tc netem`、macOS 用 `dnctl` + `pfctl`。外部工具**不入库、不进 CI、不写成 npm script**，仓库里只有 runbook 引用其命令行。不覆盖「网络故障测试非门禁」（宪法第二十四条）。清单所有者仍是 [CD-53 §2.5](../50-engineering/53-testing-and-ci.md)。
 - `bug_reporting` 及 Bug 提交、客服、通知、告警展示等同类问题：跳过，后续开发再决定。
 - 道具栏、具体数值、时长、动画、精确频率等实现级玩法细节：统一延期。定点数尺度已迁出，见 D.8 `fixed_point_contract`。该句中「复活硬直」秒数被 D.3 `traprush_respawn_stun = 1_second`（2026-08-28）覆盖；该句中「动画」的**状态名与优先级**被 D.8 `play_anim_state = presentation_priority_table`（2026-09-02）覆盖；该句中 Tick / 快照 / 心跳 / 插值步 / 输入采样 / 对账频率被 D.8 `e3_lock = promote_existing_stubs_2026_09_02`（2026-09-02）覆盖；clip、时长与绑定仍延期。其余具体数值仍延期。
 - `hidden_state_sync`：延期，不默认采用任何推荐协议。
