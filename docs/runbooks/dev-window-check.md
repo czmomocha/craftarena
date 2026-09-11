@@ -54,38 +54,36 @@ Worktree 端口偏移见 README「并行工作区」；本文件不复述端口�
 
 ---
 
-## 本刀：M5 C5 BotRunner 可达性正式化
+## 本刀：M5 C3 / C4 口径回写（只文档）
 
-本章无开发机可见行为。BotRunner 是命令行工具（`npm run bot-run`），不改大厅 / Solo / Preview 窗口，不需要三后端，也不要开主场景。
+本章无开发机可见行为。只把已批准的代签与匹配字段写入所有者文档和 [CD-91](../../Confirmed-docs/90-reference/91-decision-log.md)，不改代码、不改 JSON Schema、不接线发布按钮。不需要三后端，也不要开主场景。
 
-人类抽查按下面编号做；自动化证据是 `npm test`（薄壳正反例）与 `test_traprush_bot_run_cli.gd`（缺省五张课、拒 `res://`）。`--bot-run` 仍不进 PR CI。
+人类抽查按下面编号做。
 
-### 1. 默认五张官方课写出报告
+### 1. 确认文档写的是「已拍未接线」
 
-操作：仓库根（不需要 `npm run dev`）：
+操作：打开 [CD-33 当前生效值](../../Confirmed-docs/30-ugc/33-hot-publish.md) 与 [CD-42 §3.5](../../Confirmed-docs/40-technical/42-contracts-and-rulevm.md#35-匹配与玩家发布-http已拍未接线)。
 
-```powershell
-npm run bot-run -- --report=artifacts/bot-run-default.json
-```
+预期：玩家路径是 `POST /content/submit`、控制面代签；匹配是可选 `content: { id, version }`，不把 `course` 写成 `id@version`；两处都标明未接线。失败：文档把未实现接口写成已交，或把密钥放进玩家包。
 
-预期：进程 exit 0；`artifacts/bot-run-default.json` 的 `ok` 为 true、`exit_code` 为 0、`courses` 正好五条且 id 为 `course_01`…`course_05`；每课 `completable` 为 true，并带 `steps` 与 `search_ticks`。失败：exit 非 0，或 `empty` 为 true，或缺课、或某课 `completable` 为 false。
+### 2. 确认代码未改
 
-### 2. 安全路仍只接受 course_01
+操作：看本刀 diff 是否只动 `Confirmed-docs/`、`docs/plans/m5-traprush-vertical-slice.md`、`.cursor/rules/` 与本 runbook。
 
-操作：
-
-```powershell
-npm run bot-run -- --course=course_01 --route=safe --report=artifacts/bot-run-safe.json
-```
-
-预期：exit 0；报告 `route` 为 `safe`、`courses[0].course` 为 `course_01`。失败：exit 非 0，或把 `--route=safe` 接到 `course_02` 却悄悄当 any 跑（那条必须 exit 1）。
+预期：没有 `backend/contracts`、控制面或 Godot 发布/匹配实现改动。失败：出现 `POST /content/submit` 实现或匹配 JSON 已接受 `content`。
 
 ### 本刀不测
 
-- 打开大厅窗口听音或跑课；
-- 把 `--bot-run` 放进 PR CI；
-- C3 发布按钮 / C4 已签名 UGC 联机；
+- 打开大厅或编辑器点发布；
+- 用自制课建房；
+- 改 HMAC 算法或 `latest` 指针；
 - 改爆破半径 / 推击力度 / 道具重生。
+
+---
+
+## 上一刀（已合入）：M5 C5 BotRunner 可达性正式化
+
+本章无开发机可见行为。BotRunner 是命令行工具（`npm run bot-run`），不改大厅 / Solo / Preview 窗口。人类抽查：`npm run bot-run -- --report=artifacts/bot-run-default.json` 五张官方课 `completable`；`--route=safe` 仍只接受 `course_01`。`--bot-run` 仍不进 PR CI。
 
 ---
 

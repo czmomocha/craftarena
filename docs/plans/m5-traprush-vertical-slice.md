@@ -2,7 +2,7 @@
 
 > 类型：实现级章节计划（`docs/plans/`），**不是所有者文档**。
 > 里程碑产出与退出条件的所有者是 [CD-61 §2 M5](../../Confirmed-docs/60-plan/61-milestones.md)；本文件只把 M5 拆成可审查的章。两者冲突以 CD-61 为准。
-> 日期：2026-09-10。状态：章节划分与音频模块基建已由人类拍板（§5.1）；**A1 / A2 / A3 / B1 / B2 / C1 / C2 / C5 已交**；**C5 BotRunner 可达性本刀**。
+> 日期：2026-09-10。状态：章节划分与音频模块基建已由人类拍板（§5.1）；**A1 / A2 / A3 / B1 / B2 / C1 / C2 / C5 已交**；**C3 / C4 已拍未接线**；本刀只回写口径。
 > 上位约束：[CD-00 宪法](../../Confirmed-docs/00-constitution/CONSTITUTION.md) 第一、三、四、五、九、十七、十八、十九、二十三条。
 
 ## 1. 能不能开工
@@ -38,9 +38,9 @@ CD-61 §2 的五项产出，加人类 2026-09-10 拍板挂入本号的第六项�
 
 编辑、预览、官方课联机、结算写库都已通。断的是三处：
 
-1. **创作 → 发布**：Godot 编辑外壳没有发布按钮，客户端从不调 `POST /content/publish`。后端与 `ContentCatalog` 只有单测覆盖。
+1. **创作 → 发布**：Godot 编辑外壳没有发布按钮，客户端从不调发布 HTTP。后端与 `ContentCatalog` 只有单测覆盖。玩家路径已拍为控制面代签 `POST /content/submit`（§5.2 问题 3），未接线。
 2. **发布 → 广场**：`ContentPlazaEntry` 不拉 `GET /content/plaza`，真机打开是空列表；现有测试靠 `apply_list` 注入。
-3. **已签名 UGC → 联机**：匹配 HTTP 只认 `course_01/02/03/04/05` 五个 enum，自制课只能 Solo。
+3. **已签名 UGC → 联机**：现行匹配 HTTP 只认 `course_01`…`course_05` 五个 enum，自制课只能 Solo。扩表已拍为可选 `content: { id, version }`（§5.2 问题 4），未接线。
 
 「邀请」不算断——房间码建房 / 按码加入已通，缺的是可分享的邀请串与产品化提示。
 
@@ -174,14 +174,15 @@ cue 是数据，定义在 `game/content/audio/banks/*.json`，字段初稿：
 
 ### C3 创作者发布闭环客户端接线
 
-- **交付**：编辑外壳「发布」按钮——验证器全绿才允许 → 编译 bundle → 取得签名 → `POST /content/publish` → 回显 version / latest，失败码可读；`ContentPlazaEntry` 改走真 `GET /content/plaza`，四标签排序生效，列表项能直接 Solo 试玩。
+- **交付**：编辑外壳「发布」按钮——验证器全绿才允许 → 编译 bundle → 用 `ContentSign.hash_hex` 算 hash → `POST /content/submit`（bundle + hash，不带 signature）→ 回显 id / version / latest，失败码可读；`ContentPlazaEntry` 改走真 `GET /content/plaza`，四标签排序生效，列表项能直接 Solo 试玩。
 - **审查**：**深审**（安全边界）。
-- **必须先解决的安全问题**：M4b 的 `POST /content/publish` 校验 HMAC 平台签名，意味着调用方持密钥。**平台 HMAC 密钥绝不能进玩家包**，否则任何人都能伪造平台签名。所以客户端不能自己签，必须由控制面在鉴权后代签。这是安全边界变化，属宪法第十八条，见 §5.2 问题 3。**该问题拍板前 C3 不开工。**
+- **已拍口径**（2026-09-11）：平台 HMAC 密钥不进玩家包；控制面在会话鉴权后代签。禁止两跳「先取 signature 再 publish」。现有 `POST /content/publish` 仅测试 / 持钥工具。所有者：[CD-33 §2.2](../../Confirmed-docs/30-ugc/33-hot-publish.md#22-玩家发布路径已拍m5-c3-未接线)、[CD-13](../../Confirmed-docs/10-product/13-account-and-session.md)、[CD-42 §3.5](../../Confirmed-docs/40-technical/42-contracts-and-rulevm.md#35-匹配与玩家发布-http已拍未接线)。
 
 ### C4 邀请与已签名 UGC 联机
 
-- **交付**：可分享邀请（Web `?room=`、桌面显示 `host:port` + 房间码 + 一键复制）；匹配 HTTP 从"只认官方 enum"扩到"官方 enum ∪ 已签名 `content_id@version`"；MatchHost 传内容引用；MatchServer 取 bundle 并按 M4b 已有机制开局锁 `content_hash`；结算 payload 带上该哈希。
-- **审查**：**深审**。这是**协议不兼容变更**（匹配 HTTP 请求体），属宪法第十八条，须人类事前批准，见 §5.2 问题 4。
+- **交付**：可分享邀请（Web `?room=`、桌面显示 `host:port` + 房间码 + 一键复制）；匹配 HTTP 增加可选 `content: { id, version }`（与 `course` 互斥；都不带仍默认 `course_01`）；MatchHost 经控制面 HTTP 取该 version 信封，不查库；MatchServer 验签并重算 hash 后开局锁 `content_hash`；结算 payload 带上该哈希（结算 HTTP 不改）。
+- **审查**：**深审**。协议不兼容变更（匹配 HTTP 请求体）已于 2026-09-11 人类批准。
+- **已拍口径**：加字段，不把 `course` 塞成 `id@version`。建房钉死 version。官方响应仍只回 `course`；UGC 回 `course: null` + `content` + `content_hash`。内容引用不进邀请 URL。所有者：[CD-42 §3.5](../../Confirmed-docs/40-technical/42-contracts-and-rulevm.md#35-匹配与玩家发布-http已拍未接线)、[CD-12](../../Confirmed-docs/10-product/12-product-structure.md)、[CD-44](../../Confirmed-docs/40-technical/44-deployment.md)。
 - **窗口**：A 发布自制课 → 复制邀请 → B 加入 → 两人跑完 → 结算写库带 `content_hash`。
 
 ### C5 BotRunner 可达性正式化
@@ -209,18 +210,18 @@ cue 是数据，定义在 `game/content/audio/banks/*.json`，字段初稿：
 | 音频资产预算 | 已落 [CD-11 §8.3](../../Confirmed-docs/10-product/11-scope-and-platforms.md)（该节是所有者，本文件不复述数值） |
 | §3.4 素材映射 | 照办：击杀拆成推击命中 + 他人环境失败；gameover 拆成环境失败复位 + 结算收束；选择角色先登记为通用 UI cue。**不发明击杀与失败态** |
 
-### 5.2 仍待拍板（AI 不得自选，宪法第五节与 [CD-63](../../Confirmed-docs/60-plan/63-open-decisions.md) 使用规则）
+### 5.2 拍板状态（AI 不得自选未拍项，宪法第五节与 [CD-63](../../Confirmed-docs/60-plan/63-open-decisions.md) 使用规则）
 
-| # | 问题 | 卡住哪章 | AI 推荐 |
+| # | 问题 | 卡住哪章 | AI 推荐 / 结论 |
 |---|---|---|---|
 | 1 | 素材**来源与授权**（宪法第十八条：许可证需人类确认） | B2（**已确认**，2026-09-11） | 人类确认本地音频授权可用于正式入库 |
 | 2 | 第 4 / 第 5 张官方课的主题与机关组合 | C1（**04 已拍**）、C2（**05 已拍**） | 04 = 垂直塔（电梯 + 弹射 + 压板，考验上下层）**已拍**（2026-09-11）；05 = 双路线竞速（安全长路 vs 需打碎能量墙的短路）**已拍**（2026-09-11） |
-| 3 | 发布签名密钥去向（**阻断项**） | C3 | 客户端不持密钥；控制面在账号鉴权后代签。安全边界变化，须明确批准 |
-| 4 | 匹配 HTTP 扩到已签名 UGC（**阻断项**） | C4 | 批准后再开工；协议不兼容变更 |
+| 3 | 发布签名密钥去向（**阻断项**） | C3（**已拍**，2026-09-11） | **控制面代签**：`POST /content/submit`；玩家不持密钥；禁止两跳取签。持钥 `POST /content/publish` 仅测试 / 工具 |
+| 4 | 匹配 HTTP 扩到已签名 UGC（**阻断项**） | C4（**已拍**，2026-09-11） | **加 `content: { id, version }` 对象**，不把 `course` 塞成字符串联合；建房钉死 version；与 `course` 互斥 |
 | 5 | 两个小目录：`tools/audio-bank/` 建不建、`tools/bot-runner/` 建还是从 CD-41 删 | A2（**已执行推荐项**）、C5（**已建薄壳**） | A2 已把 bank 校验并入 `tools/content-validator/`，不新建 `tools/audio-bank/`。C5 把 `tools/bot-runner/` 建成薄壳，不从 CD-41 删 |
 | 6 | 网络故障注入工具 | C6 | Windows 用 clumsy、Linux 用 `tc netem`；外部工具不入库，仍需点头 |
 
-**C5 本刀：`tools/bot-runner/` 薄壳 + 报告产物 + nightly artifact。** 下一刀 C3（密钥去向仍待）或 C6（网络故障注入工具仍待）。C3 / C4 在 §5.2 拍板前不开。
+**本刀只回写 C3 / C4 口径，不接线。** 下一实现刀 **C3**（深审）。C6 仍待问题 6。
 
 ## 6. M5 退出条件
 

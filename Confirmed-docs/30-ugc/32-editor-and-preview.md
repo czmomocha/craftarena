@@ -17,6 +17,7 @@
 | Preview | 主视口对半锁死、`MODE_WINDOWED` 与 Editor 并排；安全点 Patch；试玩已接 Move / Jump / 道具 / 冲刺；**默认自动推进**（可关，关掉后 Advance tick 单步）；开玩后 `movers` 占位跟 `play_world` 固体位姿；上升中（`vy > 0`）不当乘客，跳离平台不按 crush 复位；点开始把焦点收到 Preview 窗。从 **项目 → 工具** 打开时编辑器 InputMap 没有玩法动作，`PlayInput` 回退到与 `project.godot` 同一套物理键，禁止每帧报 `action doesn't exist` |
 | Web 轻量 Edit UI | **真机闭环已交**（可玩性深化）：`/play/?edit=1` 与大厅「创作课程」打开同一套外壳并排 Preview；`web_light` 执行 surface 分级；关窗 / **返回大厅** 拉回大厅；草稿 `user://creator_draft.json` 在 Web 上 `force_fs_sync`。规则模板仍属 M4a |
 | surface 能力分级 | **已执行**（可玩性深化）。此前 `allows_batch_generate` / `allows_validator_details` 只是声明，三个 surface 拿到的 UI 完全相同 |
+| 玩家发布按钮 | **已拍未接线（M5 C3）**：验证器全绿才允许；走 [CD-33 §2.2](33-hot-publish.md#22-玩家发布路径已拍m5-c3-未接线) 代签，不调持钥 `POST /content/publish` |
 | 多人 Preview / 协同租约 | 未做 |
 
 ## 1. 共享编辑器框架

@@ -17,6 +17,7 @@
 | 测试期 | 明文 `http`/`ws` 可打到自备远端；**公开运营前**回到 TLS |
 | 命令 id | 1–5 同前；**6 = SprintIntent**。探针 type 3/4 = ping/pong |
 | Tick / 快照 / 插值 | **已锁（2026-09-02，E3）**：近端 ICMP 与一场协议层样本未证伪现桩，人类把现桩升为锁定值，**不改代码常量**。数字见 §4。远端样本只在 [server-deploy.md §13](../../docs/runbooks/server-deploy.md#13-协议层-rttc3) |
+| 匹配 JSON | **已拍未接线（M5 C4）**：可选 `content` 对象；二进制帧不变。字段形状只在 [CD-42 §3.5](42-contracts-and-rulevm.md#35-匹配与玩家发布-http已拍未接线) |
 
 ## 1. 序列化分工
 

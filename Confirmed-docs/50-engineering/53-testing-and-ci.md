@@ -167,7 +167,7 @@ AI 生成代码必须比普通手写代码有**更强的自动化证据**，因�
 - 对局命令门禁与双人 Headless 冲线：同槽同 tick 第二条命令拒绝且位姿只 +1 格；断开丢弃排队，重入后 commit 不继承旧 Move；快照帧不能当命令；两槽各一条 FIFO；官方 course_01 两槽经 MatchRealtime 各 5 步后 `finish_tick=4` 且 MVP 为 slot 0；同磁带同快照字节与状态哈希；冲线后 `allows_settlement` 为 true；`allows_online_writes` 为 false；不插值、不预测、不锁墙钟速率；
 - 机关狂奔单局结算写库：未全员冲线拒绝生成；course_01 两槽冲线后 payload 含 `finish_tick=4` / `pad_total=3` / `mvp_slot=0`；同磁带同哈希；心跳未完成无 settlement、完成后带上；离线冲线后 `allows_settlement` 仍为 false；控制面 POST 一次 201、第二次 409；注销会话后 GET 仍在；未知场 / `mmr` 多余字段 / 未完成 `finishTick` 拒绝；MatchHost 活场心跳或停止前从心跳 POST，无记录则不写，写失败不注销；不生成 MMR、不锁限时未全员结算；
 - 断线重连补票：入场票绑定席位，校验返回 `seat`；网关上游 URL 带 `slot=`；`occupy_slot` 占用指定席，非法/已占拒绝；断开丢排队、同槽再占恢复位姿；已消费票补发同席位新票且不占额外席；未消费/已作废/错场/未知票/多余字段拒绝；注销后不能补票；客户端 READY 补票换票，大厅 `IN_MATCH` 关闭后自动补票并跟从新快照；大厅 Cancel 本地离开不补票；不锁账号绑定、插值/预测、离开对局 HTTP；
-- 官方赛道选择：HTTP JSON 只用 `course_01` / `course_02` / `course_03` / `course_04` / `course_05`；空 body 默认 `course_01`；快速游戏只进同一赛道未满房；队列记住 `course` 且不占邻课余席；按码加入拒绝 body 并回该房课程；未知课 / `course_f_playable` / `res://` 路径 / 多余字段 400；MatchHost 按 id 映射 `--course=` 并登记；大厅跟从响应编译同一赛道，Solo 复用选择器；不锁账号绑定、插值/预测；
+- 官方赛道选择：HTTP JSON 仍只用 `course_01` / `course_02` / `course_03` / `course_04` / `course_05`；空 body 默认 `course_01`；快速游戏只进同一赛道未满房；队列记住 `course` 且不占邻课余席；按码加入拒绝 body 并回该房课程；未知课 / `course_f_playable` / `res://` 路径 / 多余字段 400；MatchHost 按 id 映射 `--course=` 并登记；大厅跟从响应编译同一赛道，Solo 复用选择器。扩到已签名 `content` 对象已拍未接线（M5 C4，字段见 [CD-42 §3.5](../40-technical/42-contracts-and-rulevm.md#35-匹配与玩家发布-http已拍未接线)），不把未实现路径写成已覆盖；
 - 人数按场下发：HTTP JSON `seats` 为 1～8；空 body 默认 2；快速游戏只进同课同人数未满房；队列记住 `seats` 且不占邻人数余席；按码加入拒绝 body 并回该房人数；0 / 9 / `players` 别名 400；MatchHost 按场 `--players=` 并登记；大厅选人数；Solo 仍为 1 人；不锁账号绑定、插值/预测；
 - 对局快照插值：tick 前进保留上一份玩家位姿；无上一份贴最新；`t=0` 亚格子显示上一份且进度取最新、`t=SCALE/2` 中点、`t=SCALE` 显示最新；yaw 最短弧；≥1 格立即贴最新；畸形最新拒绝；新槽贴最新；大厅亚格子两步到最新且隐藏不推进；箱子耐久跟最新权威；1 格跳仍贴最新；大厅 Cancel 停 in_match（清盒、后续快照不跟、不补票）；不预测、不锁插值窗口；
 - 对局本席移动预测：入场就绪 JSON 带 `seat`（0 起，须 < `seats`）；补票回同一席且错席拒绝；`MatchLocalPredict` 把 Move/Jump overlay 叠在最新权威本席位姿上，本席不插值、远端仍插值；更新 tick 硬贴并清 overlay；同 tick 不清；溢出贴最新；未绑定/越界席位不叠；畸形最新拒绝；大厅 WASD 立即移动本席盒，下份快照硬贴；Solo 不叠 overlay；箱子/赛道不预测；大厅 Cancel 停 in_match；不锁远端外推碰撞、平滑对账、插值窗口；
@@ -358,7 +358,7 @@ AI 生成代码必须比普通手写代码有**更强的自动化证据**，因�
 |---|---|---|
 | 依赖与许可证变化检查 | 未实现 | 无自动化 diff。引入依赖必须人类批准；许可证不进 CI |
 | Windows/Android 导出烟测 | 人工已跑（E1，不在 CI） | C1 有 Windows / Linux Headless / Web 导出预设与[包内核查清单](../../docs/runbooks/desktop-export-check.md)。2026-09-02 Windows `--package-check` `ok=true`。Android 导出按 [CD-61](../60-plan/61-milestones.md) 排到一期收尾；不把导出放进 CI（宪法第二十四条） |
-| 内容发布和回滚演练 | 部分 | M4b 第 1–5 章已交哈希/HMAC、`latest` 原子切换、新房/旧房并存、P0/P1 回滚、广场列表与账号认领；发布 HTTP 仍不绑账号 |
+| 内容发布和回滚演练 | 部分 | M4b 第 1–5 章已交哈希/HMAC、`latest` 原子切换、新房/旧房并存、P0/P1 回滚、广场列表与账号认领；持钥 `POST /content/publish` 仍不绑账号。玩家代签 / 匹配 UGC 已拍未接线（M5 C3 / C4），不把未实现路径写成已覆盖 |
 
 ### 4.4 发布候选
 

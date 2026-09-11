@@ -14,7 +14,8 @@
 | 项 | 当前口径 |
 |---|---|
 | 等级定义 | P0–P4 见 §1。Bundle v2 因 `GameplayAsset` 已发生一次 P4 |
-| 运行时管线 | **第 1–5 章已交**：ContentHash + HMAC 信封；控制面 `POST /content/publish` 一事务写入版本并切 `latest`；Godot `ContentCatalog` 按 `latest` 开新房，已开对局锁开局哈希。P0/P1 是 sidecar 补丁（不覆盖基础 ContentHash）；运行房全量下发，开局 latch 或检查点垫验收后生效；P2/P3 拒绝。进程内 `note_fault` 立刻追加反向 PatchHash。`latest` 可切回已签名旧版本，下一发布号 = 已存 max+1。发布成功自动进公共列表（四标签、词库名、占用袋标签；plays 标已验证）。Guest / 注册 / 登录 / 认领草稿已交；发布 HTTP 仍不绑账号。Preview P3 安全点重编译已交（sidecar，不入库）；公开对局拒绝规则补丁 |
+| 运行时管线 | **第 1–5 章已交**：ContentHash + HMAC 信封；控制面 `POST /content/publish` 一事务写入版本并切 `latest`；Godot `ContentCatalog` 按 `latest` 开新房，已开对局锁开局哈希。P0/P1 是 sidecar 补丁（不覆盖基础 ContentHash）；运行房全量下发，开局 latch 或检查点垫验收后生效；P2/P3 拒绝。进程内 `note_fault` 立刻追加反向 PatchHash。`latest` 可切回已签名旧版本，下一发布号 = 已存 max+1。发布成功自动进公共列表（四标签、词库名、占用袋标签；plays 标已验证）。Guest / 注册 / 登录 / 认领草稿已交。Preview P3 安全点重编译已交（sidecar，不入库）；公开对局拒绝规则补丁 |
+| 玩家发布 | **已拍未接线（M5 C3）**：控制面鉴权后代签 `POST /content/submit`；玩家包不持密钥、不带 signature。现有 `POST /content/publish` 保留给测试 / 持钥工具。字段与诚实边界见 §2.2 |
 | 代码热更新 | 禁止 |
 
 ## 1. 热修改等级
@@ -56,6 +57,18 @@
 - P0/P1 在运行中房间的下一玩法安全边界生效；
 - 发布失败不得留下半更新状态；
 - 客户端缺少资源时先下载验证，再进入房间。
+
+### 2.2 玩家发布路径（已拍，M5 C3 未接线）
+
+玩家包**不得**持有 `CONTENT_SIGN_KEY`。玩家路径是**一条鉴权接口内签完入库**，禁止「先取 signature 再调 `POST /content/publish`」（两跳 = 可重放能力票）。
+
+1. 客户端：验证器全绿 → 编译 SimulationBundle → 用现有 Godot `ContentSign.hash_hex` 算 ContentHash（公开算法，不是密钥）→ 只上传 bundle + hash；**不带 signature、不自报 version、不自报 `content_id`**。
+2. 控制面：会话鉴权（Guest 或正式号均可；测试期不做 CAPTCHA / 邮箱）→ 拒官方课 id（`course_01`…`course_05`）→ 校验 bundle 形状 → **服务端分配 `content_id`**（避开官方 id）→ 分配下一 version → 进程内 HMAC 代签 → 同一事务写入并切 `latest`（沿用 M4b）→ 回显 id / version / hash / latest。
+3. 每条内容绑定主人身份；别人不能对同一 id 递增版本。这覆盖此前「发布 HTTP 仍不绑账号」。
+4. 现有 `POST /content/publish` **保留**，仅测试 / 持钥工具；玩家按钮永不调用。
+5. P0/P1 补丁仍用同一把钥；**本决策不动补丁接口**。
+
+诚实边界：ContentHash 规范编码只在 Godot `StateHasher`；控制面代签时信任客户端上报的 hash。对局进程加载必须再算一遍，对不上拒绝开局。C3 **不把 StateHasher 搬到 TypeScript**。HTTP 字段形状见 [CD-42 §3.5](../40-technical/42-contracts-and-rulevm.md#35-匹配与玩家发布-http已拍未接线)。账号绑定见 [CD-13](../10-product/13-account-and-session.md)。
 
 ## 3. 热生效边界
 
