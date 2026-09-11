@@ -47,6 +47,7 @@ const OFFLINE_BANNER: String = "craft_arena.ui.offline_banner"
 const UNDO: String = "craft_arena.ui.undo"
 const REDO: String = "craft_arena.ui.redo"
 const PREVIEW: String = "craft_arena.ui.preview"
+const PUBLISH: String = "craft_arena.ui.publish"
 const PLAY: String = "craft_arena.ui.play"
 const STOP: String = "craft_arena.ui.stop"
 const RESET: String = "craft_arena.ui.reset"
@@ -154,6 +155,7 @@ const ALL_KEYS: PackedStringArray = [
 	UNDO,
 	REDO,
 	PREVIEW,
+	PUBLISH,
 	PLAY,
 	STOP,
 	RESET,

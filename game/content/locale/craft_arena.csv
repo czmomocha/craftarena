@@ -16,6 +16,7 @@ craft_arena.ui.offline_banner,"Offline play, scores are not uploaded",离线试�
 craft_arena.ui.undo,Undo,撤销
 craft_arena.ui.redo,Redo,重做
 craft_arena.ui.preview,Preview,预览
+craft_arena.ui.publish,Publish,发布
 craft_arena.ui.play,Play,开始
 craft_arena.ui.stop,Stop,停止
 craft_arena.ui.reset,Reset,重置

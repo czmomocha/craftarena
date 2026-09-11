@@ -25,6 +25,8 @@ import {
 	ContentVersionExistsError,
 	ContentVersionMissingError,
 	ContentVersionNotNextError,
+	type ContentOwnerRecord,
+	type ContentOwnerKind,
 	type ContentPatchRecord,
 	type ContentVersionRecord,
 } from "./database_content.ts";
@@ -70,6 +72,8 @@ export {
 	DraftTooLargeError,
 	GuestClaimedError,
 	GuestNotFoundError,
+	type ContentOwnerKind,
+	type ContentOwnerRecord,
 	type ContentPatchRecord,
 	type ContentVersionRecord,
 	type PlazaListingRecord,
@@ -312,8 +316,10 @@ export class ControlPlaneDatabase {
 	publishContent(input: {
 		readonly contentId: string; readonly version: number; readonly contentHash: string;
 		readonly signature: string; readonly bundle: Record<string, unknown>; readonly now: Date;
+		readonly ownerKind?: ContentOwnerKind; readonly ownerId?: string;
 	}): ContentVersionRecord { return this.#content.publish(input); }
 	getContentLatest(contentId: string): ContentVersionRecord | undefined { return this.#content.getLatest(contentId); }
+	getContentOwner(contentId: string): ContentOwnerRecord | undefined { return this.#content.getOwner(contentId); }
 	getContentVersion(contentId: string, version: number): ContentVersionRecord | undefined {
 		return this.#content.getVersion(contentId, version);
 	}

@@ -65,6 +65,15 @@ export {
 	type ContentVersionView,
 } from "./content_publish.ts";
 export {
+	CONTENT_SUBMIT_BUNDLE_SCHEMA_MAX,
+	CONTENT_SUBMIT_BUNDLE_SCHEMA_MIN,
+	CONTENT_SUBMIT_ERRORS,
+	contentSubmitBodySchema,
+	type ContentSubmitError,
+	type ContentSubmitRequest,
+	type ContentSubmitView,
+} from "./content_submit.ts";
+export {
 	CONTENT_PATCH_ERRORS,
 	CONTENT_PATCH_SCHEMA_VERSION,
 	classifyPatchOps,

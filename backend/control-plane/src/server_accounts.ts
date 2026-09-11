@@ -37,7 +37,7 @@ const LOGIN_KEYS = ["username", "password"] as const;
 const CLAIM_KEYS = ["guest_id", "recovery_key"] as const;
 const DRAFT_KEYS = ["document"] as const;
 
-function bearer(request: FastifyRequest): string | undefined {
+export function bearer(request: FastifyRequest): string | undefined {
 	const header = request.headers.authorization;
 	if (typeof header !== "string" || !header.startsWith("Bearer ")) {
 		return undefined;
@@ -46,7 +46,7 @@ function bearer(request: FastifyRequest): string | undefined {
 	return isSessionToken(token) ? token : undefined;
 }
 
-function guestPair(request: FastifyRequest): { readonly guestId: string; readonly recoveryKey: string } | undefined {
+export function guestPair(request: FastifyRequest): { readonly guestId: string; readonly recoveryKey: string } | undefined {
 	const guestId = request.headers["x-guest-id"];
 	const recoveryKey = request.headers["x-guest-key"];
 	if (typeof guestId !== "string" || typeof recoveryKey !== "string") {
@@ -67,7 +67,7 @@ function draftView(record: DraftRecord): DraftView {
 	};
 }
 
-function readAccount(options: BuildServerOptions, request: FastifyRequest): AccountRecord | { error: string } {
+export function readAccount(options: BuildServerOptions, request: FastifyRequest): AccountRecord | { error: string } {
 	const token = bearer(request);
 	if (token === undefined) {
 		return { error: ACCOUNT_ERRORS.sessionInvalid };

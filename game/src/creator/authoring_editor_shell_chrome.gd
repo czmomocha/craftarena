@@ -11,12 +11,14 @@ const VALIDATOR_NAME: String = "ValidatorDetails"
 const UNDO_NAME: String = "Undo"
 const REDO_NAME: String = "Redo"
 const PREVIEW_NAME: String = "Preview"
+const PUBLISH_NAME: String = "Publish"
 const BACK_NAME: String = "BackToLobby"
 const TraprushEditorPanelGd := preload("res://src/creator/traprush_editor_panel.gd")
 const AuthoringValidatorPanelGd := preload("res://src/creator/authoring_validator_panel.gd")
 const LayoutGd := preload("res://src/creator/authoring_window_layout.gd")
 const PointerGd := preload("res://src/creator/authoring_editor_shell_pointer.gd")
 const FloorGd := preload("res://src/creator/authoring_preview_map_floor.gd")
+const PublishGd := preload("res://src/creator/authoring_editor_shell_publish.gd")
 
 var window: Window = null
 var status: Label = null
@@ -81,6 +83,7 @@ func ensure(shell: AuthoringEditorShell, handlers: Dictionary) -> void:
 	_add_button(action_row, UNDO_NAME, UiCopy.UNDO, _handler(handlers, "undo"))
 	_add_button(action_row, REDO_NAME, UiCopy.REDO, _handler(handlers, "redo"))
 	_add_button(action_row, PREVIEW_NAME, UiCopy.PREVIEW, _handler(handlers, "preview"))
+	_add_button(action_row, PUBLISH_NAME, UiCopy.PUBLISH, _handler(handlers, "publish"))
 	# 玩家包（web_light / desktop_full）没有引擎标题栏可依赖：Web 画布上的
 	# 嵌入 Window 关了却不把大厅拉回来，人会卡在空白画布里。
 	if shell.surface != AuthoringSurfaceNames.INTERNAL_DEV:
@@ -146,7 +149,7 @@ func format_line(shell: AuthoringEditorShell) -> String:
 	if tools != null:
 		cursor_x = tools.cell_x
 		cursor_z = tools.cell_z
-	return "%s revision=%d entities=%d floor=%d cursor=%d,%d,%d selected=%d undo=%s redo=%s reach_ok=%s issues=%d draft=%s disk=%s follow=%s" % [
+	return "%s revision=%d entities=%d floor=%d cursor=%d,%d,%d selected=%d undo=%s redo=%s reach_ok=%s issues=%d draft=%s disk=%s follow=%s publish=%s" % [
 		shell.surface,
 		shell.session.world.revision,
 		shell.session.world.entity_count(),
@@ -162,6 +165,7 @@ func format_line(shell: AuthoringEditorShell) -> String:
 		str(shell.draft_store != null),
 		str(shell.last_draft_ok),
 		str(shell.preview_follows),
+		PublishGd.status_token(shell),
 	]
 
 

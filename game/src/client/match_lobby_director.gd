@@ -111,6 +111,8 @@ func try_open_plaza() -> bool:
 	if host.plaza == null:
 		return false
 	host.plaza.on_solo = try_solo_plaza
+	host.plaza.live_io = host.live_io
+	host.plaza.control_plane_base = host.control_plane_base
 	return host.plaza.try_open()
 
 
@@ -188,7 +190,7 @@ func try_solo_plaza(content_id: String = "") -> bool:
 	var id: String = content_id
 	if id == "":
 		id = host.plaza.selected_content_id()
-	var bundle: SimulationBundle = host.plaza.bundle_of(id)
+	var bundle: SimulationBundle = host.plaza.ensure_bundle(id)
 	if id == "" or bundle == null:
 		host.offline.last_error = "unknown_course"
 		host.refresh_status()

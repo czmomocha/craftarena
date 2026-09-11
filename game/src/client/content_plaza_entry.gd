@@ -7,6 +7,7 @@ extends Node
 ## path, no matchmaking HTTP. Tests call `apply_list` without HTTP.
 
 const PlazaGd := preload("res://src/ugc/content_plaza.gd")
+const PlazaHttpGd := preload("res://src/client/content_plaza_http.gd")
 
 const WINDOW_NAME: String = "PlazaWindow"
 const TAB_ROW_NAME: String = "PlazaTabs"
@@ -29,6 +30,12 @@ var selected_id: String = ""
 var bundles: Dictionary = {}
 var on_solo: Callable = Callable()
 var on_tab: Callable = Callable()
+var live_io: bool = false
+var control_plane_base: String = ""
+var last_error: String = ""
+var http_transport: Callable = Callable()
+var on_fetch_list: Callable = Callable()
+var on_fetch_latest: Callable = Callable()
 
 
 static func ensure(shell: MatchLobbyShell, existing: ContentPlazaEntry) -> ContentPlazaEntry:
@@ -50,6 +57,7 @@ func try_open() -> bool:
 		return false
 	if tab == "":
 		tab = PlazaGd.TAB_NEWEST
+	_refresh_live_list()
 	_rebuild()
 	window.visible = true
 	_set_lobby_visible(false)
@@ -79,6 +87,49 @@ func bind_bundle(content_id: String, bundle: SimulationBundle) -> void:
 	bundles[content_id] = bundle
 
 
+func apply_http_list(raw: Dictionary) -> void:
+	var parsed: Dictionary = PlazaHttpGd.read_list(raw)
+	var ok_raw: Variant = parsed.get(PlazaGd.KEY_OK, false)
+	if typeof(ok_raw) != TYPE_BOOL or not ok_raw:
+		last_error = str(parsed.get(PlazaGd.KEY_REASON, "plaza_invalid"))
+		_rebuild()
+		return
+	last_error = ""
+	var listed_raw: Variant = parsed.get(PlazaHttpGd.KEY_ITEMS, [])
+	var listed: Array = []
+	if typeof(listed_raw) == TYPE_ARRAY:
+		listed = listed_raw
+	apply_list(str(parsed.get(PlazaHttpGd.KEY_TAB, tab)), listed)
+
+
+func apply_latest(content_id: String, raw: Dictionary) -> bool:
+	var bundle: SimulationBundle = PlazaHttpGd.read_latest_bundle(raw)
+	if bundle == null:
+		last_error = PlazaGd.REASON_MISSING
+		return false
+	bind_bundle(content_id, bundle)
+	return true
+
+
+func ensure_bundle(content_id: String) -> SimulationBundle:
+	var existing: SimulationBundle = bundle_of(content_id)
+	if existing != null:
+		return existing
+	var fetched: Variant = {}
+	if on_fetch_latest.is_valid():
+		fetched = on_fetch_latest.call(content_id)
+	elif live_io:
+		fetched = PlazaHttpGd.fetch_latest(control_plane_base, content_id, http_transport)
+	else:
+		return null
+	if typeof(fetched) != TYPE_DICTIONARY:
+		return null
+	var latest: Dictionary = fetched
+	if not apply_latest(content_id, latest):
+		return null
+	return bundle_of(content_id)
+
+
 func bundle_of(content_id: String) -> SimulationBundle:
 	var raw: Variant = bundles.get(content_id, null)
 	if raw is SimulationBundle:
@@ -97,6 +148,7 @@ func try_select_tab(next_tab: String) -> bool:
 	tab = next_tab
 	if on_tab.is_valid():
 		on_tab.call(next_tab)
+	_refresh_live_list()
 	_rebuild()
 	return true
 
@@ -242,3 +294,15 @@ func _set_lobby_visible(visible: bool) -> void:
 	if lobby_window == null or not is_instance_valid(lobby_window):
 		return
 	lobby_window.visible = visible
+
+
+func _refresh_live_list() -> void:
+	if on_fetch_list.is_valid():
+		var raw: Variant = on_fetch_list.call(tab)
+		if typeof(raw) == TYPE_DICTIONARY:
+			var listed: Dictionary = raw
+			apply_http_list(listed)
+		return
+	if not live_io:
+		return
+	apply_http_list(PlazaHttpGd.fetch_list(control_plane_base, tab, http_transport))

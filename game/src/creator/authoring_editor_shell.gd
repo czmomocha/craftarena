@@ -1,19 +1,8 @@
 class_name AuthoringEditorShell
 extends Node
 
-## Shared editor host (CD-32 §1). AuthoringSession stays the write path.
-## Creates a Godot Window in code. The EditorPlugin opens this shell;
-## this class is not itself an EditorPlugin. Not in-game HUD.
-## Hosts the TRAPRUSH tool strip and read-only validator details.
-## Emits existing EDIT ops only. Overlay is not a write gate.
-## Maps AuthoringWorld through AuthoringPreviewMap.
-## A connected Preview follows committed writes: the same EDIT command is
-## forwarded as a safe-point patch at its classified level. A refused forward
-## drops the follow link instead of rolling back the authoring write.
-## Optional AuthoringDraftStore restores after crash. Never settlement.
-## In the Godot editor, FileAccess runs in the @tool plugin, not here.
-## Collaborators are chrome / place / follow so this file stays under E9 400
-## lines. Public API stays on this type.
+## Shared editor host (CD-32 §1). Collaborators: chrome / place / follow /
+## publish. Public API stays on this type so this file stays under E9 400.
 
 signal world_committed
 signal window_closed
@@ -26,6 +15,7 @@ const ChromeGd := preload("res://src/creator/authoring_editor_shell_chrome.gd")
 const FollowGd := preload("res://src/creator/authoring_editor_shell_follow.gd")
 const PlaceGd := preload("res://src/creator/authoring_editor_shell_place.gd")
 const PlaceTriggersGd := preload("res://src/creator/authoring_editor_shell_place_triggers.gd")
+const PublishGd := preload("res://src/creator/authoring_editor_shell_publish.gd")
 const TraprushEditorPanelGd := preload("res://src/creator/traprush_editor_panel.gd")
 const AuthoringValidatorPanelGd := preload("res://src/creator/authoring_validator_panel.gd")
 
@@ -39,6 +29,8 @@ var validator: AuthoringValidatorPanelGd = null
 var draft_store: AuthoringDraftStore = null
 var last_draft_ok: bool = false
 var preview_follows: bool = false
+var last_publish: Dictionary = {}
+var on_submit: Callable = Callable()
 var chrome: ChromeGd = ChromeGd.new()
 var _next_command_id: int = 1
 
@@ -239,6 +231,10 @@ func open_preview() -> bool:
 	return FollowGd.open_preview(self)
 
 
+func try_publish() -> bool:
+	return PublishGd.try_publish(self)
+
+
 func export_document() -> Dictionary:
 	if session == null:
 		return {}
@@ -348,6 +344,7 @@ func _ensure_window() -> void:
 		"undo": _on_undo,
 		"redo": _on_redo,
 		"preview": _on_preview,
+		"publish": try_publish,
 		"close": _on_close_requested,
 	})
 	window = chrome.window

@@ -166,6 +166,41 @@ func test_plaza_solo_applies_the_bound_bundle() -> void:
 	assert_eq(_shell.offline.state, MatchOfflineSessionGd.STATE_IDLE)
 
 
+func test_plaza_http_list_and_latest_bundle_start_solo() -> void:
+	_shell = _open_shell()
+	var bundle: SimulationBundleGd = _compile(OfficialTraprushCoursesGd.COURSE_02)
+	var latest: Dictionary = {
+		"content_id": PIPE_ID,
+		"version": 1,
+		"content_hash": "aa",
+		"signature": "bb",
+		"bundle": bundle.to_dictionary(),
+	}
+	assert_true(_shell.try_open_plaza())
+	_shell.plaza.on_fetch_list = func(_tab: String) -> Dictionary:
+		return {
+			"tab": ContentPlazaGd.TAB_NEWEST,
+			"items": [{
+				"content_id": PIPE_ID,
+				"display_name": ContentPlazaGd.display_name(PIPE_ID),
+				"tags": ContentPlazaGd.tags_from_bundle(bundle),
+				"verified": false,
+			}],
+		}
+	_shell.plaza.on_fetch_latest = func(content_id: String) -> Dictionary:
+		assert_eq(content_id, PIPE_ID)
+		return latest
+	assert_true(_shell.plaza.try_select_tab(ContentPlazaGd.TAB_NEWEST))
+	assert_false(_shell.plaza.empty.visible)
+	assert_true(_shell.plaza.try_select_id(PIPE_ID))
+	assert_null(_shell.plaza.bundle_of(PIPE_ID))
+	assert_true(_shell.try_solo_plaza())
+	assert_eq(_shell.offline.state, MatchOfflineSessionGd.STATE_PLAYING)
+	assert_eq(_shell.offline.course_path, "")
+	assert_false(_shell.plaza.is_open())
+	assert_true(_shell.try_stop_offline())
+
+
 func _open_shell() -> MatchLobbyShellGd:
 	var shell: MatchLobbyShellGd = MatchLobbyShellGd.create()
 	add_child(shell)

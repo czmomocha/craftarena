@@ -13,6 +13,15 @@ export interface ContentVersionRecord {
 	readonly createdAt: string;
 }
 
+export type ContentOwnerKind = "guest" | "account";
+
+export interface ContentOwnerRecord {
+	readonly contentId: string;
+	readonly ownerKind: ContentOwnerKind;
+	readonly ownerId: string;
+	readonly createdAt: string;
+}
+
 export class ContentVersionExistsError extends Error {
 	constructor(contentId: string, version: number) {
 		super(`content version already exists: ${contentId}@${version}`);
@@ -73,6 +82,8 @@ export class ControlPlaneContentStore {
 		readonly signature: string;
 		readonly bundle: Record<string, unknown>;
 		readonly now: Date;
+		readonly ownerKind?: ContentOwnerKind;
+		readonly ownerId?: string;
 	}): ContentVersionRecord {
 		const createdAt = input.now.toISOString();
 		const bundleJson = JSON.stringify(input.bundle);
@@ -121,6 +132,14 @@ export class ControlPlaneContentStore {
 				bundle: input.bundle,
 				listedAt: createdAt,
 			});
+			if (input.ownerKind !== undefined && input.ownerId !== undefined) {
+				this.db
+					.prepare(
+						`INSERT INTO content_owners (content_id, owner_kind, owner_id, created_at)
+						VALUES (?, ?, ?, ?)`,
+					)
+					.run(input.contentId, input.ownerKind, input.ownerId, createdAt);
+			}
 			this.db.exec("COMMIT");
 		} catch (error) {
 			this.db.exec("ROLLBACK");
@@ -150,6 +169,27 @@ export class ControlPlaneContentStore {
 			)
 			.get(contentId);
 		return row === undefined ? undefined : recordFromRow(row);
+	}
+
+	getOwner(contentId: string): ContentOwnerRecord | undefined {
+		const row = this.db
+			.prepare(
+				"SELECT content_id, owner_kind, owner_id, created_at FROM content_owners WHERE content_id = ?",
+			)
+			.get(contentId);
+		if (row === undefined) {
+			return undefined;
+		}
+		const kind = String(row["owner_kind"]);
+		if (kind !== "guest" && kind !== "account") {
+			throw new Error("content owner_kind is not guest or account");
+		}
+		return {
+			contentId: String(row["content_id"]),
+			ownerKind: kind,
+			ownerId: String(row["owner_id"]),
+			createdAt: String(row["created_at"]),
+		};
 	}
 
 	getVersion(contentId: string, version: number): ContentVersionRecord | undefined {

@@ -54,30 +54,55 @@ Worktree 端口偏移见 README「并行工作区」；本文件不复述端口�
 
 ---
 
-## 本刀：M5 C3 / C4 口径回写（只文档）
+## 本刀：M5 C3 创作者发布闭环
 
-本章无开发机可见行为。只把已批准的代签与匹配字段写入所有者文档和 [CD-91](../../Confirmed-docs/90-reference/91-decision-log.md)，不改代码、不改 JSON Schema、不接线发布按钮。不需要三后端，也不要开主场景。
+需要三后端。编辑外壳「发布」走控制面代签 `POST /content/submit`（不调持钥 `POST /content/publish`）。广场 `live_io` 时拉 `GET /content/plaza`。匹配 HTTP 仍只官方课（C4）。
 
-人类抽查按下面编号做。
+按「共用启动」0.1 起 `npm run dev`，再 0.2 开窗口化主场景。
 
-### 1. 确认文档写的是「已拍未接线」
+### 1. 打开创作并放到可发布
 
-操作：打开 [CD-33 当前生效值](../../Confirmed-docs/30-ugc/33-hot-publish.md) 与 [CD-42 §3.5](../../Confirmed-docs/40-technical/42-contracts-and-rulevm.md#35-匹配与玩家发布-http已拍未接线)。
+操作：点 **创作课程**（**Create course**）。工具条应有 **发布** / **Publish**。官方课草稿也可：若当前世界验证器不是全绿，点 **撤销** 清掉半成品后，不必手摆——本刀也可用已有官方课布局。最省事：关创作回大厅，再点创作，用默认空世界会看见摘要 **N 个问题挡住发布**。
 
-预期：玩家路径是 `POST /content/submit`、控制面代签；匹配是可选 `content: { id, version }`，不把 `course` 写成 `id@version`；两处都标明未接线。失败：文档把未实现接口写成已交，或把密钥放进玩家包。
+预期：并排编辑器 + 预览；状态行含 `publish=idle`；有 **发布** 按钮。失败：没有该按钮，或文案变成键名 `craft_arena.ui.publish`。
 
-### 2. 确认代码未改
+### 2. 验证器未绿时点发布
 
-操作：看本刀 diff 是否只动 `Confirmed-docs/`、`docs/plans/m5-traprush-vertical-slice.md`、`.cursor/rules/` 与本 runbook。
+操作：空世界（或只放一扇悬空传送门）点 **发布**。
 
-预期：没有 `backend/contracts`、控制面或 Godot 发布/匹配实现改动。失败：出现 `POST /content/submit` 实现或匹配 JSON 已接受 `content`。
+预期：不发 HTTP；状态行 `publish=validator_issues`。失败：状态变成 `id@version`，或进程去打了 `POST /content/publish`。
+
+### 3. 导入可发布课并发布
+
+操作：在编辑器里摆到验证器摘要变成 **可以发布** / **Ready to publish**（检查点顺序、立足面、终点、传送成对）。点 **发布**。
+
+预期：状态行变成 `publish=ugc_<32hex>@1`；失败码不会是 `session_invalid`（开发机 `live_io` 会向控制面 mint Guest）。失败：一直 `ready` 却没有 id（没打到控制面）；或回显带 `signature`；或密钥出现在玩家包 / 状态行。
+
+### 4. 广场能看见并 Solo
+
+操作：点 **返回大厅**，再点 **内容广场**。看 **最新** 标签。选刚发布的那一行，点 **单人试玩**。
+
+预期：列表不再空；能进 Solo（离线横幅仍在）。失败：广场仍空（确认 0.1 的控制面还在、大厅 `live_io` 为真）；或点 Solo 报 `unknown_course`。
+
+### 5. 切标签
+
+操作：依次点 **评分** / **游玩次数** / **已验证**。
+
+预期：四个标签都能点；刚发的课在 **已验证** 里仍可不出现（还没有 plays）。失败：某个标签崩掉。
 
 ### 本刀不测
 
-- 打开大厅或编辑器点发布；
-- 用自制课建房；
-- 改 HMAC 算法或 `latest` 指针；
+- 把自制课送进快速游戏 / 建房（C4）；
+- 可分享邀请串（C4）；
+- 大厅账号窗打控制面 HTTP（仍是进程内目录）；
+- 改 HMAC / `latest` 指针；
 - 改爆破半径 / 推击力度 / 道具重生。
+
+---
+
+## 上一刀（已合入）：M5 C3 / C4 口径回写（只文档）
+
+本章当时无开发机可见行为。只把已批准的代签与匹配字段写入所有者文档。C3 接线是下一刀（即当前本刀）。
 
 ---
 

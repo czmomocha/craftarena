@@ -7,6 +7,9 @@ extends GutTest
 const CreatorEntryGd := preload("res://src/client/creator_entry.gd")
 const MatchLobbyShellGd := preload("res://src/client/match_lobby_shell.gd")
 const AuthoringSurfaceNamesGd := preload("res://src/creator/authoring_surface_names.gd")
+const AuthoringDocumentGd := preload("res://src/creator/authoring_document.gd")
+const OfficialTraprushCoursesGd := preload("res://src/shared/official_traprush_courses.gd")
+const ContentSubmitHttpGd := preload("res://src/ugc/content_submit_http.gd")
 const TraprushEditorPanelGd := preload("res://src/creator/traprush_editor_panel.gd")
 const AuthoringValidatorPanelGd := preload("res://src/creator/authoring_validator_panel.gd")
 const WebLaunchArgsGd := preload("res://src/client/web_launch_args.gd")
@@ -25,6 +28,8 @@ func after_each() -> void:
 		_shell.free()
 	_shell = null
 	AuthoringDraftStore.new(CreatorEntryGd.DRAFT_PATH).wipe()
+	if FileAccess.file_exists(ContentSubmitHttpGd.GUEST_FILE):
+		DirAccess.remove_absolute(ProjectSettings.globalize_path(ContentSubmitHttpGd.GUEST_FILE))
 
 
 func _open_shell(web: bool = false) -> MatchLobbyShellGd:
@@ -142,6 +147,49 @@ func test_lobby_shows_the_create_course_button() -> void:
 	assert_not_null(button)
 	if button != null:
 		assert_eq(button.text, UiCopy.text(UiCopy.CREATE_COURSE))
+
+
+func test_creator_publish_button_posts_submit_when_live_io_is_on() -> void:
+	AuthoringDraftStore.new(CreatorEntryGd.DRAFT_PATH).wipe()
+	if FileAccess.file_exists(ContentSubmitHttpGd.GUEST_FILE):
+		DirAccess.remove_absolute(ProjectSettings.globalize_path(ContentSubmitHttpGd.GUEST_FILE))
+	_shell = _open_shell(false)
+	_shell.live_io = true
+	_shell.control_plane_base = "http://127.0.0.1:8080"
+	assert_true(_shell.try_open_creator())
+	var editor: AuthoringEditorShell = _shell.creator.editor
+	assert_true(editor.import_document(AuthoringDocumentGd.load_json(
+		OfficialTraprushCoursesGd.document_path(OfficialTraprushCoursesGd.COURSE_01)
+	)))
+	_shell.creator.http_transport = func(method: String, path: String, _headers: PackedStringArray, body: String) -> Dictionary:
+		if path == "/accounts/guest":
+			assert_eq(method, "POST")
+			return {
+				"status": 201,
+				"body": {
+					"guest_id": "gst_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+					"recovery_key": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+				},
+			}
+		assert_eq(path, "/content/submit")
+		var parsed: Variant = JSON.parse_string(body)
+		assert_eq(typeof(parsed), TYPE_DICTIONARY)
+		if typeof(parsed) != TYPE_DICTIONARY:
+			return {"status": 400, "body": {"error": "bad"}}
+		var payload: Dictionary = parsed
+		assert_eq(payload.size(), 2)
+		assert_false(payload.has("signature"))
+		return {
+			"status": 201,
+			"body": {
+				"id": "ugc_eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+				"version": 1,
+				"latest": 1,
+				"content_hash": str(payload.get("content_hash", "")),
+			},
+		}
+	assert_true(editor.try_publish())
+	assert_true(editor.status_label_text().contains("publish=ugc_eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee@1"))
 
 
 # ---- 链接开关 ----

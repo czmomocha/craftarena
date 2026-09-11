@@ -225,4 +225,16 @@ export const MIGRATIONS: readonly Migration[] = [
 			) STRICT`,
 		],
 	},
+	{
+		id: "0013_content_owners",
+		statements: [
+			`CREATE TABLE content_owners (
+				content_id TEXT PRIMARY KEY,
+				owner_kind TEXT NOT NULL CHECK (owner_kind IN ('guest', 'account')),
+				owner_id TEXT NOT NULL,
+				created_at TEXT NOT NULL,
+				FOREIGN KEY (content_id) REFERENCES content_latest (content_id)
+			) STRICT`,
+		],
+	},
 ];

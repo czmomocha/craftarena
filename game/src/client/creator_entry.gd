@@ -33,12 +33,16 @@ const AuthoringSurfaceNamesGd := preload("res://src/creator/authoring_surface_na
 ## 玩家包里的草稿落点。与内部开发插件的 `user://authoring_draft.json` 分开：
 ## 同一台开发机上两条入口互相覆盖草稿，是没人能复现的丢失。
 const DRAFT_PATH: String = "user://creator_draft.json"
+const SubmitHttpGd := preload("res://src/ugc/content_submit_http.gd")
 
 var editor: AuthoringEditorShellGd = null
 var draft_path: String = DRAFT_PATH
 ## 打开创作时把大厅窗口收起来。并排的 Editor + Preview 已经占满主视口，
 ## 底下再压一个最大化的大厅窗只会抢输入焦点。
 var lobby_window: Window = null
+var live_io: bool = false
+var control_plane_base: String = ""
+var http_transport: Callable = Callable()
 
 
 ## 已导出包能给出的 surface。`internal_dev` 不在候选里，理由见文件头。
@@ -58,11 +62,13 @@ static func create(web: bool) -> CreatorEntry:
 ## 3D 世界，不该在开局就建出来。已存在就原样返回。
 static func ensure(shell: MatchLobbyShell, existing: CreatorEntry) -> CreatorEntry:
 	if existing != null:
+		_copy_live(shell, existing)
 		return existing
 	var entry: CreatorEntry = create(shell.web_platform)
 	if entry == null:
 		return null
 	entry.lobby_window = shell.window
+	_copy_live(shell, entry)
 	shell.add_child(entry)
 	return entry
 
@@ -81,6 +87,7 @@ func try_open() -> bool:
 			editor.draft_store = AuthoringDraftStoreGd.new(draft_path)
 		add_child(editor)
 	_bind_editor_closed()
+	_bind_submit()
 	var opened: bool = editor.open() if not editor.is_window_visible() else editor.show_window()
 	if not opened:
 		return false
@@ -123,6 +130,21 @@ func _bind_editor_closed() -> void:
 		return
 	if not editor.window_closed.is_connected(_on_editor_window_closed):
 		editor.window_closed.connect(_on_editor_window_closed)
+
+
+func _bind_submit() -> void:
+	if editor == null or not live_io:
+		return
+	editor.on_submit = _submit_live
+
+
+func _submit_live(body: Dictionary) -> Dictionary:
+	return SubmitHttpGd.submit_player(control_plane_base, body, http_transport)
+
+
+static func _copy_live(shell: MatchLobbyShell, entry: CreatorEntry) -> void:
+	entry.live_io = shell.live_io
+	entry.control_plane_base = shell.control_plane_base
 
 
 func _on_editor_window_closed() -> void:

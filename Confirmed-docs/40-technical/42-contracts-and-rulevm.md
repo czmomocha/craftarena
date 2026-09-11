@@ -20,7 +20,7 @@
 | 静态盒阔相 | 均匀格桶 = `SCALE`；单盒超 125 格或溢出走全量窄相。ID 顺序与全量扫描相同。胶囊仍线性 |
 | Rule VM | **第 1–5 章已交**：v1 信封 + 白名单解释器 + gas；`OnMatchStarted` / `OnEveryTicks` 图编成同一套字节码。§2.1 Query / Logic / Action 最小子集：`GetField` / `CountInZone`（按结果数加 gas）/ `Logic` / `Spawn` / `Despawn` / `ApplyEffect` / `EmitGameEvent`，经 `RuleVmHost`；超 gas 回滚 host 写入。其它事件仍编译拒绝。Preview 安全点 `try_replace_rule_graphs` 重编译生效；公开对局 `try_replace_rule_graphs` 禁止。不把规则图写入 AuthoringDocument / SimulationBundle。`run()` 不走 JSON |
 | 内容签名 | **M4b 第 1–5 章已交**：sidecar 信封，不改 SimulationBundle 字段。ContentHash = StateHasher 规范编码 `to_dictionary()` 的 SHA-256；签名 = HMAC-SHA256(`content_id` + LF + `version` + LF + hash)。控制面持钥 `POST /content/publish` 校验 HMAC 后原子切 `latest`；新房吃 `latest`，已开对局锁开局哈希。P0/P1 PatchHash = 规范编码 ops 的 SHA-256；HMAC 另覆盖 `base_version` + `seq`。发布自动进广场列表。Guest / 注册 / 登录 / 认领草稿已交。官方课不要求信封 |
-| 玩家代签 / 匹配课表 | **已拍未接线（M5 C3 / C4）**：玩家 `POST /content/submit`；匹配可选 `content: { id, version }`。字段只在 §3.5 |
+| 玩家代签 / 匹配课表 | **C3 已接线；C4 已拍未接线**：玩家 `POST /content/submit`；匹配可选 `content: { id, version }`。字段只在 §3.5 |
 
 ## 1. Component Schema v1
 
@@ -303,11 +303,11 @@ Undo / Redo 是会话内对成功命令派生的反向 payload（`place`↔`remo
 | 内容签名信封 | `game/src/ugc/content_sign.gd`（sidecar；对局 `TraprushMatchSession.content_hash`） |
 | 内容 P0/P1 补丁信封 | `game/src/ugc/content_patch.gd`（sidecar；运行房 `TraprushMatchPatch`） |
 | 内容目录 / latest | `game/src/ugc/content_catalog.gd`（内存；新房解析 `latest`；补丁全量下发；`latest` 可回滚） |
-| 内容发布 HTTP | `backend/contracts/src/content_publish.ts`（控制面持钥 `POST /content/publish`、`GET /content/:id/latest`）。玩家代签 `POST /content/submit` 已拍未接线，字段见 §3.5 |
+| 内容发布 HTTP | `backend/contracts/src/content_publish.ts`（控制面持钥 `POST /content/publish`、`GET /content/:id/latest`）。玩家代签 `backend/contracts/src/content_submit.ts`（`POST /content/submit`）；Godot `content_submit.gd` |
 | 内容补丁 / 回滚 HTTP | `backend/contracts/src/content_patch.ts`（`POST /content/patch`、`GET /content/:id/patches`、`POST /content/:id/rollback`） |
 | 内容广场 HTTP | `backend/contracts/src/content_plaza.ts`（`GET /content/plaza`、`POST /content/:id/plays`、`POST /content/:id/ratings`） |
 | 内容广场内存列表 | `game/src/ugc/content_plaza.gd`（词库名 / 占用袋标签；与契约同算法） |
-| 大厅广场窗 | `game/src/client/content_plaza_entry.gd`（四 tab；Solo 已签名 bundle，不走 AuthoringDocument） |
+| 大厅广场窗 | `game/src/client/content_plaza_entry.gd`（四 tab；`live_io` 时 `GET /content/plaza`；Solo 已签名 bundle，缺则 `GET /content/:id/latest`） |
 | 账号认领 HTTP | `backend/contracts/src/account.ts`（`POST /accounts/guest`、`/register`、`/login`、`/claim`、`GET /accounts/me`、`PUT`/`GET /drafts`） |
 | 账号认领内存目录 | `game/src/ugc/account_catalog.gd`（Guest / 注册 / 登录 / 认领；与契约同动词） |
 | 大厅账号窗 | `game/src/client/account_entry.gd` |
@@ -322,9 +322,9 @@ Undo / Redo 是会话内对成功命令派生的反向 payload（`place`↔`remo
 | 音频音乐总监 | `game/src/audio/audio_music_director.gd` |
 | 生产 bank JSON | `game/content/audio/banks/` |
 
-### 3.5 匹配与玩家发布 HTTP（已拍未接线）
+### 3.5 匹配与玩家发布 HTTP（C3 已接线；C4 已拍未接线）
 
-本小节是字段形状的所有者。流水线语义见 [CD-33 §2.2](../30-ugc/33-hot-publish.md#22-玩家发布路径已拍m5-c3-未接线)；MatchHost 不查库见 [CD-44](44-deployment.md)。HMAC 算法仍见文首「内容签名」，本表不复述。实现尚未改 `backend/contracts/src/*.ts`。
+本小节是字段形状的所有者。流水线语义见 [CD-33 §2.2](../30-ugc/33-hot-publish.md#22-玩家发布路径已交m5-c3)；MatchHost 不查库见 [CD-44](44-deployment.md)。HMAC 算法仍见文首「内容签名」，本表不复述。玩家代签 Schema 已落 `backend/contracts/src/content_submit.ts`。匹配 `content` 对象仍未改 `backend/contracts/src/*.ts`。
 
 **玩家发布** `POST /content/submit`（M5 C3）：
 
@@ -354,4 +354,4 @@ JSON Schema 落点：
 | 音频 cue bank | `backend/contracts/schemas/audio_cue_bank.schema.json` |
 | 正反例与校验 | `tools/content-validator/`（由根目录 `npm test` 收集） |
 
-`payload` 只允许 nil / bool / int / String / Array / Dictionary（字符串键）；禁止 float、Object、Callable。PLAYER 命令必须带白名单 `intent` 字符串。EDIT 命令必须带白名单 `op` 字符串，payload 形状见 [§3.3](#33-服务端处理管线)。SYSTEM 命令允许 `actor_id = 0`。Component Schema v1 字段见 [§1.2](#12-字段标识符v1)。音频 cue bank v1 字段见 [§1.4](#14-音频-cue-bank-v1)。AuthoringDocument 字段见 [CD-32 §1.4](../30-ugc/32-editor-and-preview.md#14-共同数据模型)。SimulationBundle **v2** 字段见本表与 [CD-32 §3](../30-ugc/32-editor-and-preview.md#3-从编辑到预览)「TRAPRUSH 拓扑编译」（含可空 `hazards` 与可空 `solids` 袋、可选 `movers` / `conveyors` / `launches` / `switches` / `gates` / `energy_walls` / `portal_switches` / `spikes` / `flames` / `crushers` 袋，以及 v2 的 `assets` 袋与每袋资产引用，见 [§1.3](#13-权威碰撞的载体v2-起)）。Preview 试玩、MoveIntent、检查点占用验收、传送占用落地、冲线占用、重置到检查点、UseItemIntent 可破坏占用、JumpIntent 接地跳跃与周期机关固体切换见 [CD-32 §3](../30-ugc/32-editor-and-preview.md#3-从编辑到预览)「Preview 试玩」。对局票据 HTTP JSON Schema 在 `backend/contracts/src/match_ticket.ts`，由控制面 Fastify 路由挂载（含 `POST /match-sessions/:matchId/tickets/reconnect`）。单局结算 HTTP JSON Schema 在 `backend/contracts/src/match_settlement.ts`。内容发布 HTTP JSON Schema 在 `backend/contracts/src/content_publish.ts`（信封五键 + `bundle`；控制面不重算 ContentHash）。玩家代签与匹配 `content` 对象已拍、未改该文件，见 [§3.5](#35-匹配与玩家发布-http已拍未接线)。音频 cue bank Schema 已落地。Rule VM 图的 JSON Schema 仍未落地。OpenAPI 仍未落地。内容签名是 sidecar 信封，不改 SimulationBundle 字段；`GameplayAssetVersion` 的几何不可变仍靠字段与编译期准入，ContentHash 覆盖整份 v2 wire。`latest` 由控制面 `content_latest` 指向已签名版本；新房吃新版本，已开对局不改哈希。
+`payload` 只允许 nil / bool / int / String / Array / Dictionary（字符串键）；禁止 float、Object、Callable。PLAYER 命令必须带白名单 `intent` 字符串。EDIT 命令必须带白名单 `op` 字符串，payload 形状见 [§3.3](#33-服务端处理管线)。SYSTEM 命令允许 `actor_id = 0`。Component Schema v1 字段见 [§1.2](#12-字段标识符v1)。音频 cue bank v1 字段见 [§1.4](#14-音频-cue-bank-v1)。AuthoringDocument 字段见 [CD-32 §1.4](../30-ugc/32-editor-and-preview.md#14-共同数据模型)。SimulationBundle **v2** 字段见本表与 [CD-32 §3](../30-ugc/32-editor-and-preview.md#3-从编辑到预览)「TRAPRUSH 拓扑编译」（含可空 `hazards` 与可空 `solids` 袋、可选 `movers` / `conveyors` / `launches` / `switches` / `gates` / `energy_walls` / `portal_switches` / `spikes` / `flames` / `crushers` 袋，以及 v2 的 `assets` 袋与每袋资产引用，见 [§1.3](#13-权威碰撞的载体v2-起)）。Preview 试玩、MoveIntent、检查点占用验收、传送占用落地、冲线占用、重置到检查点、UseItemIntent 可破坏占用、JumpIntent 接地跳跃与周期机关固体切换见 [CD-32 §3](../30-ugc/32-editor-and-preview.md#3-从编辑到预览)「Preview 试玩」。对局票据 HTTP JSON Schema 在 `backend/contracts/src/match_ticket.ts`，由控制面 Fastify 路由挂载（含 `POST /match-sessions/:matchId/tickets/reconnect`）。单局结算 HTTP JSON Schema 在 `backend/contracts/src/match_settlement.ts`。内容发布 HTTP JSON Schema 在 `backend/contracts/src/content_publish.ts`（信封五键 + `bundle`；控制面不重算 ContentHash）。玩家代签 Schema 已落 `backend/contracts/src/content_submit.ts`；匹配 `content` 对象仍未改该文件，见 [§3.5](#35-匹配与玩家发布-httpc3-已接线c4-已拍未接线)。音频 cue bank Schema 已落地。Rule VM 图的 JSON Schema 仍未落地。OpenAPI 仍未落地。内容签名是 sidecar 信封，不改 SimulationBundle 字段；`GameplayAssetVersion` 的几何不可变仍靠字段与编译期准入，ContentHash 覆盖整份 v2 wire。`latest` 由控制面 `content_latest` 指向已签名版本；新房吃新版本，已开对局不改哈希。

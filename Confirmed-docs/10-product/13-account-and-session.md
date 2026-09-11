@@ -14,7 +14,7 @@
 | 项 | 当前口径 |
 |---|---|
 | 账号接线 | **已交**：Guest ID + 恢复密钥；用户名 + 密码注册 / 登录；认领 Guest 云端草稿。入场票据仍不绑账号 |
-| 玩家发布鉴权 | **已拍未接线（M5 C3）**：`POST /content/submit` 绑 Guest 或正式会话；测试期不做 CAPTCHA / 邮箱。持钥 `POST /content/publish` 仍不绑账号（测试 / 工具）。流水线见 [CD-33 §2.2](../30-ugc/33-hot-publish.md#22-玩家发布路径已拍m5-c3-未接线) |
+| 玩家发布鉴权 | **已交（M5 C3）**：`POST /content/submit` 绑 Guest 或正式会话；测试期不做 CAPTCHA / 邮箱。持钥 `POST /content/publish` 仍不绑账号（测试 / 工具）。流水线见 [CD-33 §2.2](../30-ugc/33-hot-publish.md#22-玩家发布路径已交m5-c3) |
 | 离线 | 永不回写；恢复在线也不补传。**测试期 Web 允许 Solo** |
 | 单局排名 | 名次 + MVP；无 MMR / 段位 |
 | 补票 | 已消费票补发同一席位；Cancel 不补票 |
@@ -38,14 +38,14 @@
 - 匿名用户获得浏览器绑定的 Guest ID 和本地恢复密钥；
 - Guest 草稿自动保存云端并保留本地缓存，云端保留期见 [CD-14](14-data-and-telemetry.md)；
 - 跨设备访问必须注册登录并认领草稿；
-- 玩家发布走鉴权会话：Guest 或正式号均可（测试期；见 [CD-33 §2.2](../30-ugc/33-hot-publish.md#22-玩家发布路径已拍m5-c3-未接线)）；跨设备仍须认领；
+- 玩家发布走鉴权会话：Guest 或正式号均可（测试期；见 [CD-33 §2.2](../30-ugc/33-hot-publish.md#22-玩家发布路径已交m5-c3)）；跨设备仍须认领；
 - 一期使用用户名 + 密码，任何互联网用户都可注册；
 - 不提供邮箱验证、密码找回、CAPTCHA、IP 限频或设备约束；
 - 忘记密码只能注册新账号，旧账号和内容不迁移；
 - 注册用户名直接作为公开玩家名与作者名，不做文本过滤；
 - 一期不提供文字、语音、快捷短语或 Ping。
 
-实现落点（2026-09-10）：控制面 `POST /accounts/guest` 签发 Guest ID + 恢复密钥；`PUT /drafts` 以 Guest 头或账号 session 写入最新 AuthoringDocument JSON（不存本地检查点带）；`POST /accounts/register` / `login` 走用户名 + 密码（scrypt）；注册可附带认领。大厅「账号」窗走进程内 `AccountCatalog`（GUT / 开发机窗口不打 HTTP）。入场票据仍不绑账号。玩家发布绑会话的口径已拍、未接线（M5 C3）。无邮箱验证、无 CAPTCHA、无密码找回、无过期清扫。落点见 [CD-42 §3.4](../40-technical/42-contracts-and-rulevm.md#34-实现落点)。
+实现落点（2026-09-10）：控制面 `POST /accounts/guest` 签发 Guest ID + 恢复密钥；`PUT /drafts` 以 Guest 头或账号 session 写入最新 AuthoringDocument JSON（不存本地检查点带）；`POST /accounts/register` / `login` 走用户名 + 密码（scrypt）；注册可附带认领。大厅「账号」窗走进程内 `AccountCatalog`（GUT / 开发机窗口不打 HTTP）。入场票据仍不绑账号。玩家发布绑会话已接线（M5 C3：`POST /content/submit` 用控制面 Guest 头或 Bearer；大厅账号窗仍不打 HTTP）。无邮箱验证、无 CAPTCHA、无密码找回、无过期清扫。落点见 [CD-42 §3.4](../40-technical/42-contracts-and-rulevm.md#34-实现落点)。
 
 > 上述开放注册、公开用户名和零防滥用组合风险很高，只适用于当前长期测试环境，不能表述为正式公开运营能力。见 [CD-62 风险登记册](../60-plan/62-risk-register.md)。
 

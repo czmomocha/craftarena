@@ -19,7 +19,7 @@
 | 内容广场 | **已交**：发布自动进公共列表；无自由文本 |
 | 音频 cue | **B2**：平台内置 id 清单 `audio_cue_catalog.gd`（35 个）；UGC 只能引用已登记 id。流文件为 OGG Vorbis，落 `game/content/audio/sfx/` 与 `music/` |
 | Fork / 「我的内容」管理 | 未做 |
-| 账号 / 云端草稿 | **已交**：Guest + 注册登录 + 认领最新草稿。入场票据仍不绑账号。玩家发布绑会话已拍、未接线（见 [CD-13](../10-product/13-account-and-session.md) / [CD-33 §2.2](33-hot-publish.md#22-玩家发布路径已拍m5-c3-未接线)） |
+| 账号 / 云端草稿 | **已交**：Guest + 注册登录 + 认领最新草稿。入场票据仍不绑账号。玩家发布绑会话已交（见 [CD-13](../10-product/13-account-and-session.md) / [CD-33 §2.2](33-hot-publish.md#22-玩家发布路径已交m5-c3)） |
 
 ## 1. 基本原则
 

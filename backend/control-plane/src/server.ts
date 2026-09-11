@@ -32,6 +32,7 @@ import {
 	viewQueue,
 } from "./server_matchmaking.ts";
 import { registerContentRoutes } from "./server_content.ts";
+import { registerContentSubmitRoutes } from "./server_content_submit.ts";
 import { registerPlazaRoutes } from "./server_plaza.ts";
 import { registerAccountRoutes } from "./server_accounts.ts";
 import { registerSessionRoutes } from "./server_sessions.ts";
@@ -129,6 +130,7 @@ export function buildServer(options: BuildServerOptions): FastifyInstance {
 
 	registerSessionRoutes(app, options, now, ticketTtlMs, runDrain);
 	registerContentRoutes(app, options);
+	registerContentSubmitRoutes(app, options);
 	registerPlazaRoutes(app, options);
 	registerAccountRoutes(app, options);
 
