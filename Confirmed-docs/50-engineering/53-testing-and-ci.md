@@ -16,7 +16,8 @@
 | 每次推送 `main` / 每次 PR | tsc + GUT fast/slow 全量 + Schema + 红线 + 资产预算（推送**之后**跑，不是直推前置） |
 | 合入 `main` | 人类授权后直推；GitHub **不**要求 PR；禁止 force push / 删除 `main` |
 | PR Web 预览 | **未实现**。Web 导出已有；人类 2026-09-03 拍板推迟到 M5 之后开工 |
-| 可玩性签署 | **E6 已签：好玩**（2026-09-02，非外部测试）。M5 / 发布候选清单仍未签 |
+| 可玩性签署 | **E6 已签：好玩**（2026-09-02，非外部测试）。M5 退出清单已落库为 [可玩性签署：TRAPRUSH](../../docs/runbooks/playability-signoff-traprush.md)，**待人类逐项签署**；发布候选清单（§4.4）仍未签 |
+| 网络故障人工检查 | 清单仍归 §2.5；执行步骤已落库为 [网络故障人工检查](../../docs/runbooks/network-fault-check.md)（M5 C6），**九项执行记录待人类填**。仍非门禁 |
 | `--bot-run` | 不进 PR CI。每日 nightly 经 `npm run bot-run` 写报告 artifact |
 
 ## 1. 测试原则
@@ -111,7 +112,9 @@ AI 生成代码必须比普通手写代码有**更强的自动化证据**，因�
 
 香港真实环境形成样本后，再根据 P90/P95 数据决定是否建立自动门禁，以及是否为 TRAPRUSH 引入 ENet/WebRTC。当前选择只保证"有检查清单"，**不保证稳定回归覆盖**。
 
-注入工具（2026-09-12 拍板）：**Windows 用 clumsy，Linux 用 `tc netem`**，macOS 开发机用 `dnctl` + `pfctl`。三者都是**外部工具，不入库、不进 CI、不写成 npm script**；仓库里只有 `docs/runbooks/network-fault-check.md` 的编号步骤引用它们的命令行。清单本身仍以本节为所有者，runbook 只写"怎么执行"。
+注入工具（2026-09-12 拍板）：**Windows 用 clumsy，Linux 用 `tc netem`**，macOS 开发机用 `dnctl` + `pfctl`。三者都是**外部工具，不入库、不进 CI、不写成 npm script**；仓库里只有 [`docs/runbooks/network-fault-check.md`](../../docs/runbooks/network-fault-check.md) 的编号步骤引用它们的命令行。清单本身仍以本节为所有者，runbook 只写"怎么执行"。
+
+执行方式（M5 C6 落库）：runbook 把九项拆成**链路整形**（延迟 / 抖动 / 丢包 / 乱序 / 重复包 / 短时断线 / 基线丢失）与**应用层帧注入**（恶意高频命令 / 篡改帧）两段。拆分理由是传输为 WebSocket over TCP（[CD-43 §2](../40-technical/43-networking-and-replay.md#2-传输)）：链路层的丢包、乱序、重复被 TCP 修复，应用层只表现为延迟与卡顿，因此不能用链路整形声称已验证应用层乱序 / 重复 / 篡改。**基线丢失**在 v1 没有增量基线可丢（快照是全量帧），该项验的是重连后贴最新权威帧。九项的执行记录在 runbook §5，未填即未执行（宪法第二十四条）。
 
 ### 2.6 UGC 安全测试
 
@@ -216,6 +219,7 @@ AI 生成代码必须比普通手写代码有**更强的自动化证据**，因�
 - M5 C2 第 5 张官方课：`course_05` 双路线竞速（安全长路 vs 打碎能量墙短路）；AuthoringDocument 编译非 null、发布可达零问题码；匹配 HTTP 接受 `course_05`，仍拒 `course_f_playable` 与 `res://` 路径；`bot_run_cli` 缺省覆盖白名单五张；`--route=safe` 仍只对 `course_01`；GUT slow 探针可完成；人类真机步骤见 [开发机窗口验收](../../docs/runbooks/dev-window-check.md) 本刀（人工检查，非 CI 门禁）；
 - M5 B2 联机音频与正式 OGG：`match_audio_source.gd` 从相邻权威快照 diff 派生跳 / 落 / 步 / 检查点 / 冲线 / 碎箱 / 结算；坏帧 / 乱序 / 重复 tick 不播；远端带米制坐标走 3D。运行时流文件为 OGG Vorbis（`sfx/` + `music/`，Git LFS）；`tools/content-validator` 按 [CD-11 §8.3](../10-product/11-scope-and-platforms.md) 查格式 / 采样率 / 声道 / 时长 / 体积，0 个文件明确输出「什么都没查」。人类 2026-09-11 确认本地音频授权。不改快照帧。人类真机步骤见 [开发机窗口验收](../../docs/runbooks/dev-window-check.md) 本刀（人工检查，非 CI 门禁）；
 - M5 C5 BotRunner 可达性正式化：`tools/bot-runner/` 薄壳（`npm run bot-run`）调已有 Godot `--bot-run`；`--report=` 写出每课 `completable` / `steps` / `search_ticks` / 退出码；0 条 `bot_run_*` 行 exit 1；缺省覆盖匹配白名单五张；`res://` 路径仍拒；nightly 写 `artifacts/bot-run-*.json` 并 upload-artifact。`--bot-run` 仍不进 PR CI。本章无开发机可见行为；
+- M5 C6 退出验收（**文档与清单，不是玩法断言**）：`docs/runbooks/network-fault-check.md` 覆盖 §2.5 九项、点名三套外部工具、声明不入库 / 不进 CI / 非门禁，并把执行记录留空给人类；`docs/runbooks/playability-signoff-traprush.md` 覆盖操作手感 / 机关可读性 / 路线选择 / 失败反馈 / 音频反馈 / 结算清晰度 / 创作流畅度 / 外人 5 分钟上手八项，带签署格与"不组织外部真人试玩"的诚实边界；CD-61 M5 为"章节全交、退出待人类签署"而非"已退出"；两份 `.cursor/rules` 指向下一动字体入包。断言在 `tools/dev-launcher/tests/m5_exit.test.ts`。`npm test` 563、GUT 1645/1645（本章未碰引擎侧，数量与上一刀一致）。**本章不改仿真、协议、Schema、官方课**；
 - 官方赛道立足固体与 Jump：三张官方课各加 entity 80（出生点正下一格 `y = -cell` 始终固体，不挡 +X）；对局 / Solo / Preview 壳 `support_dy = -Fixed.SCALE`；`jump_dy` 为 `Fixed.SCALE / 4` 占位桩（避免 `course_01` 上楼传送盒）；出生点 Jump 接地 hop；大厅 HUD `solids=2/2`；在线 overlay `play_jump_dy` 仍为 0；不锁产品跳跃高度；GUT 940/940、`npm test` 323；人类真机步骤见 [开发机窗口验收](../../docs/runbooks/dev-window-check.md) 本刀（人工检查，非 CI 门禁）；
 - 权威下落接到对局 / Solo / Preview：`fall_dy` 默认 0 时 `commit_tick` 保持出生 y；boot / Solo 占位 `-Fixed.SCALE / 16`，Preview 壳占位 `-Fixed.SCALE`；立足盒上 settle 后 Jump hop，再 commit/advance 落回 rest_y；走离立足盒 y 下降，继续下落会触发出界复位弹回出生点；`MatchRealtime` 先下落再意图再 tick，settle 不续租、hop 续租；Solo `_process` 先 advance 再采样空格；Preview 意图不下落，Advance tick 才落；零 `fall_dy` 的 advance 保持 hop；不锁产品重力加速度、不铺官方沿路地板；GUT 949/949、`npm test` 323；人类真机步骤见 [开发机窗口验收](../../docs/runbooks/dev-window-check.md) 本刀（人工检查，非 CI 门禁）；
 - 本地草稿恢复：成功写入落 `latest` 且文件非空；空会话打开恢复；恢复后工具条下一个 Place 使用新 id；编辑器 `plugin.gd` `@tool` 落盘；`world_committed`；失败写入不改草稿；损坏 / 多余键拒绝；拒绝写入 `res://`；检查点最多 30；不结算；
@@ -384,7 +388,7 @@ AI 生成代码必须比普通手写代码有**更强的自动化证据**，因�
 | 回放一致 | 部分 | 与 §4.2「固定回放」同一批每次-PR 用例，不是发布专用回放包 |
 | 新旧内容版本并存 | 未实现 | 无内容平台、无双版本房 |
 | 回滚演练通过 | 未实现 | 同 §4.3 |
-| 玩法清单签署 | 未实现 | E6 首次结论已签（好玩，非外部测试）。本表是发布候选清单，不是 E6 |
+| 玩法清单签署 | 未实现 | E6 首次结论已签（好玩，非外部测试）。**M5 退出清单**已落库为 [可玩性签署：TRAPRUSH](../../docs/runbooks/playability-signoff-traprush.md)，八项待人类签署；本表是**发布候选**清单，不是 E6、也不是那一份 |
 | 人类安全与发布确认 | 未实现 | 正式公开运营前阻断清单见 CD-63 §4 |
 
 ### 4.5 合入 `main`
