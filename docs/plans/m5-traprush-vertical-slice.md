@@ -2,7 +2,7 @@
 
 > 类型：实现级章节计划（`docs/plans/`），**不是所有者文档**。
 > 里程碑产出与退出条件的所有者是 [CD-61 §2 M5](../../Confirmed-docs/60-plan/61-milestones.md)；本文件只把 M5 拆成可审查的章。两者冲突以 CD-61 为准。
-> 日期：2026-09-10（2026-09-12 更新）。状态：章节划分与音频模块基建已由人类拍板（§5.1）；**A1 / A2 / A3 / B1 / B2 / C1 / C2 / C3 / C4 / C5 / C6 十一章全交**；**M5 退出待人类执行并签署两份清单**（[网络故障人工检查](../runbooks/network-fault-check.md)、[可玩性签署：TRAPRUSH](../runbooks/playability-signoff-traprush.md)）。
+> 日期：2026-09-10（2026-09-12 更新）。状态：章节划分与音频模块基建已由人类拍板（§5.1）；**A1 / A2 / A3 / B1 / B2 / C1 / C2 / C3 / C4 / C5 / C6 十一章全交**；**M5 已于 2026-09-13 由人类签署退出，结论「基本通过」**（两份清单：[网络故障人工检查](../runbooks/network-fault-check.md) 走过第一轮、乱序 / 重复包未严格注入；[可玩性签署：TRAPRUSH](../runbooks/playability-signoff-traprush.md) 八项「通过」）。本文件自此为历史记录，不再更新；里程碑口径以 [CD-61](../../Confirmed-docs/60-plan/61-milestones.md) 为准。
 > 上位约束：[CD-00 宪法](../../Confirmed-docs/00-constitution/CONSTITUTION.md) 第一、三、四、五、九、十七、十八、十九、二十三条。
 
 ## 1. 能不能开工
@@ -224,7 +224,7 @@ cue 是数据，定义在 `game/content/audio/banks/*.json`，字段初稿：
 | 5 | 两个小目录：`tools/audio-bank/` 建不建、`tools/bot-runner/` 建还是从 CD-41 删 | A2（**已执行推荐项**）、C5（**已建薄壳**） | A2 已把 bank 校验并入 `tools/content-validator/`，不新建 `tools/audio-bank/`。C5 把 `tools/bot-runner/` 建成薄壳，不从 CD-41 删 |
 | 6 | 网络故障注入工具 | C6（**已拍**，2026-09-12） | 人类采纳 AI 推荐：Windows 用 clumsy、Linux 用 `tc netem`、macOS 用 `dnctl` + `pfctl`。外部工具不入库、不进 CI，仓库里只有 runbook 引用命令行。所有者仍是 [CD-53 §2.5](../../Confirmed-docs/50-engineering/53-testing-and-ci.md) |
 
-**C4 / C5 / C6 已交。十一章全交，M5 退出只差人类执行并签署两份清单**（§4 C6）。
+**十一章全交；M5 已于 2026-09-13 签署退出（「基本通过」）。本文件到此封存。**
 
 ## 6. M5 退出条件
 

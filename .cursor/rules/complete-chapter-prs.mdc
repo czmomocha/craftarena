@@ -17,12 +17,12 @@ alwaysApply: true
 
 真机：[开发机窗口验收](docs/runbooks/dev-window-check.md) 本刀必须是编号步骤（怎么开、点什么、期望 / 失败）；禁止只写「真机再看一眼」。无 GUI 的章写「无」加原因。人工检查，不是 CI 门禁。口径见 [CD-52 §3.2](Confirmed-docs/50-engineering/52-ai-workflow.md)。
 
-- 做（**M5 十一章全交；下一刀 = 字体入包**，但必须等人类签完两份清单）：对照 [CD-61](Confirmed-docs/60-plan/61-milestones.md) 与 [M5 章节计划](docs/plans/m5-traprush-vertical-slice.md)。A1–C6 已交。**M5 退出待人类执行并签署** [网络故障人工检查](docs/runbooks/network-fault-check.md) 与 [可玩性签署：TRAPRUSH](docs/runbooks/playability-signoff-traprush.md)；签完后由人类授权把 CD-61 改成「已退出」，再开字体入包（思源黑体 / Noto Sans SC，许可证已确认，**子集范围仍未拍板**）。交章时整节替换 [开发机窗口验收](docs/runbooks/dev-window-check.md) 本刀。
-- 不做：代签或代填那两份清单（结论只能由人类写）；在签署完成前宣布 M5 已退出；开工 Android / iOS 烟测；公开 TLS / PR Web 沙盒；抢先 M6 / M7；改爆破半径、推击力度、道具重生（D-F4 / D-F5 / D-F6）；改默认相机距离/FOV 产品值；自由旋转镜头；改 `SimulationCore` 定点数合同；Kenney 24 皮入库（D-F9 未拍）；发明新 Hz；触控 UI；**在 UI 接线第一批开工前接任何一屏产品 UI**（S1/S2/S3 已落库但排在 M5 退出与字体入包之后；可玩性清单描述的是现有自绘大厅）；**把外部网络故障注入工具写进仓库或 CI**。
-- 仍欠着（不因本章合入而消失）：Android / iOS 烟测（**一期收尾**）；M5 之后的公开 TLS / PR Web 沙盒；M-Art 剩余（**字体入包已提前到 M5 退出之后**、UI 接线三批；皮肤池等 D-F9）；胶囊对胶囊仍线性。
+- 做（**下一刀 = 字体入包**）：**M5 已退出**（2026-09-13 人类签署，结论「基本通过」）。对照 [CD-61](Confirmed-docs/60-plan/61-milestones.md)。字体入包 = 思源黑体 / Noto Sans SC，许可证已确认，**子集范围仍未拍板，AI 不得自选**——先问人类。之后才是 UI 接线第一批（S3 广场，四项前置见 CD-61 §2 M-Art）。交章时整节替换 [开发机窗口验收](docs/runbooks/dev-window-check.md) 本刀。
+- 不做：把 M5 的两处遗留说成已解决——**乱序 / 重复包未严格注入**（待 Linux `tc netem`）、**可玩性签署只对当前自绘大厅 + 占位美术 + 占位数值那一版**；代签或代填任何人类清单；跳过字体入包直接接 UI；开工 Android / iOS 烟测；公开 TLS / PR Web 沙盒；抢先 M6 / M7；改爆破半径、推击力度、道具重生（D-F4 / D-F5 / D-F6）；改默认相机距离/FOV 产品值；自由旋转镜头；改 `SimulationCore` 定点数合同；Kenney 24 皮入库（D-F9 未拍）；发明新 Hz；触控 UI；**把外部网络故障注入工具写进仓库或 CI**。
+- 仍欠着（不因 M5 退出而消失）：网络故障九项里的乱序 / 重复包；发布候选清单（CD-53 §4.4）从未签；外部真人测试从未做；Android / iOS 烟测（**一期收尾**）；公开 TLS / PR Web 沙盒；M-Art 剩余（UI 接线三批、皮肤池等 D-F9）；胶囊对胶囊仍线性。
 - 仍不做：把 locale 热切换做成产品设置页。
 
-里程碑归属：M5
+里程碑归属：M-Art（字体入包）
 是否绕过 placeholder_spec 散落几何/色板常量：否
 审查级别：轻审
 隔离方式：当前 checkout
