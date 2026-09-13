@@ -20,11 +20,12 @@ Usage:
 `--check` exits non-zero when the checked-in supplement is stale.
 
 **This script does not run in CI** (Python + fontTools are not installed there;
-adding them is a human gate under constitution article 18). So "changing a
-string can never silently lose a glyph" is *not* an enforced property: the GUT
-suite asserts the font covers the checked-in supplement, and nothing asserts the
-supplement is current. Re-running this after a copy change is a manual step,
-listed in README.md section 4.
+adding them is a human gate under constitution article 18). A stale supplement
+therefore does not fail the pipeline — but a *missing glyph* does:
+`game/tests/unit/test_font_covers_live_sources.gd` rescans the same directories
+in GDScript and asserts the shipped font can draw every char it finds, without
+reading this file at all. So the supplement is the subsetter's input, not the
+gate; regenerating it is how you *fix* that gate once it goes red.
 """
 
 from __future__ import annotations

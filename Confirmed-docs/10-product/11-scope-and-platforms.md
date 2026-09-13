@@ -198,6 +198,7 @@
    - **保留字体名（RFN）**：OFL 要求子集产物不得沿用 "Noto Sans SC" / "Source"，所以入库文件叫 **`CraftArena Sans SC`**（`UiFont.FAMILY_NAME`）。改名只动 name 表的命名项，版权与许可全文按要求保留。许可原文随字体分发在 `game/content/ui/fonts/OFL-1.1.txt`，来源与条款已记 [ATTRIBUTION.md](../../game/content/assets/ATTRIBUTION.md) §1.1。
    - **接线**：`gui/theme/custom_font` 兜住自绘大厅 / HUD / `Label3D`（它们不挂 theme），产品 UI 主题的 `default_font` 指同一份。字体路径的唯一所有者是 `game/src/shared/ui_font.gd`。
    - **仍缺的字**：上游不含 emoji（S1 的 🔒 走引擎回退）；**只有 Regular 一个字重**，标题靠字号分层，加字重约 +800 KB 一份，未拍板；**公开未过滤用户名**（[CD-62](../60-plan/62-risk-register.md)）在 3500 字与补集之外的汉字仍可能缺字——子集解决的是"平台文案缺字"，不是"任意汉字都能画"。
+   - **"走引擎回退"只在桌面成立**。Web 导出没有系统字体可枚举，`allow_system_fallback` 在浏览器里无处可退，所以子集外的字符在 Web 上**直接是豆腐块**，不是"换个字形"。Web 是本期持续测试入口（见本文件开头平台表），凡本文件写"走系统回退"的地方都按这一条读。上游也不含 `▾`（U+25BE），2026-09-13 已把 S3 的两处下拉文案改成 `▼`（U+25BC）——取向是**改内容迁就子集**，不是为个别字形加回退层。
 4. **角色视觉占格比例 0.7 不是产品比例**。它补的是一个结构缺口：角色此前**根本没有贴合规则**（地块与门 / 箱 / 滚柱都按自身 AABB 等比缩到一格，只有角色直接用原始尺寸），前两个角色资产水平最长边小于一格所以没暴露，换成 Cube Pets 后一眼可见。0.7 是人类 2026-09-07 看真机说「有点大」之后给的占位值——**D4 从没问过这一项**，改它只动 `PlaceholderSpec.CHARACTER_VISUAL_CELL_SPAN` 一行。缩放按 AABB 算而不写死系数，所以换任何一只动物都自动适配，代价是不同动物贴合后高矮不一（那是保留动物本身比例的结果）。**视觉仍比权威胶囊大**（贴合后 0.48 × 0.62 × 0.70 m vs 胶囊直径 0.25 / 总高 0.375），这是 [ADR-0006](../../docs/adr/0006-gameplay-asset-contract.md) Q4 = A 明确允许的，不是待修缺陷。
 
 来源见 [CD-91](../90-reference/91-decision-log.md)。

@@ -41,7 +41,7 @@ AI 不得把其他文档中的示例表格、推荐项或"建议"当成已确认
 3. GodotSteam 的具体能力清单；
 4. 正式 Production、备份、监控、告警、抗滥用与可访问性何时立项；
 5. **字体是否需要第二个字重**（Bold / Medium）。当前只有 Regular 一份（约 800 KB），标题靠字号分层。每加一个字重约 +800 KB，而 Web 包体是已登记风险（[CD-62](62-risk-register.md)）；
-6. **是否入包含 emoji 的字体或子集**。上游 Noto Sans SC 不含 emoji，S1 大厅的 🔒 目前走引擎系统回退。要它就得换一份含 emoji 的字体，那是一次**新的许可证确认**（宪法第十八条）。
+6. **是否入包含 emoji 的字体或子集**。上游 Noto Sans SC 不含 emoji，S1 大厅的 🔒 在桌面走引擎系统回退，**在 Web 上直接是豆腐块**（浏览器没有系统字体可退，口径见 [CD-11 §8.2 第 3 条](../10-product/11-scope-and-platforms.md#82-表现规格d42026-08-26-拍板当前生效值)）。要它就得换一份含 emoji 的字体，那是一次**新的许可证确认**（宪法第十八条）。
 
 已关闭并迁出本清单：唯一 Godot 主 MCP 选定为 Godot AI，插件不入库，遥测强制关（2026-08-21，[ADR-0003](../../docs/adr/0003-godot-mcp-selection.md)、[CD-51 §7](../50-engineering/51-dev-environment.md)）。阶段 C 生产级启用已于 2026-08-23 通过。Agent 仍不得把 MCP 写入 CI 或提交 `project.godot` 脏写入。
 

@@ -86,6 +86,8 @@ Worktree 端口偏移见 README「并行工作区」；本文件不复述端口�
 
 预期：八个 ASCII 箭头与中文都在；提示行完整可读。失败：箭头变成方框 ⇒ 子集把 ASCII 切没了（字表按行存，空格与标点容易被漏，已在脚本里强制并入可打印 ASCII）。
 
+顺带看一眼 S3 广场（本刀不接线，但资产在库）：两个下拉按钮的文案在本刀里从 `▾`（U+25BE）改成了 `▼`（U+25BC），因为上游 Noto Sans SC 没有前者的字形。**这是一处产品可见文案改动**，改的方向是"内容迁就子集"而不是"为两个字形加回退"。看到 `▾` 说明有人改回去了。
+
 ### 5. 产品 UI 主题拿的是同一份字体
 
 操作：命令行跑一次主题加载（见下面第 6 步的 GUT），或直接在编辑器里打开 `res://content/ui/theme/craft_arena.tres`，看 Inspector 的 `Default Font`。
@@ -100,20 +102,29 @@ npm run test:gut:full
 "$GODOT4" --headless --path game -- --package-check
 ```
 
-预期：`typecheck` 无输出；`redline-scan` `no findings`；GUT **1656/1656**（本刀新增 `test_font_packaging.gd` **11 条**：三条断言本地化表 / 常用 3500 字表 / 项目补集**零缺字**，一条反例证明 `has_char` 不是恒真，一条断言没挂 theme 的 `Control` 运行时拿到的就是这份子集）；`--package-check` `ok=true` 且 `ui_font_loadable=true`、`ui_font_name="CraftArena Sans SC"`、`no_mcp_autoload=true`。失败：缺字测试红 ⇒ 它能直接打出 `U+XXXX(字)`，照着往 `project_supplement.txt` 补并重跑子集（步骤见 `tools/font-subset/README.md`）；`ui_font_name` 含 `Noto` 或 `Source` ⇒ 保留字体名泄漏。
+预期：`typecheck` 无输出；`redline-scan` `no findings`；GUT **1658/1658**；`--package-check` `ok=true` 且 `ui_font_loadable=true`、`ui_font_name="CraftArena Sans SC"`、`no_mcp_autoload=true`。
 
-补一句上面命令跑不到的：**字表是否过期要单独查**，因为扫描器不进 CI。
+本刀新增两个测试文件共 13 条：
+
+- `test_font_packaging.gd`（11 条）验**产物**：本地化表 / 常用 3500 字表 / 项目补集零缺字，改名不含保留字体名，没挂 theme 的 `Control` 运行时拿到的就是这份子集，单文件 < 2 MB，外加一条反例证明 `has_char` 不是恒真；
+- `test_font_covers_live_sources.gd`（2 条）验**源头**：现扫仓库逐字符断言字体画得出来（不读入库字表），外加一条反例证明这个扫描抓得住。
+
+失败：缺字测试红 ⇒ 它直接打出 `U+XXXX(字) 首见于 res://…`，要么改掉那个字符，要么重跑子集（步骤见 `tools/font-subset/README.md`）；`ui_font_name` 含 `Noto` 或 `Source` ⇒ 保留字体名泄漏。
+
+缺字这件事**不需要你手工查**：`test_font_covers_live_sources.gd` 在 GUT 里现扫 `res://src` / `content/locale` / `content/official`，不读入库字表，直接问字体画不画得出来，所以"改了文案忘了重跑子集"会自己红，并打出 `U+XXXX(字) 首见于 res://…`。这条门禁已用故障注入验证过（注入 `▾` 确实变红）。
+
+想额外确认入库字表是不是最新的（它只是切子集的输入，不是判据）：
 
 ```bash
 python3 tools/font-subset/collect_project_chars.py --check
 ```
 
-预期：`ok: NNNN chars, supplement up to date`。失败：`stale: …` ⇒ 有人改了文案却没重跑补集。**这一条红的时候 GUT 多半仍是绿的**——GUT 只验"字体覆盖了已入库的补集"，不验"补集是新的"，两者是不同的问题。
+预期：`ok: NNNN chars, supplement up to date`。这一条红而 GUT 绿是**正常情况**——说明新加的字恰好已在子集里，补集文件落后但没造成缺字。
 
 ### 本刀不测
 
 - **第二个字重（Bold / Medium）**：只有 Regular 一份，标题靠字号分层，加字重约 +800 KB，需人类拍板；
-- **emoji**：上游 Noto Sans SC 不含 emoji，S1 大厅那把 🔒 仍走系统回退，这是"子集没买 emoji"的结果，不是缺陷；
+- **emoji**：上游 Noto Sans SC 不含 emoji，S1 大厅那把 🔒 走系统回退，这是"子集没买 emoji"的结果，不是缺陷。**注意这条只在桌面成立**：Web 导出没有系统字体可枚举，`allow_system_fallback` 无处可退，🔒 在浏览器里就是豆腐块。本刀验的是开发机窗口，看不到这个差别；
 - **公开未过滤用户名**：3500 字与补集之外的汉字仍可能缺字（[CD-62](../../Confirmed-docs/60-plan/62-risk-register.md) 已登记），子集解决的是平台文案，不是任意汉字；
 - **接任何一屏产品 UI**（第一批是下一刀：S3 广场，前置还剩三项）；
 - 公开 TLS、PR Web 沙盒、Android / iOS；

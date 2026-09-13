@@ -1,0 +1,12 @@
+# Pinned so that re-running build_font_subset.py produces the same bytes.
+#
+# This tool does not run in CI (see README.md section 5), which means "re-running
+# it gives you the same font" is the only reproducibility guarantee available.
+# An unpinned fontTools would quietly change subsetting or name-table output and
+# nothing downstream would notice.
+#
+#   python3 -m pip install -r tools/font-subset/requirements.txt
+#
+# Last regenerated with this exact set on 2026-09-13 (Python 3.10.10):
+# output craftarena_sans_sc_regular.otf, 822380 bytes.
+fonttools==4.53.1
