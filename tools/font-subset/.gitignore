@@ -1,0 +1,7 @@
+# Upstream Noto Sans SC source (~8 MB). Only the subsetted output is checked in;
+# `build_font_subset.py` re-fetches this by URL + SHA-256 when it is missing.
+.cache/
+
+# Byte cache from running the two scripts. The repo has no other Python, so
+# there is no root-level rule catching this one.
+__pycache__/

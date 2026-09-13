@@ -50,6 +50,10 @@ naming/script_name_casing=2
 
 enabled=PackedStringArray("res://addons/gut/plugin.cfg", "res://addons/authoring_editor/plugin.cfg")
 
+[gui]
+
+theme/custom_font="res://content/ui/fonts/craftarena_sans_sc_regular.otf"
+
 [input]
 
 move_forward={

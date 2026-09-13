@@ -175,7 +175,7 @@ custom_minimum_size = Vector2(160, 44)
 layout_mode = 2
 size_flags_vertical = 4
 theme_type_variation = &"Dropdown"
-text = "排序：综合 ▾"
+text = "排序：综合 ▼"
 script = ExtResource("2_press")
 
 [node name="TagFilter" type="Button" parent="Layout/Main/VBox/FilterRow"]
@@ -183,7 +183,7 @@ custom_minimum_size = Vector2(160, 44)
 layout_mode = 2
 size_flags_vertical = 4
 theme_type_variation = &"Dropdown"
-text = "标签：全部 ▾"
+text = "标签：全部 ▼"
 script = ExtResource("2_press")
 
 [node name="Search" type="LineEdit" parent="Layout/Main/VBox/FilterRow"]

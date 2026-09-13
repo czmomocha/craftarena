@@ -54,7 +54,82 @@ Worktree 端口偏移见 README「并行工作区」；本文件不复述端口�
 
 ---
 
-## 本刀：M5 C6 退出验收（全闭环走查 + 两份清单）
+## 本刀：字体入包（Noto Sans SC 常用 3500 字子集）
+
+**不需要三后端**（全部走 Solo 与大厅窗口）。
+
+这刀验一件事：**中文不再是"碰巧能看"**。此前中文由引擎回退字体渲染，缺字不会报错、只会画出一个差不多的字或者方框。现在包里有一份常用 3500 字子集，大厅、HUD、`Label3D`、产品 UI 主题都读它。
+
+按「共用启动」0.2 开窗口化主场景即可（不用 `npm run dev`）。
+
+### 1. 大厅中文是同一个字体，不是系统回退
+
+操作：开大厅，看窗题与那排按钮。
+
+预期：本机 locale 为 `zh*` 时窗题是 **机关狂奔**，按钮 **快速游戏 / 创建房间 / 加入房间 / 单人试玩 / 取消 / 查询队列**。**字重偏细、笔画均匀**——这是 Noto Sans SC Regular 的样子；macOS 系统回退（PingFang）笔画更粗、中宫更紧，两者并排能看出来。失败：窗题是键名 `craft_arena.ui.window_traprush` ⇒ 本地化表没进包，与字体无关，先修那个。
+
+### 2. 状态行与 HUD 的中文也在同一个字体里
+
+操作：看状态行（`join=idle`、`play=idle`、`server=127.0.0.1`、`course=3/5/1`）与第一行 `FPS 60`。点 **单人试玩**，看 HUD 的「离线试玩，成绩不上传」横幅与 `pads=` / `floor=` / `crates=` 那几行。
+
+预期：数字与中文都是同一套字形；横幅那句中文**每个字都有形**，没有方框、没有豆腐块。失败：出现 `□` 或空白 ⇒ 缺字，跑第 6 步的覆盖测试定位是哪个字。
+
+### 3. 头顶标签与 3D 里的字也跟着换
+
+操作：Solo 里看角色头顶的名次标签（`*#1 P0 n/3`）与检查点垫上的 order 数字。
+
+预期：`Label3D` 也用上了入包字体（它不挂 theme，靠 `gui/theme/custom_font` 兜底）。失败：3D 里的字仍是系统字体、2D 里是新字体 ⇒ `custom_font` 那一项没生效。
+
+### 4. 导航箭头与失败提示的符号没有丢
+
+操作：Solo 里看头顶指向下一个目标的箭头（`^ ^> > v> v v< < ^<`）与导航行；踩一下出生点 −Z 两格的洋红滚柱，看那行 **被机关击退** 提示。
+
+预期：八个 ASCII 箭头与中文都在；提示行完整可读。失败：箭头变成方框 ⇒ 子集把 ASCII 切没了（字表按行存，空格与标点容易被漏，已在脚本里强制并入可打印 ASCII）。
+
+### 5. 产品 UI 主题拿的是同一份字体
+
+操作：命令行跑一次主题加载（见下面第 6 步的 GUT），或直接在编辑器里打开 `res://content/ui/theme/craft_arena.tres`，看 Inspector 的 `Default Font`。
+
+预期：`Default Font` 指向 `craftarena_sans_sc_regular.otf`，`Font Name` 显示 **CraftArena Sans SC**。失败：是空的 ⇒ 主题的 `default_font` 没写进去；显示 **Noto Sans SC** ⇒ 改名没生效，那是 OFL 保留字体名（RFN）违规，**不能合入**。
+
+### 6. 覆盖与改名都是跑出来的，不是看出来的
+
+```bash
+npm run typecheck; npm test; npm run redline-scan; npm run asset-budget
+npm run test:gut:full
+"$GODOT4" --headless --path game -- --package-check
+```
+
+预期：`typecheck` 无输出；`redline-scan` `no findings`；GUT **1656/1656**（本刀新增 `test_font_packaging.gd` **11 条**：三条断言本地化表 / 常用 3500 字表 / 项目补集**零缺字**，一条反例证明 `has_char` 不是恒真，一条断言没挂 theme 的 `Control` 运行时拿到的就是这份子集）；`--package-check` `ok=true` 且 `ui_font_loadable=true`、`ui_font_name="CraftArena Sans SC"`、`no_mcp_autoload=true`。失败：缺字测试红 ⇒ 它能直接打出 `U+XXXX(字)`，照着往 `project_supplement.txt` 补并重跑子集（步骤见 `tools/font-subset/README.md`）；`ui_font_name` 含 `Noto` 或 `Source` ⇒ 保留字体名泄漏。
+
+补一句上面命令跑不到的：**字表是否过期要单独查**，因为扫描器不进 CI。
+
+```bash
+python3 tools/font-subset/collect_project_chars.py --check
+```
+
+预期：`ok: NNNN chars, supplement up to date`。失败：`stale: …` ⇒ 有人改了文案却没重跑补集。**这一条红的时候 GUT 多半仍是绿的**——GUT 只验"字体覆盖了已入库的补集"，不验"补集是新的"，两者是不同的问题。
+
+### 本刀不测
+
+- **第二个字重（Bold / Medium）**：只有 Regular 一份，标题靠字号分层，加字重约 +800 KB，需人类拍板；
+- **emoji**：上游 Noto Sans SC 不含 emoji，S1 大厅那把 🔒 仍走系统回退，这是"子集没买 emoji"的结果，不是缺陷；
+- **公开未过滤用户名**：3500 字与补集之外的汉字仍可能缺字（[CD-62](../../Confirmed-docs/60-plan/62-risk-register.md) 已登记），子集解决的是平台文案，不是任意汉字；
+- **接任何一屏产品 UI**（第一批是下一刀：S3 广场，前置还剩三项）；
+- 公开 TLS、PR Web 沙盒、Android / iOS；
+- 改爆破半径 / 推击力度 / 道具重生、改 [CD-43 §4](../../Confirmed-docs/40-technical/43-networking-and-replay.md#4-已锁定的网络参数) 的锁定值。
+
+### 诚实边界
+
+- **3500 是一张国家标准字表，不是本仓库的写照。** 它是《现代汉语常用字表》语料库在线版；项目实际用到的字由补集兜住，所以"零缺字"是**并集**的结果，不是那 3500 字本身够用；
+- **体积 802 KB 是本机实测的观察值**（`build_font_subset.py` 打印），不是门禁；脚本里的 2 MB 上限借自 CD-11 §8.1 的单文件预算，本刀没有发明新的字体预算；
+- **进包已用真导出验证过一次**（Linux Headless 预设）：`.pck` 里能取到 `res://content/ui/fonts/craftarena_sans_sc_regular.otf`、`OFL-1.1.txt` 与两张字表。前一个是引擎资源走 `.import`，后两个不是，靠 `include_filter` 进包——**OFL 要求许可全文随字体分发，所以它不在包里是违约，不只是文档没带全**（见 [desktop-export-check.md](desktop-export-check.md) §5 第 3 条）。导出的 Linux 二进制在 macOS 上跑不了（`exec format error`），所以这一步验的是"文件在包里"，**不是**"包在真机上跑得起来"；
+- **子集工具不进 CI**：它需要 Python + fontTools，CI 只验证已生成的字体文件。往 CI 加依赖属宪法第十八条；
+- **改名的义务来自 OFL 的 RFN 约束**，不是审美。name 表里的版权（ID 0）与许可全文（ID 13/14）按要求**保留**了，删掉的只有商标声明（ID 7）。
+
+---
+
+## 上一刀（已合入）：M5 C6 退出验收（全闭环走查 + 两份清单）
 
 需要三后端。本章**没有新控件、没有新玩法**：它交的是两份人工清单，并要求把「编辑—预览—邀请—发布—游玩—单局结算」整条闭环连着走一遍。走完之后签的是另外两份文件，不是这一节。
 

@@ -1,4 +1,6 @@
-[gd_resource type="Theme" load_steps=69 format=3]
+[gd_resource type="Theme" load_steps=70 format=3]
+
+[ext_resource type="FontFile" uid="uid://cwnrv1fr1xeaw" path="res://content/ui/fonts/craftarena_sans_sc_regular.otf" id="font_ui"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_1"]
 content_margin_left = 24
@@ -796,6 +798,7 @@ corner_radius_bottom_right = 8
 corner_radius_bottom_left = 8
 
 [resource]
+default_font = ExtResource("font_ui")
 Panel/styles/panel = SubResource("StyleBoxFlat_1")
 PanelContainer/styles/panel = SubResource("StyleBoxFlat_1")
 Button/styles/normal = SubResource("StyleBoxFlat_10")

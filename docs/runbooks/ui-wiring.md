@@ -3,7 +3,7 @@
 > **状态（2026-09-12）：资产已落库，运行时尚未接线，且本文件部分内容已失真。**
 >
 > - **排期已定，见 [CD-61 §2 M-Art](../../Confirmed-docs/60-plan/61-milestones.md#m-art表现与美术)**（所有者）。三批：S3 广场（M5 退出后）→ S1 主大厅（M6 主大厅壳章内）→ S2 / S4 / S5 / S6。**M5 C6 期间不得接任何一屏。**
-> - 第一批四项前置：**字体入包**（[CD-11 §8.2 第 3 条](../../Confirmed-docs/10-product/11-scope-and-platforms.md)）、文案迁 `UiCopy`（三个场景现有 106 处硬编码中文，零处走键）、`validate_theme.gd` / `validate_scene.gd` 进 CI、本文件按仓库实际落点重写。
+> - 第一批四项前置：**字体入包 ✅ 已于 2026-09-13 交**（[CD-11 §8.2 第 3 条](../../Confirmed-docs/10-product/11-scope-and-platforms.md)，见 [§3.5](#35-字体已完成2026-09-13)）；文案迁 `UiCopy`（三个场景现有 106 处硬编码中文，零处走键）；`validate_theme.gd` / `validate_scene.gd` 进 CI；本文件按仓库实际落点重写。
 > - **下面第 1–5 节仍是源项目 `testUI` 的视角**：`F:\study\craftarena` 路径、`godot/scenes/...` 目录、`C:\Tools\Godot_v4.7.2-stable_win64_console.exe` 命令都与本仓库实际不符。实际落点是 `game/src/client/ui/scenes/`、`game/src/client/ui/scripts/`、`game/content/ui/`；命令以 [README.md](../../README.md) 为准。重写排在第一批接线那一刀（宪法第十九条）。
 > - 第 6 节（关键实现约定）与 7.2 文案语义锁定**现在就有效**，不受上述失真影响。
 
@@ -146,15 +146,17 @@ window/stretch/mode="canvas_items"
 window/stretch/aspect="expand"
 ```
 
-### 3.5 字体（★ 必做）
+### 3.5 字体（★ **已完成**，2026-09-13）
 
-主题**未内置字体**。中文必须用真实字体文件，不能切图：
+主题**此前**没有内置字体，中文全靠引擎回退字体渲染。现在：
 
-1. 将 CJK 字体放入 `game/content/ui/fonts/`（推荐 Noto Sans SC / 思源黑体 / HarmonyOS Sans SC）
-2. 在 `design/tokens.json` 的 `fonts` 段填入路径
-3. 重跑 `python tools/build_theme.py`，把生成的 `.tres` 中 `default_font` 与各 `fonts/font` 项补上
+- 入包文件：`game/content/ui/fonts/craftarena_sans_sc_regular.otf`（Noto Sans SC 常用 3500 字子集，SIL OFL 1.1，约 800 KB）。按 OFL 的保留字体名约束改了名，**不要再去找 "Noto Sans SC"**。
+- 主题的 `default_font` 已指向它（`craft_arena.tres` 的 `[resource]` 第一行）。各类型变种只设 `font_sizes/font_size`，字体继承 `default_font`，不需要逐个写 `fonts/font`。
+- 全局兜底 `gui/theme/custom_font` 指向同一份，让不挂 theme 的自绘大厅 / HUD / `Label3D` 也用上它。路径唯一所有者是 `game/src/shared/ui_font.gd`。
+- 字表随字体入库在 `game/content/ui/fonts/charsets/`（`common_3500.txt` + `project_supplement.txt`）。改了文案或加了按钮，先跑 `python3 tools/font-subset/collect_project_chars.py` 重写补集，再跑 `build_font_subset.py`，然后 `"$GODOT4" --headless --path game --import`。重跑步骤与已知边界（只有一个字重、emoji 不在子集内）见 `tools/font-subset/README.md`。
+- GUT `test_font_packaging.gd` 断言本地化表与两张字表**零缺字**；改文案导致缺字会直接红。
 
-未挂字体前，预览图中的中文由引擎回退字体渲染，实际观感会有差异。
+本节不再依赖源项目的 `design/tokens.json` / `build_theme.py`——那套管线没有入库。
 
 ---
 

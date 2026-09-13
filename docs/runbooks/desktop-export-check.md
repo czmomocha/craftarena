@@ -167,7 +167,8 @@ python -m http.server 8060 --directory export\web
 
 2. **Web 预设会因为 VRAM 压缩项而拒绝导出。** 报错只有一句 `Cannot export project with preset "Web" due to configuration errors:`，**后面不列具体项**。原因是 `vram_texture_compression/for_desktop` / `for_mobile` 要求工程先开对应的导入设置。2026-08-26 工程零纹理，两项都设为 false。**2026-09-02 第一批 `.glb` 入库后，同一预设已能导出**（三项压缩仍关；贴图走 glTF 内嵌未压缩，见 [CD-51 §5.1](../../Confirmed-docs/50-engineering/51-dev-environment.md)）。以后若打开 VRAM 压缩导入，必须与这两项一起开，否则会再次被一句空报错挡住。
 
-3. **官方赛道 JSON 与本地化 CSV 都不是引擎资源，默认不进包。** 三个预设都要 `include_filter="content/official/*.json,content/locale/*.csv"`。自检里的 `courses_readable` / `locale_table_loadable` 做的是解码而不是 `file_exists`，因为存在「文件在包里但引擎读不出来」的情况。CSV 不得走 Godot 默认翻译导入：那会生成 `.translation`，Headless 与导出包对不上同一套 remap。
+3. **官方赛道 JSON 与本地化 CSV 都不是引擎资源，默认不进包。** 三个预设都要 `include_filter="content/official/*.json,content/locale/*.csv,content/ui/fonts/*.txt,content/ui/fonts/charsets/*.txt"`。自检里的 `courses_readable` / `locale_table_loadable` 做的是解码而不是 `file_exists`，因为存在「文件在包里但引擎读不出来」的情况。CSV 不得走 Godot 默认翻译导入：那会生成 `.translation`，Headless 与导出包对不上同一套 remap。
+   **2026-09-13 追加**：字体目录里那两个 `.txt` 也进了 `include_filter`，理由不一样——**OFL 要求许可全文随字体一起分发**，所以 `OFL-1.1.txt` 不在包里就是许可证违约，不只是「文档没带全」。字表 `charsets/*.txt` 跟着进（约 19 KB），让「这个子集到底包含什么」在包里也有答案。字体本体 `.otf` 是引擎资源，走 `.import`，不需要进 filter。
 
 4. **GUT 会静默跳过解析失败的测试脚本。** 本章两个新测试文件因类型警告解析失败时，GUT 打一行 `[GUT WARNING] Ignoring script ...` 然后照常输出 `All tests passed!`，脚本数从 95 没变。**只看 GUT 绿不足以证明测试跑了**；拦住它的是 CI 里对 `game/tests` 的逐文件 `--check-only`。本地跑 GUT 时请顺带核对 Scripts 数。
 

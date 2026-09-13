@@ -61,6 +61,7 @@ static func _run_checks(failures: Array[String]) -> Dictionary:
 	_record(checks, failures, "crate_visual_loadable", _fitted_prop_loadable(SharedVisualAssetCatalog.CRATE_SCENE_PATH), true)
 	_record(checks, failures, "hazard_roller_visual_loadable", _fitted_prop_loadable(SharedVisualAssetCatalog.HAZARD_ROLLER_SCENE_PATH), true)
 	_record(checks, failures, "locale_table_loadable", _locale_table_loadable(), true)
+	_record(checks, failures, "ui_font_loadable", _ui_font_loadable(), true)
 	_record(checks, failures, "user_draft_roundtrip", _user_draft_roundtrip(), true)
 	_record(checks, failures, "no_mcp_autoload", not _autoload_names().has(MCP_AUTOLOAD), true)
 	_record(checks, failures, "runtime_material", _runtime_material_ok(), true)
@@ -107,6 +108,8 @@ static func _body(checks: Dictionary, failures: Array[String]) -> Dictionary:
 		"hazard_roller_visual_path": SharedVisualAssetCatalog.HAZARD_ROLLER_SCENE_PATH,
 		"locale_table_path": UiCopy.TABLE_PATH,
 		"locale_file_exists": FileAccess.file_exists(UiCopy.TABLE_PATH),
+		"ui_font_path": UiFont.FONT_PATH,
+		"ui_font_name": _ui_font_name(),
 		"locale_open_ok": _locale_open_ok(),
 		"locale_banner_zh": UiCopy.text(UiCopy.OFFLINE_BANNER, "zh_CN"),
 		"locale_parse": UiCopy.parse_stats(),
@@ -181,6 +184,29 @@ static func _fitted_prop_loadable(path: String) -> bool:
 		return false
 	visual.free()
 	return true
+
+
+## Decoding *and* a glyph, not file_exists: an `.otf` reaches the package as an
+## imported `.fontdata`, so a missing reimport or a wrong export filter shows up
+## here. Checking a char too catches the nastier case — a font that loads fine
+## and then renders tofu because the subset was built from a stale charset.
+##
+## The probe char is a constant (`UiFont.PROBE_CHAR`), not a string pulled from
+## `UiCopy`: a broken locale table makes `UiCopy.text()` return the key itself,
+## whose first char is ASCII, and `has_char('c')` is true for any font at all.
+## That would turn this check green exactly when the UI is most broken.
+static func _ui_font_loadable() -> bool:
+	var font: Font = UiFont.default_font()
+	if font == null:
+		return false
+	return font.has_char(UiFont.PROBE_CHAR.unicode_at(0))
+
+
+static func _ui_font_name() -> String:
+	var font: Font = UiFont.default_font()
+	if font == null:
+		return ""
+	return font.get_font_name()
 
 
 static func _user_draft_roundtrip() -> bool:

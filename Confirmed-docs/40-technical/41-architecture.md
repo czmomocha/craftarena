@@ -127,6 +127,7 @@ repo/
 │  │  ├─ locale/                 # 本地化 CSV（`craft_arena.*` 键）；解析见 `shared/ui_copy.gd`
 │  │  ├─ assets/                 # 平台运行时资产（GLB）；准入见 CD-51 §5.1
 │  │  ├─ audio/                  # 平台音频；bank JSON 在 `banks/`；运行时 OGG 在 `sfx/` 与 `music/`（Git LFS）
+│  │  ├─ ui/                     # 产品 UI 基础包（2026-09-11 落库）：`theme/`、`assets/`、`shaders/`；`fonts/` 是入包字体子集与其字表（Git LFS 管 `.otf`）
 │  │  ├─ schemas/
 │  │  └─ test_fixtures/
 │  └─ tests/
@@ -148,7 +149,8 @@ repo/
 │  ├─ godot-project-settings/
 │  ├─ redline-scanner/
 │  ├─ shell-guard/
-│  └─ replay-inspector/
+│  ├─ replay-inspector/
+│  └─ font-subset/               # 字体子集化（Python + fontTools）；**不进 CI**，只验证产物；见该目录 README
 ├─ infra/
 │  ├─ compose/
 │  └─ tencent-cloud/

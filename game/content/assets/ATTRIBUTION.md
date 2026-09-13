@@ -11,6 +11,7 @@
 | 资产 | 来源 | 许可 | 署名要求 | 入库日期 |
 |---|---|---|---|---|
 | `characters/animal-cat.glb` | Kenney，Cube Pets 2.0（`kenney.nl`） | **CC0 1.0 Universal**（公有领域奉献） | 无强制要求；Kenney 建议但不要求署名 | 2026-09-05 |
+| `../../ui/fonts/craftarena_sans_sc_regular.otf` | Noto Sans SC（Google / Adobe，[notofonts/noto-cjk](https://github.com/notofonts/noto-cjk)），常用 3500 字子集 | **SIL OFL 1.1** | 必须随附许可全文；**子集产物不得沿用保留字体名**（RFN） | 2026-09-13 |
 
 CC0 允许个人、教育与**商业**用途，无署名义务。原始包内 `License.txt` 原文：
 
@@ -20,6 +21,16 @@ CC0 允许个人、教育与**商业**用途，无署名义务。原始包内 `L
 > Support by crediting 'Kenney' or 'www.kenney.nl' (this is not a requirement)
 
 我们仍然署名（本表即署名），因为"不要求"不等于"不应该"。
+
+### 1.1 字体：Noto Sans SC 子集（2026-09-13）
+
+**许可条款原文位置**：`game/content/ui/fonts/OFL-1.1.txt`（随字体分发，OFL 要求再分发时必须带上），上游同一份在 `tools/font-subset/licenses/OFL-1.1.txt`。
+
+上游源文件与 SHA-256 记录在 `tools/font-subset/build_font_subset.py`；子集的构建、改名与重跑步骤在 `tools/font-subset/README.md`。
+
+**OFL 的保留字体名（RFN）约束**是这一项的具体义务，不是又一次门禁：上游声明了 "Noto Sans SC"（Google）与 "Source"（Adobe）两个 RFN，子集是修改产物，**不得沿用**。所以入库文件叫 `CraftArena Sans SC`，`--check` 与 GUT 都断言保留名没残留。改名只动 name 表的命名项；版权（ID 0）与许可全文（ID 13/14）按要求保留。
+
+**已知边界**：上游不含 emoji，S1 大厅的 🔒 仍走引擎系统回退；只有 Regular 一个字重，加字重约 +800 KB 一份，需人类拍板。
 
 ### 待人类确认
 

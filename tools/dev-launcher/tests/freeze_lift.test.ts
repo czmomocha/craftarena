@@ -44,7 +44,12 @@ describe("course-correction freeze lift 2026-09-03", () => {
 
 		const scope = read("Confirmed-docs/10-product/11-scope-and-platforms.md");
 		assert.match(scope, /一期收尾/);
-		assert.match(scope, /任意中文缺字/);
+		// E8 关闭的落点变了：2026-09-13 字体已入包，CD-11 §8.2 从「接受任意中文缺字」
+		// 改成「已入包 + 子集范围 + 改名」。旧口径消失本身就是这条断言要钉的事实。
+		assert.match(scope, /已入包/);
+		assert.match(scope, /常用 3500 字/);
+		assert.match(scope, /CraftArena Sans SC/);
+		assert.doesNotMatch(scope, /入包完成前仍接受任意中文缺字/);
 
 		const risks = read("Confirmed-docs/60-plan/62-risk-register.md");
 		assert.match(risks, /不设.*周/);

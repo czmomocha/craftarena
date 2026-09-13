@@ -17,9 +17,9 @@ alwaysApply: true
 
 真机：[开发机窗口验收](docs/runbooks/dev-window-check.md) 本刀必须是编号步骤（怎么开、点什么、期望 / 失败）；禁止只写「真机再看一眼」。无 GUI 的章写「无」加原因。人工检查，不是 CI 门禁。口径见 [CD-52 §3.2](Confirmed-docs/50-engineering/52-ai-workflow.md)。
 
-- 做（**下一刀 = 字体入包**）：**M5 已退出**（2026-09-13 人类签署，结论「基本通过」）。对照 [CD-61](Confirmed-docs/60-plan/61-milestones.md)。字体入包 = 思源黑体 / Noto Sans SC，许可证已确认，**子集范围仍未拍板，AI 不得自选**——先问人类。之后才是 UI 接线第一批（S3 广场，四项前置见 CD-61 §2 M-Art）。交章时整节替换 [开发机窗口验收](docs/runbooks/dev-window-check.md) 本刀。
+- 做（**下一刀 = UI 接线第一批：S3 公共内容广场**）：**M5 已退出**（2026-09-13 人类签署，结论「基本通过」）。**字体入包已交**（2026-09-13：Noto Sans SC 常用 3500 字子集，改名 `CraftArena Sans SC`，许可证与子集范围均由人类拍板）。对照 [CD-61](Confirmed-docs/60-plan/61-milestones.md)。UI 接线第一批还剩三项前置：文案迁 `UiCopy`（三个场景 106 处硬编码中文）、`validate_theme.gd` / `validate_scene.gd` 进 CI、`ui-wiring.md` 按仓库实际落点重写。交章时整节替换 [开发机窗口验收](docs/runbooks/dev-window-check.md) 本刀。
 - 不做：把 M5 的两处遗留说成已解决——**乱序 / 重复包未严格注入**（待 Linux `tc netem`）、**可玩性签署只对当前自绘大厅 + 占位美术 + 占位数值那一版**；代签或代填任何人类清单；跳过字体入包直接接 UI；开工 Android / iOS 烟测；公开 TLS / PR Web 沙盒；抢先 M6 / M7；改爆破半径、推击力度、道具重生（D-F4 / D-F5 / D-F6）；改默认相机距离/FOV 产品值；自由旋转镜头；改 `SimulationCore` 定点数合同；Kenney 24 皮入库（D-F9 未拍）；发明新 Hz；触控 UI；**把外部网络故障注入工具写进仓库或 CI**。
-- 仍欠着（不因 M5 退出而消失）：网络故障九项里的乱序 / 重复包；发布候选清单（CD-53 §4.4）从未签；外部真人测试从未做；Android / iOS 烟测（**一期收尾**）；公开 TLS / PR Web 沙盒；M-Art 剩余（UI 接线三批、皮肤池等 D-F9）；胶囊对胶囊仍线性。
+- 仍欠着（不因字体入包而消失）：网络故障九项里的乱序 / 重复包；发布候选清单（CD-53 §4.4）从未签；外部真人测试从未做；Android / iOS 烟测（**一期收尾**）；公开 TLS / PR Web 沙盒；M-Art 剩余（UI 接线三批、皮肤池等 D-F9）；**字体只有 Regular 一个字重**（加字重约 +800 KB，需人类拍板）；**emoji 不在子集内**；胶囊对胶囊仍线性。
 - 仍不做：把 locale 热切换做成产品设置页。
 
 里程碑归属：M-Art（字体入包）
