@@ -1,8 +1,12 @@
 extends SceneTree
 ## Generic headless scene check.
 ##
-##   Godot_v4.7.2-stable_win64_console.exe --headless --path godot \
+##   "$GODOT4" --headless --path game \
 ##       --script res://tools/ui/validate_scene.gd -- [scenePath] [scenePath...]
+##
+## Engine is located through GODOT4 (README section "命令"); never hard-code a
+## path here. With no arguments it checks DEFAULT_SCENES. Runs in CI as of
+## 2026-09-13; failure modes are fault-injected in docs/runbooks/ui-wiring.md.
 ##
 ## For each scene it verifies that:
 ##   1. the scene loads and instantiates

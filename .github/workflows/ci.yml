@@ -87,11 +87,40 @@ jobs:
               cat /tmp/check.log
               failed=1
             fi
-          done < <(find game/src game/tests game/addons/authoring_editor -name '*.gd' | sort)
+          done < <(find game/src game/tests game/tools game/addons/authoring_editor -name '*.gd' | sort)
           exit "$failed"
 
       - name: Headless boot smoke test
         run: "\"$GODOT4\" --headless --path game --quit"
+
+      # 产品 UI 基础包的两项静态校验，UI 接线第一批（CD-61 §2 M-Art）的前置。
+      # 它们查的是 GUT 查不到的东西：`.tscn` 里 `theme_type_variation` 写了一个
+      # 主题里不存在的名字，运行时不会报错，只会静默套用默认样式——那种 bug
+      # 只有人眼在窗口里能发现，而开发机窗口验收不是门禁（宪法第二十四条）。
+      #
+      # 两个脚本的失败模式都做过故障注入验证（步骤留在 docs/runbooks/ui-wiring.md）。
+      # 这一步不是形式：validate_theme.gd 在 2026-09-13 之前用 `get_stylebox() == null`
+      # 判缺失，而 Theme.get_stylebox() 找不到时返回回退空样式而不是 null，于是
+      # 25 项检查全部恒真。修成 has_* 之后才真正有判定力。加门禁前先注入一次故障，
+      # 不要用 PASS 本身证明门禁有效。
+      # 退出码不够：`--script` 遇到**脚本自身**解析失败时打一行
+      # `Failed to load script ... Parse error` 然后 **exit 0**（2026-09-13 实测）。
+      # 光看退出码，这两个校验会在自己坏掉的那一刻变成永远绿。所以另外要求
+      # 它们打印 RESULT: PASS——解析失败的脚本不可能打出这行。
+      # 语法层面还有第二道：下面 check-only 的 find 已含 game/tools。
+      - name: UI theme and scene validation
+        run: |
+          set -uo pipefail
+          failed=0
+          for script in validate_theme validate_scene; do
+            out="$("$GODOT4" --headless --path game --script "res://tools/ui/$script.gd" 2>&1)" || failed=1
+            echo "$out"
+            if ! grep -q "RESULT: PASS" <<<"$out"; then
+              echo "::error file=game/tools/ui/${script}.gd::${script} 未输出 RESULT: PASS（失败，或脚本自身没跑起来）"
+              failed=1
+            fi
+          done
+          exit "$failed"
 
       # job 级 timeout 把超时记成 cancelled 而不是 failure，PR 上看起来像「还在跑」。
       # #176–#180 五刀就是这样带着从未通过的 Godot 门禁合入的，见

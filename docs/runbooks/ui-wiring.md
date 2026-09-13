@@ -3,9 +3,43 @@
 > **状态（2026-09-12）：资产已落库，运行时尚未接线，且本文件部分内容已失真。**
 >
 > - **排期已定，见 [CD-61 §2 M-Art](../../Confirmed-docs/60-plan/61-milestones.md#m-art表现与美术)**（所有者）。三批：S3 广场（M5 退出后）→ S1 主大厅（M6 主大厅壳章内）→ S2 / S4 / S5 / S6。**M5 C6 期间不得接任何一屏。**
-> - 第一批四项前置：**字体入包 ✅ 已于 2026-09-13 交**（[CD-11 §8.2 第 3 条](../../Confirmed-docs/10-product/11-scope-and-platforms.md)，见 [§3.5](#35-字体已完成2026-09-13)）；文案迁 `UiCopy`（三个场景现有 106 处硬编码中文，零处走键）；`validate_theme.gd` / `validate_scene.gd` 进 CI；本文件按仓库实际落点重写。
+> - 第一批四项前置：**字体入包 ✅ 已于 2026-09-13 交**（[CD-11 §8.2 第 3 条](../../Confirmed-docs/10-product/11-scope-and-platforms.md)，见 [§3.5](#35-字体已完成2026-09-13)）；**两个校验脚本进 CI ✅ 已于 2026-09-13 交**（见 [§0](#0-两个校验脚本已进-ci2026-09-13)）；文案迁 `UiCopy`（三个场景 **85 处**硬编码中文，零处走键——此前文档写的 106 处是过期计数）；本文件按仓库实际落点重写。
 > - **下面第 1–5 节仍是源项目 `testUI` 的视角**：`F:\study\craftarena` 路径、`godot/scenes/...` 目录、`C:\Tools\Godot_v4.7.2-stable_win64_console.exe` 命令都与本仓库实际不符。实际落点是 `game/src/client/ui/scenes/`、`game/src/client/ui/scripts/`、`game/content/ui/`；命令以 [README.md](../../README.md) 为准。重写排在第一批接线那一刀（宪法第十九条）。
 > - 第 6 节（关键实现约定）与 7.2 文案语义锁定**现在就有效**，不受上述失真影响。
+
+---
+
+## 0. 两个校验脚本（已进 CI，2026-09-13）
+
+`game/tools/ui/validate_theme.gd` 与 `validate_scene.gd` 现在是 `ci.yml` 里 `godot` job 的一步。它们查的是 GUT 查不到的东西：`.tscn` 里 `theme_type_variation` 写成一个主题里不存在的名字，**运行时不报错**，只会静默套用默认样式——这种 bug 只有人眼在窗口里能看出来，而开发机窗口验收不是门禁（宪法第二十四条）。
+
+本地跑：
+
+```bash
+"$GODOT4" --headless --path game --script res://tools/ui/validate_theme.gd
+"$GODOT4" --headless --path game --script res://tools/ui/validate_scene.gd
+```
+
+`validate_scene.gd` 不带参数时查 `DEFAULT_SCENES`（S1 / S2 / S3），也可以在 `--` 之后传场景路径。
+
+### 0.1 接进 CI 那天修掉的两个假绿
+
+**这一节不是记账，是使用说明**：下次再往 CI 加这类脚本，先按同样方式注入故障，不要用 PASS 证明门禁有效。
+
+1. **`validate_theme.gd` 的 25 项检查此前全部恒真。** 它用 `theme.get_stylebox(...) == null` 和 `get_font_size(...) <= 0` 判缺失，而 `Theme.get_stylebox()` 找不到条目时返回的是**回退空样式**、不是 `null`，`get_font_size()` 返回**默认字号**、不是 0。两个条件都永远为假。改用 `has_stylebox()` / `has_font_size()` 之后才有判定力。
+2. **`--script` 在脚本自身解析失败时 exit 0。** 只在 stderr 打一行 `Failed to load script ... Parse error`，退出码是 0。于是脚本一旦写坏就变成永远绿。CI 那一步因此**额外要求输出里出现 `RESULT: PASS`**，解析失败的脚本打不出这行；同时 `game/tools` 已并入 check-only 的扫描范围，语法层面还有第二道。
+
+这与 [desktop-export-check.md §5 第 4 条](desktop-export-check.md) 记的「GUT 静默跳过解析失败的测试脚本」是同一类陷阱：**Godot 的很多失败路径不走退出码。**
+
+### 0.2 故障注入验证（2026-09-13 实测）
+
+| 注入 | 期望 | 实测 |
+|---|---|---|
+| 主题里 `ButtonPrimary/styles/normal` 改名 | 非零 + 指名缺失项 | `exit=1`，`MISSING stylebox 'normal' on type 'ButtonPrimary'` |
+| 主题里 `PageTitle/font_sizes/font_size` 改名 | 非零 + 指名缺失项 | `exit=1`，`MISSING font_size on type 'PageTitle'` |
+| `s3_workshop.tscn` 的变种改成不存在的名字 | 非零 + 指名节点 | `exit=1`，`'Sort' uses undeclared variation 'NoSuchVariation'` |
+| 传一个不存在的场景路径 | 非零 | `exit=1` |
+| 给 `validate_theme.gd` 加一行语法错误 | 非零 | 裸退出码 **0（假绿）**；加上 `RESULT: PASS` 断言后 `exit=1` |
 
 ---
 

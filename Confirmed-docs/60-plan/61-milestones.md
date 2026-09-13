@@ -19,7 +19,7 @@
 | 进行中 | M3（表现层增强不阻塞 M3 退出，归 M-Art；深化段已收口的表现不再挡本号） |
 | M5 退出记录 | 2026-09-13 人类签署，结论 **「基本通过」**（不是无保留的「通过」）。依据：A1–C6 十一章全交；五张官方课 `npm run bot-run` 全 `completable`；GUT 1645/1645；[可玩性签署：TRAPRUSH](../../docs/runbooks/playability-signoff-traprush.md) 八项均为「通过」。**两处已知缺口随本号带走，不因退出而消失**：[网络故障人工检查](../../docs/runbooks/network-fault-check.md) 九项中乱序与重复包**未严格注入**（macOS `dnctl` 无对应开关，待 Linux `tc netem`）；签署对象是当前自绘大厅 + 占位美术 + 占位数值那一版，换 UI / 定稿美术 / 改 D-F4·F5·F6 后结论不自动延续 |
 | 部分交付 | M-Export（C1 三预设；**Web 游玩分发第一刀已交**；Android / iOS 排到一期收尾）；M-Art（C4 契约与第一批 `.glb`；与 F 线重叠项已交） |
-| 下一动 | **UI 接线第一批：S3 公共内容广场**（字体入包已于 2026-09-13 交，四项前置里还剩三项：文案迁 `UiCopy`、`validate_theme.gd` / `validate_scene.gd` 进 CI、`ui-wiring.md` 按仓库实际落点重写） |
+| 下一动 | **UI 接线第一批：S3 公共内容广场**（四项前置里已交两项：字体入包、两个校验脚本进 CI，均 2026-09-13。**还剩两项**：文案迁 `UiCopy`（三个场景 85 处硬编码中文，零处走键）、`ui-wiring.md` 按仓库实际落点重写） |
 | 未开工（顺序，不是冻结） | **产品 UI 接线**（分三批，见 [§2 M-Art](#m-art表现与美术)）；M6、M7；Android / iOS 烟测（一期收尾）；角色选择界面（紧跟主大厅壳，不提前开工） |
 | 纠偏闸门 | **已解除**（2026-09-03）。C0–C5 不是里程碑号。此后本文件进度顺序生效 |
 | 解冻后顺序 | 创作者可测（已收口）→ F 线（已收口）→ Web 游玩分发（第一刀已收口）→ 可玩性深化（已收口）→ M-Art 剩余已拍板项 → **M4a** → M4b → M5 → **字体入包 → UI 接线第一批（S3 广场）** → 公开 TLS / PR Web 沙盒 → M6 / M7（含 **UI 接线第二批 S1 主大厅壳**）→ **UI 接线第三批（S2 / S4 / S5 / S6）** → **一期收尾**（Android / iOS 烟测、触控 UI） |
@@ -329,7 +329,7 @@
 
   | 批次 | 接什么 | 时机 | 前置 |
   |---|---|---|---|
-  | 第一批 | S3 公共内容广场，替换 `content_plaza_entry.gd` | M5 退出之后 | 字体入包；文案改走 `UiCopy`；`validate_theme.gd` / `validate_scene.gd` 进 CI；`ui-wiring.md` 按仓库实际落点重写 |
+  | 第一批 | S3 公共内容广场，替换 `content_plaza_entry.gd` | M5 退出之后 | ~~字体入包~~（2026-09-13 交）；~~`validate_theme.gd` / `validate_scene.gd` 进 CI~~（2026-09-13 交）；文案改走 `UiCopy`；`ui-wiring.md` 按仓库实际落点重写 |
   | 第二批 | S1 主大厅，替换 `match_lobby_*` 自绘窗口 | **M6 主大厅壳章之内**，随 BASTION 双玩法入口一起落 | 第一批已交；同一刀整节替换 [开发机窗口验收](../../docs/runbooks/dev-window-check.md) 的「共用启动」 |
   | 第三批 | S2 匹配屏 + S4 账号 + S5 我的内容 + S6 局内 HUD | 第二批之后 | S4 / S5 / S6 尚未设计，需先出设计稿 |
 

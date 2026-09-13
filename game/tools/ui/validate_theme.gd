@@ -1,11 +1,15 @@
 extends SceneTree
-## Headless sanity check for theme/craft_arena.tres.
+## Headless sanity check for content/ui/theme/craft_arena.tres.
 ##
-##   Godot_v4.7.2-stable_win64_console.exe --headless --path godot \
-##       --script res://tools/validate_theme.gd
+##   "$GODOT4" --headless --path game --script res://tools/ui/validate_theme.gd
 ##
-## Exits non-zero when the theme fails to load or a known item is missing, so it
-## can be wired into CI.
+## Engine is located through GODOT4 (README section "命令"); never hard-code a
+## path here. Runs in CI as of 2026-09-13.
+##
+## Exits non-zero when the theme fails to load or a known item is missing.
+## Both failure modes are fault-injected in docs/runbooks/ui-wiring.md — do not
+## take a PASS from this script at face value without that, because the first
+## version of it passed unconditionally (see the has_* note below).
 
 const THEME_PATH := "res://content/ui/theme/craft_arena.tres"
 
@@ -67,17 +71,21 @@ func _init() -> void:
 
 	var failures := 0
 
+	# has_* rather than get_*. `Theme.get_stylebox()` never returns null for a
+	# missing item — it falls back to an empty StyleBox — and `get_font_size()`
+	# falls back to the default size, so the obvious `== null` / `<= 0` tests are
+	# both vacuously false. This script shipped with exactly that bug: all 25
+	# checks below passed unconditionally until 2026-09-13. Fault-inject before
+	# trusting any of them (see docs/runbooks/ui-wiring.md).
 	for check: Array in STYLEBOX_CHECKS:
 		var type_name := StringName(str(check[0]))
 		var item_name := StringName(str(check[1]))
-		var sb: StyleBox = theme.get_stylebox(item_name, type_name)
-		if sb == null:
+		if not theme.has_stylebox(item_name, type_name):
 			printerr("  MISSING stylebox '", item_name, "' on type '", type_name, "'")
 			failures += 1
 
 	for name: String in FONT_SIZE_CHECKS:
-		var fs: int = theme.get_font_size(&"font_size", StringName(name))
-		if fs <= 0:
+		if not theme.has_font_size(&"font_size", StringName(name)):
 			printerr("  MISSING font_size on type '", name, "'")
 			failures += 1
 
