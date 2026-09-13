@@ -1,11 +1,10 @@
 # Craft Arena UI 基础包 · 接线说明
 
-> **状态（2026-09-12）：资产已落库，运行时尚未接线，且本文件部分内容已失真。**
+> **状态（2026-09-13）：资产已落库，四项前置已清完，运行时尚未接线。**
 >
-> - **排期已定，见 [CD-61 §2 M-Art](../../Confirmed-docs/60-plan/61-milestones.md#m-art表现与美术)**（所有者）。三批：S3 广场（M5 退出后）→ S1 主大厅（M6 主大厅壳章内）→ S2 / S4 / S5 / S6。**M5 C6 期间不得接任何一屏。**
-> - 第一批四项前置：**字体入包 ✅**（2026-09-13，[CD-11 §8.2 第 3 条](../../Confirmed-docs/10-product/11-scope-and-platforms.md)，见 [§3.5](#35-字体已完成2026-09-13)）；**两个校验脚本进 CI ✅**（2026-09-13，见 [§0](#0-两个校验脚本已进-ci2026-09-13)）；**文案迁 `UiCopy` — S3 + 卡片 ✅，S1 / S2 未做**（见 [§0.3](#03-文案迁-uicopy的真实口径)）；本文件按仓库实际落点重写。
-> - **下面第 1–5 节仍是源项目 `testUI` 的视角**：`F:\study\craftarena` 路径、`godot/scenes/...` 目录、`C:\Tools\Godot_v4.7.2-stable_win64_console.exe` 命令都与本仓库实际不符。实际落点是 `game/src/client/ui/scenes/`、`game/src/client/ui/scripts/`、`game/content/ui/`；命令以 [README.md](../../README.md) 为准。重写排在第一批接线那一刀（宪法第十九条）。
-> - 第 6 节（关键实现约定）与 7.2 文案语义锁定**现在就有效**，不受上述失真影响。
+> - **排期的所有者是 [CD-61 §2 M-Art](../../Confirmed-docs/60-plan/61-milestones.md#m-art表现与美术)**，本文件不复述（宪法第二十六条）。三批：S3 广场 → S1 主大厅（M6 主大厅壳章内）→ S2 / S4 / S5 / S6。
+> - 第一批四项前置全部已交（均 2026-09-13）：**字体入包**（[CD-11 §8.2 第 3 条](../../Confirmed-docs/10-product/11-scope-and-platforms.md)，见 [§3.5](#36-字体已完成2026-09-13)）；**两个校验脚本进 CI**（见 [§0](#0-两个校验脚本已进-ci2026-09-13)）；**S3 + 卡片文案迁 `UiCopy`**（见 [§0.3](#03-文案迁-uicopy-的真实口径)）；**本文件按仓库实际落点重写**（本次）。
+> - **本文件描述的是本仓库，不是源项目。** 2026-09-13 之前第 1–5 节还是源项目 `testUI` 的视角（`F:\study\craftarena` 路径、`godot/scenes/` 目录、写死的 Windows 引擎路径），已按 `game/` 的实际落点重写。源项目的设计管线（`design/tokens.json`、`build_theme.py`、切图脚本）**没有入库**，相关章节据此改写而不是照抄，见 [§4](#4-样式维护)。
 
 ---
 
@@ -41,11 +40,9 @@
 | 传一个不存在的场景路径 | 非零 | `exit=1` |
 | 给 `validate_theme.gd` 加一行语法错误 | 非零 | 裸退出码 **0（假绿）**；加上 `RESULT: PASS` 断言后 `exit=1` |
 
----
+### 0.3 文案迁 UiCopy 的真实口径
 
-## 0.3 文案迁 `UiCopy`：真实口径
-
-### 「85 处硬编码中文」这个数字同时高估和低估了工作量
+#### 「85 处硬编码中文」这个数字同时高估和低估了工作量
 
 它数的是四个 `.tscn` 里的 `text =` / `placeholder_text =` 行。两个方向都不准：
 
@@ -62,7 +59,7 @@
 
 `DEMO_` 这个前缀本身就是文档：它说明这段数据是要被删的，不是要被翻译的。
 
-### 已迁移与未迁移
+#### 已迁移与未迁移
 
 **已迁移**：`s3_workshop.tscn`、`components/content_card.tscn`（第一批的实际目标）。两个文件的 `text` 已清空，运行时由 `_apply_copy()` / `_apply()` 从 `UiCopy` 填。
 
@@ -70,237 +67,188 @@
 
 这份清单是**可执行的**，不只是文字：`game/tests/unit/test_ui_scene_copy.gd` 的 `PENDING_SCENES` 就是上面那两个文件，并且有一条反例断言要求它们**确实还含中文**——迁完之后那条会红，提醒把它们移进 `MIGRATED_SCENES`。
 
-### 为什么清空 `.tscn` 而不是留着当占位
+#### 为什么清空 `.tscn` 而不是留着当占位
 
 人类 2026-09-13 拍板走「清空 + 运行时填」。好处是**漏接一个键会显示为空白**，一眼可见；留着中文当占位的话，漏接的那个会继续显示一句翻译器够不到的中文，看起来完全正常。代价是编辑器里打开场景看到的是空壳，设计评审要跑起来看。
 
 ---
 
-> 本项目（`testUI`）是 **纯 UI 项目**，产出将合入 UGC 游戏项目 **Craft Arena**（`F:\study\craftarena`），作为游戏 UI 基础。
-> 本文档描述交付物、接入步骤、维护流程与已知问题。
+> UI 基础包由独立的纯 UI 项目（`testUI`）产出，2026-09-11 落库。**那个项目不在本仓库里**，本节描述的是落库之后 `game/` 里的实际形态。
+> 源项目的设计管线（`design/tokens.json`、`build_theme.py`、切图脚本、`wire_into.py`）**没有入库**，所以"改 token 重跑脚本"这条路在本仓库走不通，见 [§4](#4-样式维护)。
 
 ---
 
-## 1. 交付物概览
+## 1. 落点
 
-```
-testUI/
-├── UI_WIRING.md                    本文档
-├── craft_arena_ui_spec.md          设计规格（唯一事实来源，六屏）
-├── design/
-│   └── tokens.json                 设计 Token（色板/字号/圆角/尺寸），主题生成的输入
-├── slice_config.json               切图配置（实测源图坐标）
-├── preview/                        渲染预览图（评审用，可不入库）
-├── tools/                          Python 工具链
-│   ├── build_theme.py              tokens.json → craft_arena.tres
-│   ├── slice_assets.py             按 slice_config.json 切图
-│   ├── find_regions.py             按颜色定位元素，量取坐标
-│   └── preview_assets.py           切图结果对比图
-└── godot/                          ★ 需要合入的部分
-    ├── project.godot               最小宿主工程（仅用于验证）
-    ├── theme/craft_arena.tres      主题（53 个类型变种）
-    ├── scenes/                     屏幕场景 + components/ 可复用组件
-    ├── scripts/                    场景脚本与通用组件
-    ├── shaders/                    渐变 / 圆角 / 羽化
-    ├── assets/ui/                  切图资产
-    └── tools/                      无头校验与截图脚本
-```
-
-**合入时只搬 `godot/` 下的内容**（`project.godot` 除外，见下节）。根目录的 `tools/`、`design/`、`slice_config.json` 是设计资产管线，建议一并放入独立工具目录，便于后续改样式。
-
----
-
-## 2. 目标工程结构（craftarena）
-
-Craft Arena 的 Godot 工程根是 `game/`：
-
-```
-F:\study\craftarena\game\
-├── project.godot
-├── addons/
-├── content/          美术与内容资产
-├── src/
-│   ├── client/
-│   ├── creator/
-│   ├── games/
-│   ├── server/
-│   ├── shared/
-│   ├── simulation/
-│   └── ugc/
-└── tests/
+```text
+game/
+├── content/ui/
+│   ├── theme/craft_arena.tres        主题，1003 行 / 59 类型 / 53 变种
+│   ├── fonts/                        入包字体子集与字表（见 §3.5）
+│   ├── shaders/                      rounded_gradient / rounded_texture / feather_left
+│   └── assets/                       23 张切图（.png + .import）
+├── src/client/ui/
+│   ├── scenes/
+│   │   ├── s1_lobby.tscn
+│   │   ├── s2_matchmaking.tscn
+│   │   ├── s3_workshop.tscn
+│   │   └── components/content_card.tscn
+│   └── scripts/
+│       ├── content_card.gd           卡片组件
+│       ├── press_feedback.gd         按压反馈，只能挂 BaseButton
+│       ├── rounded_gradient.gd       同步 shader 的 rect_size
+│       ├── spinner.gd
+│       ├── s2_matchmaking.gd
+│       └── s3_workshop.gd
+└── tools/ui/
+    ├── validate_theme.gd             CI 门禁（§0）
+    ├── validate_scene.gd             CI 门禁（§0）
+    └── screenshot.gd                 出预览图，不进 CI
 ```
 
-建议合入位置：
+注意 `scenes/` 与 `scripts/` 是**平级**的两个目录，场景和组件都在 `scenes/` 下（组件在 `scenes/components/`）。历史版本的本文件写的是 `screens/` 与 `components/` 两个顶层目录，那是源项目的形状，本仓库从来没有过。
 
-| 本项目 | 目标位置 | 说明 |
-|---|---|---|
-| `godot/theme/craft_arena.tres` | `game/content/ui/theme/craft_arena.tres` | 全局主题 |
-| `godot/scenes/*.tscn` | `game/src/client/ui/screens/` | 屏幕场景 |
-| `godot/scenes/components/*.tscn` | `game/src/client/ui/components/` | 可复用组件 |
-| `godot/scripts/*.gd` | `game/src/client/ui/scripts/` | 组件脚本 |
-| `godot/shaders/*.gdshader` | `game/content/ui/shaders/` | UI shader |
-| `godot/assets/ui/*.png` | `game/content/ui/assets/` | 切图资产 |
-| `design/tokens.json` + `tools/` | `game/tools/ui/` | 设计管线（可选） |
+`s1_lobby.tscn` **没有脚本**，是纯静态场景；`s2` / `s3` 有。
 
-> 路径按团队规范可调整，**关键是保持 `theme/`、`scenes/`、`scripts/` 三者相对关系与 shader 引用路径一致**（场景内用 `res://` 绝对路径引用 shader 与脚本，移动后需全局替换）。
+## 2. 当前接线状态
 
----
+**三个屏幕都还没有被运行时引用**——它们是可加载的资产，不在任何代码路径上。现在跑起来看到的仍是自绘 UI：
 
-## 3. 接入步骤
+| 屏 | 场景 | 现在实际在用的 | 接线批次 |
+|---|---|---|---|
+| S1 主大厅 | `s1_lobby.tscn` | `match_lobby_shell.gd` 自绘 `Window` | 第二批（M6） |
+| S2 匹配 | `s2_matchmaking.tscn` | 同上（大厅窗口内的输入框与按钮） | 第三批 |
+| S3 广场 | `s3_workshop.tscn` | `content_plaza_entry.gd`（338 行，自绘 `Window` + `ItemList`） | **第一批，下一刀** |
+| S4 / S5 / S6 | — | — | 第三批，尚无设计稿 |
 
-> **接线已执行完毕**（2026-09-11）。使用 `tools/wire_into.py`，它负责拷贝文件并重映射 `res://` 前缀。
-> 重跑即可同步最新改动：`python tools/wire_into.py`（加 `--dry-run` 先预览）。
-> **不要手改 craftarena 里的 UI 文件**——下次重跑会被覆盖；改动应回到本项目，再重跑脚本同步。
->
-> 接线后必须重跑一次 `godot --headless --path <game> --import`（见 5.1）。
+第一批要做的事是用 `s3_workshop.tscn` 替换 `content_plaza_entry.gd`。**工作量不在套皮，在搬数据流**：那 338 行里有真实的 HTTP 拉取、tab 切换、选中态、Solo 与建房两个出口，而 `s3_workshop.gd` 目前只有 `_apply_copy()` 与一个填充占位卡片的 `_populate()`，既没有 HTTP 也没有信号。`content_plaza_entry.gd` 当前由 `match_lobby_director.gd` 调起，被 `test_content_plaza.gd` 覆盖——替换时那些断言要跟着搬，不是删掉。
 
-### 3.1 主题挂载策略：随场景走，不设全局
+## 3. 接入方式
 
-**当前刻意没有**设置 `gui/theme/custom`。原因：craftarena 已有 `match_lobby_*`、
-`content_plaza_entry` 等自绘 UI，挂全局主题会立刻改写它们的外观。
+### 3.1 主题随场景走，字体是全局的
 
-每个屏幕场景的根 Control 已自带 `theme = craft_arena.tres`，主题随场景生效，
-**接入一个屏只影响那一屏**。等旧 UI 全部迁移完，再统一挂全局主题即可：
+这两件事现在不一样，容易混：
 
-```ini
-[gui]
-theme/custom="res://content/ui/theme/craft_arena.tres"
-```
+- **主题不全局。** 三个屏幕场景的根 `Control` 各自带 `theme = craft_arena.tres`，所以接入一屏只影响那一屏。`project.godot` **没有** `gui/theme/custom`，因为自绘大厅还在跑，挂全局主题会当场改写它们的外观。等三批接完再统一挂。
+- **字体全局。** `gui/theme/custom_font` 指向入包子集（2026-09-13），因为自绘大厅、HUD 和 `Label3D` 都不挂 theme，需要一个兜底。这一项与上面那条不冲突：它只给字体，不给样式盒。
 
-### 3.2 接入屏幕场景
-
-每个屏幕是独立的 `Control` 场景，根节点即入口：
-
-| 屏 | 场景 | 状态 |
-|---|---|---|
-| S1 主大厅 | `scenes/s1_lobby.tscn` | 完成 |
-| S2 TRAPRUSH 匹配 | `scenes/s2_matchmaking.tscn` | 完成（两态） |
-| S3 公共内容广场 | `scenes/s3_workshop.tscn` | 完成 |
-| S4 账号 | — | 未开始 |
-| S5 我的内容 | — | 未开始 |
-| S6 局内 HUD | — | 未开始 |
-
-接入方式：
+### 3.2 实例化
 
 ```gdscript
-var screen := preload("res://src/client/ui/screens/s1_lobby.tscn").instantiate()
+var screen: Control = preload("res://src/client/ui/scenes/s3_workshop.tscn").instantiate()
 add_child(screen)
 ```
 
-### 3.3 屏幕状态切换
-
-S2 通过根节点导出属性切换，供业务侧驱动：
+### 3.3 S2 的状态由导出属性驱动
 
 ```gdscript
-var s2 := preload(".../s2_matchmaking.tscn").instantiate()
+var s2: Control = preload("res://src/client/ui/scenes/s2_matchmaking.tscn").instantiate()
 add_child(s2)
-s2.state = s2.State.MATCH_FOUND   # WAITING(0) / MATCH_FOUND(1)
-s2.player_count = 4               # 1-8
-s2.solo_mode = false              # true 时顶部显示 SOLO 橙色横幅
+s2.set("state", 1)          # State.WAITING = 0 / State.MATCH_FOUND = 1
+s2.set("player_count", 4)   # 1-8
+s2.set("solo_mode", false)  # true 时显示 CD-13 离线横幅
 ```
 
-S3 的内容卡是**数据驱动**，业务侧不应改场景树，而是注入数据（结构见 `scripts/s3_workshop.gd` 的 `ENTRIES` 数组）。
+跨脚本赋值走 `set()` 而不是点号，见 [§6.3](#63-严格-gdscriptcraftarena-已开启必守)。
 
-### 3.4 窗口与缩放
+### 3.4 S3 的卡片是数据驱动的
 
-本包按 1920×1080 设计基准制作，建议目标工程采用：
+业务侧不改场景树，只注入数据。当前的 `DEMO_ENTRIES`（`s3_workshop.gd`）是占位，接线那一刀会换成控制面的列表响应并删掉它。字段见该常量；**`plays` 只放数字**，量词由 `craft_arena.card.plays_count` 提供（[§0.3](#03-文案迁-uicopy-的真实口径)）。
+
+新增卡片文案必须走 `UiCopy` 键，不要写回 `.tscn`——`test_ui_scene_copy.gd` 会红。
+
+### 3.5 窗口与缩放
+
+`project.godot` 已经是这套值，**不需要再改**：
 
 ```ini
 [display]
 window/size/viewport_width=1920
 window/size/viewport_height=1080
+window/size/mode=2
+window/size/window_width_override=1600
+window/size/window_height_override=900
 window/stretch/mode="canvas_items"
 window/stretch/aspect="expand"
 ```
 
-### 3.5 字体（★ **已完成**，2026-09-13）
+UI 基准是 1920×1080，开发机窗口是 1600×900 最大化——**两者不是一回事**，且基准只作用于主窗口。嵌入子窗口（Editor / Preview）另有约束，所有者是 [CD-11 §8.2 第 2 条](../../Confirmed-docs/10-product/11-scope-and-platforms.md)，本文件不复述。
 
-主题**此前**没有内置字体，中文全靠引擎回退字体渲染。现在：
+### 3.6 字体（已完成，2026-09-13）
 
-- 入包文件：`game/content/ui/fonts/craftarena_sans_sc_regular.otf`（Noto Sans SC 常用 3500 字子集，SIL OFL 1.1，约 800 KB）。按 OFL 的保留字体名约束改了名，**不要再去找 "Noto Sans SC"**。
-- 主题的 `default_font` 已指向它（`craft_arena.tres` 的 `[resource]` 第一行）。各类型变种只设 `font_sizes/font_size`，字体继承 `default_font`，不需要逐个写 `fonts/font`。
-- 全局兜底 `gui/theme/custom_font` 指向同一份，让不挂 theme 的自绘大厅 / HUD / `Label3D` 也用上它。路径唯一所有者是 `game/src/shared/ui_font.gd`。
-- 字表随字体入库在 `game/content/ui/fonts/charsets/`（`common_3500.txt` + `project_supplement.txt`）。改了文案或加了按钮，先跑 `python3 tools/font-subset/collect_project_chars.py` 重写补集，再跑 `build_font_subset.py`，然后 `"$GODOT4" --headless --path game --import`。重跑步骤与已知边界（只有一个字重、emoji 不在子集内）见 `tools/font-subset/README.md`。
-- GUT `test_font_packaging.gd` 断言本地化表与两张字表**零缺字**；改文案导致缺字会直接红。
+主题**此前**没有内置字体，中文全靠引擎回退渲染。现在：
 
-本节不再依赖源项目的 `design/tokens.json` / `build_theme.py`——那套管线没有入库。
-
----
-
-## 4. 样式维护流程
-
-**改样式 = 改 `design/tokens.json` → 重跑脚本 → 重新校验**，不要手改 `.tres`。
-
-```bash
-# 1. 改 design/tokens.json（变种定义在 build_theme.py）
-python tools/build_theme.py        # 产出 godot/theme/craft_arena.tres
-
-# 2. 无头校验主题与场景
-Godot_v4.7.2-stable_win64_console.exe --headless --path godot \
-    --script res://tools/validate_theme.gd
-Godot_v4.7.2-stable_win64_console.exe --headless --path godot \
-    --script res://tools/validate_scene.gd -- res://scenes/s1_lobby.tscn res://scenes/s2_matchmaking.tscn res://scenes/s3_workshop.tscn
-
-# 3. 出预览图
-Godot_v4.7.2-stable_win64_console.exe --path godot --rendering-driver opengl3 \
-    --resolution 1920x1080 --script res://tools/screenshot.gd -- \
-    res://scenes/s1_lobby.tscn - res://../preview/s1_lobby.png
-```
-
-`validate_scene.gd` 检查：场景可加载、所有 `theme_type_variation` 已在主题中声明、`press_feedback.gd` 只挂在 BaseButton 上。**建议接入 CI**，任何主题/场景改动都跑一遍。
-
-### 4.1 新增主题变种
-
-变种定义集中在 `tools/build_theme.py` 的 `build()` 里（按屏幕分段注释）。新增步骤：在对应分段加 `b.variation(...)` + `b.set(...)` → 重跑脚本。命名遵循 `<控件><语义>`（如 `TrackRowSelected`、`ButtonOnGradient`）。
+- 入包文件 `game/content/ui/fonts/craftarena_sans_sc_regular.otf`（Noto Sans SC 常用 3500 字子集，SIL OFL 1.1，约 800 KB）。按 OFL 的保留字体名约束改过名，**不要再去找 "Noto Sans SC"**。
+- 主题的 `default_font` 指向它。各类型变种只设 `font_sizes/font_size`，字体继承 `default_font`，不必逐个写 `fonts/font`。
+- 路径的唯一所有者是 `game/src/shared/ui_font.gd`。
+- 改了文案之后的重跑步骤、已知边界（只有 Regular、emoji 不在子集内、Web 上没有系统回退）都在 `tools/font-subset/README.md`，本文件不复述。
+- 缺字有门禁：`test_font_covers_live_sources.gd` 现扫仓库逐字符断言，改文案导致缺字会直接红并打出 `U+XXXX(字) 首见于 res://…`。
 
 ---
 
-## 5. 资产（切图）管线
+## 4. 样式维护
 
-源 mockup 是 **AI 生成概念稿**，几何与规格数值不符，因此切图坐标必须实测，不能从 `craft_arena_ui_spec.md` 推算。
-
-```bash
-# 定位元素（量坐标）
-python tools/find_regions.py <mockup.png> --saturated 55 --min-area 4000 --box x0 y0 x1 y1
-python tools/find_regions.py <mockup.png> --palette 20            # 看实际渲染色
-
-# 写进 slice_config.json 后切图
-python tools/slice_assets.py --only S3_workshop
-
-# 目视检查
-python tools/preview_assets.py
-```
-
-**规则：**
-- 只切 **插画 / 缩略图 / 图标**；纯色面板、按钮、卡片一律用 Theme 代码化
-- **文字绝对不能切图**（无法本地化、无法缩放）
-- `keyOut` 用于深色底上的图标抠透明
-- `specZones` 标注画板上的标注条，切图越界会告警
-
-### 5.1 重要：切图后必须重跑 Godot 导入
-
-`slice_assets.py` 只改写 `assets/ui/*.png`，**Godot 读的是 `.godot/imported/` 里的导入产物**。
-切图后如果直接渲染/运行，看到的仍是旧纹理。必须先执行：
+**源项目的 token 管线没有入库**，所以本仓库改样式只能直接改 `.tres`。这是当前事实，不是推荐做法：
 
 ```bash
-Godot_v4.7.2-stable_win64_console.exe --headless --path godot --import
+# 改 game/content/ui/theme/craft_arena.tres 之后，两个门禁都要过
+"$GODOT4" --headless --path game --script res://tools/ui/validate_theme.gd
+"$GODOT4" --headless --path game --script res://tools/ui/validate_scene.gd
 ```
 
-再渲染或运行。这条排在"改了图却没变化"类问题的第一位排查项。
+两个脚本已进 CI（[§0](#0-两个校验脚本已进-ci2026-09-13)），本地跑只是提前发现。**新增主题变种时先加到 `validate_theme.gd` 的检查清单里**，否则它不在门禁覆盖范围内。命名沿用 `<控件><语义>`（`TrackRowSelected`、`ButtonOnGradient`）。
+
+要把 token 管线搬进来属于新增工具与依赖（宪法第十八条），需要人类拍板，现在没有排期。
+
+### 4.1 出预览图
+
+```bash
+"$GODOT4" --path game --rendering-driver opengl3 --resolution 1920x1080 \
+    --script res://tools/ui/screenshot.gd -- \
+    res://src/client/ui/scenes/s3_workshop.tscn - /tmp/s3.png
+```
+
+第三个参数是悬停节点名（`-` 表示不悬停），之后可以追加 `prop=value` 驱动导出属性（例如 `state=1`）。**不进 CI**，它需要真实渲染设备。
+
+> 注意：S3 与卡片的文案现在由 `_ready()` 填（[§0.3](#03-文案迁-uicopy-的真实口径)），所以编辑器里打开场景看到的是空标签，**截图脚本跑出来的才有字**。
+
+---
+
+## 5. 切图资产
+
+23 张 `.png` 在 `game/content/ui/assets/`，已入库并生成 `.import`。**切图脚本没有入库**，所以本仓库不能重新切图；需要改图得回源项目，或者按新流程重新立项。
+
+源 mockup 是 AI 生成概念稿，几何与规格数值不符——历史上切图坐标都是实测出来的，不是从设计稿推算的。沿用的规则：
+
+- 只切**插画 / 缩略图 / 图标**；纯色面板、按钮、卡片一律用 Theme 代码化；
+- **文字绝不切图**（无法本地化、无法缩放）——现在这条还多了一层理由：文案已走 `UiCopy`，切进图里的字既翻不了也查不出缺字。
+
+### 5.1 换了图必须重跑导入
+
+Godot 读的是 `.godot/imported/` 里的产物，不是 `.png` 本身。换图后直接运行看到的仍是旧纹理：
+
+```bash
+"$GODOT4" --headless --path game --import
+```
+
+这条是"改了图却没变化"类问题的第一排查项。同样适用于换字体（`.otf` 也是导入资源）。
 
 ---
 
 ## 6. 关键实现约定
 
+路径以仓库根为准；shader 在 `content/ui/`，脚本在 `src/client/ui/`，两者不同级（[§1](#1-落点)）。
+
 | 约定 | 原因 |
 |---|---|
-| 渐变用 `shaders/rounded_gradient.gdshader` | `StyleBoxFlat` 只支持纯色 |
-| 贴图圆角用 `shaders/rounded_texture.gdshader` | `TextureRect` 无圆角属性 |
-| 两个 shader 的 `rect_size` 由 `scripts/rounded_gradient.gd` 同步 | 否则圆角/渐变在尺寸变化时错位 |
-| 按钮按压反馈用 `scripts/press_feedback.gd` | 主题只换样式盒，缩放/亮度需代码 |
-| 插画接缝用 `shaders/feather_left.gdshader` | 切片自带烘焙渐变，与卡片渐变不匹配 |
-| 可点击卡片需显式同步 `custom_minimum_size` | **Button 不是 Container，不向子节点取最小尺寸**（见 6.1） |
-| 文案语义锁定 | 见 6.2 |
+| 渐变用 `content/ui/shaders/rounded_gradient.gdshader` | `StyleBoxFlat` 只支持纯色 |
+| 贴图圆角用 `content/ui/shaders/rounded_texture.gdshader` | `TextureRect` 无圆角属性 |
+| 两个 shader 的 `rect_size` 由 `src/client/ui/scripts/rounded_gradient.gd` 同步 | 否则圆角 / 渐变在尺寸变化时错位 |
+| 按钮按压反馈用 `src/client/ui/scripts/press_feedback.gd` | 主题只换样式盒，缩放 / 亮度需代码。**只能挂 `BaseButton`**，`validate_scene.gd` 会查 |
+| 插画接缝用 `content/ui/shaders/feather_left.gdshader` | 切片自带烘焙渐变，与卡片渐变不匹配 |
+| 可点击卡片需显式同步 `custom_minimum_size` | **Button 不是 Container，不向子节点取最小尺寸**（见 [§6.1](#61-重要button-不传播子节点最小尺寸)） |
+| 文案走 `UiCopy` 键，`.tscn` 留空 | 漏接会显示为空白而不是一句翻不了的中文（[§0.3](#03-文案迁-uicopy-的真实口径)） |
+| 文案语义锁定 | 见 [§6.2](#62-文案语义锁定规格约束不得改写) |
 
 ### 6.1 重要：Button 不传播子节点最小尺寸
 
@@ -310,11 +258,13 @@ Godot_v4.7.2-stable_win64_console.exe --headless --path godot --import
 
 ### 6.2 文案语义锁定（规格约束，不得改写）
 
-- 「离线试玩，成绩不上传 SOLO · RESULTS NOT UPLOADED」
-- 「本局名次不进入任何天梯或长期排行」
-- 「版本不可覆盖：每次发布生成新版本 · 可随时回滚到上一签名版本」
-- 「未验证内容不进入已验证筛选」
-- 标题由系统词库生成（`词库A·词库B`），**不含自由文本**；标签为白名单结构化值
+锁的是**语义**，不是某个文件里的字符串。这些句子现在有的在 `UiCopy` 键表里、有的还硬编码在场景里，迁移只换存放位置，**不得顺手改措辞**：
+
+- 「离线试玩，成绩不上传 SOLO · RESULTS NOT UPLOADED」——语义的所有者是 [CD-13 §3](../../Confirmed-docs/10-product/13-account-and-session.md)，已在 `craft_arena.ui.offline_banner`，且有专门的测试禁止它以字面量形式出现在 `src/` 里；
+- 「本局名次不进入任何天梯或长期排行」（宪法第十五条）；
+- 「版本不可覆盖：每次发布生成新版本 · 可随时回滚到上一签名版本」（宪法第六、十三条）；
+- 「未验证内容不进入已验证筛选」——已在 `craft_arena.s3.note`；
+- 标题由系统词库生成（`词库A·词库B`），**不含自由文本**；标签为白名单结构化值。
 
 ### 6.3 严格 GDScript（craftarena 已开启，必守）
 
@@ -340,29 +290,32 @@ Godot_v4.7.2-stable_win64_console.exe --headless --path godot --import
 
 ## 7. 已知问题 / TODO
 
-- [x] ~~S3 内容卡标题显示两次~~ **已解决**（2026-09-11）。根因有两层：
-  1. 切图高度按 16:9 推算（291px），实际 mockup 缩略图是 `517×203`，多出的部分把 mockup 里烘焙的标题一起切进了图里；
-  2. 重新切图后**没有重跑 Godot 导入**，渲染用的仍是 `.godot/imported/` 里的旧纹理，导致"改了 PNG 不生效"的假象。
-  修正：`slice_config.json` 改为实测 `517×203`，`content_card.tscn` 的 `ThumbWrap` 高度改为 153 以匹配 2.55:1 素材。
-- [ ] S3 未验证卡（齿轮迷城 / 风蚀高塔）的缩略图里仍残留 mockup 烘焙的角标像素，与场景内自绘 `Badge` 叠加。需更精细的裁剪或改用无角标源图。
-- [ ] S2 成功态赛道 chip 文案已接「已锁定 LOCKED」，但仍是白底，规格未定义锁定色。
+这些是**视觉与规格层面的欠账**，都不挡接线。接线本身的欠账在 [§2](#2-当前接线状态)。
+
+- [ ] S3 未验证卡（`card_gear_maze` / `card_wind_tower`）的缩略图里残留 mockup 烘焙的角标像素，与场景内自绘 `Badge` 叠加。需要更精细的裁剪或无角标源图——**切图脚本没入库**（[§5](#5-切图资产)），所以这一项当前无法在本仓库修。
+- [ ] S2 成功态赛道 chip 已接「已锁定 LOCKED」，但仍是白底，规格未定义锁定色。注意这句中文目前**硬编码在 `s2_matchmaking.gd` 里**，属 S2 文案迁移（第三批）的范围。
 - [ ] 「等待加入…」空槽用实线 1px 边框代替虚线（`StyleBoxFlat` 不支持虚线）。
 - [ ] S3 卡片 hover 顶缘 2px 强调条用渐变起始色近似，规格要求渐变。
-- [ ] BASTION 卡禁用罩层用了 35% alpha，规格 token 是 60%（60% 数学上无法达到 mockup 明度，需设计确认）。
-- [ ] 未做屏幕：S4 账号、S5 我的内容（三子 tab）、S6 局内 HUD（含结算态）。
-- [ ] 交互状态仅 S1/S2 接入，S3 卡片 hover 样式已有但未挂 `press_feedback.gd`。
+- [ ] BASTION 卡禁用罩层用了 35% alpha，规格 token 是 60%（60% 数学上达不到 mockup 明度，需设计确认）。
+- [ ] 未做屏幕：S4 账号、S5 我的内容（三子 tab）、S6 局内 HUD（含结算态），均无设计稿。
+- [ ] `content_card.tscn` 的根节点没挂 `press_feedback.gd`（只有卡内的 Action 按钮挂了），所以整卡点击没有按压反馈。
+- [ ] S1 / S2 文案未迁 `UiCopy`，见 [§0.3](#03-文案迁-uicopy-的真实口径)。
+
+已解决的历史问题不再列在这里，查 git 历史即可（宪法第二十六条：本文件不当变更日志用）。
 
 ---
 
 ## 8. 验证基线
 
-| 项 | 结果 |
+下表是**跑出来的**，不是抄设计稿的。复现命令见 [§0](#0-两个校验脚本已进-ci2026-09-13)；引擎一律通过 `GODOT4` 定位，不写死路径。
+
+| 项 | 实测（2026-09-13） |
 |---|---|
-| Godot 版本 | 4.7.2 stable（`C:\Tools\Godot_v4.7.2-stable_win64_console.exe`） |
-| 主题 | 1000 行 / 53 类型变种，`validate_theme.gd` PASS |
+| Godot | 4.7.2 stable，所有者是 [CD-51 §1](../../Confirmed-docs/50-engineering/51-dev-environment.md) |
+| 主题 | 1003 行，59 个类型 / 53 个变种，15 项 stylebox + 10 项 font_size 检查全过 |
 | S1 | 90 节点 / 33 变种 / 8 处反馈脚本，PASS |
 | S2 | 167 节点 / 98 变种 / 15 处反馈脚本，PASS |
-| S3 | 29 节点（+8 运行时实例化卡片）/ 12 变种，PASS |
-| 渲染 | 1920×1080，OpenGL 3.3 |
+| S3 | 29 节点（运行时另加 8 张卡片）/ 12 变种 / 7 处反馈脚本，PASS |
+| 未声明变种 | 三屏均为 0 |
 
-预览图见 `preview/`。
+本仓库**没有** `preview/` 目录——源项目那批评审图没有跟着落库。需要看图就用 [§4.1](#41-出预览图) 现出到仓库外的临时路径；不要往仓库里塞渲染产物。
