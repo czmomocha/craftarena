@@ -59,18 +59,48 @@ const MAX_STARS := 5
 
 var _content_margin: Control
 
-@onready var _thumb: TextureRect = $Margin/VBox/ThumbWrap/Thumb
-@onready var _dim: ColorRect = $Margin/VBox/ThumbWrap/Dim
-@onready var _badge: PanelContainer = $Margin/VBox/ThumbWrap/Badge
-@onready var _badge_label: Label = $Margin/VBox/ThumbWrap/Badge/L
-@onready var _title: Label = $Margin/VBox/Title
-@onready var _tags: HBoxContainer = $Margin/VBox/Tags
-@onready var _dot: Panel = $Margin/VBox/Footer/Dot
-@onready var _author: Label = $Margin/VBox/Footer/Author
-@onready var _action: Button = $Margin/VBox/Footer/Action
-@onready var _stars: Label = $Margin/VBox/Stats/Stars
-@onready var _score: Label = $Margin/VBox/Stats/Score
-@onready var _plays: Label = $Margin/VBox/Stats/Plays
+# Resolved lazily rather than with `@onready`, because the exported setters run
+# whenever the owner assigns them — which for a freshly instantiated card is
+# *before* it enters the tree. With `@onready` those assignments hit null fields
+# and `_apply()` bailed out on `is_node_ready()`, so the card rendered blank and
+# nothing reported an error. The GUT suite never saw it: there `add_child`
+# happens inside a running tree, so `_ready` fires before the setters do.
+var _thumb: TextureRect = null
+var _dim: ColorRect = null
+var _badge: PanelContainer = null
+var _badge_label: Label = null
+var _title: Label = null
+var _tags: HBoxContainer = null
+var _dot: Panel = null
+var _author: Label = null
+var _action: Button = null
+var _stars: Label = null
+var _score: Label = null
+var _plays: Label = null
+var _resolved: bool = false
+
+
+## Idempotent. `PackedScene.instantiate()` has already built the subtree, so
+## every path here resolves as soon as the card object exists.
+func _resolve() -> bool:
+	if _resolved:
+		return true
+	_thumb = get_node_or_null(^"Margin/VBox/ThumbWrap/Thumb") as TextureRect
+	if _thumb == null:
+		return false
+	_dim = get_node_or_null(^"Margin/VBox/ThumbWrap/Dim") as ColorRect
+	_badge = get_node_or_null(^"Margin/VBox/ThumbWrap/Badge") as PanelContainer
+	_badge_label = get_node_or_null(^"Margin/VBox/ThumbWrap/Badge/L") as Label
+	_title = get_node_or_null(^"Margin/VBox/Title") as Label
+	_tags = get_node_or_null(^"Margin/VBox/Tags") as HBoxContainer
+	_dot = get_node_or_null(^"Margin/VBox/Footer/Dot") as Panel
+	_author = get_node_or_null(^"Margin/VBox/Footer/Author") as Label
+	_action = get_node_or_null(^"Margin/VBox/Footer/Action") as Button
+	_stars = get_node_or_null(^"Margin/VBox/Stats/Stars") as Label
+	_score = get_node_or_null(^"Margin/VBox/Stats/Score") as Label
+	_plays = get_node_or_null(^"Margin/VBox/Stats/Plays") as Label
+	_resolved = true
+	return true
 
 
 func _ready() -> void:
@@ -94,12 +124,18 @@ func _sync_minimum_size() -> void:
 
 
 func _apply() -> void:
-	if not is_node_ready():
+	if not _resolve():
 		return
 
 	_thumb.texture = thumbnail
 	_title.text = card_title
+	# No author, no dot. Real plaza rows carry no author field (see
+	# s3_workshop.gd set_listing), and falling back to the content id would read
+	# as an attribution the server never made. Hiding both keeps the footer from
+	# showing a bare colour dot next to nothing.
 	_author.text = author
+	_author.visible = author != ""
+	_dot.visible = author != ""
 	_score.text = "%.1f" % score
 	# Empty stays empty: "%s plays" with nothing in front reads as a broken card,
 	# which is worse than showing no stat at all.

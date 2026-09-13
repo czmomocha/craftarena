@@ -5,25 +5,40 @@ extends Node
 ## Lists signed UGC by word-bank name and occupancy tags. Solo uses a
 ## SimulationBundle already bound by the caller — no AuthoringDocument
 ## path, no matchmaking HTTP. Tests call `apply_list` without HTTP.
+##
+## UI wiring batch 1 (2026-09-13) replaced the hand-built ItemList with the
+## product UI screen `s3_workshop.tscn`. **Only the view changed**: tabs, HTTP,
+## bundle resolution, selection and both exits behave exactly as before, and the
+## public API is untouched so `match_lobby_director.gd` needed no edit.
+##
+## Three things the designed screen does not cover, all recorded in
+## docs/runbooks/ui-wiring.md rather than invented here:
+##   * it has no Solo / Create room affordance, so the existing action row is
+##     still built in code and appended below the screen (STOPGAP_ACTIONS);
+##   * its Sort / Tag / Search controls have no backing logic in ContentPlaza,
+##     so the view disables them;
+##   * its cards were drawn with an author and a thumbnail, neither of which
+##     exists in a listing row.
 
 const PlazaGd := preload("res://src/ugc/content_plaza.gd")
 const PlazaHttpGd := preload("res://src/client/content_plaza_http.gd")
+const WorkshopScene := preload("res://src/client/ui/scenes/s3_workshop.tscn")
 
 const WINDOW_NAME: String = "PlazaWindow"
-const TAB_ROW_NAME: String = "PlazaTabs"
-const LIST_NAME: String = "PlazaList"
+const SCREEN_NAME: String = "PlazaScreen"
+const ACTION_ROW_NAME: String = "PlazaActions"
 const SOLO_NAME: String = "PlazaSolo"
 const CREATE_ROOM_NAME: String = "PlazaCreateRoom"
-const EMPTY_NAME: String = "PlazaEmpty"
 const CLOSE_NAME: String = "PlazaClose"
-const NEWEST_NAME: String = "PlazaNewest"
-const RATING_NAME: String = "PlazaRating"
-const PLAYS_NAME: String = "PlazaPlays"
-const VERIFIED_NAME: String = "PlazaVerified"
+
+## The window is sized for the 1920x1080 UI baseline rather than the old
+## 960x540: the screen is a four-column grid and collapses below roughly a
+## thousand pixels wide.
+const WINDOW_SIZE: Vector2i = Vector2i(1600, 900)
+const WINDOW_MIN_SIZE: Vector2i = Vector2i(1024, 640)
 
 var window: Window = null
-var list: ItemList = null
-var empty: Label = null
+var screen: Control = null
 var lobby_window: Window = null
 var tab: String = PlazaGd.TAB_NEWEST
 var items: Array = []
@@ -176,15 +191,13 @@ func try_select_tab(next_tab: String) -> bool:
 
 
 func try_select_id(content_id: String) -> bool:
-	if list == null:
+	if screen == null:
 		return false
-	for index: int in range(list.item_count):
-		if str(list.get_item_metadata(index)) != content_id:
-			continue
-		list.select(index)
-		selected_id = content_id
-		return true
-	return false
+	var card: Variant = screen.call("card_for", content_id)
+	if not (card is Button):
+		return false
+	selected_id = content_id
+	return true
 
 
 func try_solo_selected() -> bool:
@@ -207,52 +220,42 @@ func _ensure_window() -> void:
 	window = Window.new()
 	window.name = WINDOW_NAME
 	window.title = UiCopy.text(UiCopy.WINDOW_PLAZA)
-	window.size = Vector2i(960, 540)
-	window.min_size = Vector2i(640, 360)
+	window.size = WINDOW_SIZE
+	window.min_size = WINDOW_MIN_SIZE
 	window.exclusive = false
 	window.transient = false
 	window.close_requested.connect(_on_close)
+
 	var root: VBoxContainer = VBoxContainer.new()
 	root.name = "VBoxContainer"
 	root.set_anchors_preset(Control.PRESET_FULL_RECT)
-	root.offset_left = 8
-	root.offset_top = 8
-	root.offset_right = -8
-	root.offset_bottom = -8
 	window.add_child(root)
-	var tabs: HBoxContainer = HBoxContainer.new()
-	tabs.name = TAB_ROW_NAME
-	root.add_child(tabs)
-	_add_tab(tabs, NEWEST_NAME, UiCopy.PLAZA_NEWEST, PlazaGd.TAB_NEWEST)
-	_add_tab(tabs, RATING_NAME, UiCopy.PLAZA_RATING, PlazaGd.TAB_RATING)
-	_add_tab(tabs, PLAYS_NAME, UiCopy.PLAZA_PLAYS, PlazaGd.TAB_PLAYS)
-	_add_tab(tabs, VERIFIED_NAME, UiCopy.PLAZA_VERIFIED, PlazaGd.TAB_VERIFIED)
-	empty = Label.new()
-	empty.name = EMPTY_NAME
-	empty.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	root.add_child(empty)
-	list = ItemList.new()
-	list.name = LIST_NAME
-	list.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	list.item_selected.connect(_on_item_selected)
-	root.add_child(list)
+
+	screen = WorkshopScene.instantiate() as Control
+	screen.name = SCREEN_NAME
+	# Before add_child, so the screen's `_ready` does not briefly fill the grid
+	# with placeholder cards on the way to showing real ones.
+	screen.set("demo_content", false)
+	screen.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	root.add_child(screen)
+	screen.connect("tab_requested", _on_tab_requested)
+	screen.connect("content_selected", _on_content_selected)
+	screen.connect("back_requested", _on_close)
+
+	# STOPGAP_ACTIONS. The designed screen has a Back button and per-card
+	# actions, but no Solo / Create room. Dropping them to match the mockup
+	# would delete two shipped product exits, which is a bigger change than the
+	# one this commit is making (constitution article 9), so the original row is
+	# kept — same node names, same handlers — appended under the screen. Giving
+	# these two a home inside the design needs a designer, and is logged in
+	# docs/runbooks/ui-wiring.md.
 	var actions: HBoxContainer = HBoxContainer.new()
-	actions.name = "PlazaActions"
+	actions.name = ACTION_ROW_NAME
 	root.add_child(actions)
 	_add_button(actions, SOLO_NAME, UiCopy.PLAZA_SOLO, try_solo_selected)
 	_add_button(actions, CREATE_ROOM_NAME, UiCopy.PLAZA_CREATE_ROOM, try_create_room_selected)
 	_add_button(actions, CLOSE_NAME, UiCopy.BACK_TO_LOBBY, try_close)
 	add_child(window)
-
-
-func _add_tab(row: BoxContainer, node_name: String, copy_key: String, tab_id: String) -> void:
-	var button: Button = Button.new()
-	button.name = node_name
-	button.text = UiCopy.text(copy_key)
-	button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	button.focus_mode = Control.FOCUS_NONE
-	button.pressed.connect(func() -> void: try_select_tab(tab_id))
-	row.add_child(button)
 
 
 func _add_button(row: BoxContainer, node_name: String, copy_key: String, handler: Callable) -> void:
@@ -267,33 +270,15 @@ func _add_button(row: BoxContainer, node_name: String, copy_key: String, handler
 
 
 func _rebuild() -> void:
-	if list == null or empty == null:
+	if screen == null:
 		return
-	list.clear()
 	selected_id = ""
 	var shown: Array = _visible_items()
-	empty.text = UiCopy.text(UiCopy.PLAZA_EMPTY) if shown.is_empty() else ""
-	empty.visible = shown.is_empty()
-	list.visible = not shown.is_empty()
-	for raw: Variant in shown:
-		if typeof(raw) != TYPE_DICTIONARY:
-			continue
-		var item: Dictionary = raw
-		var content_id: String = str(item.get("content_id", ""))
-		if content_id == "":
-			continue
-		var tags_raw: Variant = item.get("tags", PackedStringArray())
-		var tags: PackedStringArray = PackedStringArray()
-		if tags_raw is PackedStringArray:
-			tags = tags_raw
-		elif typeof(tags_raw) == TYPE_ARRAY:
-			for tag_raw: Variant in tags_raw:
-				tags.append(str(tag_raw))
-		var verified_raw: Variant = item.get("verified", false)
-		var mark: String = "" if verified_raw == true else " %s" % UiCopy.text(UiCopy.PLAZA_UNVERIFIED)
-		var line: String = "%s  %s%s" % [str(item.get("display_name", content_id)), ",".join(tags), mark]
-		var index: int = list.add_item(line)
-		list.set_item_metadata(index, content_id)
+	screen.call("set_listing", shown)
+	screen.call("set_active_tab", tab)
+	# The unverified marker is the card's own badge now, not a suffix glued onto
+	# a list line, so PLAZA_UNVERIFIED is no longer used here.
+	screen.call("set_empty_notice", UiCopy.text(UiCopy.PLAZA_EMPTY) if shown.is_empty() else "")
 
 
 func _visible_items() -> Array:
@@ -310,10 +295,12 @@ func _visible_items() -> Array:
 	return shown
 
 
-func _on_item_selected(index: int) -> void:
-	if list == null:
-		return
-	selected_id = str(list.get_item_metadata(index))
+func _on_content_selected(content_id: String) -> void:
+	selected_id = content_id
+
+
+func _on_tab_requested(next_tab: String) -> void:
+	try_select_tab(next_tab)
 
 
 func _on_close() -> void:

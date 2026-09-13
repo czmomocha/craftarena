@@ -109,6 +109,10 @@ func test_try_begin_bundle_starts_local_authority_without_a_document_path() -> v
 	assert_eq(offline.last_error, "missing_course")
 
 
+## The four tabs now come from the product screen (`s3_workshop.tscn`), so this
+## asserts against that node layout instead of the hand-built row. What is being
+## checked is unchanged: four tabs exist, an empty plaza says so, and the tab
+## selection round-trips back into the entry's state.
 func test_lobby_plaza_window_has_four_tabs_empty_list_and_returns() -> void:
 	_shell = _open_shell()
 	var button: Button = _shell.window.get_node(
@@ -120,26 +124,208 @@ func test_lobby_plaza_window_has_four_tabs_empty_list_and_returns() -> void:
 	assert_true(_shell.plaza.is_open())
 	assert_false(_shell.window.visible)
 	assert_eq(_shell.plaza.tab, ContentPlazaGd.TAB_NEWEST)
-	assert_true(_shell.plaza.empty.visible)
-	assert_eq(_shell.plaza.empty.text, UiCopy.text(UiCopy.PLAZA_EMPTY))
-	assert_eq(_shell.plaza.list.item_count, 0)
-	assert_not_null(_shell.plaza.window.get_node("VBoxContainer/%s/%s" % [
-		ContentPlazaEntryGd.TAB_ROW_NAME, ContentPlazaEntryGd.NEWEST_NAME
-	]))
-	assert_not_null(_shell.plaza.window.get_node("VBoxContainer/%s/%s" % [
-		ContentPlazaEntryGd.TAB_ROW_NAME, ContentPlazaEntryGd.RATING_NAME
-	]))
-	assert_not_null(_shell.plaza.window.get_node("VBoxContainer/%s/%s" % [
-		ContentPlazaEntryGd.TAB_ROW_NAME, ContentPlazaEntryGd.PLAYS_NAME
-	]))
-	assert_not_null(_shell.plaza.window.get_node("VBoxContainer/%s/%s" % [
-		ContentPlazaEntryGd.TAB_ROW_NAME, ContentPlazaEntryGd.VERIFIED_NAME
-	]))
+	assert_eq(_card_count(), 0)
+	var empty: Label = _plaza_empty()
+	assert_not_null(empty, "空态提示必须存在")
+	if empty != null:
+		assert_true(empty.visible)
+		assert_eq(empty.text, UiCopy.text(UiCopy.PLAZA_EMPTY))
+	for node_name: String in ["Latest", "Rating", "Plays", "Verified"]:
+		assert_not_null(
+			_shell.plaza.screen.get_node_or_null(
+				"Layout/Main/VBox/FilterRow/Tabs/%s" % node_name
+			),
+			"S3 缺标签页 %s" % node_name
+		)
+	# The screen reflects the active tab; the entry owns which one it is.
+	assert_eq(_active_tab(), ContentPlazaGd.TAB_NEWEST)
 	assert_true(_shell.plaza.try_select_tab(ContentPlazaGd.TAB_VERIFIED))
 	assert_eq(_shell.plaza.tab, ContentPlazaGd.TAB_VERIFIED)
+	assert_eq(_active_tab(), ContentPlazaGd.TAB_VERIFIED)
 	assert_true(_shell.try_close_plaza())
 	assert_false(_shell.plaza.is_open())
 	assert_true(_shell.window.visible)
+
+
+## The design marks the active tab by swapping the theme variation. An earlier
+## draft used `toggle_mode`, which paints the Button's own pressed style and
+## renders the selected tab grey instead of the accent colour — invisible to
+## every assertion that only looks at state.
+func test_active_tab_uses_the_designed_variation() -> void:
+	_shell = _open_shell()
+	assert_true(_shell.try_open_plaza())
+	assert_eq(_tab_variation("Latest"), &"TabChipActive")
+	assert_eq(_tab_variation("Verified"), &"TabChip")
+	assert_true(_shell.plaza.try_select_tab(ContentPlazaGd.TAB_VERIFIED))
+	assert_eq(_tab_variation("Latest"), &"TabChip")
+	assert_eq(_tab_variation("Verified"), &"TabChipActive")
+
+
+## Setting card properties before the node enters the tree must still render.
+## Both this view and the card component used `@onready` plus an
+## `is_node_ready()` bail-out, so a card built outside a running tree came out
+## blank with no error — and the suite missed it, because `add_child` in a test
+## makes `_ready` fire before the setters run.
+func test_a_card_built_outside_the_tree_still_renders() -> void:
+	var card: Button = preload(
+		"res://src/client/ui/scenes/components/content_card.tscn"
+	).instantiate() as Button
+	card.set("card_title", "warm_forge")
+	card.set("plays", "7")
+	var title: Label = card.get_node_or_null("Margin/VBox/Title") as Label
+	assert_not_null(title)
+	if title != null:
+		assert_eq(title.text, "warm_forge", "入树前赋的值被静默丢弃了")
+	add_child_autofree(card)
+
+
+## Pressing a tab in the screen must drive the entry, not just repaint itself.
+## Without this the tabs would look alive and change nothing.
+func test_pressing_a_screen_tab_drives_the_entry() -> void:
+	_shell = _open_shell()
+	assert_true(_shell.try_open_plaza())
+	var verified: Button = _shell.plaza.screen.get_node_or_null(
+		"Layout/Main/VBox/FilterRow/Tabs/Verified"
+	) as Button
+	assert_not_null(verified)
+	if verified == null:
+		return
+	verified.emit_signal("pressed")
+	assert_eq(_shell.plaza.tab, ContentPlazaGd.TAB_VERIFIED)
+
+
+## The screen's own Back button is a second route to the same exit as the
+## stopgap action row's close button.
+func test_screen_back_button_returns_to_the_lobby() -> void:
+	_shell = _open_shell()
+	assert_true(_shell.try_open_plaza())
+	assert_false(_shell.window.visible)
+	var back: Button = _shell.plaza.screen.get_node_or_null("Layout/TopBar/Row/Back") as Button
+	assert_not_null(back)
+	if back == null:
+		return
+	back.emit_signal("pressed")
+	assert_false(_shell.plaza.is_open())
+	assert_true(_shell.window.visible)
+
+
+## Sort / tag / search are drawn but `ContentPlaza` has no such queries. They
+## must stay inert rather than look clickable — see ui-wiring.md.
+func test_filters_without_backing_logic_are_disabled() -> void:
+	_shell = _open_shell()
+	assert_true(_shell.try_open_plaza())
+	var row: String = "Layout/Main/VBox/FilterRow"
+	for node_name: String in ["Sort", "TagFilter"]:
+		var dead: Button = _shell.plaza.screen.get_node_or_null(
+			"%s/%s" % [row, node_name]
+		) as Button
+		assert_not_null(dead, node_name)
+		if dead != null:
+			assert_true(dead.disabled, "%s 没有后端逻辑，必须禁用" % node_name)
+	var search: LineEdit = _shell.plaza.screen.get_node_or_null("%s/Search" % row) as LineEdit
+	assert_not_null(search)
+	if search != null:
+		assert_false(search.editable, "搜索没有后端逻辑，必须只读")
+
+
+## A listing row carries no author and no thumbnail, and players cannot upload
+## textures at all this phase (CD-11 section 5). The card must degrade instead
+## of inventing an attribution.
+func test_cards_render_listing_rows_without_faking_author_or_thumbnail() -> void:
+	_shell = _open_shell()
+	assert_true(_shell.try_open_plaza())
+	_shell.plaza.apply_list(ContentPlazaGd.TAB_NEWEST, [{
+		"content_id": PIPE_ID,
+		"display_name": ContentPlazaGd.display_name(PIPE_ID),
+		"tags": PackedStringArray(["portal"]),
+		"play_count": 7,
+		"rating_sum": 9,
+		"rating_count": 2,
+		"verified": true,
+	}])
+	assert_eq(_card_count(), 1)
+	var card: Button = _card_for(PIPE_ID)
+	assert_not_null(card, "列表行必须渲染成一张卡")
+	if card == null:
+		return
+	assert_eq(str(card.get("card_title")), ContentPlazaGd.display_name(PIPE_ID))
+	assert_eq(str(card.get("plays")), "7", "游玩次数必须是服务端的真实计数")
+	assert_almost_eq(_card_score(card), 4.5, 0.01, "评分 = rating_sum / rating_count")
+	assert_eq(str(card.get("author")), "", "列表行没有作者字段，不得编造")
+	var thumb_raw: Variant = card.get("thumbnail")
+	assert_eq(typeof(thumb_raw), TYPE_NIL, "UGC 不可能有缩略图：玩家不能上传贴图")
+
+	var author: Label = card.get_node_or_null("Margin/VBox/Footer/Author") as Label
+	assert_not_null(author)
+	if author != null:
+		assert_false(author.visible, "没有作者时整行要隐藏，不能只剩一个色点")
+
+
+## Unrated content scores zero. That is the truth ("nobody rated this"), not a
+## missing value, and it must not crash the average.
+func test_unrated_listing_scores_zero_without_dividing_by_zero() -> void:
+	_shell = _open_shell()
+	assert_true(_shell.try_open_plaza())
+	_shell.plaza.apply_list(ContentPlazaGd.TAB_NEWEST, [{
+		"content_id": PIPE_ID,
+		"display_name": ContentPlazaGd.display_name(PIPE_ID),
+		"tags": PackedStringArray(),
+		"play_count": 0,
+		"rating_sum": 0,
+		"rating_count": 0,
+		"verified": false,
+	}])
+	var card: Button = _card_for(PIPE_ID)
+	assert_not_null(card)
+	if card != null:
+		assert_eq(_card_score(card), 0.0)
+		assert_eq(str(card.get("plays")), "0")
+
+
+## `Node.call()` hands back Variant, and this project treats unsafe Variant use
+## as an error, so screen queries funnel through typed helpers.
+func _card_count() -> int:
+	var raw: Variant = _shell.plaza.screen.call("card_count")
+	if typeof(raw) != TYPE_INT:
+		return -1
+	var count: int = raw
+	return count
+
+
+func _active_tab() -> String:
+	return str(_shell.plaza.screen.call("active_tab"))
+
+
+func _card_for(content_id: String) -> Button:
+	var raw: Variant = _shell.plaza.screen.call("card_for", content_id)
+	if raw is Button:
+		var card: Button = raw
+		return card
+	return null
+
+
+func _card_score(card: Button) -> float:
+	var raw: Variant = card.get("score")
+	if typeof(raw) == TYPE_FLOAT:
+		var value: float = raw
+		return value
+	if typeof(raw) == TYPE_INT:
+		var whole: int = raw
+		return float(whole)
+	return -1.0
+
+
+func _tab_variation(node_name: String) -> StringName:
+	var button: Button = _shell.plaza.screen.get_node_or_null(
+		"Layout/Main/VBox/FilterRow/Tabs/%s" % node_name
+	) as Button
+	if button == null:
+		return &""
+	return button.theme_type_variation
+
+
+func _plaza_empty() -> Label:
+	return _shell.plaza.screen.get_node_or_null("Layout/Main/VBox/PlazaEmpty") as Label
 
 
 func test_plaza_solo_applies_the_bound_bundle() -> void:
@@ -153,7 +339,7 @@ func test_plaza_solo_applies_the_bound_bundle() -> void:
 		"tags": ContentPlazaGd.tags_from_bundle(bundle),
 		"verified": false,
 	}])
-	assert_false(_shell.plaza.empty.visible)
+	assert_eq(_card_count(), 1)
 	assert_true(_shell.plaza.try_select_id(PIPE_ID))
 	assert_true(_shell.try_solo_plaza())
 	assert_eq(_shell.offline.state, MatchOfflineSessionGd.STATE_PLAYING)
@@ -191,7 +377,7 @@ func test_plaza_http_list_and_latest_bundle_start_solo() -> void:
 		assert_eq(content_id, PIPE_ID)
 		return latest
 	assert_true(_shell.plaza.try_select_tab(ContentPlazaGd.TAB_NEWEST))
-	assert_false(_shell.plaza.empty.visible)
+	assert_eq(_card_count(), 1)
 	assert_true(_shell.plaza.try_select_id(PIPE_ID))
 	assert_null(_shell.plaza.bundle_of(PIPE_ID))
 	assert_true(_shell.try_solo_plaza())
@@ -205,7 +391,12 @@ func test_plaza_create_room_sends_pinned_content() -> void:
 	_shell = _open_shell()
 	var bundle: SimulationBundleGd = _compile(OfficialTraprushCoursesGd.COURSE_02)
 	assert_true(_shell.try_open_plaza())
-	var create: Button = _shell.plaza.window.get_node("VBoxContainer/PlazaActions/%s" % ContentPlazaEntryGd.CREATE_ROOM_NAME) as Button
+	# STOPGAP_ACTIONS: the designed screen has no Create room button, so the
+	# original action row is still built in code below it. Same node name,
+	# so this assertion is unchanged apart from the row's parent path.
+	var create: Button = _shell.plaza.window.get_node("VBoxContainer/%s/%s" % [
+		ContentPlazaEntryGd.ACTION_ROW_NAME, ContentPlazaEntryGd.CREATE_ROOM_NAME
+	]) as Button
 	assert_not_null(create)
 	assert_eq(create.text, UiCopy.text(UiCopy.PLAZA_CREATE_ROOM))
 	_shell.plaza.bind_bundle(PIPE_ID, bundle)

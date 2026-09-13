@@ -112,16 +112,50 @@ game/
 
 ## 2. 当前接线状态
 
-**三个屏幕都还没有被运行时引用**——它们是可加载的资产，不在任何代码路径上。现在跑起来看到的仍是自绘 UI：
-
-| 屏 | 场景 | 现在实际在用的 | 接线批次 |
+| 屏 | 场景 | 运行时 | 接线批次 |
 |---|---|---|---|
-| S1 主大厅 | `s1_lobby.tscn` | `match_lobby_shell.gd` 自绘 `Window` | 第二批（M6） |
+| S1 主大厅 | `s1_lobby.tscn` | 仍是 `match_lobby_shell.gd` 自绘 `Window` | 第二批（M6） |
 | S2 匹配 | `s2_matchmaking.tscn` | 同上（大厅窗口内的输入框与按钮） | 第三批 |
-| S3 广场 | `s3_workshop.tscn` | `content_plaza_entry.gd`（338 行，自绘 `Window` + `ItemList`） | **第一批，下一刀** |
+| S3 广场 | `s3_workshop.tscn` | **已接线**（2026-09-13）：`content_plaza_entry.gd` 的视图 | 第一批 ✅ |
 | S4 / S5 / S6 | — | — | 第三批，尚无设计稿 |
 
-第一批要做的事是用 `s3_workshop.tscn` 替换 `content_plaza_entry.gd`。**工作量不在套皮，在搬数据流**：那 338 行里有真实的 HTTP 拉取、tab 切换、选中态、Solo 与建房两个出口，而 `s3_workshop.gd` 目前只有 `_apply_copy()` 与一个填充占位卡片的 `_populate()`，既没有 HTTP 也没有信号。`content_plaza_entry.gd` 当前由 `match_lobby_director.gd` 调起，被 `test_content_plaza.gd` 覆盖——替换时那些断言要跟着搬，不是删掉。
+### 2.1 S3 怎么接的
+
+**只换了视图。** `content_plaza_entry.gd` 仍然持有全部状态与逻辑——tab、列表、选中、HTTP 拉取、bundle 解析、Solo 与建房两个出口，公开 API 一个字没改，所以 `match_lobby_director.gd` 不需要动。变的只是 `_ensure_window()` 里从手搓 `ItemList` 改成实例化 `s3_workshop.tscn`，以及 `_rebuild()` 改成把列表行推给视图。
+
+视图侧（`s3_workshop.gd`）是被驱动的，自己不决定列表内容：
+
+| 视图 API | 谁调 | 作用 |
+|---|---|---|
+| `set_listing(rows)` | entry | 把 `content_plaza.gd` 的列表行渲染成卡片 |
+| `set_active_tab(tab)` | entry | 反映当前 tab（换主题变种） |
+| `set_empty_notice(text)` | entry | 空态 |
+| `tab_requested(tab)` | → entry | 点了标签页 |
+| `content_selected(id)` | → entry | 点了卡片 |
+| `back_requested()` | → entry | 点了左上返回 |
+
+`demo_content` 决定是独立预览（填 `DEMO_ENTRIES`）还是被驱动（entry 在入树前置 false）。
+
+### 2.2 设计没覆盖到的四处，以及各自怎么处理
+
+**这四条都不是实现偷懒，是设计稿与产品契约对不上。** 接线时没有自行发明产品决策：
+
+1. **没有 Solo / 创建房间的位置。** 设计只给了左上返回、四个标签页、卡片上一个「编辑/复用」。而广场现有两个出口（单人试玩、按内容建房）是已上线行为，删掉它们是比"换视图"大得多的改动（宪法第九条）。**处理**：原来的动作行仍由代码建出、附在屏幕下方，节点名不变（`PlazaActions/PlazaSolo` / `PlazaCreateRoom` / `PlazaClose`），代码里标了 `STOPGAP_ACTIONS`。**要把这两个动作放进设计里，需要设计稿。**
+2. **排序 / 标签筛选 / 搜索没有后端。** `ContentPlaza` 只按 tab 排序，没有 tab 内排序、没有标签过滤、没有搜索。**处理**：三个控件**禁用**。留着是因为删了就是改设计；禁用是因为"能点但什么都不发生"比灰掉更糟。有测试钉住。
+3. **卡片画了作者，列表行没有作者字段。** **处理**：作者名与色点一起隐藏。不拿 `content_id` 顶替——那会读作一条服务端从未做出的署名。
+4. **卡片画了缩略图，UGC 永远不会有。** 玩家上传贴图是明确的不做项（[CD-11 §5](../../Confirmed-docs/10-product/11-scope-and-platforms.md)），所以一期内 UGC 不可能有预览图。**处理**：留空，不生成假图。
+
+另外两处映射是真实的：评分 = `rating_sum / rating_count`（未评分为 0 星，那是事实不是缺值），游玩次数 = `play_count` 原样，**不缩写成 `1.2k`**——把真实计数四舍五入成设计稿的样子是在编造精度。
+
+### 2.3 接线时挖出来的一类真 bug：`@onready` 让 setter 静默失效
+
+`s3_workshop.gd` 与 `content_card.gd` 原本都用 `@onready` 取子节点，`_apply()` 上还有 `is_node_ready()` 守卫。后果是：**在节点入树之前给它赋值，会被静默丢弃**，不报错、不警告，只是渲染成空白。
+
+GUT 全绿也发现不了——测试里 `add_child` 发生在一棵已经在跑的树里，`_ready` 先于 setter 执行。是驱动态渲染（[§4.1](#41-出预览图)）里一张卡都没出来才暴露的。
+
+**修法**：两个文件都改成惰性解析（`PackedScene.instantiate()` 已经把子树建好了，`get_node_or_null` 立刻可用），并且每个公开入口先调一次幂等的 `_ensure_chrome()` / `_resolve()`。`test_content_plaza.gd` 里有一条 `test_a_card_built_outside_the_tree_still_renders` 钉住它，已做故障注入验证。
+
+**写这类组件时记住**：凡是「属性 setter + `@onready` 子节点」的组合，都要假定 setter 可能先于 `_ready` 发生。
 
 ## 3. 接入方式
 
@@ -211,6 +245,15 @@ UI 基准是 1920×1080，开发机窗口是 1600×900 最大化——**两者�
 第三个参数是悬停节点名（`-` 表示不悬停），之后可以追加 `prop=value` 驱动导出属性（例如 `state=1`）。**不进 CI**，它需要真实渲染设备。
 
 > 注意：S3 与卡片的文案现在由 `_ready()` 填（[§0.3](#03-文案迁-uicopy-的真实口径)），所以编辑器里打开场景看到的是空标签，**截图脚本跑出来的才有字**。
+
+**S3 还有第二个预览，它才是有意义的那个**：
+
+```bash
+"$GODOT4" --path game --rendering-driver opengl3 --resolution 1920x1080 \
+    --script res://tools/ui/plaza_preview.gd -- /tmp/plaza.png
+```
+
+`screenshot.gd` 渲染的是独立模式，看到的是 `DEMO_ENTRIES`——八张有缩略图有作者的漂亮卡片。真实列表行两样都没有（[§2.2](#22-设计没覆盖到的四处以及各自怎么处理)），所以那张图**说明不了玩家会看到什么**。`plaza_preview.gd` 喂的是 `ContentPlaza.list_tab()` 的真实形状：三行，含一条未评分、一条未验证。§2.3 那个 bug 就是靠它发现的。
 
 ---
 
