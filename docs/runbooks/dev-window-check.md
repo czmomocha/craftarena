@@ -54,7 +54,92 @@ Worktree 端口偏移见 README「并行工作区」；本文件不复述端口�
 
 ---
 
-## 本刀：字体入包（Noto Sans SC 常用 3500 字子集）
+## 本刀：UI 接线第一批的四项前置（字体 / CI 门禁 / 文案迁移 / 文档）
+
+**不需要三后端。** 这一节覆盖 2026-09-13 的五次提交：
+
+| 提交 | 内容 | 开发机窗口可见？ |
+|---|---|---|
+| `a9ddc0e` | 字体子集入包 | **是**（已于 2026-09-13 人类验完，步骤见本节末「已验收」） |
+| `d5bf323` | 字体覆盖改为现扫仓库 | 否，纯测试 |
+| `6b8e036` | 两个 UI 校验脚本进 CI | 否，纯流水线 |
+| `b88f4d9` | S3 + 卡片文案迁 `UiCopy` | **是，但看不到**——见第 1 步 |
+| `bf8cb62` | `ui-wiring.md` 重写 | 否，纯文档 |
+
+### 1. S3 广场：文案接上了，但它不在游戏窗口里
+
+**先说清楚为什么不能照常验**：S3 广场这一屏**还没有接线**（那是下一刀）。现在跑 `--path game` 打开的仍然是自绘的 `content_plaza_entry.gd` 窗口，`s3_workshop.tscn` 不在任何代码路径上。所以「开大厅点广场」看到的**不是**本刀改的东西。
+
+这一屏只能用截图脚本渲染出来看：
+
+```bash
+mkdir -p /tmp/uicheck
+"$GODOT4" --path game --rendering-driver opengl3 --resolution 1920x1080 \
+    --script res://tools/ui/screenshot.gd -- \
+    res://src/client/ui/scenes/s3_workshop.tscn - /tmp/uicheck/s3.png
+```
+
+预期：打印 `saved /tmp/uicheck/s3.png 3456x1950`（HiDPI 屏上是 2 倍尺寸，正常）。打开那张图，逐项核对：
+
+1. 左上标题 **公共内容广场**；
+2. 四个标签页 **最新 LATEST** / **评分 RATING** / **游玩次数 PLAYS** / **已验证 VERIFIED**；
+3. 右上 **排序：综合 ▼** / **标签：全部 ▼**——**这两个 `▼` 是本刀的一处产品改动**（原文是 `▾`，上游字体没有那个字形），看到方框或缺字就是子集出问题了；
+4. 搜索框占位符 **搜索名称或标签…**；
+5. 标签页下方那行小字 **标题由系统词库生成 · 不含自由文本 · 未验证内容不进入已验证筛选**；
+6. 每张卡片右下 **编辑/复用**，统计行是 **1.2k 次游玩** 这种「数字 + 量词」；
+7. 两张未验证卡（齿轮迷城 / 风蚀高塔）有橙色 **未验证可完成 ?** 角标，且 **编辑/复用** 按钮是灰的。
+
+**失败判读**：
+- 某一项是**空白**⇒ 那个键漏接了。这正是「清空 `.tscn` + 运行时填」想要的效果——漏接显示为空，而不是继续显示一句翻译器够不到的中文；
+- 整屏都是空白 ⇒ `_apply_copy()` 没跑，或者本地化表没加载；
+- 显示成 `craft_arena.s3.title` 这种键名 ⇒ CSV 没进 `res://` 或没解析到（与字体无关，先修那个）；
+- 中文笔画偏细、均匀 = 入包子集；笔画粗、中宫紧 = macOS 系统回退（PingFang），说明主题的 `default_font` 没生效。
+
+> 已知、不是缺陷：两张未验证卡的**缩略图里**有一层淡淡的重影角标，那是 mockup 烘焙进 PNG 的像素，和场景自绘的 Badge 叠在一起。切图脚本没入库，本仓库修不了，已记在 [ui-wiring.md §7](ui-wiring.md)。
+
+### 2. 自绘大厅没有被本刀改动
+
+操作：按「共用启动」0.2 开窗口，照常看大厅。
+
+预期：**和字体那一刀验收时完全一样**。本刀没有动自绘 UI 的任何一行——`s3_workshop.tscn` 与 `content_card.tscn` 目前无人引用，主题也仍然是「随场景走」（`project.godot` 没有 `gui/theme/custom`，只有 `gui/theme/custom_font`）。
+
+失败：大厅外观有任何变化 ⇒ 说明有人给主题挂了全局，那是第三批之后才该做的事。
+
+### 3. 三项无窗口行为的刀怎么确认
+
+它们不进窗口，只能看命令输出：
+
+```bash
+# d5bf323：缺字门禁现在扫的是仓库，不是入库字表
+npm run test:gut:fast
+python3 tools/font-subset/collect_project_chars.py --check
+
+# 6b8e036：两个 UI 校验
+"$GODOT4" --headless --path game --script res://tools/ui/validate_theme.gd
+"$GODOT4" --headless --path game --script res://tools/ui/validate_scene.gd
+```
+
+预期：GUT 全绿（当前 1667/1667）；补集 `ok: NNNN chars, supplement up to date`；两个校验各打一行 `RESULT: PASS`。
+
+**CI 那一刀真正的验收对象是远端流水线，不是本机。** 本机跑绿只说明脚本能跑，说明不了门禁接上了。看 GitHub Actions 上 `6b8e036` 那次运行的 `Godot check-only and GUT` job 里有没有 **UI theme and scene validation** 这一步，并且是绿的。截至 2026-09-13，五次提交的 CI 全部 success，该步骤已确认在 Linux runner 上执行。
+
+### 本刀不测
+
+- **S3 接线**：这一批只做前置，S3 仍未接入运行时（下一刀）；
+- **S1 / S2 文案**：仍是硬编码中文，分属第二 / 三批；
+- **第二个字重、emoji**：均为 [CD-63 §2](../../Confirmed-docs/60-plan/63-open-decisions.md) 未决项；
+- 公开 TLS、PR Web 沙盒、Android / iOS。
+
+### 诚实边界
+
+- **截图脚本不是开发机窗口验收的替代品。** 它渲染的是离屏视口，没有交互、没有 hover、没有窗口缩放。用它只是因为 S3 还没有接线入口——**接线那一刀必须回到真窗口验**；
+- **「空白 = 漏接」这条性质只对已迁移的两个场景成立**（`s3_workshop.tscn`、`content_card.tscn`）。S1 / S2 仍是场景里写死中文，漏接在那里表现为「看起来完全正常」；
+- **本机 CI 命令与远端不等价**：本机没有跑 `--check-only` 全量扫描（CI 里那一步覆盖 `game/src`、`game/tests`、`game/tools`），也没有 LFS 拉取差异；
+- 字体那一刀的窗口验收**已由人类于 2026-09-13 完成**，结论通过。本节第 1 步顺带覆盖了它当时无法验的一项：产品 UI 主题的 `default_font`——因为那一屏当时（现在也）还没接线，只能靠截图看。
+
+---
+
+## 上一刀（已合入，2026-09-13 人类验收通过）：字体入包（Noto Sans SC 常用 3500 字子集）
 
 **不需要三后端**（全部走 Solo 与大厅窗口）。
 
