@@ -91,13 +91,13 @@ theme_type_variation = &"UnverifiedBadge"
 layout_mode = 2
 theme_type_variation = &"ChipLabel"
 theme_override_colors/font_color = Color(0.12549, 0.141176, 0.184314, 1)
-text = "未验证可完成 ?"
+text = ""
 
 [node name="Title" type="Label" parent="Margin/VBox"]
 layout_mode = 2
 theme_type_variation = &"CardTitle"
 clip_text = true
-text = "标题"
+text = ""
 
 [node name="Tags" type="HBoxContainer" parent="Margin/VBox"]
 layout_mode = 2
@@ -120,7 +120,7 @@ theme_override_styles/panel = SubResource("StyleBoxFlat_dot")
 layout_mode = 2
 size_flags_vertical = 4
 theme_type_variation = &"StatusCaption"
-text = "作者"
+text = ""
 
 [node name="Spacer" type="Control" parent="Margin/VBox/Footer"]
 layout_mode = 2
@@ -131,7 +131,7 @@ mouse_filter = 2
 layout_mode = 2
 size_flags_vertical = 4
 theme_type_variation = &"CardActionButton"
-text = "编辑/复用"
+text = ""
 script = ExtResource("2_press")
 
 [node name="Stats" type="HBoxContainer" parent="Margin/VBox"]
@@ -160,4 +160,4 @@ mouse_filter = 2
 layout_mode = 2
 size_flags_vertical = 4
 theme_type_variation = &"StatusCaption"
-text = "0 次游玩"
+text = ""

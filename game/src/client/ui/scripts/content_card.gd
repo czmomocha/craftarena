@@ -6,7 +6,12 @@ extends Button
 ## single reusable scene instead of eight copy-pasted subtrees.
 ##
 ## Unverified content (spec 3, third state) dims the thumbnail, shows the
-## "未验证可完成 ?" badge and disables the edit/reuse action.
+## "completability unverified" badge and disables the edit/reuse action.
+##
+## Copy lives in `UiCopy` (`craft_arena.card.*`), not in the scene: the labels in
+## content_card.tscn are empty and filled here. `plays` carries the *number*
+## ("1.2k") and the unit comes from the key, because baking "1.2k 次游玩" into the
+## data would make the Chinese unreachable to the locale table.
 
 @export var thumbnail: Texture2D:
 	set(value):
@@ -57,6 +62,7 @@ var _content_margin: Control
 @onready var _thumb: TextureRect = $Margin/VBox/ThumbWrap/Thumb
 @onready var _dim: ColorRect = $Margin/VBox/ThumbWrap/Dim
 @onready var _badge: PanelContainer = $Margin/VBox/ThumbWrap/Badge
+@onready var _badge_label: Label = $Margin/VBox/ThumbWrap/Badge/L
 @onready var _title: Label = $Margin/VBox/Title
 @onready var _tags: HBoxContainer = $Margin/VBox/Tags
 @onready var _dot: Panel = $Margin/VBox/Footer/Dot
@@ -95,7 +101,11 @@ func _apply() -> void:
 	_title.text = card_title
 	_author.text = author
 	_score.text = "%.1f" % score
-	_plays.text = plays
+	# Empty stays empty: "%s plays" with nothing in front reads as a broken card,
+	# which is worse than showing no stat at all.
+	_plays.text = "" if plays == "" else UiCopy.text(UiCopy.CARD_PLAYS_COUNT) % plays
+	_badge_label.text = UiCopy.text(UiCopy.CARD_UNVERIFIED_BADGE)
+	_action.text = UiCopy.text(UiCopy.CARD_ACTION_EDIT_REUSE)
 	_dot.modulate = author_color
 
 	var full := clampi(roundi(score), 0, MAX_STARS)

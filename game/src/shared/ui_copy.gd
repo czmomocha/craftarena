@@ -139,6 +139,34 @@ const AUDIO_SFX: String = "craft_arena.ui.audio_sfx"
 const AUDIO_UI: String = "craft_arena.ui.audio_ui"
 const AUDIO_AMBIENCE: String = "craft_arena.ui.audio_ambience"
 
+## 产品 UI 基础包的键按屏分前缀（`craft_arena.s3.*`、`craft_arena.card.*` …），
+## 人类 2026-09-13 拍板。上面的 `craft_arena.ui.*` 是自绘壳那一套，两套并存到
+## 对应屏接线完成为止——S3 接线（UI 接线第一批）会删掉 `content_plaza_entry.gd`，
+## 届时 `plaza_*` 那批键随它一起删。
+##
+## **只放会被玩家读到的界面文案。** 赛道名、作者名、游玩次数、房间码这类由
+## 服务端或课程数据提供的值不进这里：把占位假数据写进本地化表，会让它看起来
+## 像已定稿的产品文案，接线时还得再删一遍。占位数据留在各屏脚本的 `DEMO_*`
+## 常量里，名字本身就说明它是要被删的。
+
+const S3_TITLE: String = "craft_arena.s3.title"
+const S3_TAB_LATEST: String = "craft_arena.s3.tab_latest"
+const S3_TAB_RATING: String = "craft_arena.s3.tab_rating"
+const S3_TAB_PLAYS: String = "craft_arena.s3.tab_plays"
+const S3_TAB_VERIFIED: String = "craft_arena.s3.tab_verified"
+const S3_SORT: String = "craft_arena.s3.sort"
+const S3_TAG_FILTER: String = "craft_arena.s3.tag_filter"
+const S3_SEARCH_PLACEHOLDER: String = "craft_arena.s3.search_placeholder"
+const S3_NOTE: String = "craft_arena.s3.note"
+
+const CARD_UNVERIFIED_BADGE: String = "craft_arena.card.unverified_badge"
+const CARD_ACTION_EDIT_REUSE: String = "craft_arena.card.action_edit_reuse"
+
+## 带一个 `%s` 占位符：次数由数据提供（`1.2k`），量词与语序由本表决定。
+## 英文是 `%s plays`，中文是 `%s 次游玩`——把整串 `1.2k 次游玩` 当成数据传进来
+## 就等于把中文焊死在数据里。
+const CARD_PLAYS_COUNT: String = "craft_arena.card.plays_count"
+
 const ALL_KEYS: PackedStringArray = [
 	WINDOW_TRAPRUSH,
 	WINDOW_EDITOR,
@@ -248,6 +276,18 @@ const ALL_KEYS: PackedStringArray = [
 	AUDIO_SFX,
 	AUDIO_UI,
 	AUDIO_AMBIENCE,
+	S3_TITLE,
+	S3_TAB_LATEST,
+	S3_TAB_RATING,
+	S3_TAB_PLAYS,
+	S3_TAB_VERIFIED,
+	S3_SORT,
+	S3_TAG_FILTER,
+	S3_SEARCH_PLACEHOLDER,
+	S3_NOTE,
+	CARD_UNVERIFIED_BADGE,
+	CARD_ACTION_EDIT_REUSE,
+	CARD_PLAYS_COUNT,
 ]
 
 static var _loaded: bool = false

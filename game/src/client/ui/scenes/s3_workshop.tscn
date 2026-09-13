@@ -77,7 +77,7 @@ theme_override_constants/separation = 0
 [node name="Title" type="Label" parent="Layout/TopBar/Row/TitleBox"]
 layout_mode = 2
 theme_type_variation = &"PageTitle"
-text = "公共内容广场"
+text = ""
 
 [node name="Subtitle" type="Label" parent="Layout/TopBar/Row/TitleBox"]
 layout_mode = 2
@@ -141,28 +141,28 @@ theme_override_constants/separation = 8
 custom_minimum_size = Vector2(150, 44)
 layout_mode = 2
 theme_type_variation = &"TabChipActive"
-text = "最新 LATEST"
+text = ""
 script = ExtResource("2_press")
 
 [node name="Rating" type="Button" parent="Layout/Main/VBox/FilterRow/Tabs"]
 custom_minimum_size = Vector2(150, 44)
 layout_mode = 2
 theme_type_variation = &"TabChip"
-text = "评分 RATING"
+text = ""
 script = ExtResource("2_press")
 
 [node name="Plays" type="Button" parent="Layout/Main/VBox/FilterRow/Tabs"]
 custom_minimum_size = Vector2(180, 44)
 layout_mode = 2
 theme_type_variation = &"TabChip"
-text = "游玩次数 PLAYS"
+text = ""
 script = ExtResource("2_press")
 
 [node name="Verified" type="Button" parent="Layout/Main/VBox/FilterRow/Tabs"]
 custom_minimum_size = Vector2(180, 44)
 layout_mode = 2
 theme_type_variation = &"TabChip"
-text = "已验证 VERIFIED"
+text = ""
 script = ExtResource("2_press")
 
 [node name="Spacer" type="Control" parent="Layout/Main/VBox/FilterRow"]
@@ -175,7 +175,7 @@ custom_minimum_size = Vector2(160, 44)
 layout_mode = 2
 size_flags_vertical = 4
 theme_type_variation = &"Dropdown"
-text = "排序：综合 ▼"
+text = ""
 script = ExtResource("2_press")
 
 [node name="TagFilter" type="Button" parent="Layout/Main/VBox/FilterRow"]
@@ -183,7 +183,7 @@ custom_minimum_size = Vector2(160, 44)
 layout_mode = 2
 size_flags_vertical = 4
 theme_type_variation = &"Dropdown"
-text = "标签：全部 ▼"
+text = ""
 script = ExtResource("2_press")
 
 [node name="Search" type="LineEdit" parent="Layout/Main/VBox/FilterRow"]
@@ -191,12 +191,12 @@ custom_minimum_size = Vector2(300, 44)
 layout_mode = 2
 size_flags_vertical = 4
 theme_type_variation = &"InputDark"
-placeholder_text = "搜索名称或标签…"
+placeholder_text = ""
 
 [node name="Note" type="Label" parent="Layout/Main/VBox"]
 layout_mode = 2
 theme_type_variation = &"StatusCaption"
-text = "标题由系统词库生成 · 不含自由文本 · 未验证内容不进入已验证筛选"
+text = ""
 
 [node name="Grid" type="GridContainer" parent="Layout/Main/VBox"]
 layout_mode = 2

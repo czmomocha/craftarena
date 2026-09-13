@@ -14,11 +14,41 @@ func before_each() -> void:
 	UiCopyGd.reset_for_tests()
 
 
+## 每个声明出来的键常量都必须登记进 `ALL_KEYS`。
+##
+## 这里以前写的是 `assert_eq(ALL_KEYS.size(), 108)`。那个数字抓不到任何东西：
+## 漏登记时 size 不变，断言照样绿；而正常加一个键反倒要改测试。真正的失败模式
+## 是「加了 `const X` 却忘了往 `ALL_KEYS` 里加一行」——漏登记的键不会被字体缺字
+## 断言和导出自检看到，于是缺翻译、缺字形都无人过问。这条直接比对两者。
+func test_every_declared_key_is_registered() -> void:
+	var script: GDScript = load("res://src/shared/ui_copy.gd") as GDScript
+	assert_not_null(script)
+	if script == null:
+		return
+	var registered: PackedStringArray = UiCopyGd.ALL_KEYS
+	var declared: Array[String] = []
+	for name: Variant in script.get_script_constant_map():
+		var value: Variant = script.get_script_constant_map()[name]
+		if typeof(value) != TYPE_STRING:
+			continue
+		var text: String = value
+		if not text.begins_with("craft_arena."):
+			continue
+		declared.append(text)
+		assert_true(registered.has(text), "常量 %s = %s 没登记进 ALL_KEYS" % [name, text])
+	assert_gt(declared.size(), 0, "一个键常量都没扫到，反射方式多半失效了")
+
+	var seen: Dictionary = {}
+	for key: String in registered:
+		assert_false(seen.has(key), "ALL_KEYS 里 %s 重复登记" % key)
+		seen[key] = true
+
+
 func test_table_covers_every_key_in_both_locales() -> void:
 	assert_true(UiCopyGd.ensure_loaded())
 	assert_true(UiCopyGd.has_locale("en"))
 	assert_true(UiCopyGd.has_locale("zh_CN"))
-	assert_eq(UiCopyGd.ALL_KEYS.size(), 108)
+	assert_gt(UiCopyGd.ALL_KEYS.size(), 0)
 	for key: String in UiCopyGd.ALL_KEYS:
 		assert_true(key.begins_with("craft_arena."), key)
 		var english: String = UiCopyGd.text(key, "en")

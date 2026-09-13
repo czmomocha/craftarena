@@ -107,3 +107,15 @@ craft_arena.ui.audio_music,Music,音乐
 craft_arena.ui.audio_sfx,Sound effects,音效
 craft_arena.ui.audio_ui,Interface,界面
 craft_arena.ui.audio_ambience,Ambience,环境
+craft_arena.s3.title,Public Workshop,公共内容广场
+craft_arena.s3.tab_latest,LATEST,最新 LATEST
+craft_arena.s3.tab_rating,RATING,评分 RATING
+craft_arena.s3.tab_plays,PLAYS,游玩次数 PLAYS
+craft_arena.s3.tab_verified,VERIFIED,已验证 VERIFIED
+craft_arena.s3.sort,Sort: Overall ▼,排序：综合 ▼
+craft_arena.s3.tag_filter,Tags: All ▼,标签：全部 ▼
+craft_arena.s3.search_placeholder,Search by name or tag…,搜索名称或标签…
+craft_arena.s3.note,Titles come from the system word bank · no free text · unverified entries are excluded from the verified filter,标题由系统词库生成 · 不含自由文本 · 未验证内容不进入已验证筛选
+craft_arena.card.unverified_badge,Completability unverified ?,未验证可完成 ?
+craft_arena.card.action_edit_reuse,Edit / Reuse,编辑/复用
+craft_arena.card.plays_count,%s plays,%s 次游玩
