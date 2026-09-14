@@ -45,7 +45,7 @@ ca4d71c4d7b81dfc15d1a98baa07534aa95b03fdda78a0075b06672e1648d2e5f40980c9adc28d23
 |---|---|
 | Windows Desktop | `& $env:GODOT4_CONSOLE --headless --path game --export-release "Windows Desktop" "../export/windows/CraftArena.exe"` |
 | Linux Headless | `& $env:GODOT4_CONSOLE --headless --path game --export-release "Linux Headless" "../export/linux-headless/craftarena-server.x86_64"` |
-| Web | `& $env:GODOT4_CONSOLE --headless --path game --export-release "Web" "../export/web/index.html"` |
+| Web | `npm run export:web`（底层写法：`& $env:GODOT4_CONSOLE --headless --path game --export-release "Web" "../export/web/index.html"`） |
 
 macOS 把 `& $env:GODOT4_CONSOLE` 换成 `"$GODOT4"`。
 

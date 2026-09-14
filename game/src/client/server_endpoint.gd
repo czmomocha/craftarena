@@ -18,8 +18,9 @@ extends RefCounted
 ##   3. full override: `--control-plane=URL` / `--gateway=URL`, or
 ##      CRAFTARENA_CONTROL_PLANE / CRAFTARENA_GATEWAY
 ##   Web: the same flags may arrive as `?server=` / `?control-plane=` /
-##   `?gateway=`. A page served at `/play/` can pin the host from the URL
-##   when nothing else named a server.
+##   `?gateway=`. A page served at `/play/` or at `/` (Nginx) can pin the
+##   host from the URL when nothing else named a server. The page port is
+##   not the control-plane port.
 ##
 ## Command line beats environment at the same level. A rejected value never
 ## silently degrades to something that merely looks right: the previous value

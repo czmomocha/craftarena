@@ -16,7 +16,7 @@ extends Node
 ## --gateway=, or the matching CRAFTARENA_* variables, or a Web query
 ## `?server=` / `?control-plane=` / `?gateway=`) points the lobby at a
 ## deployed test server instead of a local npm run dev. A page served at
-## `/play/` can pin the host from the URL.
+## `/play/` or at `/` (Nginx) can pin the host from the URL.
 
 const BOOT_EVENT: String = "client_boot"
 const BotRunCliGd := preload("res://src/games/traprush/bot_run_cli.gd")

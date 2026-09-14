@@ -11,25 +11,25 @@ alwaysApply: true
 
 ## 1. 解冻后开工顺序（不得跳号）
 
-下一动不是 Rule VM，也不是 BASTION。顺序以 [CD-61 当前生效值](Confirmed-docs/60-plan/61-milestones.md) 为准，本规则不另定顺序。当前镜像：
+下一动不是公开 TLS，也不是 Android 烟测。顺序以 [CD-61 当前生效值](Confirmed-docs/60-plan/61-milestones.md) 为准，本规则不另定顺序。当前镜像：
 
 ```text
 创作者可测（已收口）
   → F 线（已收口）
   → Web 游玩分发（第一刀已收口）
   → 可玩性深化（已收口）
-  → M-Art 剩余已拍板项 → M4a（已收口）→ M4b（已收口）→ M5
+  → M-Art 剩余已拍板项 → M4a（已收口，Rule VM）→ M4b（已收口）→ M5
   → 字体入包 → UI 接线第一批（S3 广场）
-  → 测试期 VPS Web 分发（M-Export 剩余）
-  → M6 / M7（含 UI 接线第二批 S1 主大厅壳）
+  → 测试期 VPS Web 分发（M-Export 剩余，已交）
+  → M6 / M7（BASTION；含 UI 接线第二批 S1 主大厅壳）
   → 公开 TLS / PR Web 沙盒
   → UI 接线第三批（S2 / S4 / S5 / S6）
   → 一期收尾：Android / iOS 烟测、触控 UI
 ```
 
-- **现在可以开工**：**M-Export 剩余：测试期 VPS Web 分发**（明文 `http`/`ws` + 自备 VPS；交付见 [CD-61 §2 M-Export](Confirmed-docs/60-plan/61-milestones.md)）。**M5 已退出**（2026-09-13 人类签署，结论「基本通过」，A1–C6 十一章全交）。字体入包与 S3 已交。Web 游玩分发第一刀已交。F 线 FA–FH 已收口。可玩性深化 / M4a / M4b 已收口。
+- **现在可以开工**：**M6 / M7**（含 UI 接线第二批 S1 主大厅壳）。**测试期 VPS Web 分发已交**（2026-09-14）。**M5 已退出**（2026-09-13 人类签署，结论「基本通过」，A1–C6 十一章全交）。字体入包与 S3 已交。Web 游玩分发两刀已交。F 线 FA–FH 已收口。可玩性深化 / M4a / M4b 已收口。
 - **M5 带走的两处遗留**（退出 ≠ 已解决，不得对外说成已覆盖）：[网络故障人工检查](docs/runbooks/network-fault-check.md) 的**乱序 / 重复包未严格注入**（macOS `dnctl` 无开关，待 Linux `tc netem`）；[可玩性签署](docs/runbooks/playability-signoff-traprush.md) 只对**当前自绘大厅 + 占位美术 + 占位数值**那一版成立，换 UI / 定稿美术 / 改 D-F4·F5·F6 后须重签。
-- **现在不得开工**：Android / iOS 烟测（**一期收尾**；不是风险项）；公开 TLS / PR Web 沙盒（**M7 之后**）；M6 / M7（BASTION；S1 在 M6 章内，不提前）。它们不是冻结，是 CD-61 还没轮到。F 线示范课 `course_f_playable` 不是 M5 官方课。
+- **现在不得开工**：Android / iOS 烟测（**一期收尾**；不是风险项）；公开 TLS / PR Web 沙盒（**M7 之后**）。它们不是冻结，是 CD-61 还没轮到。F 线示范课 `course_f_playable` 不是 M5 官方课。S1 随 M6 主大厅壳，不提前单独开工。
 - **字体入包**（2026-09-12 从一期收尾提前）：排在 M5 退出之后、UI 接线第一批之前。**2026-09-13 已交**。仍只有 Regular 一个字重，emoji 不在子集内，加字重须人类拍板。
 - **仍推迟到一期收尾**：Android / iOS 导出烟测；触控 UI（D7）。
 - **UI 接线三批**（2026-09-12 拍板，不发明新里程碑号）：第一批 S3 广场（**已交**）→ 第二批 S1 主大厅（M6 主大厅壳章内）→ 第三批 S2 / S4 / S5 / S6。一批一刀。口径见 [CD-61 §2 M-Art](Confirmed-docs/60-plan/61-milestones.md)。

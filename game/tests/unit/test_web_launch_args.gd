@@ -1,6 +1,6 @@
 extends GutTest
 
-## Web 游玩分发：查询串与 `/play/` 页主机接到已有 `--server=` 旗。
+## Web 游玩分发：查询串与页主机接到已有 `--server=` 旗。
 
 const ServerEndpointGd := preload("res://src/client/server_endpoint.gd")
 const WebLaunchArgsGd := preload("res://src/client/web_launch_args.gd")
@@ -34,7 +34,7 @@ func test_query_decodes_and_ignores_unknown_keys() -> void:
 	assert_false(parsed.has("content"))
 
 
-func test_page_host_only_when_served_from_play() -> void:
+func test_page_host_pins_nginx_root_and_play() -> void:
 	assert_eq(
 		WebLaunchArgsGd.page_host_flag("/play/", "203.0.113.9"),
 		"--server=203.0.113.9"
@@ -43,8 +43,15 @@ func test_page_host_only_when_served_from_play() -> void:
 		WebLaunchArgsGd.page_host_flag("/play/index.html", "203.0.113.9"),
 		"--server=203.0.113.9"
 	)
-	assert_eq(WebLaunchArgsGd.page_host_flag("/", "203.0.113.9"), "")
-	assert_eq(WebLaunchArgsGd.page_host_flag("/play/", ""), "")
+	assert_eq(
+		WebLaunchArgsGd.page_host_flag("/", "203.0.113.9"),
+		"--server=203.0.113.9"
+	)
+	assert_eq(
+		WebLaunchArgsGd.page_host_flag("/index.html", "203.0.113.9"),
+		"--server=203.0.113.9"
+	)
+	assert_eq(WebLaunchArgsGd.page_host_flag("/", ""), "")
 
 
 func test_room_query_normalizes_code_and_never_reads_content() -> void:
@@ -58,6 +65,16 @@ func test_from_os_uses_play_page_host_when_nothing_else_named_a_server() -> void
 	var endpoint: ServerEndpointGd = ServerEndpointGd.from_os(
 		PackedStringArray([]),
 		{"pathname": "/play/", "hostname": "203.0.113.9"}
+	)
+	assert_eq(endpoint.control_plane, "http://203.0.113.9:8080")
+	assert_eq(endpoint.gateway, "ws://203.0.113.9:8090")
+	assert_false(endpoint.has_errors(), str(endpoint.errors))
+
+
+func test_from_os_uses_nginx_root_page_host_when_nothing_else_named_a_server() -> void:
+	var endpoint: ServerEndpointGd = ServerEndpointGd.from_os(
+		PackedStringArray([]),
+		{"pathname": "/", "hostname": "203.0.113.9"}
 	)
 	assert_eq(endpoint.control_plane, "http://203.0.113.9:8080")
 	assert_eq(endpoint.gateway, "ws://203.0.113.9:8090")

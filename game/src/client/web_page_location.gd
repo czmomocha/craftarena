@@ -3,7 +3,7 @@ extends RefCounted
 
 ## Live browser location. Headless / desktop GUT never calls into
 ## JavaScriptBridge; `ServerEndpoint.from_os` takes an injected Dictionary
-## with the same keys so the query and `/play/` host rules stay testable.
+## with the same keys so the query and page-host rules stay testable.
 
 
 static func read() -> Dictionary:

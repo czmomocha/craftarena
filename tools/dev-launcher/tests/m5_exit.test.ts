@@ -207,7 +207,7 @@ describe("M5 C6 exit checklists", () => {
 		assert.match(testing, /发布候选[\s\S]{0,120}仍未签|仍未签[\s\S]{0,120}发布候选/);
 	});
 
-	it("points both always-on rules at VPS web test distribute as the next slice", () => {
+	it("points both always-on rules at M6 after VPS web distribute lands", () => {
 		for (const path of [
 			".cursor/rules/complete-chapter-prs.mdc",
 			".cursor/rules/course-correction-freeze.mdc",
@@ -215,9 +215,11 @@ describe("M5 C6 exit checklists", () => {
 			const rule = read(path);
 			assert.match(rule, /^alwaysApply: true$/m);
 			assert.match(rule, /字体入包/, `${path}: must keep font packaging in the delivered trail`);
-			assert.match(rule, /测试期 VPS Web 分发/, `${path}: next action must be VPS web test distribute`);
+			assert.match(rule, /测试期 VPS Web 分发/, `${path}: VPS web test distribute stays in the trail`);
+			assert.match(rule, /下一刀 = M6 \/ M7|现在可以开工\*\*：\*\*M6 \/ M7/, `${path}: next action must be M6 / M7`);
 			assert.match(rule, /M7 之后/, `${path}: TLS and PR sandbox stay after M7`);
 			assert.doesNotMatch(rule, /下一实现刀是 C6|下一刀 = \*\*M5 C6\*\*/);
+			assert.doesNotMatch(rule, /下一刀 = M-Export 剩余/);
 		}
 	});
 

@@ -150,9 +150,11 @@ repo/
 │  ├─ redline-scanner/
 │  ├─ shell-guard/
 │  ├─ replay-inspector/
-│  └─ font-subset/               # 字体子集化（Python + fontTools）；**不进 CI**，只验证产物；见该目录 README
+│  ├─ font-subset/               # 字体子集化（Python + fontTools）；**不进 CI**，只验证产物；见该目录 README
+│  └─ web-export/                # `npm run export:web` / `npm run deploy:web`（M-Export 第二刀）；无额外运行时依赖
 ├─ infra/
 │  ├─ compose/
+│  ├─ nginx/                     # 测试期 Web 静态：明文 :80，root `/var/www/craftarena-web`
 │  └─ tencent-cloud/
 └─ docs/
    ├─ adr/

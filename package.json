@@ -20,7 +20,8 @@
     "tools/redline-scanner",
     "tools/shell-guard",
     "tools/test-selector",
-    "tools/bot-runner"
+    "tools/bot-runner",
+    "tools/web-export"
   ],
   "scripts": {
     "typecheck": "tsc --noEmit",
@@ -32,6 +33,8 @@
     "redline-scan": "node tools/redline-scanner/src/main.ts",
     "asset-budget": "node tools/asset-budget/src/main.ts",
     "bot-run": "node tools/bot-runner/src/main.ts",
+    "export:web": "node tools/web-export/src/export_main.ts",
+    "deploy:web": "node tools/web-export/src/deploy_main.ts",
     "godot-settings:check": "node tools/godot-project-settings/src/main.ts",
     "godot-settings:scrub": "node tools/godot-project-settings/src/main.ts --scrub",
     "setup-worktree": "node tools/dev-launcher/src/setup_worktree.ts",

@@ -54,7 +54,86 @@ Worktree 端口偏移见 README「并行工作区」；本文件不复述端口�
 
 ---
 
-## 本刀：UI 接线第一批（S3 公共内容广场接入运行时）
+## 本刀：测试期 VPS Web 分发（M-Export 剩余）
+
+**需要三后端**（联机路径）。Solo 可先不启后端。VPS 上的 Nginx 是本刀窗口验收对象；开发机用静态服务验证「打开 `/` 就会钉页主机」。
+
+命令以 [README.md](../../README.md) 为准。真实 IP / 域名不写进仓库；下面一律用 `<SERVER_HOST>`。
+
+### 1. 一条命令导出 Web 包
+
+操作：仓库根 `npm run export:web`。
+
+预期：退出码 0；打印 `event=web_export` `ok=true`；`export/web/` 里有非空 `index.html`、`.js`、`.wasm`、`.pck`。
+
+失败：`GODOT4` / `GODOT4_CONSOLE` 未设；或导出模板没装（[导出包核查清单](desktop-export-check.md) §1）。`--dry-run` 只打印命令、不产出文件，不能拿它当本步通过。
+
+### 2. 开发机打开 `/`，大厅默认钉页主机
+
+操作：在 `export/web` 起一个静态服务（任意端口，不要 `file://`），浏览器打开 `http://127.0.0.1:<端口>/`。
+
+预期：出现与桌面相同的大厅；状态行 `server=127.0.0.1`（页主机钉上的），控制面仍是 `:8080`、网关 `:8090`。**不要**手填服务器框。
+
+失败：仍要进 `/play/` 才钉主机 ⇒ 第二刀的根路径没接上；`file://` 打开 ⇒ 页主机是空的，会退回内置 `127.0.0.1`，看起来像过了、其实没测到 Nginx 口径。
+
+### 3. 点现有大厅入口之一（Solo）
+
+操作：在第 2 步的同一个大厅点 **单人试玩**。不要新做「开始」按钮。
+
+预期：进入离线局，HUD 有离线横幅。这是这次导出包里的内容，不是编辑器 `--path game`。
+
+失败：按钮灰掉或 `web_locked` ⇒ 第一刀的 Solo 接线被改坏了。
+
+### 4. VPS：Nginx 指向导出目录
+
+操作：按 [远端部署手册 §14](server-deploy.md#14-测试期-vps-web-分发m-export-第二刀) 一次性装 Nginx、放行 80，再：
+
+```powershell
+$env:CRAFTARENA_WEB_DEPLOY_HOST = "<SERVER_HOST>"
+$env:CRAFTARENA_WEB_DEPLOY_USER = "<SSH_USER>"
+npm run deploy:web -- --dry-run
+npm run deploy:web
+```
+
+预期：`--dry-run` 里的主机是你填的占位符，不是仓库硬编码；真拷退出码 0。浏览器打开 `http://<SERVER_HOST>/`（明文 `http`，不是 `https`）。
+
+失败：443 / 证书 ⇒ 本刀不包含 TLS；安全组没放 80 ⇒ 连接超时；8080 `/play/` 能开、80 不能 ⇒ Nginx 没指到这次目录。
+
+### 5. 在 `http://VPS/` 上联机或 Solo
+
+操作：确认状态行 `server=<SERVER_HOST>`。点 **快速游戏** 或 **创建房间**（VPS 上 compose 已 `up`），或再点一次 **单人试玩**。
+
+预期：能进一局，看到这次包的内容（字体、广场、官方课都在包里）。大厅仍可改 `主机[:端口]`。
+
+失败：`server=127.0.0.1` ⇒ 打开的不是 Nginx 根；联机 `join=FAILED` ⇒ 8080/8090 没放行或 compose 没起来，不是 Web 包的问题。
+
+### 6. 命令行门禁
+
+```bash
+npm run typecheck
+npm test
+npm run redline-scan
+npm run test:gut:affected
+```
+
+预期：typecheck / `npm test` / 红线全绿；GUT affected 覆盖 `test_web_launch_args.gd`。
+
+### 本刀不测
+
+- 公开 TLS、每个 PR 的 Web 沙盒（**M7 之后**）；
+- Android / iOS；
+- S1 主大厅壳（M6 章内）；
+- 把 M5 两处遗留当成已解决。
+
+### 诚实边界
+
+- **AI 没有替你部署到真 VPS**。第 4、5 步要在有 Nginx 的测试机上做；开发机第 1–3 步只能证明导出与页主机钉住；
+- 测试期仍是明文 `http`/`ws`。不得对外说已有 TLS；
+- 第一刀 `/play/` 仍可用，不替代本刀的 `http://VPS/`。
+
+---
+
+## 上一刀（已合入）：UI 接线第一批（S3 公共内容广场接入运行时）
 
 **不需要三后端**（广场的列表在无后端时为空，本刀的断言都能在空态与手工注入下完成；要看真实列表再起 `npm run dev`）。
 

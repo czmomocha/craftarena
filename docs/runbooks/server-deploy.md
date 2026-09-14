@@ -148,16 +148,18 @@ bash infra/compose/craftarena-compose.sh update
 
 ## 5. 开放端口
 
-只需要两个：
+后端本身仍是两个：
 
 | 端口 | 服务 |
 |---|---|
 | 8080 | 控制面 HTTP |
 | 8090 | 实时网关 WebSocket |
 
+测试期用 Nginx 发 Web 包时，再开放 **80**（见 §14）。不要把 80 当成控制面端口：页面在 80，API 仍在 8080，网关仍在 8090。
+
 **不要开放 42000–42099。** 那是对局进程端口段，只在 compose 内网被网关拨到；开放它等于让公网直连 Godot MatchServer，违反宪法第二十二条。`docker-compose.yml` 里 `match-host` 没有 `ports:`，防火墙也不开，两层都关才算成立。
 
-云主机还要在安全组放行同样两个端口，别只改机器内的防火墙。
+云主机还要在安全组放行同样的端口，别只改机器内的防火墙。
 
 从**本机**验证一次（换成真实地址）：
 
@@ -514,3 +516,77 @@ function Get-Pct([int[]]$s, [int]$p) {
 | 日期 | 执行人 | 结果 |
 |---|---|---|
 | 2026-09-02 | 人类采 jsonl，AI 回填本表 | 最后一场 n=106、丢失 0、P50/P90/P95=16/19/25 ms。jsonl 不入库。仍不得锁 CD-43 §4。 |
+
+---
+
+## 14. 测试期 VPS Web 分发（M-Export 第二刀）
+
+这是 [CD-61 §2 M-Export](../../Confirmed-docs/60-plan/61-milestones.md#m-export平台导出与-web) 第二刀的操作步骤。部署属宪法第十八条人类门禁：AI 可以写出命令，**不要替你 scp 到真机器**。
+
+占位符沿用文首：`<SERVER_HOST>`、`<SSH_USER>`。再加：
+
+| 占位符 | 含义 | 默认 |
+|---|---|---|
+| `<WEB_DEPLOY_PATH>` | Nginx `root`，也是 `scp`/`rsync` 目标 | `/var/www/craftarena-web` |
+
+真实 IP / 域名 / SSH 落点**不入库**。
+
+### 14.1 开发机导出
+
+仓库根：
+
+```powershell
+npm run export:web
+```
+
+预期：退出码 0，打印一行 JSON `event=web_export` `ok=true`，`export/web/` 里有非空的 `index.html`、`.js`、`.wasm`、`.pck`。失败：缺 `GODOT4` / `GODOT4_CONSOLE`；或导出模板没装（见[导出包核查清单](desktop-export-check.md) §1）。
+
+`--dry-run` 只打印 Godot 命令，不导出。
+
+### 14.2 VPS 上 Nginx（一次性）
+
+测试机需要 `nginx`（发行版包装即可，不引入仓库依赖）。仓库已在 `<REPO_DIR>`：
+
+```bash
+sudo mkdir -p /var/www/craftarena-web
+sudo chown <SSH_USER> /var/www/craftarena-web
+sudo cp <REPO_DIR>/infra/nginx/craftarena-web.conf /etc/nginx/sites-available/craftarena-web
+sudo ln -sf /etc/nginx/sites-available/craftarena-web /etc/nginx/sites-enabled/craftarena-web
+# 发行版 default 若占着 :80，关掉它，否则本站起不来
+sudo rm -f /etc/nginx/sites-enabled/default
+sudo nginx -t && sudo systemctl reload nginx
+```
+
+`root` 必须等于 `<WEB_DEPLOY_PATH>`。配置里没有 443、没有真实域名。当前 Web 预设是 nothreads，**不要**加 COOP/COEP，也**不要**上 WebRTC。
+
+安全组 / 防火墙再放行 **80**（8080 与 8090 仍要开，见 §5）。
+
+```powershell
+curl.exe -fsS -o NUL http://<SERVER_HOST>/
+```
+
+预期：HTTP 200。第一次还没拷包时可能是 Nginx 默认 404，那是 14.3 还没跑。
+
+### 14.3 开发机部署
+
+```powershell
+$env:CRAFTARENA_WEB_DEPLOY_HOST = "<SERVER_HOST>"
+$env:CRAFTARENA_WEB_DEPLOY_USER = "<SSH_USER>"
+# 可选。默认 /var/www/craftarena-web
+# $env:CRAFTARENA_WEB_DEPLOY_PATH = "<WEB_DEPLOY_PATH>"
+npm run deploy:web -- --dry-run
+npm run deploy:web
+```
+
+预期：`--dry-run` 打印一条 `scp` 或 `rsync` 命令，里面是你填的占位主机，没有仓库里的硬编码地址；真拷退出码 0。Windows 通常走 `scp`；有 `rsync` 的机器走 `rsync`。都不会 `--delete`。
+
+失败：没先 `export:web`；SSH 登不上；远端目录不可写（回到 14.2 的 `chown`）。
+
+### 14.4 浏览器验收
+
+1. 打开 `http://<SERVER_HOST>/`（明文 `http`，不是 `https`，不要用 `file://`）。
+2. 预期：出现与桌面相同的大厅；状态行 `server=<SERVER_HOST>`（页主机钉上的，控制面仍 `:8080`，网关 `:8090`）。失败：仍是 `127.0.0.1` ⇒ 页主机没钉上，或你开的不是这次导出的包。
+3. 点现有入口之一：**快速游戏** / **创建房间** / **单人试玩**。不要新做「开始」按钮。
+4. 预期：Solo 能进一局且离线横幅在；联机能打到这台 VPS 上已经 `docker compose up` 的控制面与网关，并看到这次包里的内容（不是上一版缓存：Nginx 已 `Cache-Control: no-cache`）。
+
+第一刀的 `http://<SERVER_HOST>:8080/play/` 仍可用，不替代本刀。公开 TLS 与每个 PR 的 Web 沙盒排到 M7 之后。

@@ -1,0 +1,8 @@
+{
+	"name": "@craftarena/web-export",
+	"version": "0.0.0",
+	"private": true,
+	"type": "module",
+	"description": "Export the Godot Web preset and copy it to a test VPS. No extra runtime dependencies.",
+	"license": "UNLICENSED"
+}

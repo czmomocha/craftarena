@@ -5,8 +5,9 @@ extends RefCounted
 ## `--gateway=` flags `ServerEndpoint` already understands. Godot Web can
 ## also forward the query into `OS.get_cmdline_user_args()`; merging here
 ## is idempotent. Command-line flags win over the query. Serving the export
-## from the control plane at `/play/` can pin the host from the page URL
-## when nothing else named a server.
+## from `/play/` or from Nginx at `/` can pin the host from the page URL
+## when nothing else named a server. The page port is ignored: testers open
+## `http://VPS/` (port 80) while control-plane / gateway stay 8080 / 8090.
 
 const MatchInviteGd := preload("res://src/client/match_invite.gd")
 
@@ -19,7 +20,6 @@ const QUERY_GATEWAY: String = "gateway"
 const QUERY_EDIT: String = "edit"
 const QUERY_ROOM: String = "room"
 const EDIT_FLAG: String = "--edit"
-const PLAY_PATH_PREFIX: String = "/play"
 ## `?edit=0` / `?edit=false` 明确关掉。其余任何值（含 `?edit`）都是开。
 ## 不做「像布尔的字符串」的宽松解析：这是分发链接里的开关，含糊等于不可复现。
 const _EDIT_OFF: PackedStringArray = ["0", "false", "off", "no"]
@@ -87,13 +87,13 @@ static func has_flag(args: PackedStringArray, flag: String) -> bool:
 	return false
 
 
-static func page_host_flag(pathname: String, hostname: String) -> String:
+static func page_host_flag(_pathname: String, hostname: String) -> String:
 	var host: String = hostname.strip_edges()
 	if host == "":
 		return ""
-	var path: String = pathname.strip_edges()
-	if not path.begins_with(PLAY_PATH_PREFIX):
-		return ""
+	# First knife served `/play/`; this knife also serves `/` (Nginx). Either
+	# pins the host. Do not copy `location.port`: port 80 is the static page,
+	# not the control plane.
 	return SERVER_FLAG + host
 
 
