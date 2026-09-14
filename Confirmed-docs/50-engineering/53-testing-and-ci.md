@@ -15,7 +15,7 @@
 |---|---|
 | 每次推送 `main` / 每次 PR | tsc + GUT fast/slow 全量 + Schema + 红线 + 资产预算（推送**之后**跑，不是直推前置） |
 | 合入 `main` | 人类授权后直推；GitHub **不**要求 PR；禁止 force push / 删除 `main` |
-| PR Web 预览 | **未实现**。Web 导出已有；人类 2026-09-03 拍板推迟到 M5 之后开工 |
+| PR Web 预览 | **未实现**。Web 导出已有；人类 2026-09-14 拍板推迟到 **M7 之后**开工（覆盖此前「M5 之后」） |
 | 可玩性签署 | **E6 已签：好玩**（2026-09-02，非外部测试）。**M5 退出清单已签**（2026-09-13，[可玩性签署：TRAPRUSH](../../docs/runbooks/playability-signoff-traprush.md) 八项均「通过」，总结论**「基本通过」**，仍非外部测试）。**发布候选清单（§4.4）仍未签** |
 | 网络故障人工检查 | 清单仍归 §2.5；执行步骤在 [网络故障人工检查](../../docs/runbooks/network-fault-check.md)（M5 C6）。**人类 2026-09-13 在 macOS 开发机执行第一轮：9 项中 7 项符合预期，乱序与重复包未严格注入**（`dnctl` 无 reorder / duplicate 开关），待 Linux `tc netem` 补。那两项**不得表述为已覆盖**。**仍非门禁**：一次人工检查不构成回归覆盖（宪法第二十四条） |
 | `--bot-run` | 不进 PR CI。每日 nightly 经 `npm run bot-run` 写报告 artifact |
@@ -306,7 +306,7 @@ AI 生成代码必须比普通手写代码有**更强的自动化证据**，因�
 | 字体覆盖（UI 缺字） | 已启用（2026-09-13） | 两层。**产物层**：GUT `tests/unit/test_font_packaging.gd` 验本地化表、常用 3500 字表、项目补集零缺字，验改名不含保留字体名，验没挂 theme 的 `Control` 运行时拿到的就是入包那份，验单文件 < 2 MB；包内自检另加 `ui_font_loadable`（探针是常量汉字，不取自 `UiCopy`——本地化表坏掉时它会返回键名，首字符是 ASCII，探针会在 UI 最坏时变绿）。**源头层**：`tests/unit/test_font_covers_live_sources.gd` 用 GDScript 现扫 `res://src` / `content/locale` / `content/official`，逐字符断言字体画得出来，**不读入库字表**——所以「改文案 → 忘了重跑子集 → 悄悄缺字」这条路是红的，报错直接给 `U+XXXX(字) 首见于 res://…`。已做故障注入验证（注入 `▾` 后确实变红）。唯一白名单是 🔒（CD-63 §2 第 6 项未决），出现第二个 emoji 会红，必须显式决定 |
 | 字体子集工具 | **不进 CI** | `tools/font-subset/`（Python + fontTools）：下载源字体 → 子集 → 改名 → 落盘，源按 SHA-256 锁定、依赖按 `requirements.txt` 锁版本（不进 CI 时"重跑得到同一份字节"是唯一的产物保证）。只服务开发机，见该目录 README。它生成的字表是子集化的**输入**，不是门禁——门禁在上一行的源头层 |
 | 单资产预算 | 已启用（2026-08-30） | `tools/asset-budget/` + CI step `npm run asset-budget`：按 [CD-11 §8.1](../10-product/11-scope-and-platforms.md) 判每个 `game/**/*.glb` 的三角面（静态 / 带 skin 两档）、贴图边长与文件体积。只读图像 header，不解码像素，无 native 依赖。认不出的贴图格式、非三角 primitive 与 LFS 指针**判为失败而非放过**。扫描范围跳过 `addons/`（第三方插件）与 `_source_refs/`（生成源产物落点，烘焙前的原料按定义过不了预算），并认 `.gdignore`（**递归**，与 Godot 4.7.2 实测一致）——这两处跳过是必需的：这些文件被 `.gitignore` 排除，CI checkout 不到，若不跳过就变成「本地红、CI 绿」。显式指定路径（`npm run asset-budget <file>`）不经过这层跳过，想单独查一个源产物仍查得到。仓库当前 9 个 `.glb`（角色现行 + 旧占位、地块现行 + 旧扁板、5 个占用），都过预算；0 个时它明确输出「什么都没查」而**不是**报绿。**只判单资产准入**：场景总量 / Draw call / 材质数 / 骨骼上限仍属 [CD-63 §1.7](../60-plan/63-open-decisions.md) 延期 |
-| PR Web 预览 | 未实现 | Web 导出已有；PR 沙盒环境未做。人类 2026-09-03 拍板推迟到 M5 之后开工 |
+| PR Web 预览 | 未实现 | Web 导出已有；PR 沙盒环境未做。人类 2026-09-14 拍板推迟到 **M7 之后**开工 |
 | Godot AI MCP | **不进 CI** | 阶段 C 生产级启用已通过（2026-08-23），仍只服务本机打开的编辑器；Headless / GUT / `npm test` 仍是门禁。不得把 `test_run` / `McpTestSuite` 写成自动回归。见 [CD-51 §7](51-dev-environment.md)、[ADR-0003](../../docs/adr/0003-godot-mcp-selection.md) |
 | Bugbot | **非门禁** | 已拍板引入（[ADR-0004](../../docs/adr/0004-multi-agent-adoption-timing-and-architecture.md) 决策 6）。本地 `/review-bugbot` 已于 2026-08-21 跑过。`.cursor/BUGBOT.md` 已入库。**GitHub PR 侧已跳过**（Cursor SCM 安装对不上）；合入继续靠本表已启用的 CI + [§4.5](#45-pr-合并规则) 人类批准。不得描述为已覆盖的合并门禁。配置见 [CD-52 §5.2](52-ai-workflow.md) |
 

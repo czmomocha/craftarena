@@ -15,8 +15,8 @@
 |---|---|
 | 容量模型 | 50 CCU 仍是设计容量，不是某台 VPS 规格 |
 | 资源基线 | 见 [server-deploy.md §12](../../docs/runbooks/server-deploy.md)；**CPU 先于内存**。本文件不复述数字 |
-| 传输 | 测试机明文；正式公开运营前 TLS |
-| Web 试玩包 | 可选 `CRAFTARENA_WEB_ROOT` 挂控制面 `/play/`；浏览器 CORS `*` 是测试期入口 |
+| 传输 | 测试机明文 `http`/`ws`；正式公开运营前 TLS（开工 **M7 之后**） |
+| Web 试玩包 | 第一刀：可选 `CRAFTARENA_WEB_ROOT` 挂控制面 `/play/`；浏览器 CORS `*` 是测试期入口。第二刀（未交）：Nginx 指向导出目录、Web 默认连本 VPS 网关，见 [CD-61 §2 M-Export](../60-plan/61-milestones.md#m-export平台导出与-web) |
 | SQLite | 仅控制面直连 |
 | UGC 开局 | **已交（M5 C4）**：控制面 launch 带 content 引用；MatchHost 用控制面 HTTP 取该 version 信封，**仍不查库**。开局验签并重算 hash。字段见 [CD-42 §3.5](42-contracts-and-rulevm.md#35-匹配与玩家发布-httpc3-已接线c4-已接线) |
 
@@ -37,7 +37,7 @@
 
 测试开发阶段的操作手册是 `docs/runbooks/server-deploy.md`（C1 第 2 章落地）：通用步骤 + 占位符，不写死 IP、域名、规格或 SSH 落点。传输走明文 `http`/`ws`（[CD-43 §2](43-networking-and-replay.md#2-传输) 2026-08-27 落点）。香港区仍是一期目标机房（本文件标题与容量模型），但不是 C1 写入手册的必须库存。
 
-实现落点（2026-09-08）：控制面给浏览器预检回 CORS `Access-Control-Allow-Origin: *`（测试期，无新依赖）。设置 `CRAFTARENA_WEB_ROOT` 时在 `/play/` 提供已导出的 Godot Web 包，外人一条 `http://主机:控制面端口/play/` 即可打开；页路径以 `/play` 开头时客户端用页主机填默认 `--server=`。大厅仍可改 `主机[:控制面端口]`。网关端口不从控制面端口推算。不是公开 TLS，不是每个 PR 的沙盒。
+实现落点（2026-09-08）：控制面给浏览器预检回 CORS `Access-Control-Allow-Origin: *`（测试期，无新依赖）。设置 `CRAFTARENA_WEB_ROOT` 时在 `/play/` 提供已导出的 Godot Web 包，外人一条 `http://主机:控制面端口/play/` 即可打开；页路径以 `/play` 开头时客户端用页主机填默认 `--server=`。大厅仍可改 `主机[:控制面端口]`。网关端口不从控制面端口推算。不是公开 TLS，不是每个 PR 的沙盒。Nginx 指到导出目录、Web 启动后默认连本 VPS，是 M-Export 第二刀（未接线），不是现状。
 
 ## 2. 容量与排队
 

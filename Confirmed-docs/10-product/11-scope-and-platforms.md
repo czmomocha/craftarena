@@ -15,8 +15,8 @@
 |---|---|
 | 名称 | Craft Arena／工坊竞技场 |
 | Web | **一期持续测试入口**。C1 已含 Web 导出预设。测试期 Solo 与 VPS 联机见 [CD-13](13-account-and-session.md) / [CD-61](../60-plan/61-milestones.md) |
-| 域名 + 证书 | **公开运营前**补齐，不在 C1 |
-| 测试期传输 | 明文 `http`/`ws` 可打到自备远端（[CD-43 §2](../40-technical/43-networking-and-replay.md)）；外人用链接 + 端口接入 |
+| 域名 + 证书 | **公开运营前**补齐，不在 C1；开工排到 **M7 之后** |
+| 测试期传输 | 明文 `http`/`ws` 可打到自备远端（[CD-43 §2](../40-technical/43-networking-and-replay.md)）；外人用链接 + 端口接入。公开 TLS **现在不动** |
 | 字体 | 思源黑体 / Noto Sans SC，**已入包**（2026-09-13）：常用 3500 字 ∪ 项目补集 ∪ 可打印 ASCII，改名 `CraftArena Sans SC`。仍只有 Regular 一个字重，emoji 不在子集内。详见 §8.2 第 3 条 |
 | 描边 | 不做（D8） |
 
@@ -230,6 +230,7 @@
 - Web 是一期持续测试入口（§6）。C1 已含 Web 导出预设，见 [CD-51 §5](../50-engineering/51-dev-environment.md)。
 - 测试开发阶段允许明文 `http`（控制面）与 `ws`（网关）打到自备远端测试机，见 [CD-43 §2](../40-technical/43-networking-and-replay.md)。外人验证用**链接 + 端口**接入同一台 VPS，不走公开域名。
 - 测试期 Web Solo 的产品口径只在 [CD-13 §3](13-account-and-session.md#3-离线单人模式)，此处不复述。
-- **域名 + 受信证书在公开运营前补齐**，不是 C1 必须项。浏览器 HTTPS 页不能混用 `ws://`、也不接受自签，故公开 Web 联机仍须域名。
+- **域名 + 受信证书在公开运营前补齐**，不是 C1 必须项。浏览器 HTTPS 页不能混用 `ws://`、也不接受自签，故公开 Web 联机仍须域名。开工排到 **M7 之后**（2026-09-14）；测试期继续明文 `http`/`ws` + 自备 VPS 链接和端口，现在不动 TLS。
+- 每个 PR 的公开临时 Web 沙盒同样排到 **M7 之后**，测试期不靠 PR 沙盒验收。测试期 Web 分发的交付与窗口验收在 [CD-61 §2 M-Export](../60-plan/61-milestones.md#m-export平台导出与-web)，本文件不复述。
 - 不得对外表述为已具备 TLS。一期产品形态仍是宪法第二十二条的 TLS WebSocket 网关。
 
