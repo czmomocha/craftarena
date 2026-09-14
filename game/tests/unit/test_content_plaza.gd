@@ -228,6 +228,33 @@ func test_filters_without_backing_logic_are_disabled() -> void:
 		assert_false(search.editable, "搜索没有后端逻辑，必须只读")
 
 
+## Windowed play always sets live_io. The list GET used to run ControlPlaneHttp
+## on the UI thread (`OS.delay_msec` until TCP timeout, 10 s). Windows then
+## froze on every open and every tab press; macOS usually refused immediately.
+func test_opening_plaza_does_not_block_when_the_control_plane_is_down() -> void:
+	_shell = _open_shell()
+	var plaza: ContentPlazaEntryGd = ContentPlazaEntryGd.ensure(_shell, null)
+	plaza.live_io = true
+	plaza.control_plane_base = "http://127.0.0.1:1"
+	plaza.http_transport = func(
+		_method: String,
+		_path: String,
+		_headers: PackedStringArray,
+		_body: String
+	) -> Dictionary:
+		assert_true(false, "plaza list must not use blocking ControlPlaneHttp")
+		return {}
+	var started: int = Time.get_ticks_msec()
+	assert_true(plaza.try_open())
+	assert_lt(Time.get_ticks_msec() - started, 1000, "open blocked on live list GET")
+	assert_true(plaza.is_open())
+	started = Time.get_ticks_msec()
+	assert_true(plaza.try_select_tab(ContentPlazaGd.TAB_RATING))
+	assert_lt(Time.get_ticks_msec() - started, 1000, "tab switch blocked on live list GET")
+	assert_eq(plaza.tab, ContentPlazaGd.TAB_RATING)
+	assert_eq(str(plaza.screen.call("active_tab")), ContentPlazaGd.TAB_RATING)
+
+
 ## A listing row carries no author and no thumbnail, and players cannot upload
 ## textures at all this phase (CD-11 section 5). The card must degrade instead
 ## of inventing an attribution.

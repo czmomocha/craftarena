@@ -22,6 +22,8 @@ extends Node
 
 const PlazaGd := preload("res://src/ugc/content_plaza.gd")
 const PlazaHttpGd := preload("res://src/client/content_plaza_http.gd")
+const HttpGd := preload("res://src/client/control_plane_http.gd")
+const JoinCodecGd := preload("res://src/client/match_join_codec.gd")
 const WorkshopScene := preload("res://src/client/ui/scenes/s3_workshop.tscn")
 
 const WINDOW_NAME: String = "PlazaWindow"
@@ -53,6 +55,11 @@ var last_error: String = ""
 var http_transport: Callable = Callable()
 var on_fetch_list: Callable = Callable()
 var on_fetch_latest: Callable = Callable()
+## Live list GET must not use ControlPlaneHttp on the UI thread: that helper
+## polls with `OS.delay_msec` and freezes the window until TCP times out
+## (`TIMEOUT_MS` = 10 s). Windows waits; macOS usually refuses immediately.
+var _list_http: HTTPRequest = null
+var _list_tab: String = ""
 
 
 static func ensure(shell: MatchLobbyShell, existing: ContentPlazaEntry) -> ContentPlazaEntry:
@@ -74,10 +81,10 @@ func try_open() -> bool:
 		return false
 	if tab == "":
 		tab = PlazaGd.TAB_NEWEST
-	_refresh_live_list()
 	_rebuild()
 	window.visible = true
 	_set_lobby_visible(false)
+	_refresh_live_list()
 	return true
 
 
@@ -185,8 +192,9 @@ func try_select_tab(next_tab: String) -> bool:
 	tab = next_tab
 	if on_tab.is_valid():
 		on_tab.call(next_tab)
-	_refresh_live_list()
+	items = []
 	_rebuild()
+	_refresh_live_list()
 	return true
 
 
@@ -322,4 +330,52 @@ func _refresh_live_list() -> void:
 		return
 	if not live_io:
 		return
-	apply_http_list(PlazaHttpGd.fetch_list(control_plane_base, tab, http_transport))
+	_request_live_list()
+
+
+func _request_live_list() -> void:
+	if _list_http == null:
+		_list_http = HTTPRequest.new()
+		_list_http.name = "PlazaListHttp"
+		_list_http.timeout = float(HttpGd.TIMEOUT_MS) / 1000.0
+		_list_http.request_completed.connect(_on_list_http_completed)
+		add_child(_list_http)
+	_list_http.cancel_request()
+	_list_tab = tab
+	var url: String = JoinCodecGd.http_url(control_plane_base, PlazaHttpGd.list_path(tab))
+	if url == "":
+		last_error = HttpGd.REASON_URL
+		return
+	var err: int = _list_http.request(url)
+	if err != OK:
+		last_error = HttpGd.REASON_TRANSPORT
+
+
+func _on_list_http_completed(
+	result: int,
+	response_code: int,
+	_headers: PackedStringArray,
+	body: PackedByteArray
+) -> void:
+	if result != HTTPRequest.RESULT_SUCCESS:
+		last_error = HttpGd.REASON_TRANSPORT
+		return
+	var parsed: Dictionary = JoinCodecGd.parse_json_object(body.get_string_from_utf8())
+	var ok_raw: Variant = parsed.get("ok", false)
+	if typeof(ok_raw) != TYPE_BOOL or not ok_raw:
+		apply_http_list({"error": HttpGd.REASON_RESPONSE})
+		return
+	var body_raw: Variant = parsed.get("body", {})
+	if typeof(body_raw) != TYPE_DICTIONARY:
+		apply_http_list({"error": HttpGd.REASON_RESPONSE})
+		return
+	var data: Dictionary = body_raw
+	if response_code < 200 or response_code >= 300:
+		if not data.has("error"):
+			data = {"error": HttpGd.REASON_TRANSPORT}
+	var listed_tab: String = str(data.get(PlazaHttpGd.KEY_TAB, ""))
+	if listed_tab != "" and listed_tab != tab:
+		return
+	if _list_tab != tab:
+		return
+	apply_http_list(data)
