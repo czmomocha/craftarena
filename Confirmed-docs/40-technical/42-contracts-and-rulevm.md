@@ -14,7 +14,7 @@
 | 项 | 当前口径 |
 |---|---|
 | 定点 | Q48.16，向零截断；数字只在 §1.1 |
-| Schema | Component v1 + Bundle v2（`gameplay_asset`）+ 音频 cue bank v1 |
+| Schema | Component v1 + Bundle v2（`gameplay_asset`）+ 音频 cue bank v1。**BASTION 蓝图不进 Bundle v2**：2026-09-15 人类拍板，编译产物是独立新类型（自带 `schema_version` 与玩法判别键），Bundle v2 的 22 个袋与 `to_dictionary()` 一个字节不动；蓝图本身仍是一份 `AuthoringDocument`，**Component v1 不改**。来源见 [CD-91 D.4](../90-reference/91-decision-log.md) `bastion_blueprint_bundle` |
 | PLAYER 意图 | Move / Jump / Reset / UseItem / Shove / **SprintIntent（id=6）** |
 | 扫掠预算 | 单次最多 **256** 样本；超限拒绝整段，不粗化密度。数字在 §1.1 |
 | 静态盒阔相 | 均匀格桶 = `SCALE`；单盒超 125 格或溢出走全量窄相。ID 顺序与全量扫描相同。胶囊仍线性 |

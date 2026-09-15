@@ -13,10 +13,12 @@
 
 | 项 | 当前口径 |
 |---|---|
-| 开工 | **未开工**。顺序上已轮到 M6（[CD-61](../60-plan/61-milestones.md) 文首「下一动」），章节拆分已落 [M6 章节计划](../../docs/plans/m6-bastion-1v1.md)；**第一章仍被该文件 §5.2 第 1、2 项硬阻断**（编译产物载体、最小塔/兵/障碍集与占位数值，宪法第十八条），人类拍板前不得动手 |
+| 开工 | **未开工，但已解锁**。顺序上已轮到 M6（[CD-61](../60-plan/61-milestones.md) 文首「下一动」），章节拆分已落 [M6 章节计划](../../docs/plans/m6-bastion-1v1.md)；两项硬阻断已于 **2026-09-15 人类拍板**（见下两行），第一章 D1 可开工。其余六项待拍板项卡在各自那一章之前，见该计划 §5.2 |
 | 文档地位 | 本文件仍是玩法规则所有者；**实现落点为零**（`game/src/games/bastion/` 是空目录） |
+| **M6 最小集**（2026-09-15 拍板） | 塔 = 箭塔（单体）+ 火炮塔（范围）+ 冰霜塔（减速）；兵 = 快速兵 + 重装兵 + 集群兵；障碍 = 路障 + 减速地块 + 分流门。**只锁「M6 用哪九个」**，不锁完整清单——[CD-63 §1.2](../60-plan/63-open-decisions.md#1-玩法与数值细节) 的正式清单与 §1.3 的具体数值仍延期。狙击 / 电弧 / 增幅塔、护盾 / 支援 / 首领兵、护盾柱 / 干扰塔座 / 视野雾区**不在 M6**。数值是占位桩，落 `game/src/games/bastion/play_stubs.gd` 一处。来源见 [CD-91 D.4](../90-reference/91-decision-log.md) `bastion_minimum_set_m6` |
+| **蓝图编译产物**（2026-09-15 拍板） | 独立新类型 `BastionBlueprintBundle`，自带 `schema_version` 与显式玩法判别键；`SimulationBundle` 一个字节不动。蓝图本身仍是一份 `AuthoringDocument`，**Component Schema v1 不改**。来源见 [CD-91 D.4](../90-reference/91-decision-log.md) `bastion_blueprint_bundle`；Schema 口径的所有者是 [CD-42](../40-technical/42-contracts-and-rulevm.md) |
 | 已就位的契约位 | Component Schema v1 的 `path_agent` / `build_slot` / `tower` / `team` / `health` / `spawner`（[CD-42 §1.2](../40-technical/42-contracts-and-rulevm.md#12-字段标识符v1)）；`player_intent_names.gd` 的五个 §7.3 意图名；`tower_target_priorities.gd` 的 §5.1 四种目标策略。**都只是名字与形状，没有任何裁决逻辑** |
-| 本文件的示例表 | §4.2 障碍、§5.1 炮塔、§5.2 单位三张表**都不是锁定清单**（原文已写）。M6 用哪几个属待拍板项，见 M6 章节计划 §5.2 第 2 项与 [CD-63 §1.2](../60-plan/63-open-decisions.md) |
+| 本文件的示例表 | §4.2 障碍、§5.1 炮塔、§5.2 单位三张表**仍不是锁定清单**（原文已写）。M6 从里面取的九个见上「M6 最小集」行；**超出那九个的仍属待决**，AI 不得从示例表自行补全 |
 | 官方人数 | 先 1v1，再 2v2；UGC 最多 8。2v2 与队伍公共槽、队长盲设属 **M7**，不在 M6 |
 
 ## 1. 玩法定位

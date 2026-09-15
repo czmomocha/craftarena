@@ -43,19 +43,52 @@ describe("M6 chapter plan is landed as a plan, not as a start signal", () => {
 		assert.doesNotMatch(plan, /### M8/);
 	});
 
-	it("says BASTION has zero implementation and D1 is blocked on human calls", () => {
+	it("says BASTION has zero implementation even though D1 is unlocked", () => {
 		const plan = read(PLAN);
-		// 顺序上轮到 ≠ 可以动手。这三句是 D1 的门禁。
-		assert.match(plan, /硬阻断/);
-		assert.match(plan, /本章不得开工/);
-		assert.match(plan, /game\/src\/games\/bastion\//);
+		// 拍板解锁 ≠ 已经做了。这句一旦消失就会被读成 BASTION 已有落点。
+		assert.match(plan, /没有一行实现/);
 		assert.match(plan, /落点仍是零|实现落点为零/);
-		// 八项拍板项必须都还在待拍状态，AI 不得自选。
+		assert.match(plan, /game\/src\/games\/bastion\//);
+	});
+
+	it("moves the two settled calls to 5.1 and keeps the other six pending", () => {
+		const plan = read(PLAN);
+		const settled = headingSection(plan, "### 5.1 已拍板", "### 5.2");
+		// 两项结论各自的要害：不动已发布内容的哈希载体；只锁「用哪九个」。
+		assert.match(settled, /独立新类型/);
+		assert.match(settled, /一个字节不动/);
+		assert.match(settled, /只锁「M6 用哪九个」/);
+		assert.match(settled, /不在 M6/);
+		// 「3 种障碍」是本次新增口径，不得被读成夹具本来的要求。
+		assert.match(settled, /不是文档原有要求/);
+
 		const pending = headingSection(plan, "### 5.2 待拍板", "### 5.3");
-		for (const index of ["| 1 |", "| 2 |", "| 3 |", "| 4 |", "| 5 |", "| 6 |", "| 7 |", "| 8 |"]) {
-			assert.ok(pending.includes(index), `${PLAN}: §5.2 must keep row ${index}`);
+		// 行号覆盖而非删除，前两行必须写明已拍，后六行必须仍带推荐而非结论。
+		assert.match(pending, /\| 1 \| ~~/);
+		assert.match(pending, /\| 2 \| ~~/);
+		for (const index of ["| 3 |", "| 4 |", "| 5 |", "| 6 |", "| 7 |", "| 8 |"]) {
+			assert.ok(pending.includes(index), `${PLAN}: §5.2 must keep pending row ${index}`);
 		}
 		assert.match(pending, /AI 推荐/);
+		assert.match(pending, /不挡 D1/);
+	});
+
+	it("records both calls in CD-91 without closing the deferred full lists", () => {
+		const decisions = read("Confirmed-docs/90-reference/91-decision-log.md");
+		assert.match(decisions, /bastion_blueprint_bundle = separate_type_not_simulation_bundle/);
+		assert.match(decisions, /bastion_minimum_set_m6 = three_towers_three_units_three_obstacles/);
+
+		// CD-63 §1.2 / §1.3 只被迁出「M6 用哪九个」，完整清单与数值仍延期。
+		const open = read("Confirmed-docs/60-plan/63-open-decisions.md");
+		assert.match(open, /M6 的 BASTION 最小九项也已迁出|M6 的 BASTION 最小塔/);
+		assert.match(open, /完整清单仍延期|完整清单与 §1\.3 的具体伤害/);
+		// 隐藏布障仍未拍，不得被这次拍板顺带认领。
+		assert.match(open, /BASTION 隐藏布障的协议实现/);
+
+		// Schema 所有者必须写明 Bundle v2 与 Component v1 没动。
+		const contracts = read("Confirmed-docs/40-technical/42-contracts-and-rulevm.md");
+		assert.match(contracts, /BASTION 蓝图不进 Bundle v2/);
+		assert.match(contracts, /Component v1 不改/);
 	});
 
 	it("keeps the four article-18 boundaries visible instead of burying them in chapters", () => {
@@ -86,14 +119,17 @@ describe("M6 chapter plan is landed as a plan, not as a start signal", () => {
 		const m6 = headingSection(live, "### M6：", "### M7：");
 		assert.match(m6, /m6-bastion-1v1\.md/);
 		assert.match(m6, /未开工/);
-		assert.match(m6, /硬阻断/);
+		assert.match(m6, /其余六项仍待拍板/);
 		// 产出与验收句仍归 CD-61，计划文件不得替代它。
 		assert.match(m6, /非法封路、伪造金币和伪造建造均被拒绝/);
 
 		const bastion = read("Confirmed-docs/20-gameplay/22-bastion.md");
 		assert.match(bastion, /m6-bastion-1v1\.md/);
 		assert.match(bastion, /实现落点为零/);
-		assert.match(bastion, /不是锁定清单/);
+		assert.match(bastion, /仍不是锁定清单/);
+		// 最小集与其排除项都要在玩法所有者文档里，不能只活在计划文件。
+		assert.match(bastion, /箭塔/);
+		assert.match(bastion, /狙击 \/ 电弧 \/ 增幅塔/);
 	});
 
 	it("routes BASTION placeholder numbers to a single source per the freeze rule", () => {

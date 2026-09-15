@@ -2,7 +2,7 @@
 
 > 类型：实现级章节计划（`docs/plans/`），**不是所有者文档**。
 > 里程碑产出与退出条件的所有者是 [CD-61 §2 M6](../../Confirmed-docs/60-plan/61-milestones.md)；玩法规则的所有者是 [CD-22](../../Confirmed-docs/20-gameplay/22-bastion.md)。本文件只把 M6 拆成可审查的章，冲突以那两份为准。
-> 日期：2026-09-15。状态：**章节划分与八项拍板项待人类裁决；第一章 D1 被 §5.2 第 1、2 项硬阻断，未拍板前不得开工。** 本文件到今天为止**没有一行实现**，BASTION 的落点仍是零（`game/src/games/bastion/` 是空目录）。
+> 日期：2026-09-15。状态：**两项硬阻断已拍板（§5.1），D1 可开工；其余六项仍待人类裁决（§5.2），卡在各自那一章之前。** 本文件到今天为止**没有一行实现**，BASTION 的落点仍是零（`game/src/games/bastion/` 是空目录）。
 > 上位约束：[CD-00 宪法](../../Confirmed-docs/00-constitution/CONSTITUTION.md) 第一、二、三、四、五、六、九、十五、十七、十八、十九、二十三、二十四条。
 
 ## 1. 能不能开工
@@ -15,11 +15,12 @@
 | 字体入包 | 已交（2026-09-13） |
 | UI 接线第一批（S3 广场） | 已交（2026-09-13 / 09-14） |
 | 测试期 VPS Web 分发（M-Export 第二刀） | 已交（2026-09-14）。人类 2026-09-15 另行确认**部署与测试已自行走过**，不阻塞本号 |
-| CD-61 明写的下一动 | **M6 / M7**，含 UI 接线第二批 S1 主大厅壳（在 M6 章内，不提前） |
+| CD-61 明写的下一动 | **M6**，含 UI 接线第二批 S1 主大厅壳（在本号 F1 章内，不提前） |
+| D1 的两项硬阻断 | **已拍板**（2026-09-15，均采纳 AI 推荐），见 [§5.1](#51-已拍板2026-09-15) |
 
-**但「轮到」不等于「可以动手」。** 第一章 D1 要锁的是 Schema 与白名单，落在宪法第十八条的人类门禁上（[§5.2](#52-待拍板阻断ai-不得自选) 第 1、2 项）。AI 在这两项拍板前只能写本文件，不能写 `game/src/games/bastion/` 里的第一行代码。
+**D1 曾被两项人类门禁挡住，2026-09-15 已拍板解锁**（结论见 [§5.1](#51-已拍板2026-09-15)）。在那之前 AI 只能写本文件——第一章要锁的是 Schema 与白名单，落在宪法第十八条上，不是可以「先写着等确认」的东西。
 
-D1 真正开工那一刀，须一并把两处仓库规则文件从里程碑级粒度改到「M6 D1」，否则下一个 Agent 加载到的仍是「M6 / M7」这种一整号的指向：
+两处仓库规则文件已从里程碑级粒度改到「M6 D1」，否则下一个 Agent 加载到的仍是「M6 / M7」这种一整号的指向：
 
 - `.cursor/rules/course-correction-freeze.mdc` §1；
 - `.cursor/rules/complete-chapter-prs.mdc` 的「做 / 不做」两段与末四行任务单。
@@ -100,14 +101,14 @@ D 段全部离线、不碰协议；E 段上线；F 段接 UI 与退出。每章�
 
 D 段前四章在窗口里没有可见行为——这是玩法底座的性质，不是省事。**第一次有画面是 E4。** 把这件事写在这里，是为了不让人类在 D 段每交一章都期待一次窗口走查。
 
-### D1 BASTION L0 契约与蓝图编译（**下一刀，当前被阻断**）
+### D1 BASTION L0 契约与蓝图编译（**下一刀，已解锁**）
 
-- **交付**：`game/src/games/bastion/` 落第一批文件；`bastion_blueprint_bundle.gd`（新类型，自带 `schema_version = 1` 与显式玩法判别键；`SimulationBundle` 不动）；`bastion_prototype_catalog.gd`（塔 / 兵 / 障碍白名单 id + 升级上限 3，形状照 `gameplay_asset_catalog.gd`）；`bastion_play_stubs.gd`（占位数值单一配置源，形状照 `TraprushPlayStubs`）；`bastion_blueprint_compiler.gd`（AuthoringWorld → bundle：双方核心、建造槽、障碍槽、waypoint 边、波次基础表、初始金币 / 基础收入 / 赏金上限 / 时限）；灰盒夹具蓝图落 `game/content/test_fixtures/`；`tools/content-validator/` 加蓝图校验并进 CI。
-- **测试**：正反例——未登记原型 id、`tower.level` 超上限、缺一侧核心、障碍槽为 0、waypoint 悬空边、两侧预算不等、`float` / `NodePath` 注入一律拒绝；**旧 TRAPRUSH bundle 喂进新解码器必须被拒**，且 `SimulationBundle` 的解码与 `to_dictionary()` 逐字节不变（金标断言，守住已发布内容的 ContentHash）。
+- **交付**：`game/src/games/bastion/` 落第一批文件；`bastion_blueprint_bundle.gd`（**独立新类型**，自带 `schema_version = 1` 与显式玩法判别键；`SimulationBundle` 不动）；`bastion_prototype_catalog.gd`（[§5.1](#51-已拍板2026-09-15) 那九个原型的白名单 id + 升级上限 3，形状照 `gameplay_asset_catalog.gd`）；`bastion_play_stubs.gd`（占位数值单一配置源，形状照 `TraprushPlayStubs`）；`bastion_blueprint_compiler.gd`（AuthoringWorld → bundle：双方核心、建造槽、障碍槽、waypoint 边、波次基础表、初始金币 / 基础收入 / 赏金上限 / 时限）；灰盒夹具蓝图落 `game/content/test_fixtures/`；`tools/content-validator/` 加蓝图校验并进 CI。
+- **测试**：正反例——未登记原型 id（**九个之外的一律拒绝**，防止有人从 CD-22 的示例表里自行补全）、`tower.level` 超上限、缺一侧核心、障碍槽为 0、waypoint 悬空边、两侧预算不等、`float` / `NodePath` 注入一律拒绝；**旧 TRAPRUSH bundle 喂进新解码器必须被拒**，且 `SimulationBundle` 的解码与 `to_dictionary()` 逐字节不变（金标断言，守住已发布内容的 ContentHash）。
 - **审查**：**深审**（`shared/` 契约 + `ugc/` 编译 + UGC 安全边界）。
 - **窗口**：无。纯契约与命令行校验，没有可点的控件。
-- **不做**：仿真推进、协议帧、匹配、UI、蓝图编辑面板（M7）。
-- **阻断**：[§5.2](#52-待拍板阻断ai-不得自选) 第 1、2 项。**这两项没拍板，本章不得开工。**
+- **不做**：仿真推进、协议帧、匹配、UI、蓝图编辑面板（M7）；把九项之外的塔 / 兵 / 障碍登记进白名单；改 Component Schema v1 或 Bundle v2。
+- **诚实边界**：白名单里那九个原型的**数值是占位桩**，不是产品表（[CD-63 §1.3](../../Confirmed-docs/60-plan/63-open-decisions.md#1-玩法与数值细节) 仍延期）。本章锁的是「哪九个」与「形状」，不是「多少伤害」。
 
 ### D2 确定性寻路与「不得完全封路」守卫
 
@@ -190,16 +191,25 @@ D 段前四章在窗口里没有可见行为——这是玩法底座的性质，
 
 ## 5. 拍板状态
 
-### 5.1 本计划没有自选任何未决项
+### 5.1 已拍板（2026-09-15）
 
-三塔三兵三障碍的具体数值、蓝图主题、协议帧形状、隐藏布障的实现方式，全部在下表里以「AI 推荐」的形式出现，**没有一项被当成结论写进章节交付**。CD-22 §4.2 / §5.1 / §5.2 的表格自己写着「不是锁定清单」，CD-63 §1.2 / §1.3 也明写完整清单与具体数值仍延期。
+两项都采纳了 AI 推荐。所有者文档与覆盖链见 [CD-91 D.4](../../Confirmed-docs/90-reference/91-decision-log.md)，本节不复述那里的未覆盖范围。
+
+| 项 | 结论 | 所有者 |
+|---|---|---|
+| 蓝图编译产物载体 | **独立新类型** `BastionBlueprintBundle`，自带 `schema_version` 与显式玩法判别键；`SimulationBundle` 的 22 个袋与 `to_dictionary()` **一个字节不动**。蓝图本身仍是一份 `AuthoringDocument`，**Component Schema v1 不改**。新增资产 id 走 `SharedGameplayAssetCatalog` 登记（加行，不改几何）；建造槽占地仍按 AABB 格网投影派生，不加字段 | [CD-42 当前生效值](../../Confirmed-docs/40-technical/42-contracts-and-rulevm.md)；键 `bastion_blueprint_bundle` |
+| M6 最小塔 / 兵 / 障碍集 | **3 / 3 / 3**：箭塔（单体）+ 火炮塔（范围）+ 冰霜塔（减速）；快速兵 + 重装兵 + 集群兵；路障 + 减速地块 + 分流门。**只锁「M6 用哪九个」**——[CD-63 §1.2](../../Confirmed-docs/60-plan/63-open-decisions.md#1-玩法与数值细节) 的完整清单与 §1.3 的具体数值仍延期，M6 里它们全是落在 `bastion_play_stubs.gd` 一处的占位桩。狙击 / 电弧 / 增幅塔、护盾 / 支援 / 首领兵、护盾柱 / 干扰塔座 / 视野雾区**不在 M6**，D1 的白名单必须把它们判失败 | [CD-22 当前生效值](../../Confirmed-docs/20-gameplay/22-bastion.md)；键 `bastion_minimum_set_m6` |
+
+**「3 种障碍」是本次新增的口径，不是文档原有要求。** CD-61 §4.2 明写「3 种塔、3 种兵」，但障碍那一条只写「双方各 3 个障碍**槽**」。这一句留在这里，是为了下次有人回头查「三种障碍是谁定的」时不会误读成夹具本来就要求。
 
 ### 5.2 待拍板（阻断，AI 不得自选）
 
+余下六项全部仍是「AI 给推荐、不给结论」，**没有一项被当成结论写进章节交付**。CD-22 §4.2 / §5.1 / §5.2 的表格自己写着「不是锁定清单」。下表第 1、2 行已于 2026-09-15 关闭并迁到 [§5.1](#51-已拍板2026-09-15)，**行号保留**以便 D1 之前的讨论仍能对上号（覆盖而非删除，照 CD-63 的记法）。
+
 | # | 问题 | 卡住哪章 | AI 推荐与理由 | 依据 |
 |---|---|---|---|---|
-| 1 | **编译产物载体**：新类型 `BastionBlueprintBundle`，还是扩 `SimulationBundle` | **D1（硬阻断）** | **新类型**，自带 `schema_version = 1` 与显式玩法判别键，`SimulationBundle` 一个字节不动。理由：ContentHash 覆盖 `to_dictionary()`，动 `SimulationBundle` 就牵动已发布内容与旧回放的哈希；22 个袋再混进 BASTION 之后，改哪个玩法都要重读另一个 | 宪法第三、六、十八条；[CD-42 当前生效值](../../Confirmed-docs/40-technical/42-contracts-and-rulevm.md) |
-| 2 | **最小塔 / 兵 / 障碍集与占位数值** | **D1、D3、D4（硬阻断）** | 照 CD-61 §4.2 夹具取 **3 / 3 / 3**：箭塔（单体）+ 火炮塔（范围）+ 冰霜塔（减速）；快速兵 + 重装兵 + 集群兵；路障 + 减速地块 + 分流门。数值全是占位桩，落 `bastion_play_stubs.gd` 一处并标注「不是产品表」。形状照 D5「一期最小道具 = 爆破球 + 冲刺」那次的先例。**注意**：§4.2 只要求各 3 个障碍**槽**，没规定几种障碍，「三种障碍」是 AI 推荐不是文档要求 | [CD-63 §1.2 / §1.3](../../Confirmed-docs/60-plan/63-open-decisions.md#1-玩法与数值细节)；[CD-22 §4.2 / §5.1 / §5.2](../../Confirmed-docs/20-gameplay/22-bastion.md) |
+| 1 | ~~编译产物载体~~ | ~~D1~~ | **已拍板**（2026-09-15）：新类型。结论见 [§5.1](#51-已拍板2026-09-15) | — |
+| 2 | ~~最小塔 / 兵 / 障碍集~~ | ~~D1、D3、D4~~ | **已拍板**（2026-09-15）：3 / 3 / 3。结论见 [§5.1](#51-已拍板2026-09-15) | — |
 | 3 | **实时帧扩展方式** | E1 | **在 v1 上加新帧类型 + 新 intent id，不升协议大版本**。依据是现有解码器的行为：`decode_snapshot` / `decode_command` 都先查 `type` 字节、不符即拒，所以加类型不会让 TRAPRUSH 客户端误读，TRAPRUSH 帧布局也一个字节不动。次选是独立 `bastion_frame_codec.gd` 自带版本字节 | 宪法第十八条；[CD-43 §1](../../Confirmed-docs/40-technical/43-networking-and-replay.md#1-序列化分工) |
 | 4 | **匹配 HTTP 玩法判别位** | E3 | **加玩法字段，缺省 TRAPRUSH**；官方蓝图走独立的 `blueprint` id，与 `course` / `content` 三者互斥。**不把 `course` 塞成 `"bastion:blueprint_01"`**——照 M5 C4「加 `content` 对象而不是把 `course` 塞成 `id@version`」那次的先例 | 宪法第十八条；[CD-42 §3.5](../../Confirmed-docs/40-technical/42-contracts-and-rulevm.md#35-匹配与玩家发布-httpc3-已接线c4-已接线) |
 | 5 | **结算 HTTP 队伍结果** | E3 | **加可选队伍数组，复用已有 `mvpSlot`**，TRAPRUSH 现有必填字段一律不动（否则已写入的结算记录读不出来）。`place` 在 BASTION 读作队伍名次。一期仍只有单局名次与 MVP，不产生任何账号级排位 | 宪法第十五、十八条 |
@@ -207,7 +217,7 @@ D 段前四章在窗口里没有可见行为——这是玩法底座的性质，
 | 7 | **第一张官方蓝图的主题与机关组合** | E2 | 对称双线：每侧一条主路 + 一条绕行分支，3 个障碍槽卡在分支口；5 波、5 分钟局时。照 M5 C1 / C2 的先例由人类拍 | [CD-61 §4.2](../../Confirmed-docs/60-plan/61-milestones.md#42-bastion) |
 | 8 | **BASTION 音效素材与 cue 映射** | E4 | 先只用已登记的通用 UI cue 与现有命中 / 打碎类 cue；新素材入库仍是一次人类许可确认 | 宪法第十八条；[CD-42 §1.4](../../Confirmed-docs/40-technical/42-contracts-and-rulevm.md#14-音频-cue-bank-v1) |
 
-第 1、2 项是**硬阻断**：没有它们，D1 连文件名都定不下来。第 3–8 项卡在各自那一章开工前，不挡 D1。
+第 1、2 项曾是硬阻断——没有它们，D1 连文件名都定不下来；**2026-09-15 已关闭**。第 3–8 项卡在各自那一章开工前，**不挡 D1**。
 
 ### 5.3 需要人类澄清的一处口径不一致（不是新决策）
 
@@ -249,7 +259,12 @@ CD-61 §2 M6 的验收句不变：**双方可以完成一局；非法封路、�
 | 把本文件 F1 的「重签」全部换成「再看一眼」 | 非零 | `exit=1`，6 项里 1 项红 |
 | 把 CD-61 §2 M6 的「状态：**未开工**」改成「进行中」 | 非零 | `exit=1`，6 项里 1 项红 |
 | 把 `.cursor/rules/complete-chapter-prs.mdc` 的指针退回整号 `M6 / M7` | 非零 | `exit=1`（`m5_exit.test.ts`） |
+| 抹掉 CD-22 里「狙击 / 电弧 / 增幅塔……**不在 M6**」那句排除项 | 非零 | `exit=1` |
+| 把 CD-63 §1.2 / §1.3 改成「完整清单就此关闭」 | 非零 | `exit=1` |
+| 把本文件 §5.1 的「只锁「M6 用哪九个」」改成「锁定清单」 | 非零 | `exit=1` |
 | 全部还原 | 零 | 两份测试都 `exit=0` |
+
+最后三行守的是同一件事：**这次拍板只关闭了「M6 用哪九个」，没有关闭完整清单。** 这个区别一旦在任何一份文档里被抹平，下一个人就会从 CD-22 的示例表里自行补全塔和兵（宪法第五节明确禁止的那种「把示例当已确认答案」）。
 
 `tools/dev-launcher/tests/m5_exit.test.ts` 里那条「两份规则指向哪一刀」的断言同时收窄了：从整号 `M6 / M7` 改成具体章 `M6 D1`，并加了一条反例禁止再退回整号指向——上表第三行就是它。
 
