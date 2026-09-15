@@ -47,7 +47,7 @@ describe("M6 chapter plan is landed as a plan, not as a start signal", () => {
 		const plan = read(PLAN);
 		// D1–D4 之前这里钉的是「没有一行实现」。那句话在 D1 之后就假了，直接删掉
 		// 等于把门禁拆了，所以换成三件仍然为真、同样容易被顺手抹掉的事。
-		assert.match(plan, /D1–D5 已交，E1 起未开工/);
+		assert.match(plan, /D1–E1 已交，E2 起未开工/);
 		assert.match(plan, /game\/src\/games\/bastion\//);
 		// 「第一次有画面是 E4」必须留在章节清单的引子里，不能只活在 §8 那张
 		// 故障注入表的行文里——那样这条断言会被自己的文档描述喂饱。
@@ -67,29 +67,36 @@ describe("M6 chapter plan is landed as a plan, not as a start signal", () => {
 		assert.match(settled, /不在 M6/);
 		// 「3 种障碍」是本次新增口径，不得被读成夹具本来的要求。
 		assert.match(settled, /不是文档原有要求/);
+		assert.match(settled, /服务端裁剪/);
+		assert.match(settled, /不升协议大版本|type 5\/6/);
 
 		const pending = headingSection(plan, "### 5.2 待拍板", "### 5.3");
 		// 行号覆盖而非删除，前两行必须写明已拍，后六行必须仍带推荐而非结论。
 		assert.match(pending, /\| 1 \| ~~/);
 		assert.match(pending, /\| 2 \| ~~/);
+		assert.match(pending, /\| 3 \| ~~/);
+		assert.match(pending, /\| 6 \| ~~/);
 		for (const index of ["| 3 |", "| 4 |", "| 5 |", "| 6 |", "| 7 |", "| 8 |"]) {
 			assert.ok(pending.includes(index), `${PLAN}: §5.2 must keep pending row ${index}`);
 		}
 		assert.match(pending, /AI 推荐/);
-		assert.match(pending, /不挡 D1/);
+		assert.match(pending, /不挡 E2 之前已交的章|不挡 D1/);
 	});
 
 	it("records both calls in CD-91 without closing the deferred full lists", () => {
 		const decisions = read("Confirmed-docs/90-reference/91-decision-log.md");
 		assert.match(decisions, /bastion_blueprint_bundle = separate_type_not_simulation_bundle/);
 		assert.match(decisions, /bastion_minimum_set_m6 = three_towers_three_units_three_obstacles/);
+		assert.match(decisions, /bastion_realtime_frames = v1_new_types_not_major_bump/);
+		assert.match(decisions, /hidden_state_sync = server_clip_obstacles/);
 
 		// CD-63 §1.2 / §1.3 只被迁出「M6 用哪九个」，完整清单与数值仍延期。
 		const open = read("Confirmed-docs/60-plan/63-open-decisions.md");
 		assert.match(open, /M6 的 BASTION 最小九项也已迁出|M6 的 BASTION 最小塔/);
 		assert.match(open, /完整清单仍延期|完整清单与 §1\.3 的具体伤害/);
-		// 隐藏布障仍未拍，不得被这次拍板顺带认领。
-		assert.match(open, /BASTION 隐藏布障的协议实现/);
+		// 隐藏布障已迁出为服务端裁剪，不得被读成仍未拍。
+		assert.match(open, /已关闭并迁出本清单：\*\*BASTION 隐藏布障/);
+		assert.match(open, /服务端裁剪/);
 
 		// Schema 所有者必须写明 Bundle v2 与 Component v1 没动。
 		const contracts = read("Confirmed-docs/40-technical/42-contracts-and-rulevm.md");
@@ -124,8 +131,8 @@ describe("M6 chapter plan is landed as a plan, not as a start signal", () => {
 		const live = read("Confirmed-docs/60-plan/61-milestones.md");
 		const m6 = headingSection(live, "### M6：", "### M7：");
 		assert.match(m6, /m6-bastion-1v1\.md/);
-		assert.match(m6, /E1 起未开工/);
-		assert.match(m6, /其余六项仍待拍板/);
+		assert.match(m6, /E2 起未开工/);
+		assert.match(m6, /其余四项仍待拍板/);
 		// 「交了什么」必须和「没交什么」写在一起，否则下一个读者会以为 M6 快好了。
 		assert.match(m6, /开不出一局给人看|第一次有画面是 E4/);
 		// 产出与验收句仍归 CD-61，计划文件不得替代它。

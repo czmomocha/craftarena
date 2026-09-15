@@ -5,16 +5,16 @@ extends RefCounted
 ## **不是内容**：不进发布系统、不产生新版本、进入准备建造后冻结。
 ##
 ## 盲设只在本对象的只读视图上成立：`visible_placements(viewer)` 在揭示前只返回
-## 观察者自己的 pending。权威哈希含双方 pending，否则回放对不上。协议层怎么把
-## 对方布局藏住是 E1 / [CD-63 §1.6](Confirmed-docs/60-plan/63-open-decisions.md)，
-## 本章一个字节都不碰。
+## 观察者自己的 pending。权威哈希含双方 pending，否则回放对不上。协议层裁剪
+## 已交于 E1：`BastionFrameCodec.encode_snapshot` 在 phase=SETUP 时按观察者
+## 裁剪障碍袋；本对象仍交出权威双方 pending，不在这里先滤一遍。
 ##
 ## 提交时立即拒：非槽位、超预算、锁定后改动、未知原型。封路提案可以进 pending，
 ## 因为 pending 不是活图；揭示时整表重跑预算与 D2 可达性，非法放置 LIFO 撤销
 ## 并退还点数（CD-22 §4.1 第 6、7 步）。
 ##
-## 布障命令进本对象自己的磁带，不走 `SharedCommand`：五个 BASTION 意图还没有
-## 线上 id（E1），把准备阶段命令塞进 L0 信封等于提前发明协议。
+## 布障命令进本对象自己的磁带，不走 `SharedCommand`：E1 已给线上 id，但接线
+## 对局进程（把磁带编进 type 5）仍是 E3。本章不提前发明那条路径。
 
 const CatalogGd := preload("res://src/ugc/bastion_prototype_catalog.gd")
 const GuardGd := preload("res://src/games/bastion/path_guard.gd")

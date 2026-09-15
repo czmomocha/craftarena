@@ -21,6 +21,8 @@ func test_bastion_intents_are_present() -> void:
 	assert_true(PlayerIntentNames.contains("SellTowerIntent"))
 	assert_true(PlayerIntentNames.contains("SetTowerPriorityIntent"))
 	assert_true(PlayerIntentNames.contains("DonateResourceIntent"))
+	assert_true(PlayerIntentNames.contains("PlaceObstacleIntent"))
+	assert_true(PlayerIntentNames.contains("LockSetupIntent"))
 
 
 func test_unknown_intent_is_rejected() -> void:
@@ -29,4 +31,4 @@ func test_unknown_intent_is_rejected() -> void:
 
 
 func test_intent_list_size_matches_locked_catalog() -> void:
-	assert_eq(PlayerIntentNames.ALL.size(), 12)
+	assert_eq(PlayerIntentNames.ALL.size(), 14)

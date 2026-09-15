@@ -15,7 +15,7 @@
 |---|---|
 | 产品形态 | TLS WebSocket 网关（宪法第二十二条） |
 | 测试期 | 明文 `http`/`ws` 可打到自备远端；**公开运营前**回到 TLS |
-| 命令 id | 1–5 同前；**6 = SprintIntent**。探针 type 3/4 = ping/pong |
+| 命令 id | TRAPRUSH：1–5 同前；**6 = SprintIntent**。探针 type 3/4 = ping/pong。**BASTION**（2026-09-15，M6 E1）：type **5/6** 新帧，intent id **7–12**；不升协议大版本。来源见 [CD-91 D.4](../90-reference/91-decision-log.md) `bastion_realtime_frames` |
 | Tick / 快照 / 插值 | **已锁（2026-09-02，E3）**：近端 ICMP 与一场协议层样本未证伪现桩，人类把现桩升为锁定值，**不改代码常量**。数字见 §4。远端样本只在 [server-deploy.md §13](../../docs/runbooks/server-deploy.md#13-协议层-rttc3) |
 | 匹配 JSON | **已交（M5 C4）**：可选 `content` 对象；二进制帧不变。字段形状只在 [CD-42 §3.5](42-contracts-and-rulevm.md#35-匹配与玩家发布-httpc3-已接线c4-已接线) |
 
@@ -30,6 +30,8 @@
   - 探针帧（定长 18 字节）：`[version:u8=1][type:u8=3 ping / 4 pong][seq:s64][client_send_ms:s64]`。服务端原样回显，不解析时钟；远端样本见 [server-deploy.md §13](../../docs/runbooks/server-deploy.md)，数字不在本文件复述；
   - 快照帧（变长）：`[version:u8=1][type:u8=2][tick:s64][player_count:u8]`，随后每玩家 41 字节（`x/y/z/yaw_bam` s64×4 + `accepted_count:u8` + `finish_tick:s64`），再 `[crate_count:u8]` 与每箱 16 字节（`entity_id:s64` + `durability:s64`，0 为已毁）；
   - 解码拒绝：版本不符、未知类型、截断、尾随字节、保留字段非零；编码规范（同一逻辑帧恒得同一字节）；新增 intent id 属协议变更，旧解码器拒绝。
+  - BASTION 命令帧（定长 35 字节，type=5；实现：`game/src/shared/protocol/bastion_frame_codec.gd`）：`[version:u8=1][type:u8=5][tick:s64][intent_id:u8][arg0:s64][arg1:s64][arg2:s64]`。intent_id：7=BuildTower / 8=UpgradeTower / 9=SellTower / 10=SetTowerPriority / 11=PlaceObstacle / 12=LockSetup。未使用的 arg 为保留字段，必须为零。`DonateResourceIntent` 仍无 id（M7）；`InteractIntent` 仍无 id。type 5 与 type 1 互不解码。
+  - BASTION 快照帧（变长，type=6）：`[version:u8=1][type:u8=6][tick:s64][phase:u8][wave_index:s64][result:u8][team_count:u8]`，随后每队按 team_id 升序写核心血量 / 金币 / 漏怪 / 击杀 / 锁定 / 塔 / 存活单位 / 障碍。**互设障碍阶段（phase=1）必须带观察者 team_id，对方障碍袋写成 count=0；缺观察者则整帧拒绝。** 离开该阶段后观察者被忽略，双方障碍都下发。来源见 [CD-91 D.4](../90-reference/91-decision-log.md) `hidden_state_sync`。TRAPRUSH type 1–4 布局一个字节不动。
 
 ## 2. 传输
 

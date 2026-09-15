@@ -4,7 +4,7 @@ extends GutTest
 ##
 ## D3 已经有阶段、锁定标志、倒计时。本章补齐 CD-22 §4.1 / §7.2 剩下的那一截：
 ## 点数预算、只放在预留槽、盲设视图、统一揭示、揭示后重验与退点、
-## `MatchSetupState`、布障命令进回放。协议层裁剪是 E1，本批一个字节都不碰。
+## `MatchSetupState`、布障命令进回放。协议层裁剪已交于 E1；本批测的是会话层。
 ##
 ## 提交时立即拒的是槽位 / 白名单 / 预算 / 锁定——这些没有「等揭示再看」的合法
 ## 解释。封路提案可以先进 pending：pending **不是活图**，揭示时才上图，守卫在
@@ -104,7 +104,7 @@ func test_setup_is_blind_until_reveal() -> void:
 	assert_eq(seen_by_b.size(), 1)
 	var seen_b_node: int = seen_by_b[0]["node_id"]
 	assert_eq(seen_b_node, B_FORK)
-	# 权威哈希两边都有，盲的只是视图。协议层裁剪是 E1，这里不得假装已经藏住。
+	# 权威哈希两边都有，盲的只是视图。协议层裁剪在 E1 的编码器上测，这里不得假装已经藏住。
 	assert_eq(session.setup_authority_obstacles(TEAM_A).size(), 1)
 	assert_eq(session.setup_authority_obstacles(TEAM_B).size(), 1)
 	assert_true(session.lock_setup(TEAM_A))

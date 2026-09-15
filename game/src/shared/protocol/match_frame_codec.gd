@@ -14,7 +14,9 @@ extends RefCounted
 ## 解码拒绝：版本不符、未知类型、截断、尾随字节、保留字段非零。
 ## 命令是规范的：同一逻辑帧恒得同一字节序列。字节序为 PackedByteArray 原生小端。
 ## 命令帧不带 slot：连接身份由服务端持有。SprintIntent id=6。Shove 已接线但无线上目标 id；
-## Interact 仍未接线。新增 id / 帧类型属协议变更，旧解码器拒绝。Tick/快照频率不在本文件锁定（CD-43 §4）。
+## Interact 仍未接线。type 5/6 是 BASTION 命令/快照（`bastion_frame_codec.gd`），本解码器
+## 按未知类型拒绝，TRAPRUSH 布局一个字节不动。新增 id / 帧类型属协议变更。
+## Tick/快照频率不在本文件锁定（CD-43 §4）。
 
 const PlayerIntentNames := preload("res://src/shared/commands/player_intent_names.gd")
 
