@@ -15,7 +15,9 @@
 |---|---|
 | 定点 | Q48.16，向零截断；数字只在 §1.1 |
 | Schema | Component v1 + Bundle v2（`gameplay_asset`）+ 音频 cue bank v1。**BASTION 蓝图不进 Bundle v2**：2026-09-15 人类拍板，编译产物是独立新类型（自带 `schema_version` 与玩法判别键），Bundle v2 的 22 个袋与 `to_dictionary()` 一个字节不动；蓝图本身仍是一份 `AuthoringDocument`，**Component v1 不改**。来源见 [CD-91 D.4](../90-reference/91-decision-log.md) `bastion_blueprint_bundle` |
-| PLAYER 意图 | Move / Jump / Reset / UseItem / Shove / **SprintIntent（id=6）** |
+| BASTION 蓝图 bundle | **v1 已落地**（M6 D1，2026-09-15）。`backend/contracts/schemas/bastion_blueprint_bundle.schema.json` + `game/src/ugc/bastion_blueprint_bundle.gd`，恰好 12 个键：`schema_version`（恒 1）/ `gameplay`（恒 `"bastion"`，显式玩法判别位）/ `cell` / `source_revision` / `cores` / `spawns` / `build_slots` / `obstacle_slots` / `waypoints` / `edges` / `waves` / `economy`。两个 wire 互不相认：TRAPRUSH bundle 喂进 BASTION 解码器被拒，反之亦然；`SimulationBundle.to_dictionary()` 由 `test_bastion_blueprint_contract.gd` 的金标摘要钉住逐字节不变。wire 里**不含任何塔 / 兵数值**，那些是 `game/src/games/bastion/play_stubs.gd` 的占位桩 |
+| BASTION 蓝图的作者映射 | 蓝图输入仍是一份普通 `AuthoringDocument`，**Component v1 一个字节不改**。角色由 `zone.tags` 声明：`bastion_core` / `bastion_spawn` / `bastion_build_slot` / `bastion_obstacle_slot` / `bastion_route` / `bastion_wave` / `bastion_config`，各自需要的组件见 `game/src/ugc/bastion_blueprint_compiler.gd` 文件头。**一处借用需要人类知情**：v1 没有「对局配置」组件，而加一个是 Schema 破坏性变更（宪法第十八条），所以八个经济标量落在 `bastion_config` 实体的 `score.tallies` 上（v1 里唯一契约是「字符串键 → 整数、不锁具体统计项」的槽）。将来真加了配置组件，改 `BastionBlueprintCompilerBags.read_config` 一处 |
+| PLAYER 意图 | Move / Jump / Reset / UseItem / Shove / **SprintIntent（id=6）**。BASTION 的五个意图名已在 `player_intent_names.gd`，但**仍没有线上 id**（E1） |
 | 扫掠预算 | 单次最多 **256** 样本；超限拒绝整段，不粗化密度。数字在 §1.1 |
 | 静态盒阔相 | 均匀格桶 = `SCALE`；单盒超 125 格或溢出走全量窄相。ID 顺序与全量扫描相同。胶囊仍线性 |
 | Rule VM | **第 1–5 章已交**：v1 信封 + 白名单解释器 + gas；`OnMatchStarted` / `OnEveryTicks` 图编成同一套字节码。§2.1 Query / Logic / Action 最小子集：`GetField` / `CountInZone`（按结果数加 gas）/ `Logic` / `Spawn` / `Despawn` / `ApplyEffect` / `EmitGameEvent`，经 `RuleVmHost`；超 gas 回滚 host 写入。其它事件仍编译拒绝。Preview 安全点 `try_replace_rule_graphs` 重编译生效；公开对局 `try_replace_rule_graphs` 禁止。不把规则图写入 AuthoringDocument / SimulationBundle。`run()` 不走 JSON |

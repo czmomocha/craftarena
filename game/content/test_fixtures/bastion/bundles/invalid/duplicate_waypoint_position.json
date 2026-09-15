@@ -1,0 +1,162 @@
+{
+	"schema_version": 1,
+	"gameplay": "bastion",
+	"cell": 65536,
+	"source_revision": 1,
+	"cores": [
+		{
+			"entity_id": 10,
+			"team_id": 1,
+			"node_id": 1,
+			"max_health": 10
+		},
+		{
+			"entity_id": 11,
+			"team_id": 2,
+			"node_id": 6,
+			"max_health": 10
+		}
+	],
+	"spawns": [
+		{
+			"entity_id": 20,
+			"team_id": 1,
+			"node_id": 3
+		},
+		{
+			"entity_id": 21,
+			"team_id": 2,
+			"node_id": 4
+		}
+	],
+	"build_slots": [
+		{
+			"entity_id": 30,
+			"team_id": 1,
+			"x": 65536,
+			"y": 0,
+			"z": -131072,
+			"whitelist": [
+				1,
+				2,
+				3
+			]
+		},
+		{
+			"entity_id": 31,
+			"team_id": 2,
+			"x": 65536,
+			"y": 0,
+			"z": 131072,
+			"whitelist": [
+				1,
+				2,
+				3
+			]
+		}
+	],
+	"obstacle_slots": [
+		{
+			"entity_id": 40,
+			"team_id": 1,
+			"node_id": 2,
+			"whitelist": [
+				21,
+				22
+			]
+		},
+		{
+			"entity_id": 41,
+			"team_id": 2,
+			"node_id": 5,
+			"whitelist": [
+				21,
+				22
+			]
+		}
+	],
+	"waypoints": [
+		{
+			"node_id": 1,
+			"team_id": 1,
+			"x": 0,
+			"y": 0,
+			"z": -196608
+		},
+		{
+			"node_id": 2,
+			"team_id": 1,
+			"x": 0,
+			"y": 0,
+			"z": -131072
+		},
+		{
+			"node_id": 3,
+			"team_id": 1,
+			"x": 0,
+			"y": 0,
+			"z": -131072
+		},
+		{
+			"node_id": 4,
+			"team_id": 2,
+			"x": 0,
+			"y": 0,
+			"z": 65536
+		},
+		{
+			"node_id": 5,
+			"team_id": 2,
+			"x": 0,
+			"y": 0,
+			"z": 131072
+		},
+		{
+			"node_id": 6,
+			"team_id": 2,
+			"x": 0,
+			"y": 0,
+			"z": 196608
+		}
+	],
+	"edges": [
+		{
+			"from_id": 2,
+			"to_id": 1,
+			"cost": 1
+		},
+		{
+			"from_id": 3,
+			"to_id": 2,
+			"cost": 1
+		},
+		{
+			"from_id": 4,
+			"to_id": 5,
+			"cost": 1
+		},
+		{
+			"from_id": 5,
+			"to_id": 6,
+			"cost": 1
+		}
+	],
+	"waves": [
+		{
+			"index": 1,
+			"prototype_id": 11,
+			"count": 3,
+			"interval_ticks": 30
+		}
+	],
+	"economy": {
+		"initial_gold": 100,
+		"base_income": 40,
+		"bounty_cap": 80,
+		"time_limit_ticks": 9000,
+		"setup_ticks": 600,
+		"prep_ticks": 600,
+		"wave_interval_ticks": 600,
+		"obstacle_points": 4
+	}
+}

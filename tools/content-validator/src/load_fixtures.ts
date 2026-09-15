@@ -1,10 +1,16 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
-import { FIXTURES_DIR, OFFICIAL_CONTENT_DIR } from "./paths.ts";
+import { FIXTURES_DIR, OFFICIAL_CONTENT_DIR, TEST_FIXTURE_CONTENT_DIR } from "./paths.ts";
 
 export type EnvelopeKind = "command" | "event";
-export type FixtureKind = EnvelopeKind | "component" | "authoring" | "simulation_bundle" | "audio_bank";
+export type FixtureKind =
+	| EnvelopeKind
+	| "component"
+	| "authoring"
+	| "simulation_bundle"
+	| "bastion_blueprint_bundle"
+	| "audio_bank";
 
 export type FixtureFile = {
 	readonly kind: FixtureKind;
@@ -30,12 +36,34 @@ export function loadSimulationBundleFixtures(): FixtureFile[] {
 	return loadKindFixtures("simulation_bundle");
 }
 
+/**
+ * BASTION bundle 的正反例住在 `game/content/test_fixtures/`，不在本工具的
+ * `fixtures/` 下：GDScript 的解码器与本文件的校验器必须吃**同一批文件**，
+ * 否则两侧各自绿着、口径已经分叉了也没人知道。
+ */
+export function loadBastionBlueprintFixtures(): FixtureFile[] {
+	const root = join(TEST_FIXTURE_CONTENT_DIR, "bastion/bundles");
+	return [
+		...loadJsonTree(join(root, "valid"), "bastion_blueprint_bundle", true),
+		...loadJsonTree(join(root, "invalid"), "bastion_blueprint_bundle", false),
+	];
+}
+
 export function loadAudioBankFixtures(): FixtureFile[] {
 	return loadKindFixtures("audio_bank");
 }
 
 export function loadOfficialAuthoringDocuments(): FixtureFile[] {
 	return loadJsonTree(OFFICIAL_CONTENT_DIR, "authoring", true);
+}
+
+/**
+ * `game/content/test_fixtures/` 下的灰盒蓝图。它们不是官方内容，但仍然必须是
+ * 合法 `AuthoringDocument`——BASTION 编译器的输入就是它，夹具自己先烂掉的话，
+ * 所有正反例都在测一份不合法的输入。
+ */
+export function loadTestFixtureAuthoringDocuments(): FixtureFile[] {
+	return loadJsonTree(join(TEST_FIXTURE_CONTENT_DIR, "bastion/blueprints"), "authoring", true);
 }
 
 function loadKindFixtures(kind: FixtureKind): FixtureFile[] {

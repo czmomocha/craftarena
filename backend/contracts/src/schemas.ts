@@ -16,6 +16,13 @@ export const AUTHORING_SCHEMA_FILES = ["authoring_document.schema.json"] as cons
 export const AUTHORING_DOCUMENT_SCHEMA_VERSION = 1;
 export const SIMULATION_BUNDLE_SCHEMA_FILES = ["simulation_bundle.schema.json"] as const;
 export const SIMULATION_BUNDLE_SCHEMA_VERSION = 2;
+/**
+ * BASTION 蓝图编译产物是**独立目录**，不是 SimulationBundle 的一个版本。
+ * 混进上面那张表就等于承认两个玩法共用一条 wire，而 TRAPRUSH 那条上挂着已发布
+ * 内容的 ContentHash（CD-91 D.4 键 `bastion_blueprint_bundle`）。
+ */
+export const BASTION_BLUEPRINT_SCHEMA_FILES = ["bastion_blueprint_bundle.schema.json"] as const;
+export const BASTION_BLUEPRINT_SCHEMA_VERSION = 1;
 export const AUDIO_BANK_SCHEMA_FILES = ["audio_cue_bank.schema.json"] as const;
 export const AUDIO_BANK_SCHEMA_VERSION = 1;
 
@@ -23,4 +30,5 @@ export type L0SchemaFile = (typeof L0_SCHEMA_FILES)[number];
 export type ComponentSchemaFile = (typeof COMPONENT_SCHEMA_FILES)[number];
 export type AuthoringSchemaFile = (typeof AUTHORING_SCHEMA_FILES)[number];
 export type SimulationBundleSchemaFile = (typeof SIMULATION_BUNDLE_SCHEMA_FILES)[number];
+export type BastionBlueprintSchemaFile = (typeof BASTION_BLUEPRINT_SCHEMA_FILES)[number];
 export type AudioBankSchemaFile = (typeof AUDIO_BANK_SCHEMA_FILES)[number];

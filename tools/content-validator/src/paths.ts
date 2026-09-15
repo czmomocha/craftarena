@@ -8,8 +8,10 @@ export const CONTRACTS_SCHEMA_DIR = join(REPO_ROOT, "backend/contracts/schemas")
 export const SHARED_SRC_DIR = join(REPO_ROOT, "game/src/shared");
 export const CREATOR_SRC_DIR = join(REPO_ROOT, "game/src/creator");
 export const UGC_SRC_DIR = join(REPO_ROOT, "game/src/ugc");
+export const BASTION_SRC_DIR = join(REPO_ROOT, "game/src/games/bastion");
 export const FIXTURES_DIR = join(here, "../fixtures");
 export const OFFICIAL_CONTENT_DIR = join(REPO_ROOT, "game/content/official");
+export const TEST_FIXTURE_CONTENT_DIR = join(REPO_ROOT, "game/content/test_fixtures");
 
 export const PLAYER_INTENT_NAMES_PATH = join(SHARED_SRC_DIR, "commands/player_intent_names.gd");
 export const EDIT_OP_NAMES_PATH = join(SHARED_SRC_DIR, "commands/edit_op_names.gd");
@@ -30,6 +32,8 @@ export const AUDIO_MUSIC_DIR = join(REPO_ROOT, "game/content/audio/music");
 export const AUDIO_RUNTIME_DIR = join(REPO_ROOT, "game/content/audio");
 export const AUTHORING_DOCUMENT_PATH = join(CREATOR_SRC_DIR, "authoring_document.gd");
 export const SIMULATION_BUNDLE_PATH = join(UGC_SRC_DIR, "simulation_bundle.gd");
+export const BASTION_BLUEPRINT_BUNDLE_PATH = join(UGC_SRC_DIR, "bastion_blueprint_bundle.gd");
+export const BASTION_PROTOTYPE_CATALOG_PATH = join(UGC_SRC_DIR, "bastion_prototype_catalog.gd");
 
 export const COMMAND_SCHEMA_PATH = join(CONTRACTS_SCHEMA_DIR, "shared_command.schema.json");
 export const EVENT_SCHEMA_PATH = join(CONTRACTS_SCHEMA_DIR, "shared_domain_event.schema.json");
@@ -37,4 +41,8 @@ export const CANONICAL_SCHEMA_PATH = join(CONTRACTS_SCHEMA_DIR, "canonical_paylo
 export const COMPONENT_SCHEMA_PATH = join(CONTRACTS_SCHEMA_DIR, "component_record.schema.json");
 export const AUTHORING_DOCUMENT_SCHEMA_PATH = join(CONTRACTS_SCHEMA_DIR, "authoring_document.schema.json");
 export const SIMULATION_BUNDLE_SCHEMA_PATH = join(CONTRACTS_SCHEMA_DIR, "simulation_bundle.schema.json");
+export const BASTION_BLUEPRINT_SCHEMA_PATH = join(
+	CONTRACTS_SCHEMA_DIR,
+	"bastion_blueprint_bundle.schema.json",
+);
 export const AUDIO_BANK_SCHEMA_PATH = join(CONTRACTS_SCHEMA_DIR, "audio_cue_bank.schema.json");

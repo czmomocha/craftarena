@@ -1,0 +1,203 @@
+{
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"$id": "https://craftarena.local/contracts/bastion_blueprint_bundle.schema.json",
+	"title": "BastionBlueprintBundle",
+	"description": "v1 BASTION battlefield blueprint compile of AuthoringWorld. Independent of SimulationBundle: separate wire, separate decoder, separate schema file (human call 2026-09-15, CD-91 D.4 key bastion_blueprint_bundle). SimulationBundle's 22 bags and to_dictionary() are byte-identical to before M6, because TRAPRUSH's ContentHash covers that wire and published content plus old replays hang off it. Two explicit discriminators up front: schema_version and gameplay. The blueprint input is still a plain AuthoringDocument and Component Schema v1 is unchanged; roles are declared with zone.tags and fields borrow v1 components (see game/src/ugc/bastion_blueprint_compiler.gd). This wire carries no tower or unit numbers: damage, health, speed and bounty are placeholder stubs in game/src/games/bastion/play_stubs.gd while CD-63 §1.2 / §1.3 stay deferred. Economy scalars are here because CD-22 §7.1 makes them creator-editable. Prototype ids are the M6 minimum set only (three towers, three units, three obstacles); the wider CD-22 candidate tables are explicitly not locked and must not be added here without a human call. Waypoint node ids are derived by the compiler, ascending, and edges are strictly ordered by (from_id, to_id) so one blueprint has exactly one wire form. Unsigned wire. Platform signatures are the ContentSign sidecar. Not Rule VM.",
+	"type": "object",
+	"additionalProperties": false,
+	"required": [
+		"schema_version",
+		"gameplay",
+		"cell",
+		"source_revision",
+		"cores",
+		"spawns",
+		"build_slots",
+		"obstacle_slots",
+		"waypoints",
+		"edges",
+		"waves",
+		"economy"
+	],
+	"properties": {
+		"schema_version": { "type": "integer", "const": 1 },
+		"gameplay": { "type": "string", "const": "bastion" },
+		"cell": { "type": "integer", "minimum": 1 },
+		"source_revision": { "type": "integer", "minimum": 0 },
+		"cores": {
+			"type": "array",
+			"minItems": 2,
+			"maxItems": 2,
+			"items": { "$ref": "#/$defs/core" }
+		},
+		"spawns": {
+			"type": "array",
+			"minItems": 2,
+			"items": { "$ref": "#/$defs/spawn" }
+		},
+		"build_slots": {
+			"type": "array",
+			"minItems": 2,
+			"items": { "$ref": "#/$defs/build_slot" }
+		},
+		"obstacle_slots": {
+			"type": "array",
+			"minItems": 2,
+			"items": { "$ref": "#/$defs/obstacle_slot" }
+		},
+		"waypoints": {
+			"type": "array",
+			"minItems": 4,
+			"items": { "$ref": "#/$defs/waypoint" }
+		},
+		"edges": {
+			"type": "array",
+			"minItems": 2,
+			"items": { "$ref": "#/$defs/edge" }
+		},
+		"waves": {
+			"type": "array",
+			"minItems": 1,
+			"items": { "$ref": "#/$defs/wave" }
+		},
+		"economy": { "$ref": "#/$defs/economy" }
+	},
+	"$defs": {
+		"team_id": {
+			"description": "1v1 has exactly two teams. Multi-team and 2v2 belong to M7; this wire keeps no extension slot because an unverified slot is worse than none.",
+			"type": "integer",
+			"enum": [1, 2]
+		},
+		"tower_prototype_id": {
+			"description": "M6 minimum tower set: arrow, cannon, frost. Sniper / arc / amplifier from CD-22 §5.1 are candidates, not M6. Kept in sync with game/src/ugc/bastion_prototype_catalog.gd by tools/content-validator/src/gdscript_sync.ts.",
+			"type": "integer",
+			"enum": [1, 2, 3]
+		},
+		"unit_prototype_id": {
+			"description": "M6 minimum unit set: swift, heavy, swarm. Shield / support / boss from CD-22 §5.2 are candidates, not M6.",
+			"type": "integer",
+			"enum": [11, 12, 13]
+		},
+		"obstacle_prototype_id": {
+			"description": "M6 minimum obstacle set: barricade, slow tile, diverter. Shield pylon / jammer pad / fog zone from CD-22 §4.2 are candidates, not M6.",
+			"type": "integer",
+			"enum": [21, 22, 23]
+		},
+		"core": {
+			"description": "One per team. Position is not duplicated here; node_id points into waypoints. Both sides must declare the same max_health (CD-22 §2 fairness).",
+			"type": "object",
+			"additionalProperties": false,
+			"required": ["entity_id", "team_id", "node_id", "max_health"],
+			"properties": {
+				"entity_id": { "type": "integer", "minimum": 1 },
+				"team_id": { "$ref": "#/$defs/team_id" },
+				"node_id": { "type": "integer", "minimum": 1 },
+				"max_health": { "type": "integer", "minimum": 1 }
+			}
+		},
+		"spawn": {
+			"type": "object",
+			"additionalProperties": false,
+			"required": ["entity_id", "team_id", "node_id"],
+			"properties": {
+				"entity_id": { "type": "integer", "minimum": 1 },
+				"team_id": { "$ref": "#/$defs/team_id" },
+				"node_id": { "type": "integer", "minimum": 1 }
+			}
+		},
+		"build_slot": {
+			"description": "Towers never stand on a lane cell, so a build slot carries its own position instead of a node_id.",
+			"type": "object",
+			"additionalProperties": false,
+			"required": ["entity_id", "team_id", "x", "y", "z", "whitelist"],
+			"properties": {
+				"entity_id": { "type": "integer", "minimum": 1 },
+				"team_id": { "$ref": "#/$defs/team_id" },
+				"x": { "type": "integer" },
+				"y": { "type": "integer" },
+				"z": { "type": "integer" },
+				"whitelist": {
+					"type": "array",
+					"minItems": 1,
+					"items": { "$ref": "#/$defs/tower_prototype_id" }
+				}
+			}
+		},
+		"obstacle_slot": {
+			"description": "Must sit on a lane node of its own team, otherwise placing an obstacle there cannot change any path.",
+			"type": "object",
+			"additionalProperties": false,
+			"required": ["entity_id", "team_id", "node_id", "whitelist"],
+			"properties": {
+				"entity_id": { "type": "integer", "minimum": 1 },
+				"team_id": { "$ref": "#/$defs/team_id" },
+				"node_id": { "type": "integer", "minimum": 1 },
+				"whitelist": {
+					"type": "array",
+					"minItems": 1,
+					"items": { "$ref": "#/$defs/obstacle_prototype_id" }
+				}
+			}
+		},
+		"waypoint": {
+			"type": "object",
+			"additionalProperties": false,
+			"required": ["node_id", "team_id", "x", "y", "z"],
+			"properties": {
+				"node_id": { "type": "integer", "minimum": 1 },
+				"team_id": { "$ref": "#/$defs/team_id" },
+				"x": { "type": "integer" },
+				"y": { "type": "integer" },
+				"z": { "type": "integer" }
+			}
+		},
+		"edge": {
+			"description": "Directed, integer cost in lane cells. Both endpoints must exist and belong to the same team.",
+			"type": "object",
+			"additionalProperties": false,
+			"required": ["from_id", "to_id", "cost"],
+			"properties": {
+				"from_id": { "type": "integer", "minimum": 1 },
+				"to_id": { "type": "integer", "minimum": 1 },
+				"cost": { "type": "integer", "minimum": 1 }
+			}
+		},
+		"wave": {
+			"description": "One shared table for both teams. Mirrored waves are fair because there is only one table, not because two tables are compared (CD-22 §5.2).",
+			"type": "object",
+			"additionalProperties": false,
+			"required": ["index", "prototype_id", "count", "interval_ticks"],
+			"properties": {
+				"index": { "type": "integer", "minimum": 1 },
+				"prototype_id": { "$ref": "#/$defs/unit_prototype_id" },
+				"count": { "type": "integer", "minimum": 1 },
+				"interval_ticks": { "type": "integer", "minimum": 0 }
+			}
+		},
+		"economy": {
+			"description": "Exactly these eight scalars. Creator-editable per CD-22 §7.1, which is why they travel in the wire instead of living in the placeholder stubs.",
+			"type": "object",
+			"additionalProperties": false,
+			"required": [
+				"initial_gold",
+				"base_income",
+				"bounty_cap",
+				"time_limit_ticks",
+				"setup_ticks",
+				"prep_ticks",
+				"wave_interval_ticks",
+				"obstacle_points"
+			],
+			"properties": {
+				"initial_gold": { "type": "integer", "minimum": 0 },
+				"base_income": { "type": "integer", "minimum": 0 },
+				"bounty_cap": { "type": "integer", "minimum": 0 },
+				"time_limit_ticks": { "type": "integer", "minimum": 1 },
+				"setup_ticks": { "type": "integer", "minimum": 1 },
+				"prep_ticks": { "type": "integer", "minimum": 1 },
+				"wave_interval_ticks": { "type": "integer", "minimum": 1 },
+				"obstacle_points": { "type": "integer", "minimum": 1 }
+			}
+		}
+	}
+}

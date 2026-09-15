@@ -4,6 +4,7 @@ import { join } from "node:path";
 import {
 	AUDIO_BANK_SCHEMA_VERSION,
 	AUTHORING_DOCUMENT_SCHEMA_VERSION,
+	BASTION_BLUEPRINT_SCHEMA_VERSION,
 	COMPONENT_SCHEMA_VERSION,
 	L0_CONTRACT_VERSION,
 	SIMULATION_BUNDLE_SCHEMA_VERSION,
@@ -18,6 +19,9 @@ import {
 	AUDIO_CUE_PATH,
 	AUTHORING_DOCUMENT_PATH,
 	AUTHORING_DOCUMENT_SCHEMA_PATH,
+	BASTION_BLUEPRINT_BUNDLE_PATH,
+	BASTION_BLUEPRINT_SCHEMA_PATH,
+	BASTION_PROTOTYPE_CATALOG_PATH,
 	CANONICAL_PAYLOAD_PATH,
 	COLLISION_SHAPE_KINDS_PATH,
 	COMMAND_SCHEMA_PATH,
@@ -138,6 +142,8 @@ export function collectGdscriptSchemaMismatches(): SyncMismatch[] {
 		});
 	}
 
+	pushBastionBlueprintMismatches(mismatches);
+
 	const audioBankSchema = loadJsonFile(AUDIO_BANK_SCHEMA_PATH);
 	const cueFields = parseVarNames(readFileSync(AUDIO_CUE_PATH, "utf8"));
 	const schemaCueFields = cuePropertyNames(audioBankSchema);
@@ -157,6 +163,136 @@ export function collectGdscriptSchemaMismatches(): SyncMismatch[] {
 	pushListMismatch(mismatches, "audio_cue_catalog", [...catalogIds].sort(), [...bankIds].sort());
 
 	return mismatches;
+}
+
+/**
+ * BASTION 蓝图 bundle 的两侧对齐。
+ *
+ * 除了字段名与版本号，这里还把**九个原型 id** 钉在 GDScript 白名单与 JSON Schema
+ * 的 enum 之间。理由不是洁癖：2026-09-15 那次拍板只锁了「M6 用哪九个」，
+ * CD-22 的候选表原文仍写着「不是锁定清单」。少了这条对齐，谁在 GDScript 里加一
+ * 个狙击塔、Schema 忘了改，`npm test` 照样绿，白名单就悄悄扩大了。
+ */
+function pushBastionBlueprintMismatches(mismatches: SyncMismatch[]): void {
+	const schema = loadJsonFile(BASTION_BLUEPRINT_SCHEMA_PATH);
+	const bundleSource = readFileSync(BASTION_BLUEPRINT_BUNDLE_PATH, "utf8");
+
+	pushListMismatch(
+		mismatches,
+		"bastion_blueprint_fields",
+		parseFieldConstants(bundleSource),
+		schemaPropertyNames(schema),
+	);
+
+	const version = parseIntConstant(bundleSource, "SCHEMA_VERSION");
+	if (version !== BASTION_BLUEPRINT_SCHEMA_VERSION) {
+		mismatches.push({
+			name: "bastion_blueprint_schema_version",
+			expected: String(BASTION_BLUEPRINT_SCHEMA_VERSION),
+			actual: String(version),
+		});
+	}
+
+	pushListMismatch(
+		mismatches,
+		"bastion_economy_keys",
+		parseStringArrayConstant(bundleSource, "ECONOMY_KEYS"),
+		schemaRequired(property(property(schema, "$defs"), "economy")),
+	);
+
+	const catalog = readFileSync(BASTION_PROTOTYPE_CATALOG_PATH, "utf8");
+	const prototypeGroups: readonly { readonly name: string; readonly def: string }[] = [
+		{ name: "TOWER_IDS", def: "tower_prototype_id" },
+		{ name: "UNIT_IDS", def: "unit_prototype_id" },
+		{ name: "OBSTACLE_IDS", def: "obstacle_prototype_id" },
+	];
+	for (const group of prototypeGroups) {
+		pushListMismatch(
+			mismatches,
+			`bastion_${group.def}`,
+			parseIntArrayConstant(catalog, group.name).map(String),
+			defEnum(schema, group.def).map(String),
+		);
+	}
+
+	const levelCap = parseIntConstant(catalog, "MAX_TOWER_LEVEL");
+	if (levelCap !== 3) {
+		mismatches.push({
+			name: "bastion_max_tower_level",
+			expected: "3",
+			actual: String(levelCap),
+		});
+	}
+}
+
+function defEnum(schema: unknown, name: string): number[] {
+	const values = asArray(property(property(property(schema, "$defs"), name), "enum"));
+	return values.filter((value): value is number => typeof value === "number");
+}
+
+/** 只读 `const FIELD_*: String = "..."`，这样门面上的非字段字符串常量不参与对齐。 */
+export function parseFieldConstants(source: string): string[] {
+	const names: string[] = [];
+	const pattern = /const\s+FIELD_[A-Z0-9_]*:\s*String\s*=\s*"([^"]+)"/g;
+	for (const match of source.matchAll(pattern)) {
+		const value = match[1];
+		if (value !== undefined) {
+			names.push(value);
+		}
+	}
+	return names;
+}
+
+/**
+ * `const X: PackedInt32Array = [A, B, C]`。元素可以是字面量，也可以是同一文件里
+ * 用 `const NAME: int = N` 定义的符号——白名单就是那么写的，读不懂符号等于读不到
+ * 真正生效的 id。
+ */
+export function parseIntArrayConstant(source: string, name: string): number[] {
+	const match = source.match(new RegExp(`const\\s+${name}:\\s*PackedInt32Array\\s*=\\s*\\[([^\\]]*)\\]`));
+	const body = match?.[1];
+	if (body === undefined) {
+		return [];
+	}
+	const symbols = parseIntConstantMap(source);
+	const values: number[] = [];
+	for (const raw of body.split(",")) {
+		const token = raw.trim();
+		if (token.length === 0) {
+			continue;
+		}
+		const resolved = /^-?\d+$/.test(token) ? Number(token) : symbols.get(token);
+		values.push(resolved ?? Number.NaN);
+	}
+	return values;
+}
+
+function parseIntConstantMap(source: string): Map<string, number> {
+	const symbols = new Map<string, number>();
+	for (const match of source.matchAll(/const\s+([A-Z_][A-Z0-9_]*):\s*int\s*=\s*(-?\d+)/g)) {
+		const name = match[1];
+		const raw = match[2];
+		if (name !== undefined && raw !== undefined) {
+			symbols.set(name, Number(raw));
+		}
+	}
+	return symbols;
+}
+
+export function parseStringArrayConstant(source: string, name: string): string[] {
+	const match = source.match(new RegExp(`const\\s+${name}:\\s*PackedStringArray\\s*=\\s*\\[([^\\]]*)\\]`));
+	const body = match?.[1];
+	if (body === undefined) {
+		return [];
+	}
+	const values: string[] = [];
+	for (const entry of body.matchAll(/"([^"]+)"/g)) {
+		const value = entry[1];
+		if (value !== undefined) {
+			values.push(value);
+		}
+	}
+	return values;
 }
 
 export function parseStringConstants(source: string): string[] {
