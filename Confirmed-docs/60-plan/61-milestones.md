@@ -19,7 +19,7 @@
 | 进行中 | M3（表现层增强不阻塞 M3 退出，归 M-Art；深化段已收口的表现不再挡本号） |
 | M5 退出记录 | 2026-09-13 人类签署，结论 **「基本通过」**（不是无保留的「通过」）。依据：A1–C6 十一章全交；五张官方课 `npm run bot-run` 全 `completable`；GUT 1645/1645；[可玩性签署：TRAPRUSH](../../docs/runbooks/playability-signoff-traprush.md) 八项均为「通过」。**两处已知缺口随本号带走，不因退出而消失**：[网络故障人工检查](../../docs/runbooks/network-fault-check.md) 九项中乱序与重复包**未严格注入**（macOS `dnctl` 无对应开关，待 Linux `tc netem`）；签署对象是当前自绘大厅 + 占位美术 + 占位数值那一版，换 UI / 定稿美术 / 改 D-F4·F5·F6 后结论不自动延续 |
 | 部分交付 | M-Export（C1 三预设；**Web 游玩分发两刀已交**；Android / iOS 排到一期收尾；公开 TLS / PR 沙盒排到 **M7 之后**）；M-Art（C4 契约与第一批 `.glb`；字体入包与 S3 已交；与 F 线重叠项已交） |
-| 下一动 | **M6 / M7**（含 UI 接线第二批 S1 主大厅壳）。**测试期 VPS Web 分发已交**（2026-09-14）。测试期继续明文 `http`/`ws` + 自备 VPS 链接和端口。S1 仍在 **M6 主大厅壳章之内**，不提前。S3 三项设计缺口仍待产品输入，见 [ui-wiring.md §2.2](../../docs/runbooks/ui-wiring.md) |
+| 下一动 | **M6**（含 UI 接线第二批 S1 主大厅壳）。章节拆分见 [M6 章节计划](../../docs/plans/m6-bastion-1v1.md)（11 章，D1 → F2；实现级计划，不是本文件的替代）。**第一章 D1 被该文件 §5.2 第 1、2 项硬阻断**（蓝图编译产物载体、最小塔/兵/障碍集与占位数值），人类拍板前不得写 `game/src/games/bastion/` 的第一行。**测试期 VPS Web 分发已交**（2026-09-14；人类 2026-09-15 确认部署与测试已自行走过）。测试期继续明文 `http`/`ws` + 自备 VPS 链接和端口。S1 仍在 **M6 主大厅壳章之内**，不提前。S3 三项设计缺口仍待产品输入，见 [ui-wiring.md §2.2](../../docs/runbooks/ui-wiring.md) |
 | 未开工（顺序，不是冻结） | 公开 TLS / 每个 PR 的 Web 沙盒（**M7 之后**）；**产品 UI 接线**第二、三批（S1 在 M6 章内）；M6、M7；Android / iOS 烟测（一期收尾）；角色选择界面（紧跟主大厅壳，不提前开工） |
 | 纠偏闸门 | **已解除**（2026-09-03）。C0–C5 不是里程碑号。此后本文件进度顺序生效 |
 | 解冻后顺序 | 创作者可测（已收口）→ F 线（已收口）→ Web 游玩分发（第一刀已收口）→ 可玩性深化（已收口）→ M-Art 剩余已拍板项 → **M4a** → M4b → M5 → **字体入包 → UI 接线第一批（S3 广场）** → **测试期 VPS Web 分发（M-Export 剩余）** → M6 / M7（含 **UI 接线第二批 S1 主大厅壳**）→ **公开 TLS / 每个 PR 的 Web 沙盒** → **UI 接线第三批（S2 / S4 / S5 / S6）** → **一期收尾**（Android / iOS 烟测、触控 UI） |
@@ -405,6 +405,10 @@
 
 ### M6：BASTION 最小 1v1
 
+状态：**未开工**（2026-09-15 出章节计划）。章节拆分见 [M6 章节计划](../../docs/plans/m6-bastion-1v1.md)（11 章：D1 契约与蓝图编译 → D2 寻路与封路守卫 → D3 阶段机与波次 → D4 炮塔与经济 → D5 互设障碍 → E1 实时帧 → E2 官方蓝图 → E3 对局进程与匹配 → E4 客户端对局壳 → F1 UI 接线第二批 S1 → F2 退出验收）。那是实现级计划，本节仍是产出与退出条件的所有者。**八项待人类拍板，其中两项硬阻断 D1**，清单与 AI 推荐在该文件 §5.2，AI 不得自选。
+
+**BASTION 实现落点当前为零**（`game/src/games/bastion/` 是空目录）。已就位的只有契约位：Component Schema v1 的 `path_agent` / `build_slot` / `tower` / `team` / `health` / `spawner`（[CD-42 §1.2](../40-technical/42-contracts-and-rulevm.md#12-字段标识符v1)）、`player_intent_names.gd` 的五个 BASTION 意图名、`tower_target_priorities.gd` 的四种目标策略。**UI 接线第二批 S1 主大厅壳在本号 F1 章内**；它落地后 M5 的 TRAPRUSH 可玩性签署结论作废、须在 F2 重签（见上「M5 退出记录」第 2 条）。
+
 产出：
 
 - 1v1 战场；
@@ -415,6 +419,8 @@
 - 无预测网络同步。
 
 验收：双方可以完成一局；非法封路、伪造金币和伪造建造均被拒绝。
+
+本号要动四处受宪法第十八条门禁的边界，计划把它们集中在 E1 / E3 两章一次性交人类批：实时快照帧与 intent id（[CD-43 §1](../40-technical/43-networking-and-replay.md) 的 v1 布局只有玩家位姿与箱耐久，没有塔/兵/金币/核心/阶段）、匹配 HTTP 的玩法判别位、结算 HTTP 的队伍结果、控制面三张表加玩法列。`SimulationCore` 定点合同、已锁的 Tick / 快照 / 心跳 / 插值数字（[CD-43 §4](../40-technical/43-networking-and-replay.md#4-已锁定的网络参数)）与 `SimulationBundle` 的 22 个袋都**不在**变更范围内。
 
 ### M7：BASTION 多人模板与复用评估
 

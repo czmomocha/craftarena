@@ -1,0 +1,108 @@
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { describe, it } from "node:test";
+import { fileURLToPath } from "node:url";
+
+const REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), "../../..");
+
+function read(relativePath: string): string {
+	return readFileSync(join(REPO_ROOT, relativePath), "utf8")
+		.replace(/^\uFEFF/, "")
+		.replaceAll("\r\n", "\n");
+}
+
+function headingSection(source: string, heading: string, nextHeading: string): string {
+	const start = source.indexOf(heading);
+	assert.ok(start >= 0, `missing ${heading}`);
+	const fromHeading = source.slice(start);
+	const next = fromHeading.indexOf(nextHeading, heading.length);
+	return next < 0 ? fromHeading : fromHeading.slice(0, next);
+}
+
+const PLAN = "docs/plans/m6-bastion-1v1.md";
+
+/**
+ * M6 章节计划落库时的口径门禁。
+ *
+ * 存在的理由：M6 要动四处宪法第十八条边界（实时帧 / 匹配 HTTP / 结算 HTTP /
+ * 控制面加列），并且 UI 接线第二批会让 M5 刚签的可玩性结论作废。这两件事都是
+ * 「写在计划里人类才知道」的，一旦被后续编辑顺手删掉，下一个读者会以为 M6
+ * 可以直接开工、以为旧签署仍然成立。本文件把这些句子钉住。
+ */
+describe("M6 chapter plan is landed as a plan, not as a start signal", () => {
+	it("splits M6 into the eleven chapters and keeps them ordered D1 to F2", () => {
+		const plan = read(PLAN);
+		assert.match(plan, /^# M6 章节计划/m);
+		assert.match(plan, /不是所有者文档/);
+		for (const chapter of ["D1", "D2", "D3", "D4", "D5", "E1", "E2", "E3", "E4", "F1", "F2"]) {
+			assert.match(plan, new RegExp(`### ${chapter} `), `${PLAN}: missing chapter ${chapter}`);
+		}
+		assert.match(plan, /D1 → D2 → D3 → D4 → D5 → E1 → E2 → E3 → E4 → F1 → F2/);
+		assert.match(plan, /不发明 M8/);
+		assert.doesNotMatch(plan, /### M8/);
+	});
+
+	it("says BASTION has zero implementation and D1 is blocked on human calls", () => {
+		const plan = read(PLAN);
+		// 顺序上轮到 ≠ 可以动手。这三句是 D1 的门禁。
+		assert.match(plan, /硬阻断/);
+		assert.match(plan, /本章不得开工/);
+		assert.match(plan, /game\/src\/games\/bastion\//);
+		assert.match(plan, /落点仍是零|实现落点为零/);
+		// 八项拍板项必须都还在待拍状态，AI 不得自选。
+		const pending = headingSection(plan, "### 5.2 待拍板", "### 5.3");
+		for (const index of ["| 1 |", "| 2 |", "| 3 |", "| 4 |", "| 5 |", "| 6 |", "| 7 |", "| 8 |"]) {
+			assert.ok(pending.includes(index), `${PLAN}: §5.2 must keep row ${index}`);
+		}
+		assert.match(pending, /AI 推荐/);
+	});
+
+	it("keeps the four article-18 boundaries visible instead of burying them in chapters", () => {
+		const plan = read(PLAN);
+		const facts = headingSection(plan, "### 3.3 实时面与两条 HTTP", "## 4.");
+		assert.match(facts, /宪法第十八条/);
+		assert.match(facts, /没有线上 id|没有玩法判别位/);
+		// 不在变更范围内的三条，写进计划才防得住顺手改。
+		assert.match(plan, /`SimulationCore` 定点合同/);
+		assert.match(plan, /22 个袋/);
+	});
+
+	it("warns that wiring S1 voids the signed TRAPRUSH playability checklist", () => {
+		// 宪法第二十四条：不得把已作废的签署当成仍然成立。
+		const plan = read(PLAN);
+		const f1 = headingSection(plan, "### F1 UI 接线第二批", "### F2");
+		assert.match(f1, /作废/);
+		assert.match(f1, /重签/);
+
+		const live = read("Confirmed-docs/60-plan/61-milestones.md");
+		const m6 = headingSection(live, "### M6：", "### M7：");
+		assert.match(m6, /F1/);
+		assert.match(m6, /重签/);
+	});
+
+	it("points CD-61 and CD-22 at the plan without claiming BASTION started", () => {
+		const live = read("Confirmed-docs/60-plan/61-milestones.md");
+		const m6 = headingSection(live, "### M6：", "### M7：");
+		assert.match(m6, /m6-bastion-1v1\.md/);
+		assert.match(m6, /未开工/);
+		assert.match(m6, /硬阻断/);
+		// 产出与验收句仍归 CD-61，计划文件不得替代它。
+		assert.match(m6, /非法封路、伪造金币和伪造建造均被拒绝/);
+
+		const bastion = read("Confirmed-docs/20-gameplay/22-bastion.md");
+		assert.match(bastion, /m6-bastion-1v1\.md/);
+		assert.match(bastion, /实现落点为零/);
+		assert.match(bastion, /不是锁定清单/);
+	});
+
+	it("routes BASTION placeholder numbers to a single source per the freeze rule", () => {
+		const freeze = read(".cursor/rules/course-correction-freeze.mdc");
+		assert.match(freeze, /game\/src\/games\/bastion\/play_stubs\.gd/);
+		assert.match(freeze, /placeholder_spec\.gd/);
+
+		const plan = read(PLAN);
+		assert.match(plan, /bastion_play_stubs\.gd/);
+		assert.match(plan, /不散落新 `const`|不散落几何 \/ 色板常量/);
+	});
+});
