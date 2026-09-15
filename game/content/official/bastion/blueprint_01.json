@@ -1,0 +1,378 @@
+{
+	"schema_version": 1,
+	"cell": 65536,
+	"revision": 1,
+	"entities": [
+		{
+			"schema_version": 1,
+			"entity_id": 1,
+			"components": {
+				"zone": {
+					"shape": { "kind": "box", "hx": 32768, "hy": 32768, "hz": 32768 },
+					"tags": ["bastion_config"]
+				},
+				"score": {
+					"tallies": {
+						"initial_gold": 200,
+						"base_income": 60,
+						"bounty_cap": 120,
+						"time_limit_ticks": 18000,
+						"setup_ticks": 1800,
+						"prep_ticks": 1200,
+						"wave_interval_ticks": 900,
+						"obstacle_points": 6
+					}
+				}
+			}
+		},
+		{
+			"schema_version": 1,
+			"entity_id": 10,
+			"components": {
+				"transform": { "x": 0, "y": 0, "z": -524288, "yaw_bam": 0 },
+				"team": { "team_id": 1 },
+				"health": { "current": 20, "maximum": 20, "invuln_ticks": 0 },
+				"zone": {
+					"shape": { "kind": "box", "hx": 32768, "hy": 32768, "hz": 32768 },
+					"tags": ["bastion_core"]
+				}
+			}
+		},
+		{
+			"schema_version": 1,
+			"entity_id": 11,
+			"components": {
+				"transform": { "x": 0, "y": 0, "z": 524288, "yaw_bam": 32768 },
+				"team": { "team_id": 2 },
+				"health": { "current": 20, "maximum": 20, "invuln_ticks": 0 },
+				"zone": {
+					"shape": { "kind": "box", "hx": 32768, "hy": 32768, "hz": 32768 },
+					"tags": ["bastion_core"]
+				}
+			}
+		},
+		{
+			"schema_version": 1,
+			"entity_id": 20,
+			"components": {
+				"transform": { "x": 0, "y": 0, "z": -131072, "yaw_bam": 0 },
+				"team": { "team_id": 1 },
+				"zone": {
+					"shape": { "kind": "box", "hx": 32768, "hy": 32768, "hz": 32768 },
+					"tags": ["bastion_spawn"]
+				}
+			}
+		},
+		{
+			"schema_version": 1,
+			"entity_id": 21,
+			"components": {
+				"transform": { "x": 0, "y": 0, "z": 131072, "yaw_bam": 32768 },
+				"team": { "team_id": 2 },
+				"zone": {
+					"shape": { "kind": "box", "hx": 32768, "hy": 32768, "hz": 32768 },
+					"tags": ["bastion_spawn"]
+				}
+			}
+		},
+		{
+			"schema_version": 1,
+			"entity_id": 30,
+			"components": {
+				"transform": { "x": -131072, "y": 0, "z": -262144, "yaw_bam": 0 },
+				"team": { "team_id": 1 },
+				"build_slot": { "whitelist": [1, 2, 3], "occupant_id": 0 },
+				"zone": {
+					"shape": { "kind": "box", "hx": 32768, "hy": 32768, "hz": 32768 },
+					"tags": ["bastion_build_slot"]
+				}
+			}
+		},
+		{
+			"schema_version": 1,
+			"entity_id": 31,
+			"components": {
+				"transform": { "x": -131072, "y": 0, "z": -393216, "yaw_bam": 0 },
+				"team": { "team_id": 1 },
+				"build_slot": { "whitelist": [1, 2, 3], "occupant_id": 0 },
+				"zone": {
+					"shape": { "kind": "box", "hx": 32768, "hy": 32768, "hz": 32768 },
+					"tags": ["bastion_build_slot"]
+				}
+			}
+		},
+		{
+			"schema_version": 1,
+			"entity_id": 32,
+			"components": {
+				"transform": { "x": -131072, "y": 0, "z": -524288, "yaw_bam": 0 },
+				"team": { "team_id": 1 },
+				"build_slot": { "whitelist": [1, 2, 3], "occupant_id": 0 },
+				"zone": {
+					"shape": { "kind": "box", "hx": 32768, "hy": 32768, "hz": 32768 },
+					"tags": ["bastion_build_slot"]
+				}
+			}
+		},
+		{
+			"schema_version": 1,
+			"entity_id": 33,
+			"components": {
+				"transform": { "x": -131072, "y": 0, "z": 262144, "yaw_bam": 32768 },
+				"team": { "team_id": 2 },
+				"build_slot": { "whitelist": [1, 2, 3], "occupant_id": 0 },
+				"zone": {
+					"shape": { "kind": "box", "hx": 32768, "hy": 32768, "hz": 32768 },
+					"tags": ["bastion_build_slot"]
+				}
+			}
+		},
+		{
+			"schema_version": 1,
+			"entity_id": 34,
+			"components": {
+				"transform": { "x": -131072, "y": 0, "z": 393216, "yaw_bam": 32768 },
+				"team": { "team_id": 2 },
+				"build_slot": { "whitelist": [1, 2, 3], "occupant_id": 0 },
+				"zone": {
+					"shape": { "kind": "box", "hx": 32768, "hy": 32768, "hz": 32768 },
+					"tags": ["bastion_build_slot"]
+				}
+			}
+		},
+		{
+			"schema_version": 1,
+			"entity_id": 35,
+			"components": {
+				"transform": { "x": -131072, "y": 0, "z": 524288, "yaw_bam": 32768 },
+				"team": { "team_id": 2 },
+				"build_slot": { "whitelist": [1, 2, 3], "occupant_id": 0 },
+				"zone": {
+					"shape": { "kind": "box", "hx": 32768, "hy": 32768, "hz": 32768 },
+					"tags": ["bastion_build_slot"]
+				}
+			}
+		},
+		{
+			"schema_version": 1,
+			"entity_id": 40,
+			"components": {
+				"transform": { "x": 0, "y": 0, "z": -262144, "yaw_bam": 0 },
+				"team": { "team_id": 1 },
+				"build_slot": { "whitelist": [21, 22, 23], "occupant_id": 0 },
+				"zone": {
+					"shape": { "kind": "box", "hx": 32768, "hy": 32768, "hz": 32768 },
+					"tags": ["bastion_obstacle_slot"]
+				}
+			}
+		},
+		{
+			"schema_version": 1,
+			"entity_id": 41,
+			"components": {
+				"transform": { "x": 0, "y": 0, "z": -393216, "yaw_bam": 0 },
+				"team": { "team_id": 1 },
+				"build_slot": { "whitelist": [21, 22], "occupant_id": 0 },
+				"zone": {
+					"shape": { "kind": "box", "hx": 32768, "hy": 32768, "hz": 32768 },
+					"tags": ["bastion_obstacle_slot"]
+				}
+			}
+		},
+		{
+			"schema_version": 1,
+			"entity_id": 42,
+			"components": {
+				"transform": { "x": 131072, "y": 0, "z": -262144, "yaw_bam": 0 },
+				"team": { "team_id": 1 },
+				"build_slot": { "whitelist": [21, 22], "occupant_id": 0 },
+				"zone": {
+					"shape": { "kind": "box", "hx": 32768, "hy": 32768, "hz": 32768 },
+					"tags": ["bastion_obstacle_slot"]
+				}
+			}
+		},
+		{
+			"schema_version": 1,
+			"entity_id": 43,
+			"components": {
+				"transform": { "x": 0, "y": 0, "z": 262144, "yaw_bam": 32768 },
+				"team": { "team_id": 2 },
+				"build_slot": { "whitelist": [21, 22, 23], "occupant_id": 0 },
+				"zone": {
+					"shape": { "kind": "box", "hx": 32768, "hy": 32768, "hz": 32768 },
+					"tags": ["bastion_obstacle_slot"]
+				}
+			}
+		},
+		{
+			"schema_version": 1,
+			"entity_id": 44,
+			"components": {
+				"transform": { "x": 0, "y": 0, "z": 393216, "yaw_bam": 32768 },
+				"team": { "team_id": 2 },
+				"build_slot": { "whitelist": [21, 22], "occupant_id": 0 },
+				"zone": {
+					"shape": { "kind": "box", "hx": 32768, "hy": 32768, "hz": 32768 },
+					"tags": ["bastion_obstacle_slot"]
+				}
+			}
+		},
+		{
+			"schema_version": 1,
+			"entity_id": 45,
+			"components": {
+				"transform": { "x": 131072, "y": 0, "z": 262144, "yaw_bam": 32768 },
+				"team": { "team_id": 2 },
+				"build_slot": { "whitelist": [21, 22], "occupant_id": 0 },
+				"zone": {
+					"shape": { "kind": "box", "hx": 32768, "hy": 32768, "hz": 32768 },
+					"tags": ["bastion_obstacle_slot"]
+				}
+			}
+		},
+		{
+			"schema_version": 1,
+			"entity_id": 50,
+			"components": {
+				"team": { "team_id": 1 },
+				"path_agent": {
+					"waypoints": [
+						{ "x": 0, "y": 0, "z": -131072 },
+						{ "x": 0, "y": 0, "z": -262144 },
+						{ "x": 0, "y": 0, "z": -393216 },
+						{ "x": 0, "y": 0, "z": -524288 }
+					],
+					"speed": 0,
+					"bounty": 0
+				},
+				"zone": {
+					"shape": { "kind": "box", "hx": 32768, "hy": 32768, "hz": 32768 },
+					"tags": ["bastion_route"]
+				}
+			}
+		},
+		{
+			"schema_version": 1,
+			"entity_id": 51,
+			"components": {
+				"team": { "team_id": 1 },
+				"path_agent": {
+					"waypoints": [
+						{ "x": 0, "y": 0, "z": -131072 },
+						{ "x": 0, "y": 0, "z": -262144 },
+						{ "x": 131072, "y": 0, "z": -262144 },
+						{ "x": 131072, "y": 0, "z": -393216 },
+						{ "x": 131072, "y": 0, "z": -524288 },
+						{ "x": 0, "y": 0, "z": -524288 }
+					],
+					"speed": 0,
+					"bounty": 0
+				},
+				"zone": {
+					"shape": { "kind": "box", "hx": 32768, "hy": 32768, "hz": 32768 },
+					"tags": ["bastion_route"]
+				}
+			}
+		},
+		{
+			"schema_version": 1,
+			"entity_id": 52,
+			"components": {
+				"team": { "team_id": 2 },
+				"path_agent": {
+					"waypoints": [
+						{ "x": 0, "y": 0, "z": 131072 },
+						{ "x": 0, "y": 0, "z": 262144 },
+						{ "x": 0, "y": 0, "z": 393216 },
+						{ "x": 0, "y": 0, "z": 524288 }
+					],
+					"speed": 0,
+					"bounty": 0
+				},
+				"zone": {
+					"shape": { "kind": "box", "hx": 32768, "hy": 32768, "hz": 32768 },
+					"tags": ["bastion_route"]
+				}
+			}
+		},
+		{
+			"schema_version": 1,
+			"entity_id": 53,
+			"components": {
+				"team": { "team_id": 2 },
+				"path_agent": {
+					"waypoints": [
+						{ "x": 0, "y": 0, "z": 131072 },
+						{ "x": 0, "y": 0, "z": 262144 },
+						{ "x": 131072, "y": 0, "z": 262144 },
+						{ "x": 131072, "y": 0, "z": 393216 },
+						{ "x": 131072, "y": 0, "z": 524288 },
+						{ "x": 0, "y": 0, "z": 524288 }
+					],
+					"speed": 0,
+					"bounty": 0
+				},
+				"zone": {
+					"shape": { "kind": "box", "hx": 32768, "hy": 32768, "hz": 32768 },
+					"tags": ["bastion_route"]
+				}
+			}
+		},
+		{
+			"schema_version": 1,
+			"entity_id": 60,
+			"components": {
+				"spawner": { "prototype_id": 11, "interval_ticks": 30, "max_alive": 6 },
+				"zone": {
+					"shape": { "kind": "box", "hx": 32768, "hy": 32768, "hz": 32768 },
+					"tags": ["bastion_wave"]
+				}
+			}
+		},
+		{
+			"schema_version": 1,
+			"entity_id": 61,
+			"components": {
+				"spawner": { "prototype_id": 13, "interval_ticks": 15, "max_alive": 10 },
+				"zone": {
+					"shape": { "kind": "box", "hx": 32768, "hy": 32768, "hz": 32768 },
+					"tags": ["bastion_wave"]
+				}
+			}
+		},
+		{
+			"schema_version": 1,
+			"entity_id": 62,
+			"components": {
+				"spawner": { "prototype_id": 11, "interval_ticks": 30, "max_alive": 8 },
+				"zone": {
+					"shape": { "kind": "box", "hx": 32768, "hy": 32768, "hz": 32768 },
+					"tags": ["bastion_wave"]
+				}
+			}
+		},
+		{
+			"schema_version": 1,
+			"entity_id": 63,
+			"components": {
+				"spawner": { "prototype_id": 12, "interval_ticks": 45, "max_alive": 4 },
+				"zone": {
+					"shape": { "kind": "box", "hx": 32768, "hy": 32768, "hz": 32768 },
+					"tags": ["bastion_wave"]
+				}
+			}
+		},
+		{
+			"schema_version": 1,
+			"entity_id": 64,
+			"components": {
+				"spawner": { "prototype_id": 13, "interval_ticks": 15, "max_alive": 12 },
+				"zone": {
+					"shape": { "kind": "box", "hx": 32768, "hy": 32768, "hz": 32768 },
+					"tags": ["bastion_wave"]
+				}
+			}
+		}
+	]
+}

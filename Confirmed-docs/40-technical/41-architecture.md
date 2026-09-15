@@ -123,7 +123,7 @@ repo/
 │  │     ├─ traprush/            # 对局门面 `match_session.gd` + bootstrap/intents/scan/view/patch；灰盒门面 `graybox_course.gd` + layout/assemble/play；探针门面 `course_completion_probe.gd` + heuristic/search；玩法音效路由 `traprush_audio_router.gd` + observe
 │  │     └─ bastion/             # 对局门面 `match_session.gd` + waves/towers/view/setup；`match_setup_state.gd`（CD-22 §7.2）；`match_session_wire.gd`（E1 会话→帧）；占位数值 `play_stubs.gd`；封路守卫 `path_guard.gd`
 │  ├─ content/
-│  │  ├─ official/
+│  │  ├─ official/               # `traprush/` 五张课；`bastion/blueprint_01.json`（M6 E2）
 │  │  ├─ locale/                 # 本地化 CSV（`craft_arena.*` 键）；解析见 `shared/ui_copy.gd`
 │  │  ├─ assets/                 # 平台运行时资产（GLB）；准入见 CD-51 §5.1
 │  │  ├─ audio/                  # 平台音频；bank JSON 在 `banks/`；运行时 OGG 在 `sfx/` 与 `music/`（Git LFS）

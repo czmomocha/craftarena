@@ -51,6 +51,15 @@ export {
 	type OfficialTraprushCourseId,
 } from "./official_courses.ts";
 export {
+	DEFAULT_OFFICIAL_BASTION_BLUEPRINT,
+	OFFICIAL_BASTION_BLUEPRINT_IDS,
+	isOfficialBastionBlueprintId,
+	officialBastionBlueprintIdFromPath,
+	officialBastionBlueprintIdSchema,
+	officialBastionBlueprintPath,
+	type OfficialBastionBlueprintId,
+} from "./official_blueprints.ts";
+export {
 	CONTENT_ID_RE,
 	DEMO_TRAPRUSH_COURSE_ID,
 	isMatchContentId,

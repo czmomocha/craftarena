@@ -54,9 +54,9 @@ Worktree 端口偏移见 README「并行工作区」；本文件不复述端口�
 
 ---
 
-## 本刀：M6 E1（BASTION 实时帧与意图 id）
+## 本刀：M6 E2（第一张官方 BASTION 蓝图）
 
-**窗口验收：无。** 不是省事，是这一章的性质——type 5/6 编解码住在 `game/src/shared/protocol/`，**没有接任何场景、没有任何入口按钮、没有一行表现代码**。BASTION 第一次有画面是 **E4 客户端对局壳**；在那之前打开窗口看到的仍然是 TRAPRUSH 大厅，与本刀无关。本章把协议层的「盲」钉在编码器上：布障阶段缺观察者则整帧拒绝，写出的字节不含对方 pending。
+**窗口验收：无。** 不是省事，是这一章的性质——官方蓝图是手写 JSON，白名单住在 `game/src/shared/` 与 `backend/contracts/`，**没有接任何场景、没有任何入口按钮、没有一行表现代码**。BASTION 第一次有画面是 **E4 客户端对局壳**；在那之前打开窗口看到的仍然是 TRAPRUSH 大厅，与本刀无关。匹配 HTTP 仍不认 `blueprint_01`（E3）。
 
 人类要确认本章成立，走命令行，不走窗口：
 
@@ -67,30 +67,47 @@ npm run redline-scan
 npm run test:gut:full
 ```
 
-预期：四条全绿。本刀新增 `game/tests/unit/test_bastion_frame_codec.gd`：六个 M6 意图往返、DonateResource / Interact 无 id、TRAPRUSH 与 BASTION 帧互拒、布障阶段按观察者裁剪、揭示后双方同帧。
+预期：四条全绿。本刀新增 `game/tests/unit/test_official_bastion_blueprint_01.gd`：id 白名单拒 `res://` 路径、编译零问题码、发布前可达通过、两侧对称、5 波三种兵、五分钟局时内表能跑完。`blueprint_01` 塞进 TRAPRUSH `course` 仍失败。
 
-想亲眼看一眼编解码在动，可以只跑这一组：
+想亲眼看一眼编译在动，可以只跑这一组：
 
 ```powershell
-& $env:GODOT4_CONSOLE --headless --path game -s res://addons/gut/gut_cmdln.gd -gdir=res://tests/unit -gprefix=test_bastion_frame -gexit
+& $env:GODOT4_CONSOLE --headless --path game -s res://addons/gut/gut_cmdln.gd -gdir=res://tests/unit -gprefix=test_official_bastion -gexit
 ```
 
 ### 本刀不测
 
 - 任何窗口行为（本刀没有）；
+- 匹配 HTTP 玩法判别位与结算队伍结果（E3）；
 - 对局进程按玩法分派（E3）；
 - 客户端跟从 BASTION 快照（E4）；
-- DonateResource（M7）；
-- 队长与队内投票（M7）；
-- 官方蓝图（E2）、S1 主大厅壳（F1）；
-- TRAPRUSH 的任何行为——本刀一个字没碰它的帧布局。
+- 蓝图 Edit（M7）；
+- S1 主大厅壳（F1）；
+- TRAPRUSH 的任何行为——本刀一个字没碰它的帧布局与课表。
 
 ### 诚实边界
 
-- **E1 交完不等于 M6 能开一局给人看。** 帧已有、进程还没有；九个原型的数值全部是 `game/src/games/bastion/play_stubs.gd` 的占位桩（[CD-63 §1.2 / §1.3](../../Confirmed-docs/60-plan/63-open-decisions.md) 仍延期），不是产品表；
+- **E2 交完不等于 M6 能开一局给人看。** 蓝图已有、进程还没有；九个原型的数值全部是 `game/src/games/bastion/play_stubs.gd` 的占位桩（[CD-63 §1.2 / §1.3](../../Confirmed-docs/60-plan/63-open-decisions.md) 仍延期），不是产品表；
 - 没有真人走查过任何 BASTION 画面，因为还没有画面；
-- 下一刀 E2 被章节计划 §5.2 第 7 项挡住（官方蓝图主题），AI 不得自选开工；
+- 下一刀 E3 被章节计划 §5.2 第 4、5 项挡住（匹配 HTTP 玩法判别位、结算 HTTP 队伍结果），AI 不得自选开工；
 - M5 带走的两处遗留（乱序 / 重复包未严格注入、TRAPRUSH 可玩性签署只对旧那一版成立）不因本刀消失。
+
+---
+
+## 上一刀（已合入）：M6 E1（BASTION 实时帧与意图 id）
+
+**窗口验收：无。** 不是省事，是那一章的性质——type 5/6 编解码住在 `game/src/shared/protocol/`，**没有接任何场景、没有任何入口按钮、没有一行表现代码**。BASTION 第一次有画面是 **E4 客户端对局壳**。本章把协议层的「盲」钉在编码器上：布障阶段缺观察者则整帧拒绝，写出的字节不含对方 pending。
+
+人类抽查命令行：
+
+```bash
+npm run typecheck
+npm test
+npm run redline-scan
+npm run test:gut:full
+```
+
+预期：四条全绿。`game/tests/unit/test_bastion_frame_codec.gd`：六个 M6 意图往返、DonateResource / Interact 无 id、TRAPRUSH 与 BASTION 帧互拒、布障阶段按观察者裁剪、揭示后双方同帧。
 
 ---
 

@@ -170,6 +170,10 @@ describe("official authoring documents", () => {
 		assert.ok(documents.some((document) => document.name === "course_05.json"));
 	});
 
+	it("keeps the official BASTION blueprint", () => {
+		assert.ok(documents.some((document) => document.name === "blueprint_01.json"));
+	});
+
 	for (const document of documents) {
 		it(`official/${document.name} is schema-valid`, () => {
 			assert.deepEqual(validateAuthoringDocument(document.instance), []);
