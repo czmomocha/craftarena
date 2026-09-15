@@ -54,7 +54,44 @@ Worktree 端口偏移见 README「并行工作区」；本文件不复述端口�
 
 ---
 
-## 本刀：测试期 VPS Web 分发（M-Export 剩余）
+## 本刀：M6 D1–D4（BASTION 离线玩法底座）
+
+**窗口验收：无。** 不是省事，是这四章的性质——它们全部在 `game/src/ugc/`、`game/src/simulation/` 与 `game/src/games/bastion/` 里，**没有接任何场景、没有任何入口按钮、没有一行表现代码**。BASTION 第一次有画面是 **E4 客户端对局壳**；在那之前打开窗口看到的仍然是 TRAPRUSH 大厅，与本刀无关。
+
+人类要确认这四章成立，走命令行，不走窗口：
+
+```bash
+npm run typecheck
+npm test
+npm run redline-scan
+npm run test:gut:full
+```
+
+预期：四条全绿。GUT 全量里本刀新增四份脚本共 75 项：`test_bastion_blueprint_contract.gd`（29）、`test_bastion_path_guard.gd`（16）、`test_bastion_match_session.gd`（14）、`test_bastion_towers_and_economy.gd`（16）。
+
+想亲眼看一眼底座在动，可以只跑这一组：
+
+```powershell
+& $env:GODOT4_CONSOLE --headless --path game -s res://addons/gut/gut_cmdln.gd -gdir=res://tests/unit -gprefix=test_bastion -gexit
+```
+
+### 本刀不测
+
+- 任何窗口行为（本刀没有）；
+- 协议帧、匹配、结算写库（E1 / E3）；
+- 官方蓝图（E2）、客户端对局壳（E4）、S1 主大厅壳（F1）；
+- 互设障碍的点数预算 / 盲设 / 揭示 / 退点（D5）；
+- TRAPRUSH 的任何行为——本刀一个字没碰它，`SimulationBundle` 的 wire 有金标摘要钉着逐字节不变。
+
+### 诚实边界
+
+- **D 段交完不等于 M6 能开一局给人看。** 九个原型的数值全部是 `game/src/games/bastion/play_stubs.gd` 的占位桩（[CD-63 §1.2 / §1.3](../../Confirmed-docs/60-plan/63-open-decisions.md) 仍延期），不是产品表；
+- 没有真人走查过任何 BASTION 画面，因为还没有画面；
+- M5 带走的两处遗留（乱序 / 重复包未严格注入、TRAPRUSH 可玩性签署只对旧那一版成立）不因本刀消失。
+
+---
+
+## 上一刀（已合入）：测试期 VPS Web 分发（M-Export 剩余）
 
 **需要三后端**（联机路径）。Solo 可先不启后端。VPS 上的 Nginx 是本刀窗口验收对象；开发机用静态服务验证「打开 `/` 就会钉页主机」。
 

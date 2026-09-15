@@ -43,12 +43,18 @@ describe("M6 chapter plan is landed as a plan, not as a start signal", () => {
 		assert.doesNotMatch(plan, /### M8/);
 	});
 
-	it("says BASTION has zero implementation even though D1 is unlocked", () => {
+	it("says the delivered D segment is still an offline base with no playable match", () => {
 		const plan = read(PLAN);
-		// 拍板解锁 ≠ 已经做了。这句一旦消失就会被读成 BASTION 已有落点。
-		assert.match(plan, /没有一行实现/);
-		assert.match(plan, /落点仍是零|实现落点为零/);
+		// D1–D4 之前这里钉的是「没有一行实现」。那句话在 D1 之后就假了，直接删掉
+		// 等于把门禁拆了，所以换成三件仍然为真、同样容易被顺手抹掉的事。
+		assert.match(plan, /D1–D4 已交，D5 起未开工/);
 		assert.match(plan, /game\/src\/games\/bastion\//);
+		// 「第一次有画面是 E4」必须留在章节清单的引子里，不能只活在 §8 那张
+		// 故障注入表的行文里——那样这条断言会被自己的文档描述喂饱。
+		const chapters = headingSection(plan, "## 4. 章节清单", "### D1 ");
+		assert.match(chapters, /第一次有画面是 E4/);
+		// 数值仍是占位桩：这是「拍板只关闭了用哪九个」的另一半。
+		assert.match(plan, /占位桩/);
 	});
 
 	it("moves the two settled calls to 5.1 and keeps the other six pending", () => {
@@ -114,19 +120,21 @@ describe("M6 chapter plan is landed as a plan, not as a start signal", () => {
 		assert.match(m6, /重签/);
 	});
 
-	it("points CD-61 and CD-22 at the plan without claiming BASTION started", () => {
+	it("points CD-61 and CD-22 at the plan without claiming M6 can be played", () => {
 		const live = read("Confirmed-docs/60-plan/61-milestones.md");
 		const m6 = headingSection(live, "### M6：", "### M7：");
 		assert.match(m6, /m6-bastion-1v1\.md/);
-		assert.match(m6, /未开工/);
+		assert.match(m6, /D5 起未开工/);
 		assert.match(m6, /其余六项仍待拍板/);
+		// 「交了什么」必须和「没交什么」写在一起，否则下一个读者会以为 M6 快好了。
+		assert.match(m6, /开不出一局给人看|第一次有画面是 E4/);
 		// 产出与验收句仍归 CD-61，计划文件不得替代它。
 		assert.match(m6, /非法封路、伪造金币和伪造建造均被拒绝/);
 
 		const bastion = read("Confirmed-docs/20-gameplay/22-bastion.md");
 		assert.match(bastion, /m6-bastion-1v1\.md/);
-		assert.match(bastion, /实现落点为零/);
 		assert.match(bastion, /仍不是锁定清单/);
+		assert.match(bastion, /占位桩/);
 		// 最小集与其排除项都要在玩法所有者文档里，不能只活在计划文件。
 		assert.match(bastion, /箭塔/);
 		assert.match(bastion, /狙击 \/ 电弧 \/ 增幅塔/);
