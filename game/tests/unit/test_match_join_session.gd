@@ -4,6 +4,7 @@ extends GutTest
 ## No sockets. Room-code alphabet is the current development placeholder.
 
 const MatchJoinSession := preload("res://src/client/match_join_session.gd")
+const MatchGameplayGd := preload("res://src/shared/match_gameplay.gd")
 
 const _HASH: String = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
 
@@ -386,6 +387,51 @@ func test_ready_get_settlement_writes_board_without_failing() -> void:
 	assert_false(session.has_settlement)
 
 
+func test_quick_blueprint_201_sets_gameplay_and_rejects_course_mix() -> void:
+	var session: MatchJoinSession = MatchJoinSession.create()
+	assert_true(session.try_quick_blueprint())
+	assert_eq(session.pending_path(), "/matchmaking/quick")
+	assert_true(session.pending_body().contains("blueprint_01"))
+	assert_true(session.pending_body().contains("bastion"))
+	assert_false(session.pending_body().contains("course"))
+	assert_true(session.accept_http(201, _join_blueprint("ABCD23", "ticket-b1")))
+	assert_eq(session.state, MatchJoinSession.STATE_READY)
+	assert_eq(session.gameplay, MatchGameplayGd.BASTION)
+	assert_eq(session.blueprint, "blueprint_01")
+	assert_eq(session.course, "")
+	assert_eq(session.seats, 2)
+	assert_eq(session.seat, 0)
+	var mixed: MatchJoinSession = MatchJoinSession.create()
+	assert_true(mixed.try_quick_blueprint())
+	var body: Dictionary = _join_blueprint("ABCD23", "ticket-mix")
+	body["course"] = "course_01"
+	assert_true(mixed.accept_http(201, body))
+	assert_eq(mixed.state, MatchJoinSession.STATE_FAILED)
+
+
+func test_bastion_settlement_accepts_tied_places() -> void:
+	var session: MatchJoinSession = MatchJoinSession.create()
+	assert_true(session.try_quick_blueprint())
+	assert_true(session.accept_http(201, _join_blueprint("ABCD23", "ticket-draw")))
+	assert_true(session.try_get_settlement())
+	assert_true(session.accept_http(200, _settlement_teams_draw()))
+	assert_eq(session.state, MatchJoinSession.STATE_READY)
+	assert_true(session.has_settlement)
+	assert_eq(session.settlement_mvp_slot, 0)
+
+
+func test_traprush_join_clears_blueprint() -> void:
+	var session: MatchJoinSession = MatchJoinSession.create()
+	assert_true(session.try_quick_blueprint())
+	assert_true(session.accept_http(201, _join_blueprint("ABCD23", "ticket-b")))
+	assert_true(session.try_abandon())
+	assert_true(session.try_quick())
+	assert_true(session.accept_http(201, _join("EFGH45", "ticket-t")))
+	assert_eq(session.gameplay, MatchGameplayGd.TRAPRUSH)
+	assert_eq(session.blueprint, "")
+	assert_eq(session.course, "course_01")
+
+
 func test_settlement_get_404_and_malformed_keep_ready() -> void:
 	var missing: MatchJoinSession = MatchJoinSession.create()
 	assert_true(missing.try_quick())
@@ -441,6 +487,21 @@ func _join(
 		"issued": 1,
 		"seat": seat,
 		"course": course,
+	}
+
+
+func _join_blueprint(room_code: String, ticket: String) -> Dictionary:
+	return {
+		"roomCode": room_code,
+		"ticket": ticket,
+		"matchId": "match-1",
+		"expiresAt": "2026-08-25T03:00:00.000Z",
+		"seats": 2,
+		"issued": 1,
+		"seat": 0,
+		"course": null,
+		"gameplay": MatchGameplayGd.BASTION,
+		"blueprint": "blueprint_01",
 	}
 
 
@@ -500,6 +561,25 @@ func _settlement() -> Dictionary:
 		"rows": [
 			{"slot": 0, "place": 1, "finishTick": 4, "acceptedCount": 3},
 			{"slot": 1, "place": 2, "finishTick": 8, "acceptedCount": 3},
+		],
+		"createdAt": "2026-08-25T12:00:00.000Z",
+	}
+
+
+func _settlement_teams_draw() -> Dictionary:
+	return {
+		"matchId": "match-1",
+		"tick": 12,
+		"stateHash": "def456",
+		"padTotal": 0,
+		"mvpSlot": 0,
+		"rows": [
+			{"slot": 0, "place": 1, "finishTick": 12, "acceptedCount": 0},
+			{"slot": 1, "place": 1, "finishTick": 12, "acceptedCount": 0},
+		],
+		"teams": [
+			{"teamId": 1, "place": 1, "coreHealth": 40, "leaked": 2, "finishTick": 12},
+			{"teamId": 2, "place": 1, "coreHealth": 40, "leaked": 2, "finishTick": 12},
 		],
 		"createdAt": "2026-08-25T12:00:00.000Z",
 	}

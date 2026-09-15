@@ -1,11 +1,16 @@
-class_name MatchServerBoot
 extends RefCounted
 
-## Official `--course=` or signed `--content-envelope=` → TraprushMatchSession.
+## Official `--course=` / signed `--content-envelope=` → TraprushMatchSession.
+## `--gameplay=bastion` + official blueprint path → BastionMatchSession.
+## Omitted gameplay stays TRAPRUSH so old MatchHost CLI stays byte-compatible.
 
 const AuthoringDocument := preload("res://src/creator/authoring_document.gd")
 const AuthoringWorld := preload("res://src/creator/authoring_world.gd")
+const BastionBlueprintBundleGd := preload("res://src/ugc/bastion_blueprint_bundle.gd")
+const BastionBlueprintCompilerGd := preload("res://src/ugc/bastion_blueprint_compiler.gd")
+const BastionMatchSessionGd := preload("res://src/games/bastion/match_session.gd")
 const ContentSignGd := preload("res://src/ugc/content_sign.gd")
+const MatchGameplayGd := preload("res://src/shared/match_gameplay.gd")
 const PlayStubs := preload("res://src/games/traprush/play_stubs.gd")
 const SimulationBundle := preload("res://src/ugc/simulation_bundle.gd")
 const TraprushMatchSession := preload("res://src/games/traprush/match_session.gd")
@@ -15,9 +20,16 @@ const SPAWN_STRIDE: int = PlaceholderSpec.SPAWN_STRIDE
 const MATCH_SEED: int = 1
 
 
-static func boot_session(config: Dictionary) -> TraprushMatchSession:
+static func boot_session(config: Dictionary) -> RefCounted:
 	if not config.get("ok", false):
 		return null
+	var gameplay: String = str(config.get("gameplay", MatchGameplayGd.TRAPRUSH))
+	if gameplay == MatchGameplayGd.BASTION:
+		return _boot_bastion(config)
+	return _boot_traprush(config)
+
+
+static func _boot_traprush(config: Dictionary) -> TraprushMatchSession:
 	var players: int = config.get("players", 0)
 	var bundle: SimulationBundle = _bundle_from_config(config)
 	if bundle == null:
@@ -33,6 +45,24 @@ static func boot_session(config: Dictionary) -> TraprushMatchSession:
 	if session == null:
 		return null
 	PlayStubs.apply_match(session)
+	return session
+
+
+static func _boot_bastion(config: Dictionary) -> BastionMatchSessionGd:
+	var course: String = str(config.get("course", ""))
+	if course.is_empty():
+		return null
+	var world: AuthoringWorld = AuthoringDocument.load_from_path(course)
+	if world == null:
+		return null
+	var bundle: BastionBlueprintBundleGd = BastionBlueprintCompilerGd.compile(world)
+	if bundle == null:
+		return null
+	var session: BastionMatchSessionGd = BastionMatchSessionGd.create(bundle, MATCH_SEED)
+	if session == null:
+		return null
+	if not session.begin_match():
+		return null
 	return session
 
 

@@ -1,12 +1,9 @@
 import {
-	DEFAULT_OFFICIAL_TRAPRUSH_COURSE,
-	readMatchBody,
-	type MatchContentRef,
+	MATCH_GAMEPLAY_BASTION,
 	type MatchQueueKind,
 	type MatchmakingJoinResponse,
 	type MatchmakingQueueStatusResponse,
 	type MatchmakingQueueWaitingResponse,
-	type OfficialTraprushCourseId,
 	type ReadinessCheck,
 } from "../../contracts/src/index.ts";
 import {
@@ -21,8 +18,11 @@ import {
 	MatchHostCapacityError,
 	MatchHostLaunchError,
 } from "./match_host.ts";
+import { findOpenForWaiter, playSpecFromQueue, type MatchPlaySpec } from "./match_spec.ts";
 import { generateRoomCode } from "./rooms.ts";
 import type { BuildServerOptions } from "./server.ts";
+
+export { resolveMatchSpec, type MatchPlaySpec } from "./match_spec.ts";
 
 export function databaseCheck(database: ControlPlaneDatabase, now: Date): ReadinessCheck {
 	try {
@@ -37,28 +37,6 @@ export function databaseCheck(database: ControlPlaneDatabase, now: Date): Readin
 			detail: error instanceof Error ? error.message : String(error),
 		};
 	}
-}
-
-export type MatchPlaySpec =
-	| { readonly kind: "official"; readonly course: OfficialTraprushCourseId; readonly seats: number }
-	| { readonly kind: "content"; readonly content: MatchContentRef; readonly seats: number };
-
-export function resolveMatchSpec(
-	database: ControlPlaneDatabase,
-	body: unknown,
-): { readonly ok: true; readonly spec: MatchPlaySpec } | { readonly ok: false; readonly error: string } {
-	const parsed = readMatchBody(body);
-	if (!parsed.ok) {
-		return { ok: false, error: parsed.error };
-	}
-	if (parsed.kind === "content") {
-		const stored = database.getContentVersion(parsed.content.id, parsed.content.version);
-		if (stored === undefined) {
-			return { ok: false, error: "invalid_content" };
-		}
-		return { ok: true, spec: { kind: "content", content: parsed.content, seats: parsed.seats } };
-	}
-	return { ok: true, spec: { kind: "official", course: parsed.course, seats: parsed.seats } };
 }
 
 export function hasUnexpectedKeys(body: unknown, allowed: readonly string[]): boolean {
@@ -90,10 +68,7 @@ export async function launchOrEnqueue(
 		return admitToRoom(options, matchId, now(), ticketTtlMs);
 	} catch (error) {
 		if (error instanceof MatchHostCapacityError) {
-			const queued =
-				spec.kind === "content"
-					? options.database.enqueue(kind, now(), queueTtlMs, "", spec.seats, spec.content.id, spec.content.version)
-					: options.database.enqueue(kind, now(), queueTtlMs, spec.course, spec.seats);
+			const queued = enqueueSpec(options, kind, now(), queueTtlMs, spec);
 			await runDrain();
 			const view = viewQueue(options, queued.token, now(), queueSlotEstimateMs);
 			if (view !== undefined && view.status === "ready") {
@@ -128,7 +103,7 @@ export async function drainQueue(options: BuildServerOptions, now: () => Date, t
 			if (waiter.kind !== "quick") {
 				continue;
 			}
-			const open = findOpenForWaiter(options, waiter);
+			const open = findOpenForWaiter(options.database, waiter);
 			if (open === undefined) {
 				continue;
 			}
@@ -147,7 +122,7 @@ export async function drainQueue(options: BuildServerOptions, now: () => Date, t
 		if (head === undefined) {
 			return;
 		}
-		if (head.kind === "quick" && findOpenForWaiter(options, head) !== undefined) {
+		if (head.kind === "quick" && findOpenForWaiter(options.database, head) !== undefined) {
 			progress = true;
 			continue;
 		}
@@ -189,7 +164,9 @@ export async function launchRegisteredRoom(options: BuildServerOptions, spec: Ma
 	const launched =
 		spec.kind === "content"
 			? await options.matchLauncher.launch({ content: spec.content, seats: spec.seats })
-			: await options.matchLauncher.launch({ course: spec.course, seats: spec.seats });
+			: spec.kind === "blueprint"
+				? await options.matchLauncher.launch({ blueprint: spec.blueprint, seats: spec.seats })
+				: await options.matchLauncher.launch({ course: spec.course, seats: spec.seats });
 	if (options.database.getMatchSession(launched.matchId) === undefined) {
 		throw new MatchHostLaunchError("session_not_registered");
 	}
@@ -256,6 +233,8 @@ export function readyToJoin(
 		course: view.course,
 		...(view.content === undefined ? {} : { content: view.content }),
 		...(view.content_hash === undefined ? {} : { content_hash: view.content_hash }),
+		...(view.gameplay === undefined ? {} : { gameplay: view.gameplay }),
+		...(view.blueprint === undefined ? {} : { blueprint: view.blueprint }),
 	};
 }
 
@@ -296,6 +275,14 @@ function withSessionContent(
 	body: MatchmakingJoinResponse,
 	session: MatchSessionRecord,
 ): MatchmakingJoinResponse {
+	if (session.gameplay === MATCH_GAMEPLAY_BASTION && session.blueprint !== undefined) {
+		return {
+			...body,
+			course: null,
+			gameplay: MATCH_GAMEPLAY_BASTION,
+			blueprint: session.blueprint,
+		};
+	}
 	if (
 		session.contentId === undefined ||
 		session.contentVersion === undefined ||
@@ -326,6 +313,9 @@ function waitingFromQueue(
 		course: record.course,
 		seats: record.seats,
 	};
+	if (record.gameplay === MATCH_GAMEPLAY_BASTION && record.blueprint !== undefined) {
+		return { ...body, course: null, gameplay: MATCH_GAMEPLAY_BASTION, blueprint: record.blueprint };
+	}
 	if (record.contentId === undefined || record.contentVersion === undefined) {
 		return body;
 	}
@@ -351,35 +341,33 @@ function waitingFromSpec(
 		course: spec.kind === "official" ? spec.course : null,
 		seats: spec.seats,
 	};
+	if (spec.kind === "blueprint") {
+		return { ...body, gameplay: MATCH_GAMEPLAY_BASTION, blueprint: spec.blueprint };
+	}
 	if (spec.kind !== "content") {
 		return body;
 	}
 	return { ...body, content: spec.content };
 }
 
-function findOpenForWaiter(options: BuildServerOptions, waiter: MatchQueueRecord): MatchSessionRecord | undefined {
-	if (waiter.contentId !== undefined && waiter.contentVersion !== undefined) {
-		return options.database.findOldestOpenContentRoom(waiter.contentId, waiter.contentVersion, waiter.seats);
+function enqueueSpec(
+	options: BuildServerOptions,
+	kind: MatchQueueKind,
+	now: Date,
+	queueTtlMs: number,
+	spec: MatchPlaySpec,
+) {
+	if (spec.kind === "content") {
+		return options.database.enqueue(
+			kind, now, queueTtlMs, "", spec.seats, spec.content.id, spec.content.version,
+		);
 	}
-	if (waiter.course === null) {
-		return undefined;
+	if (spec.kind === "blueprint") {
+		return options.database.enqueue(
+			kind, now, queueTtlMs, "", spec.seats, undefined, undefined, MATCH_GAMEPLAY_BASTION, spec.blueprint,
+		);
 	}
-	return options.database.findOldestOpenRoom(waiter.course, waiter.seats);
-}
-
-function playSpecFromQueue(record: MatchQueueRecord): MatchPlaySpec {
-	if (record.contentId !== undefined && record.contentVersion !== undefined) {
-		return {
-			kind: "content",
-			content: { id: record.contentId, version: record.contentVersion },
-			seats: record.seats,
-		};
-	}
-	return {
-		kind: "official",
-		course: record.course ?? DEFAULT_OFFICIAL_TRAPRUSH_COURSE,
-		seats: record.seats,
-	};
+	return options.database.enqueue(kind, now, queueTtlMs, spec.course, spec.seats);
 }
 
 /** 兜底：空对象按「没传」处理，和 MatchHost 的 POST /matches 同一口径。 */

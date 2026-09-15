@@ -7,6 +7,8 @@ export interface MatchLaunchSpec {
 	readonly course?: string;
 	/** Godot `--content-envelope=` 路径。与 `course` 互斥。 */
 	readonly contentEnvelopePath?: string;
+	/** Godot `--gameplay=`。省略则对局进程按 TRAPRUSH。 */
+	readonly gameplay?: "traprush" | "bastion";
 	/** Godot `--players=`。省略时用启动器默认。 */
 	readonly players?: number;
 }
@@ -71,6 +73,9 @@ export class GodotProcessLauncher implements ProcessLauncher {
 			`--port=${spec.port}`,
 			`--players=${spec.players ?? this.#options.players}`,
 		];
+		if (spec.gameplay !== undefined && spec.gameplay !== "traprush") {
+			args.push(`--gameplay=${spec.gameplay}`);
+		}
 		if (spec.contentEnvelopePath !== undefined) {
 			args.push(`--content-envelope=${spec.contentEnvelopePath}`);
 			return args;

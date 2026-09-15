@@ -47,7 +47,7 @@ describe("M6 chapter plan is landed as a plan, not as a start signal", () => {
 		const plan = read(PLAN);
 		// D1–D4 之前这里钉的是「没有一行实现」。那句话在 D1 之后就假了，直接删掉
 		// 等于把门禁拆了，所以换成三件仍然为真、同样容易被顺手抹掉的事。
-		assert.match(plan, /D1–E2 已交，E3 起未开工/);
+		assert.match(plan, /D1–E3 已交，E4 起未开工/);
 		assert.match(plan, /game\/src\/games\/bastion\//);
 		// 「第一次有画面是 E4」必须留在章节清单的引子里，不能只活在 §8 那张
 		// 故障注入表的行文里——那样这条断言会被自己的文档描述喂饱。
@@ -57,7 +57,7 @@ describe("M6 chapter plan is landed as a plan, not as a start signal", () => {
 		assert.match(plan, /占位桩/);
 	});
 
-	it("moves the two settled calls to 5.1 and keeps the other six pending", () => {
+	it("moves the settled calls to 5.1 and keeps the remaining audio item pending", () => {
 		const plan = read(PLAN);
 		const settled = headingSection(plan, "### 5.1 已拍板", "### 5.2");
 		// 两项结论各自的要害：不动已发布内容的哈希载体；只锁「用哪九个」。
@@ -70,19 +70,23 @@ describe("M6 chapter plan is landed as a plan, not as a start signal", () => {
 		assert.match(settled, /服务端裁剪/);
 		assert.match(settled, /不升协议大版本|type 5\/6/);
 		assert.match(settled, /对称双线|blueprint_01/);
+		assert.match(settled, /可选 `gameplay`|加可选 `gameplay`/);
+		assert.match(settled, /可选 `teams\[\]`|teams\[\]/);
 
 		const pending = headingSection(plan, "### 5.2 待拍板", "### 5.3");
-		// 行号覆盖而非删除，前两行必须写明已拍，后六行必须仍带推荐而非结论。
+		// 行号覆盖而非删除，前七行必须写明已拍，第 8 行必须仍带推荐而非结论。
 		assert.match(pending, /\| 1 \| ~~/);
 		assert.match(pending, /\| 2 \| ~~/);
 		assert.match(pending, /\| 3 \| ~~/);
+		assert.match(pending, /\| 4 \| ~~/);
+		assert.match(pending, /\| 5 \| ~~/);
 		assert.match(pending, /\| 6 \| ~~/);
 		assert.match(pending, /\| 7 \| ~~/);
 		for (const index of ["| 3 |", "| 4 |", "| 5 |", "| 6 |", "| 7 |", "| 8 |"]) {
 			assert.ok(pending.includes(index), `${PLAN}: §5.2 must keep pending row ${index}`);
 		}
 		assert.match(pending, /AI 推荐/);
-		assert.match(pending, /不挡 E3 之前已交的章|不挡 E2 之前已交的章|不挡 D1/);
+		assert.match(pending, /不挡 E4 之前已交的章|不挡 E3 之前已交的章|不挡 E2 之前已交的章|不挡 D1/);
 	});
 
 	it("records both calls in CD-91 without closing the deferred full lists", () => {
@@ -92,6 +96,8 @@ describe("M6 chapter plan is landed as a plan, not as a start signal", () => {
 		assert.match(decisions, /bastion_realtime_frames = v1_new_types_not_major_bump/);
 		assert.match(decisions, /hidden_state_sync = server_clip_obstacles/);
 		assert.match(decisions, /official_bastion_blueprint_01 = symmetric_dual_lane/);
+		assert.match(decisions, /match_http_gameplay = optional_field_default_traprush/);
+		assert.match(decisions, /settlement_http_teams = optional_array_reuse_mvp_slot/);
 
 		// CD-63 §1.2 / §1.3 只被迁出「M6 用哪九个」，完整清单与数值仍延期。
 		const open = read("Confirmed-docs/60-plan/63-open-decisions.md");
@@ -111,7 +117,7 @@ describe("M6 chapter plan is landed as a plan, not as a start signal", () => {
 		const plan = read(PLAN);
 		const facts = headingSection(plan, "### 3.3 实时面与两条 HTTP", "## 4.");
 		assert.match(facts, /宪法第十八条/);
-		assert.match(facts, /没有线上 id|没有玩法判别位/);
+		assert.match(facts, /没有线上 id|玩法判别|teams/);
 		// 不在变更范围内的三条，写进计划才防得住顺手改。
 		assert.match(plan, /`SimulationCore` 定点合同/);
 		assert.match(plan, /22 个袋/);
@@ -134,8 +140,8 @@ describe("M6 chapter plan is landed as a plan, not as a start signal", () => {
 		const live = read("Confirmed-docs/60-plan/61-milestones.md");
 		const m6 = headingSection(live, "### M6：", "### M7：");
 		assert.match(m6, /m6-bastion-1v1\.md/);
-		assert.match(m6, /E3 起未开工/);
-		assert.match(m6, /其余三项仍待拍板/);
+		assert.match(m6, /E4 起未开工/);
+		assert.match(m6, /其余一项仍待拍板/);
 		// 「交了什么」必须和「没交什么」写在一起，否则下一个读者会以为 M6 快好了。
 		assert.match(m6, /开不出一局给人看|第一次有画面是 E4/);
 		// 产出与验收句仍归 CD-61，计划文件不得替代它。

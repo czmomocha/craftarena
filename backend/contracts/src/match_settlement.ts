@@ -14,12 +14,22 @@ export interface MatchSettlementRow {
 	readonly acceptedCount: number;
 }
 
+/** BASTION 队伍结果。`place` 是队伍名次；平局两侧都可以是 1。TRAPRUSH 省略。 */
+export interface MatchSettlementTeam {
+	readonly teamId: number;
+	readonly place: number;
+	readonly coreHealth: number;
+	readonly leaked: number;
+	readonly finishTick: number;
+}
+
 export interface RecordMatchSettlementRequest {
 	readonly tick: number;
 	readonly stateHash: string;
 	readonly padTotal: number;
 	readonly mvpSlot: number;
 	readonly rows: readonly MatchSettlementRow[];
+	readonly teams?: readonly MatchSettlementTeam[];
 }
 
 export interface MatchSettlementResponse {
@@ -29,6 +39,7 @@ export interface MatchSettlementResponse {
 	readonly padTotal: number;
 	readonly mvpSlot: number;
 	readonly rows: readonly MatchSettlementRow[];
+	readonly teams?: readonly MatchSettlementTeam[];
 	readonly createdAt: string;
 }
 
@@ -54,6 +65,23 @@ export const recordMatchSettlementBodySchema = {
 					place: { type: "integer", minimum: 1, maximum: 8 },
 					finishTick: { type: "integer", minimum: 0 },
 					acceptedCount: { type: "integer", minimum: 0 },
+				},
+			},
+		},
+		teams: {
+			type: "array",
+			minItems: 2,
+			maxItems: 2,
+			items: {
+				type: "object",
+				additionalProperties: false,
+				required: ["teamId", "place", "coreHealth", "leaked", "finishTick"],
+				properties: {
+					teamId: { type: "integer", minimum: 1, maximum: 2 },
+					place: { type: "integer", minimum: 1, maximum: 2 },
+					coreHealth: { type: "integer", minimum: 0 },
+					leaked: { type: "integer", minimum: 0 },
+					finishTick: { type: "integer", minimum: 0 },
 				},
 			},
 		},

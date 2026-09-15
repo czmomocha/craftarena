@@ -60,11 +60,25 @@ export {
 	type OfficialBastionBlueprintId,
 } from "./official_blueprints.ts";
 export {
+	BASTION_MATCH_SEATS,
+	BASTION_SEAT_TEAM_A,
+	BASTION_SEAT_TEAM_B,
+	DEFAULT_MATCH_GAMEPLAY,
+	MATCH_GAMEPLAY_BASTION,
+	MATCH_GAMEPLAY_IDS,
+	MATCH_GAMEPLAY_TRAPRUSH,
+	bastionSeatForTeamId,
+	bastionTeamIdForSeat,
+	isMatchGameplay,
+	type MatchGameplay,
+} from "./match_gameplay.ts";
+export {
 	CONTENT_ID_RE,
 	DEMO_TRAPRUSH_COURSE_ID,
 	isMatchContentId,
 	isMatchContentVersion,
 	isReservedMatchContentId,
+	matchGameplayOf,
 	readMatchBody,
 	readMatchContentRef,
 	type MatchBodyError,
@@ -75,6 +89,7 @@ export {
 	recordMatchSettlementBodySchema,
 	type MatchSettlementResponse,
 	type MatchSettlementRow,
+	type MatchSettlementTeam,
 	type RecordMatchSettlementRequest,
 } from "./match_settlement.ts";
 export {

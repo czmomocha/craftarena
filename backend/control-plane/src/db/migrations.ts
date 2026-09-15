@@ -248,4 +248,16 @@ export const MIGRATIONS: readonly Migration[] = [
 			`ALTER TABLE match_queue ADD COLUMN content_version INTEGER`,
 		],
 	},
+	{
+		id: "0015_match_gameplay_and_teams",
+		statements: [
+			// 玩法判别位。旧行按 TRAPRUSH 补，官方 BASTION 走 blueprint 列而不是改 course。
+			`ALTER TABLE match_sessions ADD COLUMN gameplay TEXT NOT NULL DEFAULT 'traprush'`,
+			`ALTER TABLE match_sessions ADD COLUMN blueprint TEXT`,
+			`ALTER TABLE match_queue ADD COLUMN gameplay TEXT NOT NULL DEFAULT 'traprush'`,
+			`ALTER TABLE match_queue ADD COLUMN blueprint TEXT`,
+			`ALTER TABLE content_plaza ADD COLUMN gameplay TEXT NOT NULL DEFAULT 'traprush'`,
+			`ALTER TABLE match_settlements ADD COLUMN teams_json TEXT`,
+		],
+	},
 ];

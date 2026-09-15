@@ -23,9 +23,13 @@ extends Node
 ## TraprushPlayStubs，本进程不再自带副本。
 
 const MatchRealtime := preload("res://src/server/match_realtime.gd")
+const MatchRealtimeBastionGd := preload("res://src/server/match_realtime_bastion.gd")
 const TraprushMatchSession := preload("res://src/games/traprush/match_session.gd")
 const TraprushMatchSettlement := preload("res://src/games/traprush/match_settlement.gd")
+const BastionMatchSessionGd := preload("res://src/games/bastion/match_session.gd")
+const BastionMatchSettlementGd := preload("res://src/games/bastion/match_settlement.gd")
 const MatchServerBootGd := preload("res://src/server/match_server_boot.gd")
+const MatchGameplayGd := preload("res://src/shared/match_gameplay.gd")
 
 const BOOT_EVENT: String = "match_server_boot"
 const LISTEN_EVENT: String = "match_listen"
@@ -37,8 +41,9 @@ const HEARTBEAT_EVERY_TICKS: int = 60
 ## 占位快照广播节奏（每 2 个 tick 一帧），不是产品快照频率（CD-43 §4）。
 const SNAPSHOT_EVERY_TICKS: int = 2
 
-var _session: TraprushMatchSession = null
-var _realtime: MatchRealtime = null
+var _session: RefCounted = null
+var _traprush_rt: MatchRealtime = null
+var _bastion_rt: MatchRealtimeBastionGd = null
 var _match_id: String = ""
 var _max_ticks: int = 0
 var _tcp: TCPServer = null
@@ -53,14 +58,16 @@ func _ready() -> void:
 		print(JSON.stringify({"event": ERROR_EVENT, "error": error_name}))
 		get_tree().quit(1)
 		return
-	var session: TraprushMatchSession = boot_session(config)
+	var session: RefCounted = boot_session(config)
 	if session == null:
 		print(JSON.stringify({"event": ERROR_EVENT, "error": "session_boot_failed"}))
 		get_tree().quit(1)
 		return
 	_session = session
-	_realtime = MatchRealtime.new()
-	_realtime.session = session
+	if not _attach_realtime(session):
+		print(JSON.stringify({"event": ERROR_EVENT, "error": "session_boot_failed"}))
+		get_tree().quit(1)
+		return
 	_match_id = config.get("match_id", "")
 	_max_ticks = config.get("max_ticks", 0)
 	var port: int = config.get("port", 0)
@@ -79,6 +86,7 @@ func _ready() -> void:
 		"headless": DisplayServer.get_name() == "headless",
 		"course": config.get("course", ""),
 		"players": config.get("players", 0),
+		"gameplay": config.get("gameplay", MatchGameplayGd.TRAPRUSH),
 	}))
 	print(JSON.stringify({
 		"event": LISTEN_EVENT,
@@ -89,7 +97,7 @@ func _ready() -> void:
 
 
 func _process(_delta: float) -> void:
-	if _tcp == null or _realtime == null:
+	if _tcp == null or not _rt_alive():
 		return
 	while _tcp.is_connection_available():
 		var stream: StreamPeerTCP = _tcp.take_connection()
@@ -115,7 +123,7 @@ func _process(_delta: float) -> void:
 				_peers[peer] = slot
 			while peer.get_available_packet_count() > 0:
 				var inbound: PackedByteArray = peer.get_packet()
-				var pong: PackedByteArray = _realtime.handle_inbound(slot, inbound)
+				var pong: PackedByteArray = _rt_handle_inbound(slot, inbound)
 				if pong.is_empty():
 					continue
 				if peer.get_ready_state() == WebSocketPeer.STATE_OPEN:
@@ -125,12 +133,12 @@ func _process(_delta: float) -> void:
 	for peer: WebSocketPeer in closed:
 		var slot: int = _peers[peer]
 		if slot >= 0:
-			_realtime.remove_player(slot)
+			_rt_remove_player(slot)
 		_peers.erase(peer)
 
 
 func _bind_peer(peer: WebSocketPeer) -> int:
-	if _realtime == null:
+	if not _rt_alive():
 		return -1
 	var parsed: Dictionary = MatchRealtime.parse_requested_slot(peer.get_requested_url())
 	var present: bool = parsed.get("present", false)
@@ -139,38 +147,39 @@ func _bind_peer(peer: WebSocketPeer) -> int:
 		if not parsed_ok:
 			return -1
 		var requested: int = parsed.get("slot", -1)
-		if _realtime.occupy_slot(requested):
+		if _rt_occupy_slot(requested):
 			return requested
 		return -1
-	return _realtime.add_player()
+	return _rt_add_player()
 
 
 func _physics_process(_delta: float) -> void:
-	if _session == null or _realtime == null:
+	if _session == null or not _rt_alive():
 		return
-	_realtime.commit_tick()
-	var tick: int = _session.tick_index()
+	_rt_commit_tick()
+	var tick: int = _session_tick()
 	if tick % SNAPSHOT_EVERY_TICKS == 0:
 		_broadcast_snapshot()
 	var at_max: bool = _max_ticks > 0 and tick >= _max_ticks
 	if tick % HEARTBEAT_EVERY_TICKS == 0 or at_max:
-		print(_heartbeat_line(_match_id, _session, _realtime.last_valid_input_tick()))
+		print(_heartbeat_line(_match_id, _session, _rt_last_valid_input_tick()))
 	if at_max:
 		get_tree().quit(0)
 
 
 func _broadcast_snapshot() -> void:
-	if _realtime == null:
-		return
-	var frame: PackedByteArray = _realtime.snapshot_frame()
-	if frame.is_empty():
+	if not _rt_alive():
 		return
 	for peer: WebSocketPeer in _peers.keys():
 		var slot: int = _peers[peer]
 		if slot < 0:
 			continue
-		if peer.get_ready_state() == WebSocketPeer.STATE_OPEN:
-			peer.send(frame, WebSocketPeer.WRITE_MODE_BINARY)
+		if peer.get_ready_state() != WebSocketPeer.STATE_OPEN:
+			continue
+		var frame: PackedByteArray = _rt_snapshot_frame_for(slot)
+		if frame.is_empty():
+			continue
+		peer.send(frame, WebSocketPeer.WRITE_MODE_BINARY)
 
 
 ## 只接受 `--key=value` 形式。裸开关与位置参数一律忽略，避免 MatchHost 传参出错时
@@ -205,9 +214,17 @@ static func _boot_config(options: Dictionary) -> Dictionary:
 		return failed
 	var course: String = options.get("course", "")
 	var envelope: String = options.get("content-envelope", "")
+	var gameplay: String = str(options.get("gameplay", MatchGameplayGd.TRAPRUSH)).strip_edges()
+	if gameplay.is_empty():
+		gameplay = MatchGameplayGd.TRAPRUSH
+	if not MatchGameplayGd.is_id(gameplay):
+		return failed
 	var has_course: bool = not course.is_empty()
 	var has_envelope: bool = not envelope.is_empty()
-	if has_course == has_envelope:
+	if gameplay == MatchGameplayGd.BASTION:
+		if has_envelope or not has_course:
+			return failed
+	elif has_course == has_envelope:
 		return failed
 	if has_course and not FileAccess.file_exists(course):
 		return failed
@@ -215,7 +232,10 @@ static func _boot_config(options: Dictionary) -> Dictionary:
 		return failed
 	var players_raw: String = options.get("players", "")
 	var players: int = _parse_int(players_raw, -1)
-	if players < 1 or players > TraprushMatchSession.MAX_PLAYERS:
+	if gameplay == MatchGameplayGd.BASTION:
+		if players != MatchGameplayGd.BASTION_SEATS:
+			return failed
+	elif players < 1 or players > TraprushMatchSession.MAX_PLAYERS:
 		return failed
 	var max_ticks: int = 0
 	if options.has("max-ticks"):
@@ -235,10 +255,11 @@ static func _boot_config(options: Dictionary) -> Dictionary:
 		"players": players,
 		"max_ticks": max_ticks,
 		"bind": bind,
+		"gameplay": gameplay,
 	}
 
 
-static func boot_session(config: Dictionary) -> TraprushMatchSession:
+static func boot_session(config: Dictionary) -> RefCounted:
 	return MatchServerBootGd.boot_session(config)
 
 
@@ -248,21 +269,120 @@ static func _spawn_offsets(players: int) -> Array[Dictionary]:
 
 static func _heartbeat_line(
 	match_id: String,
-	session: TraprushMatchSession,
+	session: RefCounted,
 	valid_input_tick: int = -1
 ) -> String:
+	var bastion: BastionMatchSessionGd = session as BastionMatchSessionGd
+	if bastion != null:
+		var bastion_body: Dictionary = {
+			"event": TICK_EVENT,
+			"match_id": match_id,
+			"tick": bastion.tick_index(),
+			"players": bastion.player_count(),
+			"hash": bastion.hash_state(),
+			"valid_input_tick": valid_input_tick,
+		}
+		var bastion_built: Dictionary = BastionMatchSettlementGd.try_build(bastion)
+		if bastion_built.get("ok", false):
+			bastion_body["settlement"] = BastionMatchSettlementGd.to_heartbeat(bastion_built)
+		return JSON.stringify(bastion_body)
+	var traprush: TraprushMatchSession = session as TraprushMatchSession
+	if traprush == null:
+		return "{}"
 	var body: Dictionary = {
 		"event": TICK_EVENT,
 		"match_id": match_id,
-		"tick": session.tick_index(),
-		"players": session.player_count(),
-		"hash": session.hash_state(),
+		"tick": traprush.tick_index(),
+		"players": traprush.player_count(),
+		"hash": traprush.hash_state(),
 		"valid_input_tick": valid_input_tick,
 	}
-	var built: Dictionary = TraprushMatchSettlement.try_build(session)
+	var built: Dictionary = TraprushMatchSettlement.try_build(traprush)
 	if built.get("ok", false):
 		body["settlement"] = TraprushMatchSettlement.to_heartbeat(built)
 	return JSON.stringify(body)
+
+
+func _attach_realtime(session: RefCounted) -> bool:
+	var bastion: BastionMatchSessionGd = session as BastionMatchSessionGd
+	if bastion != null:
+		_bastion_rt = MatchRealtimeBastionGd.create(bastion) as MatchRealtimeBastionGd
+		return _bastion_rt != null
+	var traprush: TraprushMatchSession = session as TraprushMatchSession
+	if traprush == null:
+		return false
+	_traprush_rt = MatchRealtime.create(traprush)
+	return _traprush_rt != null
+
+
+func _rt_alive() -> bool:
+	return _traprush_rt != null or _bastion_rt != null
+
+
+func _rt_handle_inbound(slot: int, inbound: PackedByteArray) -> PackedByteArray:
+	if _bastion_rt != null:
+		return _bastion_rt.handle_inbound(slot, inbound)
+	if _traprush_rt != null:
+		return _traprush_rt.handle_inbound(slot, inbound)
+	return PackedByteArray()
+
+
+func _rt_remove_player(slot: int) -> void:
+	if _bastion_rt != null:
+		_bastion_rt.remove_player(slot)
+		return
+	if _traprush_rt != null:
+		_traprush_rt.remove_player(slot)
+
+
+func _rt_occupy_slot(slot: int) -> bool:
+	if _bastion_rt != null:
+		return _bastion_rt.occupy_slot(slot)
+	if _traprush_rt != null:
+		return _traprush_rt.occupy_slot(slot)
+	return false
+
+
+func _rt_add_player() -> int:
+	if _bastion_rt != null:
+		return _bastion_rt.add_player()
+	if _traprush_rt != null:
+		return _traprush_rt.add_player()
+	return -1
+
+
+func _rt_commit_tick() -> void:
+	if _bastion_rt != null:
+		_bastion_rt.commit_tick()
+		return
+	if _traprush_rt != null:
+		_traprush_rt.commit_tick()
+
+
+func _rt_last_valid_input_tick() -> int:
+	if _bastion_rt != null:
+		return _bastion_rt.last_valid_input_tick()
+	if _traprush_rt != null:
+		return _traprush_rt.last_valid_input_tick()
+	return -1
+
+
+func _rt_snapshot_frame_for(slot: int) -> PackedByteArray:
+	if _bastion_rt != null:
+		return _bastion_rt.snapshot_frame_for(slot)
+	if _traprush_rt != null:
+		return _traprush_rt.snapshot_frame_for(slot)
+	return PackedByteArray()
+
+
+func _session_tick() -> int:
+	var bastion: BastionMatchSessionGd = _session as BastionMatchSessionGd
+	if bastion != null:
+		return bastion.tick_index()
+	var traprush: TraprushMatchSession = _session as TraprushMatchSession
+	if traprush != null:
+		return traprush.tick_index()
+	return 0
 
 
 static func _parse_int(raw: String, fallback: int) -> int:

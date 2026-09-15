@@ -54,7 +54,46 @@ Worktree 端口偏移见 README「并行工作区」；本文件不复述端口�
 
 ---
 
-## 本刀：M6 E2（第一张官方 BASTION 蓝图）
+## 本刀：M6 E3（对局进程 + 匹配 HTTP + 结算队伍）
+
+**窗口验收：无。** 不是省事，是这一章的性质——玩法判别位、结算 `teams[]` 和 `--gameplay=bastion` 分派都住在 HTTP / Headless 对局进程里，**没有接任何场景、没有任何入口按钮、没有一行表现代码**。BASTION 第一次有画面是 **E4 客户端对局壳**；在那之前打开窗口看到的仍然是 TRAPRUSH 大厅，与本刀无关。匹配 HTTP 已认 `blueprint_01`，但大厅入口还不会发这个 body。
+
+人类要确认本章成立，走命令行，不走窗口：
+
+```bash
+npm run typecheck
+npm test
+npm run redline-scan
+npm run test:gut:full
+```
+
+预期：四条全绿。本刀新增 / 扩的断言包括：匹配 body 缺省仍是 TRAPRUSH、`course` / `content` / `blueprint` 三者互斥、BASTION 锁 2 席、迁移 `0015` 旧行仍可读、结算带 `teams[]` 时 409 幂等仍成立、`--gameplay=bastion` 编官方蓝图进 `BastionMatchSession`、SETUP 快照按席位裁剪。
+
+想亲眼看一眼分派在动，可以只跑这一组：
+
+```powershell
+& $env:GODOT4_CONSOLE --headless --path game -s res://addons/gut/gut_cmdln.gd -gdir=res://tests/unit -gprefix=test_match_server_boot_bastion -gexit
+```
+
+### 本刀不测
+
+- 任何窗口行为（本刀没有）；
+- 客户端跟从 BASTION 快照 / 建造交互 / HUD（E4）；
+- BASTION 音效素材（E4，§5.2 第 8 项仍待拍）；
+- 蓝图 Edit（M7）；
+- S1 主大厅壳（F1）；
+- TRAPRUSH 的帧布局与课表——本刀加字段，不改旧必填键。
+
+### 诚实边界
+
+- **E3 交完不等于 M6 能开一局给人看。** 进程已有、画面还没有；九个原型的数值全部是 `game/src/games/bastion/play_stubs.gd` 的占位桩（[CD-63 §1.2 / §1.3](../../Confirmed-docs/60-plan/63-open-decisions.md) 仍延期），不是产品表；
+- 没有真人走查过任何 BASTION 画面，因为还没有画面；
+- 下一刀 E4 被章节计划 §5.2 第 8 项挡住（BASTION 音效素材），AI 不得自选开工；
+- M5 带走的两处遗留（乱序 / 重复包未严格注入、TRAPRUSH 可玩性签署只对旧那一版成立）不因本刀消失。
+
+---
+
+## 上一刀（已合入）：M6 E2（第一张官方 BASTION 蓝图）
 
 **窗口验收：无。** 不是省事，是这一章的性质——官方蓝图是手写 JSON，白名单住在 `game/src/shared/` 与 `backend/contracts/`，**没有接任何场景、没有任何入口按钮、没有一行表现代码**。BASTION 第一次有画面是 **E4 客户端对局壳**；在那之前打开窗口看到的仍然是 TRAPRUSH 大厅，与本刀无关。匹配 HTTP 仍不认 `blueprint_01`（E3）。
 

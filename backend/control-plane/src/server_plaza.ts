@@ -4,6 +4,8 @@ import {
 	CONTENT_PLAZA_ERRORS,
 	CONTENT_PUBLISH_ERRORS,
 	DEFAULT_PLAZA_TAB,
+	DEFAULT_MATCH_GAMEPLAY,
+	isMatchGameplay,
 	isPlazaMatchId,
 	isPlazaRater,
 	isPlazaStars,
@@ -36,6 +38,7 @@ interface ContentIdParams {
 
 interface PlazaQuery {
 	readonly tab?: string;
+	readonly gameplay?: string;
 }
 
 export function registerPlazaRoutes(app: FastifyInstance, options: BuildServerOptions): void {
@@ -51,9 +54,18 @@ export function registerPlazaRoutes(app: FastifyInstance, options: BuildServerOp
 			}
 			tab = raw;
 		}
+		let gameplay = DEFAULT_MATCH_GAMEPLAY;
+		const gameplayRaw = request.query.gameplay;
+		if (gameplayRaw !== undefined) {
+			if (!isMatchGameplay(gameplayRaw)) {
+				reply.code(400);
+				return { error: "invalid_gameplay" };
+			}
+			gameplay = gameplayRaw;
+		}
 		const body: PlazaListView = {
 			tab,
-			items: options.database.listPlaza(tab).map(itemViewOf),
+			items: options.database.listPlaza(tab, gameplay).map(itemViewOf),
 		};
 		return body;
 	});

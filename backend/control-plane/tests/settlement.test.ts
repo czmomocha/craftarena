@@ -45,6 +45,47 @@ describe("settlement semantics", () => {
 		);
 		assert.equal(isValidSettlementSemantics({ ...VALID_BODY, mvpSlot: 1 }), false);
 	});
+
+	test("accepts optional BASTION teams, including a draw", () => {
+		const winner = {
+			...VALID_BODY,
+			padTotal: 0,
+			rows: [
+				{ slot: 0, place: 1, finishTick: 9, acceptedCount: 0 },
+				{ slot: 1, place: 2, finishTick: 9, acceptedCount: 0 },
+			],
+			teams: [
+				{ teamId: 1, place: 1, coreHealth: 0, leaked: 4, finishTick: 9 },
+				{ teamId: 2, place: 2, coreHealth: 40, leaked: 1, finishTick: 9 },
+			],
+		};
+		assert.equal(isValidSettlementSemantics(winner), true);
+		assert.equal(
+			isValidSettlementSemantics({
+				...winner,
+				mvpSlot: 0,
+				rows: [
+					{ slot: 0, place: 1, finishTick: 9, acceptedCount: 0 },
+					{ slot: 1, place: 1, finishTick: 9, acceptedCount: 0 },
+				],
+				teams: [
+					{ teamId: 1, place: 1, coreHealth: 20, leaked: 2, finishTick: 9 },
+					{ teamId: 2, place: 1, coreHealth: 20, leaked: 2, finishTick: 9 },
+				],
+			}),
+			true,
+		);
+		assert.equal(
+			isValidSettlementSemantics({
+				...winner,
+				teams: [
+					{ teamId: 1, place: 2, coreHealth: 0, leaked: 4, finishTick: 9 },
+					{ teamId: 2, place: 1, coreHealth: 40, leaked: 1, finishTick: 9 },
+				],
+			}),
+			false,
+		);
+	});
 });
 
 describe("control plane match settlement", () => {
@@ -183,5 +224,44 @@ describe("control plane match settlement", () => {
 			},
 		});
 		assert.equal(unfinished.statusCode, 400);
+	});
+
+	test("writes BASTION teams once and still 409s the second write", async () => {
+		const matchId = "eeeeeeee-ffff-0000-1111-222222222222";
+		await registerMatch(matchId);
+		const payload = {
+			tick: 9,
+			stateHash: "bastion-hash",
+			padTotal: 0,
+			mvpSlot: 1,
+			rows: [
+				{ slot: 0, place: 2, finishTick: 8, acceptedCount: 0 },
+				{ slot: 1, place: 1, finishTick: 8, acceptedCount: 0 },
+			],
+			teams: [
+				{ teamId: 1, place: 2, coreHealth: 12, leaked: 5, finishTick: 8 },
+				{ teamId: 2, place: 1, coreHealth: 0, leaked: 1, finishTick: 8 },
+			],
+		};
+		const created = await app.inject({
+			method: "POST",
+			url: `/match-sessions/${matchId}/settlement`,
+			payload,
+		});
+		assert.equal(created.statusCode, 201);
+		assert.deepEqual(created.json<MatchSettlementResponse>().teams, payload.teams);
+		const read = await app.inject({
+			method: "GET",
+			url: `/match-sessions/${matchId}/settlement`,
+		});
+		assert.equal(read.statusCode, 200);
+		assert.deepEqual(read.json<MatchSettlementResponse>().teams, payload.teams);
+		const duplicate = await app.inject({
+			method: "POST",
+			url: `/match-sessions/${matchId}/settlement`,
+			payload,
+		});
+		assert.equal(duplicate.statusCode, 409);
+		assert.equal(duplicate.json<{ error: string }>().error, "already_settled");
 	});
 });

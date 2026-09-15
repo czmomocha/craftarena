@@ -1,6 +1,11 @@
 import type { DatabaseSync } from "node:sqlite";
 
 import type { OfficialTraprushCourseId } from "../../../contracts/src/official_courses.ts";
+import type { OfficialBastionBlueprintId } from "../../../contracts/src/official_blueprints.ts";
+import {
+	DEFAULT_MATCH_GAMEPLAY,
+	type MatchGameplay,
+} from "../../../contracts/src/match_gameplay.ts";
 import type { MatchQueueKind } from "../../../contracts/src/match_room.ts";
 import {
 	DEFAULT_MATCHMAKING_SEATS,
@@ -18,6 +23,9 @@ import {
 	type IssuedTicket,
 	type MatchQueueRecord,
 } from "./database.ts";
+
+const QUEUE_COLUMNS =
+	"rowid, token_hash, kind, status, created_at, expires_at, match_id, ticket, ticket_expires_at, error, course, seats, content_id, content_version, gameplay, blueprint";
 
 export class ControlPlaneQueueStore {
 	readonly db: DatabaseSync;
@@ -42,6 +50,8 @@ export class ControlPlaneQueueStore {
 		seats: number = DEFAULT_MATCHMAKING_SEATS,
 		contentId?: string,
 		contentVersion?: number,
+		gameplay: MatchGameplay = DEFAULT_MATCH_GAMEPLAY,
+		blueprint?: OfficialBastionBlueprintId,
 	): EnqueuedMatch {
 		const token = generateQueueToken();
 		const createdAt = now.toISOString();
@@ -50,8 +60,8 @@ export class ControlPlaneQueueStore {
 			.prepare(
 				`INSERT INTO match_queue (
 					token_hash, kind, status, created_at, expires_at, match_id, ticket, ticket_expires_at, error,
-					course, seats, content_id, content_version
-				) VALUES (?, ?, 'waiting', ?, ?, NULL, NULL, NULL, NULL, ?, ?, ?, ?)`,
+					course, seats, content_id, content_version, gameplay, blueprint
+				) VALUES (?, ?, 'waiting', ?, ?, NULL, NULL, NULL, NULL, ?, ?, ?, ?, ?, ?)`,
 			)
 			.run(
 				hashQueueToken(token),
@@ -62,6 +72,8 @@ export class ControlPlaneQueueStore {
 				seats,
 				contentId ?? null,
 				contentVersion ?? null,
+				gameplay,
+				blueprint ?? null,
 			);
 		return { token, createdAt, expiresAt };
 	}
@@ -69,7 +81,7 @@ export class ControlPlaneQueueStore {
 	getQueueByToken(token: string, now: Date): MatchQueueRecord | undefined {
 		const row = this.db
 			.prepare(
-				`SELECT rowid, token_hash, kind, status, created_at, expires_at, match_id, ticket, ticket_expires_at, error, course, seats, content_id, content_version
+				`SELECT ${QUEUE_COLUMNS}
 				 FROM match_queue WHERE token_hash = ?`,
 			)
 			.get(hashQueueToken(token));
@@ -91,7 +103,7 @@ export class ControlPlaneQueueStore {
 		const nowIso = now.toISOString();
 		return this.db
 			.prepare(
-				`SELECT rowid, token_hash, kind, status, created_at, expires_at, match_id, ticket, ticket_expires_at, error, course, seats, content_id, content_version
+				`SELECT ${QUEUE_COLUMNS}
 				 FROM match_queue
 				 WHERE status = 'waiting' AND expires_at > ?
 				 ORDER BY rowid ASC`,
@@ -125,8 +137,7 @@ export class ControlPlaneQueueStore {
 		try {
 			const row = this.db
 				.prepare(
-					`SELECT rowid, token_hash, kind, status, created_at, expires_at, match_id, ticket, ticket_expires_at, error, course, seats, content_id, content_version
-					 FROM match_queue WHERE token_hash = ?`,
+					`SELECT ${QUEUE_COLUMNS} FROM match_queue WHERE token_hash = ?`,
 				)
 				.get(tokenHash);
 			if (row === undefined) {
@@ -141,6 +152,8 @@ export class ControlPlaneQueueStore {
 				session === undefined ||
 				session.seats !== record.seats ||
 				session.course !== record.course ||
+				session.gameplay !== record.gameplay ||
+				(session.blueprint ?? "") !== (record.blueprint ?? "") ||
 				(session.contentId ?? "") !== (record.contentId ?? "") ||
 				(session.contentVersion ?? 0) !== (record.contentVersion ?? 0)
 			) {

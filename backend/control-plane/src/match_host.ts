@@ -5,6 +5,8 @@ import {
 	DEFAULT_OFFICIAL_TRAPRUSH_COURSE,
 	type OfficialTraprushCourseId,
 } from "../../contracts/src/official_courses.ts";
+import type { OfficialBastionBlueprintId } from "../../contracts/src/official_blueprints.ts";
+import { MATCH_GAMEPLAY_BASTION } from "../../contracts/src/match_gameplay.ts";
 
 export interface MatchLaunchResult {
 	readonly matchId: string;
@@ -14,6 +16,7 @@ export interface MatchLaunchRequest {
 	readonly course?: OfficialTraprushCourseId;
 	readonly seats?: number;
 	readonly content?: MatchContentRef;
+	readonly blueprint?: OfficialBastionBlueprintId;
 }
 
 export interface MatchLauncher {
@@ -52,9 +55,11 @@ export class MatchHostHttpLauncher implements MatchLauncher {
 	async launch(request: MatchLaunchRequest = {}): Promise<MatchLaunchResult> {
 		const seats = request.seats ?? DEFAULT_MATCHMAKING_SEATS;
 		const payload =
-			request.content === undefined
-				? { course: request.course ?? DEFAULT_OFFICIAL_TRAPRUSH_COURSE, seats }
-				: { content: request.content, seats };
+			request.content !== undefined
+				? { content: request.content, seats }
+				: request.blueprint !== undefined
+					? { gameplay: MATCH_GAMEPLAY_BASTION, blueprint: request.blueprint, seats }
+					: { course: request.course ?? DEFAULT_OFFICIAL_TRAPRUSH_COURSE, seats };
 		let response: Response;
 		try {
 			response = await fetch(`${this.#baseUrl}/matches`, {

@@ -11,6 +11,7 @@ export class FakeMatchLauncher implements MatchLauncher {
 	readonly launchedCourses: string[] = [];
 	readonly launchedSeats: number[] = [];
 	readonly launchedContent: Array<MatchContentRef | undefined> = [];
+	readonly launchedBlueprints: string[] = [];
 	seats = 2;
 	remainingCapacity = 100;
 	failWith: Error | undefined;
@@ -54,6 +55,9 @@ export class FakeMatchLauncher implements MatchLauncher {
 			const view = version.json<ContentVersionView>();
 			payload.content = request.content;
 			payload.content_hash = view.content_hash;
+		} else if (request.blueprint !== undefined) {
+			payload.gameplay = "bastion";
+			payload.blueprint = request.blueprint;
 		} else {
 			payload.course = request.course ?? "course_01";
 		}
@@ -71,6 +75,9 @@ export class FakeMatchLauncher implements MatchLauncher {
 		this.launchedCourses.push(typeof payload.course === "string" ? payload.course : "");
 		this.launchedSeats.push(seats);
 		this.launchedContent.push(request.content);
+		if (request.blueprint !== undefined) {
+			this.launchedBlueprints.push(request.blueprint);
+		}
 		return { matchId };
 	}
 }

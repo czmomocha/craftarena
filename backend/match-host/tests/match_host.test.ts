@@ -190,6 +190,28 @@ describe("godot process launcher args", () => {
 		assert.ok(separator >= 0);
 		assert.ok(args.indexOf("--match-id=m-1") > separator);
 	});
+
+	test("omits --gameplay for TRAPRUSH and passes it for BASTION", () => {
+		const launcher = new GodotProcessLauncher({
+			executable: "godot",
+			projectPath: "/repo/game",
+			scene: "res://src/server/match_server.tscn",
+			course: "res://content/official/traprush/course_01.json",
+			players: 2,
+		});
+		const traprush = launcher.buildArgs({ matchId: "m-1", port: 42000 });
+		assert.equal(traprush.some((argument) => argument.startsWith("--gameplay=")), false);
+		const bastion = launcher.buildArgs({
+			matchId: "m-1",
+			port: 42000,
+			course: "res://content/official/bastion/blueprint_01.json",
+			players: 2,
+			gameplay: "bastion",
+		});
+		assert.ok(bastion.includes("--gameplay=bastion"));
+		assert.ok(bastion.includes("--course=res://content/official/bastion/blueprint_01.json"));
+		assert.ok(bastion.includes("--players=2"));
+	});
 });
 
 /** 假的控制面登记：让租约测试不必起 HTTP，也证明 MatchHost 只依赖接口、不查库。 */
@@ -355,6 +377,43 @@ describe("match tick settlement parse", () => {
 			undefined,
 		);
 		assert.equal(parseMatchTickSettlement([JSON.stringify({ event: "match_tick", tick: 1 })]), undefined);
+	});
+
+	test("parses snake_case BASTION teams from the heartbeat", () => {
+		const payload = parseMatchTickSettlement([
+			JSON.stringify({
+				event: "match_tick",
+				tick: 12,
+				settlement: {
+					tick: 12,
+					state_hash: "hash-b",
+					pad_total: 0,
+					mvp_slot: 0,
+					rows: [
+						{ slot: 0, place: 1, finish_tick: 12, accepted_count: 0 },
+						{ slot: 1, place: 2, finish_tick: 12, accepted_count: 0 },
+					],
+					teams: [
+						{ team_id: 1, place: 1, core_health: 0, leaked: 3, finish_tick: 12 },
+						{ team_id: 2, place: 2, core_health: 40, leaked: 1, finish_tick: 12 },
+					],
+				},
+			}),
+		]);
+		assert.deepEqual(payload, {
+			tick: 12,
+			stateHash: "hash-b",
+			padTotal: 0,
+			mvpSlot: 0,
+			rows: [
+				{ slot: 0, place: 1, finishTick: 12, acceptedCount: 0 },
+				{ slot: 1, place: 2, finishTick: 12, acceptedCount: 0 },
+			],
+			teams: [
+				{ teamId: 1, place: 1, coreHealth: 0, leaked: 3, finishTick: 12 },
+				{ teamId: 2, place: 2, coreHealth: 40, leaked: 1, finishTick: 12 },
+			],
+		});
 	});
 });
 
@@ -1115,6 +1174,62 @@ describe("match host http", () => {
 			assert.equal(created.json<{ seats: number }>().seats, 8);
 			assert.equal(registrar.registered[0]?.course, "course_02");
 			assert.equal(registrar.registered[0]?.seats, 8);
+		} finally {
+			await app.close();
+		}
+	});
+
+	test("POST /matches launches an official BASTION blueprint with locked seats", async () => {
+		const launcher = new FakeLauncher();
+		const { app, registrar } = makeApp(10, new FakeRegistrar(), new FakeListenProbe(), launcher);
+		try {
+			const created = await app.inject({
+				method: "POST",
+				url: "/matches",
+				headers: { "content-type": "application/json" },
+				payload: { gameplay: "bastion" },
+			});
+			assert.equal(created.statusCode, 201);
+			const body = created.json<{
+				course: string | null;
+				gameplay?: string;
+				blueprint?: string;
+				seats: number;
+			}>();
+			assert.equal(body.course, null);
+			assert.equal(body.gameplay, "bastion");
+			assert.equal(body.blueprint, "blueprint_01");
+			assert.equal(body.seats, 2);
+			assert.equal(registrar.registered[0]?.gameplay, "bastion");
+			assert.equal(registrar.registered[0]?.blueprint, "blueprint_01");
+			assert.equal(launcher.launched[0]?.gameplay, "bastion");
+			assert.equal(
+				launcher.launched[0]?.course,
+				"res://content/official/bastion/blueprint_01.json",
+			);
+		} finally {
+			await app.close();
+		}
+	});
+
+	test("POST /matches rejects unknown gameplay and mixed selectors", async () => {
+		const { app } = makeApp();
+		try {
+			const gameplay = await app.inject({
+				method: "POST",
+				url: "/matches",
+				headers: { "content-type": "application/json" },
+				payload: { gameplay: "quake" },
+			});
+			assert.equal(gameplay.statusCode, 400);
+			assert.equal(gameplay.json<{ error: string }>().error, "invalid_gameplay");
+			const mixed = await app.inject({
+				method: "POST",
+				url: "/matches",
+				headers: { "content-type": "application/json" },
+				payload: { course: "course_01", blueprint: "blueprint_01" },
+			});
+			assert.equal(mixed.statusCode, 400);
 		} finally {
 			await app.close();
 		}

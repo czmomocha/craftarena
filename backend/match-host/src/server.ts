@@ -101,15 +101,21 @@ export function buildMatchHost(options: BuildMatchHostOptions): FastifyInstance 
 			const invalidCourse = matchResult.error === "invalid_course";
 			const invalidSeats = matchResult.error === "invalid_seats";
 			const invalidContent = matchResult.error === "invalid_content";
+			const invalidGameplay = matchResult.error === "invalid_gameplay";
+			const invalidBlueprint = matchResult.error === "invalid_blueprint";
 			return {
 				error: matchResult.error,
 				message: invalidCourse
 					? "POST /matches only accepts official TRAPRUSH course ids"
 					: invalidSeats
-						? "POST /matches only accepts seats in [1, 8]"
+						? "POST /matches only accepts seats in [1, 8] (BASTION locks 2)"
 						: invalidContent
 							? "POST /matches rejected an invalid content object"
-							: "POST /matches rejected unexpected fields",
+							: invalidGameplay
+								? "POST /matches only accepts traprush or bastion gameplay"
+								: invalidBlueprint
+									? "POST /matches only accepts official BASTION blueprint ids"
+									: "POST /matches rejected unexpected fields",
 			};
 		}
 
@@ -117,7 +123,9 @@ export function buildMatchHost(options: BuildMatchHostOptions): FastifyInstance 
 			const record =
 				matchResult.kind === "content"
 					? await options.registry.startContent(matchResult.content, matchResult.seats)
-					: await options.registry.start(matchResult.course, matchResult.seats);
+					: matchResult.kind === "blueprint"
+						? await options.registry.startBlueprint(matchResult.blueprint, matchResult.seats)
+						: await options.registry.start(matchResult.course, matchResult.seats);
 			reply.code(201);
 			return toWire(record);
 		} catch (error) {
@@ -201,6 +209,11 @@ function toWire(record: MatchRecord): Record<string, unknown> {
 		lastValidInputAt: new Date(record.lease.lastValidInputAt).toISOString(),
 		stopReason: record.stopReason,
 	};
+	if (record.blueprint !== undefined) {
+		body.course = null;
+		body.gameplay = "bastion";
+		body.blueprint = record.blueprint;
+	}
 	if (record.content !== undefined && record.contentHash !== undefined) {
 		body.course = null;
 		body.content = record.content;

@@ -12,6 +12,11 @@ import {
 	isValidMatchSeats,
 	type OfficialTraprushCourseId,
 } from "../../../contracts/src/official_courses.ts";
+import type { OfficialBastionBlueprintId } from "../../../contracts/src/official_blueprints.ts";
+import {
+	DEFAULT_MATCH_GAMEPLAY,
+	type MatchGameplay,
+} from "../../../contracts/src/match_gameplay.ts";
 import {
 	RECONNECT_TICKET_ERRORS,
 	type ReconnectTicketError,
@@ -94,6 +99,7 @@ export interface MatchSessionRecord {
 	readonly roomCode: string | undefined;
 	readonly seats: number;
 	readonly course: OfficialTraprushCourseId | null;
+	readonly gameplay: MatchGameplay; readonly blueprint?: OfficialBastionBlueprintId | undefined;
 	readonly contentId?: string | undefined;
 	readonly contentVersion?: number | undefined;
 	readonly contentHash?: string | undefined;
@@ -142,6 +148,7 @@ export interface MatchSettlementRecord {
 	readonly padTotal: number;
 	readonly mvpSlot: number;
 	readonly rowsJson: string;
+	readonly teamsJson?: string | undefined;
 	readonly createdAt: string;
 }
 
@@ -159,6 +166,7 @@ export interface MatchQueueRecord {
 	readonly ticketExpiresAt: string | undefined;
 	readonly error: string | undefined;
 	readonly course: OfficialTraprushCourseId | null;
+	readonly gameplay: MatchGameplay; readonly blueprint?: OfficialBastionBlueprintId | undefined;
 	readonly seats: number;
 	readonly contentId?: string | undefined;
 	readonly contentVersion?: number | undefined;
@@ -200,52 +208,31 @@ export class ControlPlaneDatabase {
 
 	migrate(): readonly string[] {
 		this.#db.exec(SCHEMA_MIGRATIONS_TABLE);
-
 		const applied = new Set(
-			this.#db
-				.prepare("SELECT id FROM schema_migrations")
-				.all()
-				.map((row) => String(row["id"])),
+			this.#db.prepare("SELECT id FROM schema_migrations").all().map((row) => String(row["id"])),
 		);
-
 		const newlyApplied: string[] = [];
-		const record = this.#db.prepare(
-			"INSERT INTO schema_migrations (id, applied_at) VALUES (?, ?)",
-		);
-
+		const record = this.#db.prepare("INSERT INTO schema_migrations (id, applied_at) VALUES (?, ?)");
 		for (const migration of MIGRATIONS) {
-			if (applied.has(migration.id)) {
-				continue;
-			}
-
+			if (applied.has(migration.id)) continue;
 			this.#db.exec("BEGIN");
 			try {
-				for (const statement of migration.statements) {
-					this.#db.exec(statement);
-				}
+				for (const statement of migration.statements) this.#db.exec(statement);
 				record.run(migration.id, new Date().toISOString());
 				this.#db.exec("COMMIT");
 			} catch (error) {
 				this.#db.exec("ROLLBACK");
 				throw error;
 			}
-
 			newlyApplied.push(migration.id);
 		}
-
 		return newlyApplied;
 	}
 
 	probeReadWrite(now: Date): boolean {
 		const stamp = now.toISOString();
-		this.#db
-			.prepare("UPDATE readiness_probe SET last_checked_at = ? WHERE id = 1")
-			.run(stamp);
-
-		const row = this.#db
-			.prepare("SELECT last_checked_at FROM readiness_probe WHERE id = 1")
-			.get();
-
+		this.#db.prepare("UPDATE readiness_probe SET last_checked_at = ? WHERE id = 1").run(stamp);
+		const row = this.#db.prepare("SELECT last_checked_at FROM readiness_probe WHERE id = 1").get();
 		return row !== undefined && String(row["last_checked_at"]) === stamp;
 	}
 
@@ -255,6 +242,7 @@ export class ControlPlaneDatabase {
 		readonly now: Date;
 		readonly seats?: number | undefined;
 		readonly course?: OfficialTraprushCourseId | undefined;
+		readonly gameplay?: MatchGameplay | undefined; readonly blueprint?: OfficialBastionBlueprintId | undefined;
 		readonly contentId?: string | undefined;
 		readonly contentVersion?: number | undefined;
 		readonly contentHash?: string | undefined;
@@ -273,6 +261,7 @@ export class ControlPlaneDatabase {
 		readonly padTotal: number;
 		readonly mvpSlot: number;
 		readonly rowsJson: string;
+		readonly teamsJson?: string | undefined;
 		readonly now: Date;
 	}): MatchSettlementRecord {
 		return this.#sessions.insertMatchSettlement(input);
@@ -293,6 +282,9 @@ export class ControlPlaneDatabase {
 		course: OfficialTraprushCourseId = DEFAULT_OFFICIAL_TRAPRUSH_COURSE,
 		seats: number = DEFAULT_MATCHMAKING_SEATS,
 	): MatchSessionRecord | undefined { return this.#sessions.findOldestOpenRoom(course, seats); }
+	findOldestOpenBlueprintRoom(
+		blueprint: OfficialBastionBlueprintId, seats: number = DEFAULT_MATCHMAKING_SEATS,
+	): MatchSessionRecord | undefined { return this.#sessions.findOldestOpenBlueprintRoom(blueprint, seats); }
 	findOldestOpenContentRoom(
 		contentId: string, version: number, seats: number = DEFAULT_MATCHMAKING_SEATS,
 	): MatchSessionRecord | undefined {
@@ -312,7 +304,11 @@ export class ControlPlaneDatabase {
 		course: OfficialTraprushCourseId | "" = DEFAULT_OFFICIAL_TRAPRUSH_COURSE,
 		seats: number = DEFAULT_MATCHMAKING_SEATS,
 		contentId?: string, contentVersion?: number,
-	): EnqueuedMatch { return this.#queue.enqueue(kind, now, ttlMs, course, seats, contentId, contentVersion); }
+		gameplay: MatchGameplay = DEFAULT_MATCH_GAMEPLAY,
+		blueprint?: OfficialBastionBlueprintId,
+	): EnqueuedMatch {
+		return this.#queue.enqueue(kind, now, ttlMs, course, seats, contentId, contentVersion, gameplay, blueprint);
+	}
 	getQueueByToken(token: string, now: Date): MatchQueueRecord | undefined {
 		return this.#queue.getQueueByToken(token, now);
 	}
@@ -348,7 +344,7 @@ export class ControlPlaneDatabase {
 	rollbackContentLatest(contentId: string, targetVersion: number): ContentVersionRecord {
 		return this.#content.rollbackLatest(contentId, targetVersion);
 	}
-	listPlaza(tab: PlazaTab): readonly PlazaListingRecord[] { return this.#plaza.list(tab); }
+	listPlaza(tab: PlazaTab, gameplay: MatchGameplay = DEFAULT_MATCH_GAMEPLAY): readonly PlazaListingRecord[] { return this.#plaza.list(tab, gameplay); }
 	getPlazaListing(contentId: string): PlazaListingRecord | undefined { return this.#plaza.get(contentId); }
 	recordPlazaPlay(contentId: string, matchId: string, now: Date): PlazaListingRecord {
 		return this.#plaza.recordPlay(contentId, matchId, now);

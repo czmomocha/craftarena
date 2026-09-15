@@ -5,6 +5,8 @@ extends RefCounted
 ## No SceneTree. Does not own matchmaking state.
 
 const OfficialTraprushCoursesGd := preload("res://src/shared/official_traprush_courses.gd")
+const OfficialBastionBlueprintsGd := preload("res://src/shared/official_bastion_blueprints.gd")
+const MatchGameplayGd := preload("res://src/shared/match_gameplay.gd")
 
 const ROOM_CODE_ALPHABET: String = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
 const ROOM_CODE_LENGTH: int = 6
@@ -29,6 +31,18 @@ const JOIN_KEYS_CONTENT: PackedStringArray = [
 	"course",
 	"content",
 	"content_hash",
+]
+const JOIN_KEYS_BLUEPRINT: PackedStringArray = [
+	"roomCode",
+	"ticket",
+	"matchId",
+	"expiresAt",
+	"seats",
+	"issued",
+	"seat",
+	"course",
+	"gameplay",
+	"blueprint",
 ]
 const WAITING_KEYS: PackedStringArray = [
 	"status",
@@ -63,6 +77,19 @@ const READY_KEYS_CONTENT: PackedStringArray = [
 	"content",
 	"content_hash",
 ]
+const READY_KEYS_BLUEPRINT: PackedStringArray = [
+	"status",
+	"roomCode",
+	"ticket",
+	"matchId",
+	"expiresAt",
+	"seats",
+	"issued",
+	"seat",
+	"course",
+	"gameplay",
+	"blueprint",
+]
 const WAITING_KEYS_CONTENT: PackedStringArray = [
 	"status",
 	"queueToken",
@@ -84,6 +111,17 @@ const WAITING_KEYS_CONTENT_HASH: PackedStringArray = [
 	"content",
 	"content_hash",
 ]
+const WAITING_KEYS_BLUEPRINT: PackedStringArray = [
+	"status",
+	"queueToken",
+	"position",
+	"estimatedWaitMs",
+	"expiresAt",
+	"course",
+	"seats",
+	"gameplay",
+	"blueprint",
+]
 const QUEUE_FAILED_KEYS: PackedStringArray = ["status", "error"]
 const ERROR_KEYS: PackedStringArray = ["error", "message"]
 const CANCEL_KEYS: PackedStringArray = ["ok"]
@@ -92,21 +130,6 @@ const REISSUE_KEYS: PackedStringArray = [
 	"matchId",
 	"expiresAt",
 	"seat",
-]
-const SETTLEMENT_KEYS: PackedStringArray = [
-	"matchId",
-	"tick",
-	"stateHash",
-	"padTotal",
-	"mvpSlot",
-	"rows",
-	"createdAt",
-]
-const SETTLEMENT_ROW_KEYS: PackedStringArray = [
-	"slot",
-	"place",
-	"finishTick",
-	"acceptedCount",
 ]
 
 
@@ -160,12 +183,31 @@ static func match_body_content(content_id: String, version: int, seat_count: int
 	return JSON.stringify({"content": {"id": content_id, "version": version}, "seats": seats_value})
 
 
+static func match_body_blueprint(blueprint_id: String) -> String:
+	var id: String = OfficialBastionBlueprintsGd.normalize_id(blueprint_id)
+	if id == "":
+		return ""
+	return JSON.stringify({
+		"gameplay": MatchGameplayGd.BASTION,
+		"blueprint": id,
+		"seats": MatchGameplayGd.BASTION_SEATS,
+	})
+
+
 static func is_join_body(body: Dictionary) -> bool:
-	return keys_only(body, JOIN_KEYS) or keys_only(body, JOIN_KEYS_CONTENT)
+	return (
+		keys_only(body, JOIN_KEYS)
+		or keys_only(body, JOIN_KEYS_CONTENT)
+		or keys_only(body, JOIN_KEYS_BLUEPRINT)
+	)
 
 
 static func is_ready_body(body: Dictionary) -> bool:
-	return keys_only(body, READY_KEYS) or keys_only(body, READY_KEYS_CONTENT)
+	return (
+		keys_only(body, READY_KEYS)
+		or keys_only(body, READY_KEYS_CONTENT)
+		or keys_only(body, READY_KEYS_BLUEPRINT)
+	)
 
 
 static func is_waiting_body(body: Dictionary) -> bool:
@@ -173,13 +215,17 @@ static func is_waiting_body(body: Dictionary) -> bool:
 		return true
 	if keys_only(body, WAITING_KEYS_CONTENT):
 		return true
-	return keys_only(body, WAITING_KEYS_CONTENT_HASH)
+	if keys_only(body, WAITING_KEYS_CONTENT_HASH):
+		return true
+	return keys_only(body, WAITING_KEYS_BLUEPRINT)
 
 
 static func is_match_content_id(content_id: String) -> bool:
 	if content_id.is_empty() or content_id.length() > 64:
 		return false
 	if OfficialTraprushCoursesGd.is_id(content_id) or content_id == "course_f_playable":
+		return false
+	if OfficialBastionBlueprintsGd.is_id(content_id):
 		return false
 	for index: int in range(content_id.length()):
 		var code: int = content_id.unicode_at(index)
@@ -235,63 +281,3 @@ static func read_int(body: Dictionary, key: String) -> Dictionary:
 			return {"ok": false}
 		return {"ok": true, "value": int(number)}
 	return {"ok": false}
-
-
-static func parse_settlement_rows(rows: Array, mvp_slot: int) -> Dictionary:
-	if rows.is_empty() or rows.size() > 8:
-		return {"ok": false}
-	var slots: Dictionary = {}
-	var places: Dictionary = {}
-	var winner_slot: int = -1
-	var by_place: Dictionary = {}
-	var collected: Array[Dictionary] = []
-	for item: Variant in rows:
-		if typeof(item) != TYPE_DICTIONARY:
-			return {"ok": false}
-		var row: Dictionary = item
-		if not keys_only(row, SETTLEMENT_ROW_KEYS):
-			return {"ok": false}
-		var slot_read: Dictionary = read_int(row, "slot")
-		var place_read: Dictionary = read_int(row, "place")
-		var finish_read: Dictionary = read_int(row, "finishTick")
-		var accepted_read: Dictionary = read_int(row, "acceptedCount")
-		if not slot_read.get("ok", false) or not place_read.get("ok", false):
-			return {"ok": false}
-		if not finish_read.get("ok", false) or not accepted_read.get("ok", false):
-			return {"ok": false}
-		var slot_value: int = slot_read.get("value", -1)
-		var place_value: int = place_read.get("value", 0)
-		var finish_value: int = finish_read.get("value", -1)
-		var accepted_value: int = accepted_read.get("value", -1)
-		if slot_value < 0 or slot_value > 7:
-			return {"ok": false}
-		if place_value < 1 or place_value > 8:
-			return {"ok": false}
-		if finish_value < 0 or accepted_value < 0:
-			return {"ok": false}
-		if slots.has(slot_value) or places.has(place_value):
-			return {"ok": false}
-		slots[slot_value] = true
-		places[place_value] = true
-		by_place[place_value] = slot_value
-		collected.append({
-			"slot": slot_value,
-			"place": place_value,
-			"finish_tick": finish_value,
-			"accepted_count": accepted_value,
-		})
-		if place_value == 1:
-			winner_slot = slot_value
-	if winner_slot < 0 or winner_slot != mvp_slot:
-		return {"ok": false}
-	var parts: PackedStringArray = PackedStringArray()
-	for place_index: int in range(1, rows.size() + 1):
-		if not places.has(place_index):
-			return {"ok": false}
-		var slot_at_place: int = by_place.get(place_index, -1)
-		parts.append("#%ds%d" % [place_index, slot_at_place])
-	return {
-		"ok": true,
-		"line": "%s mvp=%d" % [",".join(parts), mvp_slot],
-		"rows": collected,
-	}

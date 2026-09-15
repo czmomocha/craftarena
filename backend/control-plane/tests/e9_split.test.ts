@@ -17,6 +17,7 @@ const SPLIT_FILES = [
 	"backend/control-plane/src/server.ts",
 	"backend/control-plane/src/server_matchmaking.ts",
 	"backend/control-plane/src/server_sessions.ts",
+	"backend/control-plane/src/server_settlement.ts",
 	"backend/control-plane/src/server_content.ts",
 	"backend/control-plane/src/server_content_submit.ts",
 	"backend/control-plane/src/server_plaza.ts",

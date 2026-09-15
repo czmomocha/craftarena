@@ -16,6 +16,8 @@ export interface MatchSessionRegisterSpec {
 	readonly course?: string;
 	readonly content?: MatchContentRef;
 	readonly content_hash?: string;
+	readonly gameplay?: "traprush" | "bastion";
+	readonly blueprint?: string;
 }
 
 export interface MatchSessionRegistrar {
@@ -94,7 +96,9 @@ export class ControlPlaneMatchSessionRegistrar implements MatchSessionRegistrar 
 					upstreamUrl: spec.upstreamUrl,
 					seats: spec.seats,
 					...(spec.content === undefined
-						? { course: spec.course }
+						? spec.blueprint === undefined
+							? { course: spec.course }
+							: { gameplay: spec.gameplay, blueprint: spec.blueprint }
 						: { content: spec.content, content_hash: spec.content_hash }),
 				}),
 				signal: AbortSignal.timeout(this.#timeoutMs),

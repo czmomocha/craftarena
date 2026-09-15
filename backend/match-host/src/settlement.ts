@@ -35,6 +35,31 @@ function parseRow(value: unknown): RecordMatchSettlementRequest["rows"][number] 
 	return { slot, place, finishTick, acceptedCount };
 }
 
+function parseTeam(value: unknown): NonNullable<RecordMatchSettlementRequest["teams"]>[number] | undefined {
+	const team = asRecord(value);
+	if (team === undefined) {
+		return undefined;
+	}
+	const teamId = asInt(team["team_id"]);
+	const place = asInt(team["place"]);
+	const coreHealth = asInt(team["core_health"]);
+	const leaked = asInt(team["leaked"]);
+	const finishTick = asInt(team["finish_tick"]);
+	if (
+		teamId === undefined ||
+		place === undefined ||
+		coreHealth === undefined ||
+		leaked === undefined ||
+		finishTick === undefined
+	) {
+		return undefined;
+	}
+	if (teamId < 1 || teamId > 2 || place < 1 || place > 2 || coreHealth < 0 || leaked < 0 || finishTick < 0) {
+		return undefined;
+	}
+	return { teamId, place, coreHealth, leaked, finishTick };
+}
+
 function parseSettlementObject(raw: Record<string, unknown>): MatchHeartbeatSettlement | undefined {
 	const tick = asInt(raw["tick"]);
 	const stateHash = asString(raw["state_hash"]);
@@ -60,7 +85,22 @@ function parseSettlementObject(raw: Record<string, unknown>): MatchHeartbeatSett
 		}
 		rows.push(row);
 	}
-	return { tick, stateHash, padTotal, mvpSlot, rows };
+	const teamsRaw = raw["teams"];
+	if (teamsRaw === undefined) {
+		return { tick, stateHash, padTotal, mvpSlot, rows };
+	}
+	if (!Array.isArray(teamsRaw) || teamsRaw.length !== 2) {
+		return undefined;
+	}
+	const teams = [];
+	for (const item of teamsRaw) {
+		const team = parseTeam(item);
+		if (team === undefined) {
+			return undefined;
+		}
+		teams.push(team);
+	}
+	return { tick, stateHash, padTotal, mvpSlot, rows, teams };
 }
 
 /**

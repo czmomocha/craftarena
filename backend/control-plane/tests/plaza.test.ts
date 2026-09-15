@@ -168,6 +168,28 @@ describe("control plane content plaza", () => {
 		const ids = plaza.json<PlazaListView>().items.map((item) => item.content_id);
 		assert.equal(ids.includes("course_01"), false);
 	});
+
+	test("default plaza list stays TRAPRUSH and BASTION bundles do not mix in", async () => {
+		const bastionId = "ugc_plaza_bastion";
+		const published = await publish(app, bastionId, 1, HASH_C.replaceAll("c", "d"), {
+			schema_version: 1,
+			gameplay: "bastion",
+			cores: [],
+		});
+		assert.equal(published.statusCode, 201);
+		const traprush = await app.inject({ method: "GET", url: "/content/plaza" });
+		const trapIds = traprush.json<PlazaListView>().items.map((item) => item.content_id);
+		assert.equal(trapIds.includes(bastionId), false);
+		assert.equal(trapIds.includes(ID_A), true);
+		const bastion = await app.inject({ method: "GET", url: "/content/plaza?gameplay=bastion" });
+		assert.equal(bastion.statusCode, 200);
+		assert.deepEqual(
+			bastion.json<PlazaListView>().items.map((item) => item.content_id),
+			[bastionId],
+		);
+		const bad = await app.inject({ method: "GET", url: "/content/plaza?gameplay=quake" });
+		assert.equal(bad.statusCode, 400);
+	});
 });
 
 async function publish(

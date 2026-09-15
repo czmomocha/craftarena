@@ -29,6 +29,7 @@ extends RefCounted
 ## 被打死的兵不会再往前走一步。
 
 const GuardGd := preload("res://src/games/bastion/path_guard.gd")
+const MatchGameplayGd := preload("res://src/shared/match_gameplay.gd")
 const SetupGd := preload("res://src/games/bastion/match_session_setup.gd")
 const SetupStateGd := preload("res://src/games/bastion/match_setup_state.gd")
 const TowersGd := preload("res://src/games/bastion/match_session_towers.gd")
@@ -175,6 +176,10 @@ func commit_tick() -> void:
 
 func tick_index() -> int:
 	return tick
+
+
+func player_count() -> int:
+	return MatchGameplayGd.BASTION_SEATS
 
 
 func wave_index() -> int:

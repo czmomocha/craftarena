@@ -6,6 +6,13 @@ import {
 	DEFAULT_OFFICIAL_TRAPRUSH_COURSE,
 	type OfficialTraprushCourseId,
 } from "../../../contracts/src/official_courses.ts";
+import type { OfficialBastionBlueprintId } from "../../../contracts/src/official_blueprints.ts";
+import {
+	DEFAULT_MATCH_GAMEPLAY,
+	MATCH_GAMEPLAY_BASTION,
+	MATCH_GAMEPLAY_TRAPRUSH,
+	type MatchGameplay,
+} from "../../../contracts/src/match_gameplay.ts";
 import { isUniqueConstraint, sessionFromRow, settlementFromRow } from "./database_rows.ts";
 import {
 	DEFAULT_MATCH_SEATS,
@@ -18,9 +25,9 @@ import {
 } from "./database.ts";
 
 const SESSION_COLUMNS =
-	"match_id, upstream_url, created_at, room_code, seats, course, content_id, content_version, content_hash";
+	"match_id, upstream_url, created_at, room_code, seats, course, gameplay, blueprint, content_id, content_version, content_hash";
 const SESSION_COLUMNS_S =
-	"s.match_id, s.upstream_url, s.created_at, s.room_code, s.seats, s.course, s.content_id, s.content_version, s.content_hash";
+	"s.match_id, s.upstream_url, s.created_at, s.room_code, s.seats, s.course, s.gameplay, s.blueprint, s.content_id, s.content_version, s.content_hash";
 
 export class ControlPlaneSessionStore {
 	readonly db: DatabaseSync;
@@ -35,6 +42,8 @@ export class ControlPlaneSessionStore {
 		readonly now: Date;
 		readonly seats?: number | undefined;
 		readonly course?: OfficialTraprushCourseId | undefined;
+		readonly gameplay?: MatchGameplay | undefined;
+		readonly blueprint?: OfficialBastionBlueprintId | undefined;
 		readonly contentId?: string | undefined;
 		readonly contentVersion?: number | undefined;
 		readonly contentHash?: string | undefined;
@@ -46,10 +55,14 @@ export class ControlPlaneSessionStore {
 			input.contentId !== undefined &&
 			input.contentVersion !== undefined &&
 			input.contentHash !== undefined;
-		const storedCourse: OfficialTraprushCourseId | null = hasContent
-			? null
-			: (input.course ?? DEFAULT_OFFICIAL_TRAPRUSH_COURSE);
+		const hasBlueprint = input.blueprint !== undefined;
+		const gameplay: MatchGameplay = hasBlueprint
+			? MATCH_GAMEPLAY_BASTION
+			: (input.gameplay ?? DEFAULT_MATCH_GAMEPLAY);
+		const storedCourse: OfficialTraprushCourseId | null =
+			hasContent || hasBlueprint ? null : (input.course ?? DEFAULT_OFFICIAL_TRAPRUSH_COURSE);
 		const course = storedCourse ?? "";
+		const blueprint = hasBlueprint ? input.blueprint : null;
 		const contentId = hasContent ? input.contentId : null;
 		const contentVersion = hasContent ? input.contentVersion : null;
 		const contentHash = hasContent ? input.contentHash : null;
@@ -58,11 +71,22 @@ export class ControlPlaneSessionStore {
 			this.db
 				.prepare(
 					`INSERT INTO match_sessions (
-						match_id, upstream_url, created_at, room_code, seats, course,
+						match_id, upstream_url, created_at, room_code, seats, course, gameplay, blueprint,
 						content_id, content_version, content_hash
-					) VALUES (?, ?, ?, NULL, ?, ?, ?, ?, ?)`,
+					) VALUES (?, ?, ?, NULL, ?, ?, ?, ?, ?, ?, ?)`,
 				)
-				.run(matchId, input.upstreamUrl, createdAt, seats, course, contentId, contentVersion, contentHash);
+				.run(
+					matchId,
+					input.upstreamUrl,
+					createdAt,
+					seats,
+					course,
+					gameplay,
+					blueprint,
+					contentId,
+					contentVersion,
+					contentHash,
+				);
 		} catch (error) {
 			if (isUniqueConstraint(error)) {
 				throw new MatchSessionExistsError(matchId);
@@ -77,6 +101,8 @@ export class ControlPlaneSessionStore {
 			roomCode: undefined,
 			seats,
 			course: storedCourse,
+			gameplay,
+			blueprint: hasBlueprint ? input.blueprint : undefined,
 			contentId: hasContent ? input.contentId : undefined,
 			contentVersion: hasContent ? input.contentVersion : undefined,
 			contentHash: hasContent ? input.contentHash : undefined,
@@ -116,6 +142,7 @@ export class ControlPlaneSessionStore {
 		readonly padTotal: number;
 		readonly mvpSlot: number;
 		readonly rowsJson: string;
+		readonly teamsJson?: string | undefined;
 		readonly now: Date;
 	}): MatchSettlementRecord {
 		if (this.getMatchSession(input.matchId) === undefined) {
@@ -126,8 +153,8 @@ export class ControlPlaneSessionStore {
 			this.db
 				.prepare(
 					`INSERT INTO match_settlements
-					 (match_id, tick, state_hash, pad_total, mvp_slot, rows_json, created_at)
-					 VALUES (?, ?, ?, ?, ?, ?, ?)`,
+					 (match_id, tick, state_hash, pad_total, mvp_slot, rows_json, teams_json, created_at)
+					 VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
 				)
 				.run(
 					input.matchId,
@@ -136,6 +163,7 @@ export class ControlPlaneSessionStore {
 					input.padTotal,
 					input.mvpSlot,
 					input.rowsJson,
+					input.teamsJson ?? null,
 					createdAt,
 				);
 		} catch (error) {
@@ -151,6 +179,7 @@ export class ControlPlaneSessionStore {
 			padTotal: input.padTotal,
 			mvpSlot: input.mvpSlot,
 			rowsJson: input.rowsJson,
+			teamsJson: input.teamsJson,
 			createdAt,
 		};
 	}
@@ -158,7 +187,7 @@ export class ControlPlaneSessionStore {
 	getMatchSettlement(matchId: string): MatchSettlementRecord | undefined {
 		const row = this.db
 			.prepare(
-				`SELECT match_id, tick, state_hash, pad_total, mvp_slot, rows_json, created_at
+				`SELECT match_id, tick, state_hash, pad_total, mvp_slot, rows_json, teams_json, created_at
 				 FROM match_settlements WHERE match_id = ?`,
 			)
 			.get(matchId);
@@ -192,6 +221,7 @@ export class ControlPlaneSessionStore {
 				`SELECT ${SESSION_COLUMNS_S}
 				 FROM match_sessions s
 				 WHERE s.room_code IS NOT NULL
+				 AND s.gameplay = '${MATCH_GAMEPLAY_TRAPRUSH}'
 				 AND s.course = ?
 				 AND s.seats = ?
 				 AND (
@@ -215,6 +245,7 @@ export class ControlPlaneSessionStore {
 				`SELECT ${SESSION_COLUMNS_S}
 				 FROM match_sessions s
 				 WHERE s.room_code IS NOT NULL
+				 AND s.gameplay = '${MATCH_GAMEPLAY_TRAPRUSH}'
 				 AND s.content_id = ?
 				 AND s.content_version = ?
 				 AND s.seats = ?
@@ -226,6 +257,30 @@ export class ControlPlaneSessionStore {
 				 LIMIT 1`,
 			)
 			.get(contentId, version, seats);
+		return row === undefined ? undefined : sessionFromRow(row);
+	}
+
+	findOldestOpenBlueprintRoom(
+		blueprint: OfficialBastionBlueprintId,
+		seats: number = DEFAULT_MATCHMAKING_SEATS,
+	): MatchSessionRecord | undefined {
+		const row = this.db
+			.prepare(
+				`SELECT ${SESSION_COLUMNS_S}
+				 FROM match_sessions s
+				 WHERE s.room_code IS NOT NULL
+				 AND s.gameplay = '${MATCH_GAMEPLAY_BASTION}'
+				 AND s.blueprint = ?
+				 AND s.seats = ?
+				 AND s.content_id IS NULL
+				 AND (
+					SELECT COUNT(DISTINCT t.seat) FROM match_tickets t
+					WHERE t.match_id = s.match_id AND t.superseded_at IS NULL
+				 ) < s.seats
+				 ORDER BY s.created_at ASC
+				 LIMIT 1`,
+			)
+			.get(blueprint, seats);
 		return row === undefined ? undefined : sessionFromRow(row);
 	}
 

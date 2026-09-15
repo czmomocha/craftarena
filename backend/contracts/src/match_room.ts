@@ -20,10 +20,14 @@ export interface MatchmakingJoinResponse {
 	readonly issued: number;
 	/** 本张入场票占用的席位（0 起）。客户端用来做本席移动预测，不是 `issued`。 */
 	readonly seat: number;
-	/** 官方课 id。UGC 房为 `null`，此时带 `content` 与 `content_hash`。 */
+	/** 官方课 id。UGC 房与 BASTION 官方蓝图房为 `null`。 */
 	readonly course: OfficialTraprushCourseId | null;
 	readonly content?: MatchContentRef;
 	readonly content_hash?: string;
+	/** 缺省视为 TRAPRUSH。BASTION 官方房必带。 */
+	readonly gameplay?: "traprush" | "bastion";
+	/** 官方 BASTION 蓝图 id。与 `course` / `content` 互斥。 */
+	readonly blueprint?: string;
 }
 
 export type MatchQueueKind = "quick" | "create_room";
@@ -38,6 +42,8 @@ export interface MatchmakingQueueWaitingResponse {
 	readonly seats: number;
 	readonly content?: MatchContentRef;
 	readonly content_hash?: string;
+	readonly gameplay?: "traprush" | "bastion";
+	readonly blueprint?: string;
 }
 
 export interface MatchmakingQueueReadyResponse extends MatchmakingJoinResponse {

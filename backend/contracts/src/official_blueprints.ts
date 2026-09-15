@@ -5,8 +5,8 @@
  * `content: { id, version }`（见 `match_body.ts` / CD-42 §3.5）。Godot 对局
  * 进程仍用 `res://content/official/bastion/{id}.json` 读 AuthoringDocument。
  *
- * 匹配 HTTP 的玩法判别位是 E3，本文件不改 `readOfficialMatchBody` /
- * `readMatchBody`。把 `blueprint_01` 塞进 `course` 必须继续失败。
+ * 匹配 HTTP 走独立的 `blueprint` 字段，与 `course` / `content` 三者互斥。
+ * 把 `blueprint_01` 塞进 `course` 必须继续失败。
  */
 
 export const OFFICIAL_BASTION_BLUEPRINT_IDS = ["blueprint_01"] as const;

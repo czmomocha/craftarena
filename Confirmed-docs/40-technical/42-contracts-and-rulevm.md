@@ -22,7 +22,7 @@
 | 静态盒阔相 | 均匀格桶 = `SCALE`；单盒超 125 格或溢出走全量窄相。ID 顺序与全量扫描相同。胶囊仍线性 |
 | Rule VM | **第 1–5 章已交**：v1 信封 + 白名单解释器 + gas；`OnMatchStarted` / `OnEveryTicks` 图编成同一套字节码。§2.1 Query / Logic / Action 最小子集：`GetField` / `CountInZone`（按结果数加 gas）/ `Logic` / `Spawn` / `Despawn` / `ApplyEffect` / `EmitGameEvent`，经 `RuleVmHost`；超 gas 回滚 host 写入。其它事件仍编译拒绝。Preview 安全点 `try_replace_rule_graphs` 重编译生效；公开对局 `try_replace_rule_graphs` 禁止。不把规则图写入 AuthoringDocument / SimulationBundle。`run()` 不走 JSON |
 | 内容签名 | **M4b 第 1–5 章已交**：sidecar 信封，不改 SimulationBundle 字段。ContentHash = StateHasher 规范编码 `to_dictionary()` 的 SHA-256；签名 = HMAC-SHA256(`content_id` + LF + `version` + LF + hash)。控制面持钥 `POST /content/publish` 校验 HMAC 后原子切 `latest`；新房吃 `latest`，已开对局锁开局哈希。P0/P1 PatchHash = 规范编码 ops 的 SHA-256；HMAC 另覆盖 `base_version` + `seq`。发布自动进广场列表。Guest / 注册 / 登录 / 认领草稿已交。官方课不要求信封 |
-| 玩家代签 / 匹配课表 | **C3 / C4 已接线**：玩家 `POST /content/submit`；匹配可选 `content: { id, version }`。官方 BASTION `blueprint_01` 白名单已落（E2，`official_blueprints.ts` / `official_bastion_blueprints.gd`），**匹配 HTTP 仍不认**（E3）。字段只在 §3.5 |
+| 玩家代签 / 匹配课表 | **C3 / C4 已接线**：玩家 `POST /content/submit`；匹配可选 `content: { id, version }`。官方 BASTION `blueprint_01` 白名单已落（E2），**匹配 HTTP 已认**（E3：可选 `gameplay` + 独立 `blueprint`，与 `course` / `content` 三者互斥）。字段只在 §3.5 |
 
 ## 1. Component Schema v1
 
@@ -342,6 +342,22 @@ Undo / Redo 是会话内对成功命令派生的反向 payload（`place`↔`remo
 - 建房当下钉死 `version`，不跟 `latest`。按码加入仍禁止带课表 body（课锁在房间上）。
 - 响应：官方课仍只回 `course`；UGC 回 `course: null` + `content: { id, version }` + `content_hash`。
 - 不把 `course` 塞成 `id@version` 字符串。结算 HTTP 不改；Godot 结算 payload 已有 `content_hash`（M4b）。
+
+**匹配玩法判别与官方蓝图**（M6 E3 已接线）：
+
+- 请求增加可选 `gameplay`：`traprush` | `bastion`；省略 = TRAPRUSH。
+- 官方 BASTION 走独立 `blueprint` id（白名单目前只有 `blueprint_01`），与 `course` / `content` 三者互斥；同时出现 400。把 `blueprint_01` 塞进 `course` 仍失败。
+- `gameplay: "bastion"` 且不带 `blueprint` 时默认 `blueprint_01`。BASTION 锁定 2 席，其它 `seats` 400。
+- 响应：官方蓝图回 `course: null` + `gameplay: "bastion"` + `blueprint`。TRAPRUSH 响应不带这两个键。
+- 广场 `GET /content/plaza` 增加可选 `gameplay` 查询参数，缺省 TRAPRUSH；BASTION 条目不混进默认列表。
+- 控制面 `match_sessions` / `match_queue` / `content_plaza` 加玩法列；迁移 `0015_match_gameplay_and_teams` 用 `DEFAULT 'traprush'` 补旧行。
+
+**结算队伍结果**（M6 E3 已接线）：
+
+- `POST /match-sessions/:matchId/settlement` 增加可选 `teams` 数组（恰好 2 项：`teamId` / `place` / `coreHealth` / `leaked` / `finishTick`）。
+- TRAPRUSH 现有必填字段（`tick` / `stateHash` / `padTotal` / `mvpSlot` / `rows`）一律不动；省略 `teams` 的旧记录仍可读。
+- `place` 在 BASTION 读作队伍名次。平局两侧都可以是 1；`mvpSlot` 为 0 或 1。一期仍只有单局名次与 MVP。
+- 对局心跳是 snake_case；控制面 POST 是 camelCase。409 幂等仍成立。
 
 JSON Schema 落点：
 

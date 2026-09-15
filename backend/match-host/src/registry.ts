@@ -3,6 +3,7 @@ import {
 	isOfficialTraprushCourseId,
 	type OfficialTraprushCourseId,
 } from "../../contracts/src/official_courses.ts";
+import type { OfficialBastionBlueprintId } from "../../contracts/src/official_blueprints.ts";
 import type { MatchContentRef } from "../../contracts/src/match_body.ts";
 import { createLease, evaluateLease, renewLease, type Lease, type LeaseExpiryReason } from "./lease.ts";
 import { PortAllocator } from "./ports.ts";
@@ -33,6 +34,7 @@ export interface MatchRecord {
 	readonly upstreamUrl: string;
 	readonly seats: number;
 	readonly course: OfficialTraprushCourseId | null;
+	readonly blueprint?: OfficialBastionBlueprintId | undefined;
 	readonly content?: MatchContentRef | undefined;
 	readonly contentHash?: string | undefined;
 	readonly stopReason?: MatchStopReason | undefined;
@@ -129,6 +131,13 @@ export class MatchRegistry {
 		return this.#startPlan({ kind: "content", content, seats });
 	}
 
+	async startBlueprint(
+		blueprint: OfficialBastionBlueprintId,
+		seats: number = this.#options.seats,
+	): Promise<MatchRecord> {
+		return this.#startPlan({ kind: "blueprint", blueprint, seats });
+	}
+
 	#defaultCourse(): OfficialTraprushCourseId {
 		return isOfficialTraprushCourseId(this.#options.defaultCourse)
 			? this.#options.defaultCourse
@@ -138,6 +147,7 @@ export class MatchRegistry {
 	async #startPlan(
 		plan:
 			| { readonly kind: "official"; readonly course: OfficialTraprushCourseId; readonly seats: number }
+			| { readonly kind: "blueprint"; readonly blueprint: OfficialBastionBlueprintId; readonly seats: number }
 			| { readonly kind: "content"; readonly content: MatchContentRef; readonly seats: number },
 	): Promise<MatchRecord> {
 		if (this.occupiedCount() >= this.#options.maxConcurrentMatches) {
@@ -178,6 +188,7 @@ export class MatchRegistry {
 				upstreamUrl: started.upstreamUrl,
 				seats: started.seats,
 				course: started.course,
+				blueprint: started.blueprint,
 				content: started.content,
 				contentHash: started.contentHash,
 			};

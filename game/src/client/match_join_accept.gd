@@ -5,7 +5,10 @@ extends RefCounted
 ## pending HTTP and public fields; this type owns status dispatch.
 
 const MatchJoinCodecGd := preload("res://src/client/match_join_codec.gd")
+const MatchJoinSettlementGd := preload("res://src/client/match_join_settlement.gd")
 const OfficialTraprushCoursesGd := preload("res://src/shared/official_traprush_courses.gd")
+const OfficialBastionBlueprintsGd := preload("res://src/shared/official_bastion_blueprints.gd")
+const MatchGameplayGd := preload("res://src/shared/match_gameplay.gd")
 
 
 func apply(session: MatchJoinSession, status_code: int, body: Dictionary) -> bool:
@@ -77,7 +80,7 @@ func _accept_reissue(session: MatchJoinSession, body: Dictionary) -> bool:
 
 
 func _accept_settlement(session: MatchJoinSession, body: Dictionary) -> bool:
-	if not MatchJoinCodecGd.keys_only(body, MatchJoinCodecGd.SETTLEMENT_KEYS):
+	if not MatchJoinSettlementGd.is_body(body):
 		return true
 	var next_match: String = str(body.get("matchId", "")).strip_edges()
 	if next_match == "" or next_match != session.match_id:
@@ -103,7 +106,7 @@ func _accept_settlement(session: MatchJoinSession, body: Dictionary) -> bool:
 	if typeof(rows_raw) != TYPE_ARRAY:
 		return true
 	var rows: Array = rows_raw
-	var parsed: Dictionary = MatchJoinCodecGd.parse_settlement_rows(rows, mvp_value)
+	var parsed: Dictionary = MatchJoinSettlementGd.parse_rows(rows, mvp_value, body.get("teams", null))
 	if not parsed.get("ok", false):
 		return true
 	session.settlement_line = str(parsed.get("line", ""))
@@ -236,6 +239,8 @@ func _copy_waiting_fields(session: MatchJoinSession, body: Dictionary) -> bool:
 func _copy_identity(session: MatchJoinSession, body: Dictionary, require_hash: bool) -> bool:
 	var course_raw: Variant = body.get("course", null)
 	if typeof(course_raw) == TYPE_NIL:
+		if body.has("blueprint") or str(body.get("gameplay", "")) == MatchGameplayGd.BASTION:
+			return _copy_blueprint(session, body)
 		var content_raw: Variant = body.get("content", null)
 		if typeof(content_raw) != TYPE_DICTIONARY:
 			return false
@@ -258,16 +263,39 @@ func _copy_identity(session: MatchJoinSession, body: Dictionary, require_hash: b
 			if not MatchJoinCodecGd.is_content_hash(content_hash):
 				return false
 		session.course = ""
+		session.gameplay = MatchGameplayGd.TRAPRUSH
+		session.blueprint = ""
 		session.content_id = content_id
 		session.content_version = version
 		session.content_hash = content_hash
 		return true
-	if body.has("content") or body.has("content_hash"):
+	if body.has("content") or body.has("content_hash") or body.has("blueprint"):
+		return false
+	if body.has("gameplay") and str(body.get("gameplay", "")) != MatchGameplayGd.TRAPRUSH:
 		return false
 	var next_course: String = OfficialTraprushCoursesGd.normalize_id(str(course_raw))
 	if next_course == "":
 		return false
 	session.course = next_course
+	session.gameplay = MatchGameplayGd.TRAPRUSH
+	session.blueprint = ""
+	session.content_id = ""
+	session.content_version = 0
+	session.content_hash = ""
+	return true
+
+
+func _copy_blueprint(session: MatchJoinSession, body: Dictionary) -> bool:
+	if body.has("content") or body.has("content_hash"):
+		return false
+	if str(body.get("gameplay", MatchGameplayGd.BASTION)) != MatchGameplayGd.BASTION:
+		return false
+	var blueprint: String = OfficialBastionBlueprintsGd.normalize_id(str(body.get("blueprint", "")))
+	if blueprint == "":
+		return false
+	session.course = ""
+	session.gameplay = MatchGameplayGd.BASTION
+	session.blueprint = blueprint
 	session.content_id = ""
 	session.content_version = 0
 	session.content_hash = ""

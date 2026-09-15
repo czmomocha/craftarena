@@ -20,12 +20,16 @@ export interface RegisterMatchSessionRequest {
 	readonly upstreamUrl: string;
 	/** 本场席位。省略时控制面按 TRAPRUSH 上限 8 记，不是默认开局人数。 */
 	readonly seats?: number;
-	/** 官方赛道 id。省略且无 `content` 时 `course_01`。与 `content` 互斥。 */
+	/** 官方赛道 id。省略且无 `content` / `blueprint` 时 `course_01`。三者互斥。 */
 	readonly course?: string;
-	/** 已签名 UGC。与 `course` 互斥；建房钉死 version。 */
+	/** 已签名 UGC。与 `course` / `blueprint` 互斥；建房钉死 version。 */
 	readonly content?: { readonly id: string; readonly version: number };
 	/** UGC 开局锁定的 ContentHash。官方课省略。 */
 	readonly content_hash?: string;
+	/** 缺省 TRAPRUSH。BASTION 官方房为 `bastion`。 */
+	readonly gameplay?: "traprush" | "bastion";
+	/** 官方 BASTION 蓝图 id。与 `course` / `content` 互斥。 */
+	readonly blueprint?: string;
 }
 
 export interface RegisterMatchSessionResponse {
@@ -35,6 +39,8 @@ export interface RegisterMatchSessionResponse {
 	readonly course: string | null;
 	readonly content?: { readonly id: string; readonly version: number };
 	readonly content_hash?: string;
+	readonly gameplay?: "traprush" | "bastion";
+	readonly blueprint?: string;
 }
 
 export interface UnregisterMatchSessionResponse {
@@ -91,6 +97,8 @@ export const registerMatchSessionBodySchema = {
 		upstreamUrl: { type: "string", minLength: 1, maxLength: 512 },
 		seats: { type: "integer", minimum: 1, maximum: 8 },
 		course: { type: "string", minLength: 1, maxLength: 32 },
+		gameplay: { type: "string", enum: ["traprush", "bastion"] },
+		blueprint: { type: "string", minLength: 1, maxLength: 32 },
 		content: {
 			type: "object",
 			additionalProperties: false,

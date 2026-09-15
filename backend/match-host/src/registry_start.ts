@@ -6,6 +6,11 @@ import {
 	type OfficialTraprushCourseId,
 } from "../../contracts/src/official_courses.ts";
 import {
+	officialBastionBlueprintPath,
+	type OfficialBastionBlueprintId,
+} from "../../contracts/src/official_blueprints.ts";
+import { MATCH_GAMEPLAY_BASTION } from "../../contracts/src/match_gameplay.ts";
+import {
 	contentRefOf,
 	removeMatchEnvelopeFile,
 	writeMatchEnvelopeFile,
@@ -19,6 +24,7 @@ import type { PortAllocator } from "./ports.ts";
 
 export type MatchStartPlan =
 	| { readonly kind: "official"; readonly course: OfficialTraprushCourseId; readonly seats: number }
+	| { readonly kind: "blueprint"; readonly blueprint: OfficialBastionBlueprintId; readonly seats: number }
 	| { readonly kind: "content"; readonly content: MatchContentRef; readonly seats: number };
 
 export interface MatchLaunchContext {
@@ -44,6 +50,7 @@ export interface StartedMatch {
 	readonly upstreamUrl: string;
 	readonly seats: number;
 	readonly course: OfficialTraprushCourseId | null;
+	readonly blueprint?: OfficialBastionBlueprintId | undefined;
 	readonly content?: MatchContentRef | undefined;
 	readonly contentHash?: string | undefined;
 	readonly process: LaunchedProcess;
@@ -74,6 +81,9 @@ export async function launchRegisteredMatch(
 			upstreamUrl,
 			seats: plan.seats,
 			...(launch.course === undefined ? {} : { course: launch.course }),
+			...(launch.blueprint === undefined
+				? {}
+				: { gameplay: MATCH_GAMEPLAY_BASTION, blueprint: launch.blueprint }),
 			...(launch.content === undefined
 				? {}
 				: { content: launch.content, content_hash: launch.contentHash }),
@@ -100,6 +110,7 @@ export async function launchRegisteredMatch(
 		upstreamUrl,
 		seats: plan.seats,
 		course: plan.kind === "official" ? plan.course : null,
+		blueprint: plan.kind === "blueprint" ? plan.blueprint : undefined,
 		content,
 		contentHash,
 		process,
@@ -110,6 +121,7 @@ export async function launchRegisteredMatch(
 interface ResolvedLaunch {
 	readonly spec: MatchLaunchSpec;
 	readonly course?: string;
+	readonly blueprint?: OfficialBastionBlueprintId;
 	readonly content?: MatchContentRef;
 	readonly contentHash?: string;
 	readonly envelopePath?: string;
@@ -130,6 +142,18 @@ async function resolveLaunch(
 				players: plan.seats,
 			},
 			course: plan.course,
+		};
+	}
+	if (plan.kind === "blueprint") {
+		return {
+			spec: {
+				matchId,
+				port,
+				course: officialBastionBlueprintPath(plan.blueprint),
+				players: plan.seats,
+				gameplay: MATCH_GAMEPLAY_BASTION,
+			},
+			blueprint: plan.blueprint,
 		};
 	}
 	if (ctx.contentEnvelope === undefined) {

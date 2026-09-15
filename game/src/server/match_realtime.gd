@@ -200,6 +200,10 @@ func snapshot_frame() -> PackedByteArray:
 	)
 
 
+func snapshot_frame_for(_slot: int) -> PackedByteArray:
+	return snapshot_frame()
+
+
 func allows_settlement() -> bool:
 	return TraprushMatchSettlement.all_finished(session)
 

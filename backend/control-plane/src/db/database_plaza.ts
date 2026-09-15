@@ -5,6 +5,11 @@ import {
 	plazaTagsFromBundle,
 	type PlazaTab,
 } from "../../../contracts/src/content_plaza.ts";
+import {
+	DEFAULT_MATCH_GAMEPLAY,
+	MATCH_GAMEPLAY_BASTION,
+	type MatchGameplay,
+} from "../../../contracts/src/match_gameplay.ts";
 import { isUniqueConstraint } from "./database_rows.ts";
 import { ContentVersionMissingError } from "./database_content.ts";
 
@@ -46,13 +51,14 @@ export function upsertPlazaListing(
 	},
 ): void {
 	const tagsJson = JSON.stringify(plazaTagsFromBundle(input.bundle));
+	const gameplay = plazaGameplayFromBundle(input.bundle);
 	const existing = db.prepare("SELECT content_id FROM content_plaza WHERE content_id = ?").get(input.contentId);
 	if (existing === undefined) {
 		db.prepare(
 			`INSERT INTO content_plaza (
 				content_id, version, content_hash, display_name, tags_json,
-				play_count, rating_sum, rating_count, verified, listed_at
-			) VALUES (?, ?, ?, ?, ?, 0, 0, 0, 0, ?)`,
+				play_count, rating_sum, rating_count, verified, listed_at, gameplay
+			) VALUES (?, ?, ?, ?, ?, 0, 0, 0, 0, ?, ?)`,
 		).run(
 			input.contentId,
 			input.version,
@@ -60,13 +66,14 @@ export function upsertPlazaListing(
 			plazaDisplayName(input.contentId),
 			tagsJson,
 			input.listedAt,
+			gameplay,
 		);
 		return;
 	}
 	db.prepare(
-		`UPDATE content_plaza SET version = ?, content_hash = ?, tags_json = ?, listed_at = ?
+		`UPDATE content_plaza SET version = ?, content_hash = ?, tags_json = ?, listed_at = ?, gameplay = ?
 		WHERE content_id = ?`,
-	).run(input.version, input.contentHash, tagsJson, input.listedAt, input.contentId);
+	).run(input.version, input.contentHash, tagsJson, input.listedAt, gameplay, input.contentId);
 }
 
 export function syncPlazaLatest(
@@ -83,8 +90,14 @@ export function syncPlazaLatest(
 		return;
 	}
 	db.prepare(
-		`UPDATE content_plaza SET version = ?, content_hash = ?, tags_json = ? WHERE content_id = ?`,
-	).run(input.version, input.contentHash, JSON.stringify(plazaTagsFromBundle(input.bundle)), input.contentId);
+		`UPDATE content_plaza SET version = ?, content_hash = ?, tags_json = ?, gameplay = ? WHERE content_id = ?`,
+	).run(
+		input.version,
+		input.contentHash,
+		JSON.stringify(plazaTagsFromBundle(input.bundle)),
+		plazaGameplayFromBundle(input.bundle),
+		input.contentId,
+	);
 }
 
 export class ControlPlanePlazaStore {
@@ -99,10 +112,10 @@ export class ControlPlanePlazaStore {
 		return row === undefined ? undefined : listingFromRow(row);
 	}
 
-	list(tab: PlazaTab): readonly PlazaListingRecord[] {
+	list(tab: PlazaTab, gameplay: MatchGameplay = DEFAULT_MATCH_GAMEPLAY): readonly PlazaListingRecord[] {
 		const order = orderSql(tab);
-		const filter = tab === "verified" ? "WHERE verified = 1" : "";
-		const rows = this.db.prepare(`${PLAZA_SELECT} ${filter} ${order}`).all();
+		const filter = tab === "verified" ? "WHERE verified = 1 AND gameplay = ?" : "WHERE gameplay = ?";
+		const rows = this.db.prepare(`${PLAZA_SELECT} ${filter} ${order}`).all(gameplay);
 		return rows.map((row) => listingFromRow(row));
 	}
 
@@ -214,4 +227,8 @@ function listingFromRow(row: Record<string, unknown>): PlazaListingRecord {
 		verified: Number(row["verified"]) === 1,
 		listedAt: String(row["listed_at"]),
 	};
+}
+
+function plazaGameplayFromBundle(bundle: Record<string, unknown>): MatchGameplay {
+	return bundle["gameplay"] === MATCH_GAMEPLAY_BASTION ? MATCH_GAMEPLAY_BASTION : DEFAULT_MATCH_GAMEPLAY;
 }

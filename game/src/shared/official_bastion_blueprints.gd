@@ -5,8 +5,8 @@ extends RefCounted
 ## HTTP never accepts res:// paths or UGC documents.
 ## Match ids live here and in `backend/contracts/src/official_blueprints.ts`.
 ##
-## Seats and the match HTTP gameplay discriminant are E3. This file only
-## names the blueprint and the on-disk AuthoringDocument.
+## Seats are locked to 2. Match HTTP gameplay discriminant is `bastion`.
+## This file names the blueprint and the on-disk AuthoringDocument.
 
 const DEFAULT_ID: String = "blueprint_01"
 const BLUEPRINT_01: String = "blueprint_01"

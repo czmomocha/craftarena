@@ -3,6 +3,15 @@ import {
 	isOfficialTraprushCourseId,
 	type OfficialTraprushCourseId,
 } from "../../../contracts/src/official_courses.ts";
+import {
+	isOfficialBastionBlueprintId,
+	type OfficialBastionBlueprintId,
+} from "../../../contracts/src/official_blueprints.ts";
+import {
+	DEFAULT_MATCH_GAMEPLAY,
+	isMatchGameplay,
+	type MatchGameplay,
+} from "../../../contracts/src/match_gameplay.ts";
 import type {
 	MatchQueueRecord,
 	MatchQueueRowStatus,
@@ -28,6 +37,8 @@ export function queueFromRow(row: Record<string, unknown>): MatchQueueRecord {
 			ticketExpiresAt === null || ticketExpiresAt === undefined ? undefined : String(ticketExpiresAt),
 		error: error === null || error === undefined ? undefined : String(error),
 		course: courseFromRow(row["course"]),
+		gameplay: gameplayFromRow(row["gameplay"]),
+		blueprint: blueprintFromRow(row["blueprint"]),
 		seats: Number(row["seats"]),
 		contentId: optionalText(row["content_id"]),
 		contentVersion: optionalInt(row["content_version"]),
@@ -49,6 +60,7 @@ export function settlementFromRow(row: Record<string, unknown>): MatchSettlement
 		padTotal: Number(row["pad_total"]),
 		mvpSlot: Number(row["mvp_slot"]),
 		rowsJson: String(row["rows_json"]),
+		teamsJson: optionalText(row["teams_json"]),
 		createdAt: String(row["created_at"]),
 	};
 }
@@ -62,6 +74,8 @@ export function sessionFromRow(row: Record<string, unknown>): MatchSessionRecord
 		roomCode: roomCode === null || roomCode === undefined ? undefined : String(roomCode),
 		seats: Number(row["seats"]),
 		course: courseFromRow(row["course"]),
+		gameplay: gameplayFromRow(row["gameplay"]),
+		blueprint: blueprintFromRow(row["blueprint"]),
 		contentId: optionalText(row["content_id"]),
 		contentVersion: optionalInt(row["content_version"]),
 		contentHash: optionalText(row["content_hash"]),
@@ -80,6 +94,14 @@ export function courseFromRow(value: unknown): OfficialTraprushCourseId | null {
 
 export function officialCourseFromRow(value: unknown): OfficialTraprushCourseId {
 	return courseFromRow(value) ?? DEFAULT_OFFICIAL_TRAPRUSH_COURSE;
+}
+
+export function gameplayFromRow(value: unknown): MatchGameplay {
+	return isMatchGameplay(value) ? value : DEFAULT_MATCH_GAMEPLAY;
+}
+
+export function blueprintFromRow(value: unknown): OfficialBastionBlueprintId | undefined {
+	return isOfficialBastionBlueprintId(value) ? value : undefined;
 }
 
 function optionalText(value: unknown): string | undefined {

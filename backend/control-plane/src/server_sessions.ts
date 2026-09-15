@@ -2,16 +2,19 @@ import type { FastifyInstance } from "fastify";
 
 import {
 	RECONNECT_TICKET_ERRORS,
-	recordMatchSettlementBodySchema,
 	registerMatchSessionBodySchema,
 	verifyMatchTicketBodySchema,
 	type IssueMatchTicketResponse,
-	type MatchSettlementResponse,
-	type RecordMatchSettlementRequest,
 	type RegisterMatchSessionRequest,
 	type RegisterMatchSessionResponse,
 	type UnregisterMatchSessionResponse,
 	isOfficialTraprushCourseId,
+	isOfficialBastionBlueprintId,
+	isMatchGameplay,
+	MATCH_GAMEPLAY_BASTION,
+	MATCH_GAMEPLAY_TRAPRUSH,
+	BASTION_MATCH_SEATS,
+	DEFAULT_OFFICIAL_BASTION_BLUEPRINT,
 	readMatchContentRef,
 	type VerifyMatchTicketRequest,
 } from "../../contracts/src/index.ts";
@@ -19,12 +22,11 @@ import {
 	MatchSessionExistsError,
 	MatchSessionFullError,
 	MatchSessionNotFoundError,
-	MatchSettlementExistsError,
 	isValidSeatCount,
 } from "./db/database.ts";
-import { isValidSettlementSemantics, settlementRowsFromUnknown } from "./settlement.ts";
 import { isMatchId, parseUpstreamUrl } from "./tickets.ts";
 import { hasRequestBody, hasUnexpectedKeys } from "./server_matchmaking.ts";
+import { registerSettlementRoutes } from "./server_settlement.ts";
 import type { BuildServerOptions, MatchIdParams } from "./server.ts";
 
 export function registerSessionRoutes(
@@ -34,11 +36,12 @@ export function registerSessionRoutes(
 	ticketTtlMs: number,
 	runDrain: () => Promise<void>,
 ): void {
+	registerSettlementRoutes(app, options, now);
 	app.post<{ Body: RegisterMatchSessionRequest }>(
 		"/match-sessions",
 		{ schema: { body: registerMatchSessionBodySchema } },
 		async (request, reply) => {
-			if (hasUnexpectedKeys(request.body, ["upstreamUrl", "matchId", "seats", "course", "content", "content_hash"])) {
+			if (hasUnexpectedKeys(request.body, ["upstreamUrl", "matchId", "seats", "course", "content", "content_hash", "gameplay", "blueprint"])) {
 				reply.code(400);
 				return { error: "unexpected_request_body" };
 			}
@@ -64,7 +67,29 @@ export function registerSessionRoutes(
 			const requestedCourse = request.body.course;
 			const requestedContent = request.body.content;
 			const requestedHash = request.body.content_hash;
+			const requestedGameplay = request.body.gameplay;
+			const requestedBlueprint = request.body.blueprint;
+			if (requestedGameplay !== undefined && !isMatchGameplay(requestedGameplay)) {
+				reply.code(400);
+				return { error: "invalid_gameplay" };
+			}
+			const selectorCount =
+				(requestedCourse !== undefined ? 1 : 0) +
+				(requestedContent !== undefined ? 1 : 0) +
+				(requestedBlueprint !== undefined ? 1 : 0);
+			if (selectorCount > 1) {
+				reply.code(400);
+				return { error: "unexpected_request_body" };
+			}
 			if (requestedCourse !== undefined && requestedContent !== undefined) {
+				reply.code(400);
+				return { error: "unexpected_request_body" };
+			}
+			if (requestedGameplay === MATCH_GAMEPLAY_BASTION && (requestedCourse !== undefined || requestedContent !== undefined)) {
+				reply.code(400);
+				return { error: "unexpected_request_body" };
+			}
+			if (requestedGameplay === MATCH_GAMEPLAY_TRAPRUSH && requestedBlueprint !== undefined) {
 				reply.code(400);
 				return { error: "unexpected_request_body" };
 			}
@@ -97,6 +122,44 @@ export function registerSessionRoutes(
 						course: null,
 						content,
 						content_hash: requestedHash,
+					};
+					return body;
+				} catch (error) {
+					if (error instanceof MatchSessionExistsError) {
+						reply.code(409);
+						return { error: "match_already_exists" };
+					}
+					throw error;
+				}
+			}
+
+			if (requestedBlueprint !== undefined || requestedGameplay === MATCH_GAMEPLAY_BASTION) {
+				const blueprint = requestedBlueprint ?? DEFAULT_OFFICIAL_BASTION_BLUEPRINT;
+				if (!isOfficialBastionBlueprintId(blueprint)) {
+					reply.code(400);
+					return { error: "invalid_blueprint" };
+				}
+				if (requestedSeats !== undefined && requestedSeats !== BASTION_MATCH_SEATS) {
+					reply.code(400);
+					return { error: "invalid_seats" };
+				}
+				try {
+					const record = options.database.insertMatchSession({
+						matchId: requestedMatchId,
+						upstreamUrl,
+						now: now(),
+						seats: requestedSeats ?? BASTION_MATCH_SEATS,
+						gameplay: MATCH_GAMEPLAY_BASTION,
+						blueprint,
+					});
+					reply.code(201);
+					const body: RegisterMatchSessionResponse = {
+						matchId: record.matchId,
+						upstreamUrl: record.upstreamUrl,
+						seats: record.seats,
+						course: null,
+						gameplay: MATCH_GAMEPLAY_BASTION,
+						blueprint,
 					};
 					return body;
 				} catch (error) {
@@ -168,94 +231,6 @@ export function registerSessionRoutes(
 			}
 		},
 	);
-
-	app.post<{ Params: MatchIdParams; Body: RecordMatchSettlementRequest }>(
-		"/match-sessions/:matchId/settlement",
-		{ schema: { body: recordMatchSettlementBodySchema } },
-		async (request, reply) => {
-			if (
-				hasUnexpectedKeys(request.body, ["tick", "stateHash", "padTotal", "mvpSlot", "rows"])
-			) {
-				reply.code(400);
-				return { error: "unexpected_request_body" };
-			}
-			if (!isMatchId(request.params.matchId)) {
-				reply.code(400);
-				return { error: "invalid_match_id" };
-			}
-			if (!isValidSettlementSemantics(request.body)) {
-				reply.code(400);
-				return { error: "invalid_settlement" };
-			}
-
-			const rows = settlementRowsFromUnknown(request.body.rows);
-			try {
-				const record = options.database.insertMatchSettlement({
-					matchId: request.params.matchId,
-					tick: request.body.tick,
-					stateHash: request.body.stateHash,
-					padTotal: request.body.padTotal,
-					mvpSlot: request.body.mvpSlot,
-					rowsJson: JSON.stringify(rows),
-					now: now(),
-				});
-				reply.code(201);
-				const body: MatchSettlementResponse = {
-					matchId: record.matchId,
-					tick: record.tick,
-					stateHash: record.stateHash,
-					padTotal: record.padTotal,
-					mvpSlot: record.mvpSlot,
-					rows,
-					createdAt: record.createdAt,
-				};
-				return body;
-			} catch (error) {
-				if (error instanceof MatchSessionNotFoundError) {
-					reply.code(404);
-					return { error: "match_not_found" };
-				}
-				if (error instanceof MatchSettlementExistsError) {
-					reply.code(409);
-					return { error: "already_settled" };
-				}
-				throw error;
-			}
-		},
-	);
-
-	app.get<{ Params: MatchIdParams }>("/match-sessions/:matchId/settlement", async (request, reply) => {
-		if (!isMatchId(request.params.matchId)) {
-			reply.code(400);
-			return { error: "invalid_match_id" };
-		}
-		const record = options.database.getMatchSettlement(request.params.matchId);
-		if (record === undefined) {
-			reply.code(404);
-			return { error: "settlement_not_found" };
-		}
-		let rowsUnknown: unknown;
-		try {
-			rowsUnknown = JSON.parse(record.rowsJson);
-		} catch {
-			reply.code(500);
-			return { error: "settlement_corrupt" };
-		}
-		if (!Array.isArray(rowsUnknown)) {
-			reply.code(500);
-			return { error: "settlement_corrupt" };
-		}
-		const body: MatchSettlementResponse = {
-			matchId: record.matchId,
-			tick: record.tick,
-			stateHash: record.stateHash,
-			padTotal: record.padTotal,
-			mvpSlot: record.mvpSlot,
-			rows: rowsUnknown as MatchSettlementResponse["rows"],
-			createdAt: record.createdAt,
-		};
-		return body;
-	});
 
 	app.post<{ Params: MatchIdParams }>(
 		"/match-sessions/:matchId/tickets",

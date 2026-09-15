@@ -11,6 +11,7 @@ const E9_LINE_CAP: int = 400
 const JOIN_PATHS: PackedStringArray = [
 	"res://src/client/match_join_accept.gd",
 	"res://src/client/match_join_codec.gd",
+	"res://src/client/match_join_settlement.gd",
 	"res://src/client/match_join_session.gd",
 ]
 
