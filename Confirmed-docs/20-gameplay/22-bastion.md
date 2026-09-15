@@ -13,12 +13,12 @@
 
 | 项 | 当前口径 |
 |---|---|
-| 开工 | **进行中**。D 段前四章 **D1–D4 已交**（2026-09-15：L0 契约与蓝图编译 / 确定性寻路与封路守卫 / 阶段机与镜像波次与胜负 / 炮塔与经济）。**D5 起未开工**，章节拆分见 [M6 章节计划](../../docs/plans/m6-bastion-1v1.md)。其余六项待拍板项卡在各自那一章之前，见该计划 §5.2 |
-| 文档地位 | 本文件仍是玩法规则所有者。**实现落点不再为零**：`game/src/games/bastion/`（占位数值桩、封路守卫、对局会话与炮塔经济）与 `game/src/ugc/bastion_*`（原型白名单、蓝图 bundle、编译器、问题码），搜索在 `game/src/simulation/fixed_graph_search.gd`。**全部离线**——没有协议帧、没有匹配、没有 UI、没有官方蓝图（E1 / E2 / E3 / E4 都未开工），所以**现在还不能开一局给人看** |
-| 落地的判据（D1–D4） | 九个原型之外一律编译失败；蓝图里出现 `tower` 一律拒（建塔是玩法命令，不是内容）；两侧核心生命 / 建造槽 / 障碍槽 / 出兵点数量必须相等；任意时刻至少保留一条出兵点 → 核心的路径，封死即拒；两侧波次逐字节等价；四类伪造建造（非白名单原型 / 非本方槽位 / 余额不足 / 超 3 级）各有反例。数值仍是占位桩 |
+| 开工 | **进行中**。D 段五章 **D1–D5 已交**（2026-09-15：L0 契约与蓝图编译 / 确定性寻路与封路守卫 / 阶段机与镜像波次与胜负 / 炮塔与经济 / 互设障碍盲设揭示退点）。**E1 起未开工**，且被 [M6 章节计划](../../docs/plans/m6-bastion-1v1.md) §5.2 第 3、6 项挡住，AI 不得自选。其余待拍板项卡在各自那一章之前 |
+| 文档地位 | 本文件仍是玩法规则所有者。**实现落点不再为零**：`game/src/games/bastion/`（占位数值桩、封路守卫、对局会话与炮塔经济、`MatchSetupState`）与 `game/src/ugc/bastion_*`（原型白名单、蓝图 bundle、编译器、问题码），搜索在 `game/src/simulation/fixed_graph_search.gd`。**全部离线**——没有协议帧、没有匹配、没有 UI、没有官方蓝图（E1 / E2 / E3 / E4 都未开工），所以**现在还不能开一局给人看** |
+| 落地的判据（D1–D5） | 九个原型之外一律编译失败；蓝图里出现 `tower` 一律拒（建塔是玩法命令，不是内容）；两侧核心生命 / 建造槽 / 障碍槽 / 出兵点数量必须相等；任意时刻至少保留一条出兵点 → 核心的路径，封死即拒；两侧波次逐字节等价；四类伪造建造（非白名单原型 / 非本方槽位 / 余额不足 / 超 3 级）各有反例；互设障碍预算超支 / 非槽位 / 锁定后改动当场拒，封死路径在揭示时撤销并退点，布障磁带可回放。数值仍是占位桩 |
 | **M6 最小集**（2026-09-15 拍板） | 塔 = 箭塔（单体）+ 火炮塔（范围）+ 冰霜塔（减速）；兵 = 快速兵 + 重装兵 + 集群兵；障碍 = 路障 + 减速地块 + 分流门。**只锁「M6 用哪九个」**，不锁完整清单——[CD-63 §1.2](../60-plan/63-open-decisions.md#1-玩法与数值细节) 的正式清单与 §1.3 的具体数值仍延期。狙击 / 电弧 / 增幅塔、护盾 / 支援 / 首领兵、护盾柱 / 干扰塔座 / 视野雾区**不在 M6**。数值是占位桩，落 `game/src/games/bastion/play_stubs.gd` 一处。来源见 [CD-91 D.4](../90-reference/91-decision-log.md) `bastion_minimum_set_m6` |
 | **蓝图编译产物**（2026-09-15 拍板） | 独立新类型 `BastionBlueprintBundle`，自带 `schema_version` 与显式玩法判别键；`SimulationBundle` 一个字节不动。蓝图本身仍是一份 `AuthoringDocument`，**Component Schema v1 不改**。来源见 [CD-91 D.4](../90-reference/91-decision-log.md) `bastion_blueprint_bundle`；Schema 口径的所有者是 [CD-42](../40-technical/42-contracts-and-rulevm.md) |
-| 已就位的契约位 | Component Schema v1 的 `path_agent` / `build_slot` / `tower` / `team` / `health` / `spawner`（[CD-42 §1.2](../40-technical/42-contracts-and-rulevm.md#12-字段标识符v1)）；`player_intent_names.gd` 的五个 §7.3 意图名；`tower_target_priorities.gd` 的 §5.1 四种目标策略。**都只是名字与形状，没有任何裁决逻辑** |
+| 已就位的契约位 | Component Schema v1 的 `path_agent` / `build_slot` / `tower` / `team` / `health` / `spawner`（[CD-42 §1.2](../40-technical/42-contracts-and-rulevm.md#12-字段标识符v1)）；`player_intent_names.gd` 的五个 §7.3 意图名；`tower_target_priorities.gd` 的 §5.1 四种目标策略。**五个意图仍没有线上 id**（E1）。离线会话里建造、经济、布障、波次与胜负已经有裁决 |
 | 本文件的示例表 | §4.2 障碍、§5.1 炮塔、§5.2 单位三张表**仍不是锁定清单**（原文已写）。M6 从里面取的九个见上「M6 最小集」行；**超出那九个的仍属待决**，AI 不得从示例表自行补全 |
 | 官方人数 | 先 1v1，再 2v2；UGC 最多 8。2v2 与队伍公共槽、队长盲设属 **M7**，不在 M6 |
 

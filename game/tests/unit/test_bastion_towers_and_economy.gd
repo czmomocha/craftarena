@@ -51,6 +51,8 @@ const SPLIT_PATHS: PackedStringArray = [
 	"res://src/games/bastion/match_session_waves.gd",
 	"res://src/games/bastion/match_session_towers.gd",
 	"res://src/games/bastion/match_session_view.gd",
+	"res://src/games/bastion/match_setup_state.gd",
+	"res://src/games/bastion/match_session_setup.gd",
 ]
 
 

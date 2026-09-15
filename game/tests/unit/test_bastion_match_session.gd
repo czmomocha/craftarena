@@ -82,9 +82,7 @@ func test_obstacles_are_only_accepted_during_setup_and_before_the_lock() -> void
 	assert_true(session.begin_match())
 	var barricade: int = BastionPrototypeCatalog.OBSTACLE_BARRICADE
 	assert_true(session.try_place_obstacle(TEAM_A, A_MID, barricade))
-	# 封死唯一路径仍然被 D2 的守卫挡住，会话不额外放水。
-	assert_false(session.try_place_obstacle(TEAM_A, A_BRANCH_NEAR, barricade))
-	# 对手防区的槽不归本队。
+	# 对手防区的槽不归本队。封路提案可以进 pending，揭示时才退点——那是 D5。
 	assert_false(session.try_place_obstacle(TEAM_A, B_FORK, barricade))
 	assert_true(session.lock_setup(TEAM_A))
 	assert_false(

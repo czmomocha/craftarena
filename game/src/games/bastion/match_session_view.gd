@@ -5,8 +5,12 @@ extends RefCounted
 ## `BastionMatchSession` 低于 E9 400 行；公开 API 仍在会话门面。
 ##
 ## 哈希覆盖的范围就是这一号「什么算权威状态」的定义：tick、阶段、波次序号、
-## 胜负、每队的核心血量 / 金币 / 漏怪数 / 击杀 / 完成击杀 tick / 本波已发赏金、
-## 每座塔的槽位与等级与冷却与目标策略、每个已生效障碍、每只存活单位的位姿。
+## 胜负、互设障碍的 `MatchSetupState`（揭示标志 / 点数 / 双方放置）、每队的核心
+## 血量 / 金币 / 漏怪数 / 击杀 / 完成击杀 tick / 本波已发赏金、每座塔的槽位与
+## 等级与冷却与目标策略、每只存活单位的位姿。
+##
+## 障碍不从 `team["obstacles"]` 再喂一遍：那是揭示后抄给 `freeze_lanes` 的活图
+## 副本，权威在 `BastionMatchSetupState` 里。
 ##
 ## 用 `StateHasher` 而不是 `Variant.hash()`：后者不保证版本间稳定，也不能进回放。
 
@@ -53,6 +57,7 @@ static func hash_state(session: BastionMatchSession) -> String:
 	hasher.write_s64(session.phase)
 	hasher.write_s64(session.wave_index())
 	hasher.write_s64(session.result)
+	session.feed_setup_hasher(hasher)
 	for team_id: int in BastionBlueprintBundle.TEAMS:
 		var team: Dictionary = session._team(team_id)
 		hasher.write_s64(team_id)
@@ -62,7 +67,6 @@ static func hash_state(session: BastionMatchSession) -> String:
 			var scalar: int = team[key]
 			hasher.write_s64(scalar)
 		_feed_towers(hasher, team)
-		_feed_obstacles(hasher, team)
 		_feed_units(hasher, session, team_id)
 	return hasher.digest_hex()
 
@@ -77,17 +81,6 @@ static func _feed_towers(hasher: StateHasher, team: Dictionary) -> void:
 			hasher.write_s64(field)
 		var priority: String = tower["target_priority"]
 		hasher.write_string(priority)
-
-
-static func _feed_obstacles(hasher: StateHasher, team: Dictionary) -> void:
-	var obstacles: Array = team["obstacles"]
-	hasher.write_s64(obstacles.size())
-	for item: Variant in obstacles:
-		var placement: Dictionary = item
-		var node_id: int = placement["node_id"]
-		var prototype_id: int = placement["prototype_id"]
-		hasher.write_s64(node_id)
-		hasher.write_s64(prototype_id)
 
 
 static func _feed_units(

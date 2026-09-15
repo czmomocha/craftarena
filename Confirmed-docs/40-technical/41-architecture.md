@@ -121,7 +121,7 @@ repo/
 │  │  ├─ creator/                # shared shell/edit_commands/preview；Preview 门面 `authoring_preview.gd` + bootstrap/intents/scan/view；Preview 映射门面 `authoring_preview_map.gd` + convert/occupancy/gizmos/overlay/player；Preview 窗口门面 `authoring_preview_shell.gd` + chrome/sampler/hud/play/view；编辑门面 `authoring_editor_shell.gd` + chrome/place/follow
 │  │  └─ games/
 │  │     ├─ traprush/            # 对局门面 `match_session.gd` + bootstrap/intents/scan/view/patch；灰盒门面 `graybox_course.gd` + layout/assemble/play；探针门面 `course_completion_probe.gd` + heuristic/search；玩法音效路由 `traprush_audio_router.gd` + observe
-│  │     └─ bastion/
+│  │     └─ bastion/             # 对局门面 `match_session.gd` + waves/towers/view/setup；`match_setup_state.gd`（CD-22 §7.2）；占位数值 `play_stubs.gd`；封路守卫 `path_guard.gd`
 │  ├─ content/
 │  │  ├─ official/
 │  │  ├─ locale/                 # 本地化 CSV（`craft_arena.*` 键）；解析见 `shared/ui_copy.gd`

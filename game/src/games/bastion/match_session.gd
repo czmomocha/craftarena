@@ -19,15 +19,17 @@ extends RefCounted
 ## | 镜像波次 | 准备结束 | 任一核心归零 / 全部波次打完 / `time_limit_ticks` 到 |
 ## | 结算 | 上一条任一 | 终态 |
 ##
-## 互设障碍这一阶段目前只有**放置与守卫**两件事：点数预算、盲设、揭示、重验退点
-## 是 D5，隐藏布障的协议裁剪是 E1。不得据此说「盲设已经做了」。
+## 互设障碍：提交只验槽位 / 预算 / 锁定（pending 不是活图）；双方都锁定或
+## `setup_ticks` 到了之后统一揭示，揭示时重跑预算与 D2 可达性，非法放置 LIFO
+## 撤销并退点。隐藏布障的协议裁剪是 E1，本章的「盲」只在会话视图上成立。
 ##
 ## 一拍之内的顺序是固定的，改了它就改了裁决结果：**生成 → 开火 → 行进 → 判胜负**。
 ## 开火在行进之前，所以刚生成的兵这一拍就可能挨打；行进在开火之后，所以这一拍
 ## 被打死的兵不会再往前走一步。
 
 const GuardGd := preload("res://src/games/bastion/path_guard.gd")
-const StubsGd := preload("res://src/games/bastion/play_stubs.gd")
+const SetupGd := preload("res://src/games/bastion/match_session_setup.gd")
+const SetupStateGd := preload("res://src/games/bastion/match_setup_state.gd")
 const TowersGd := preload("res://src/games/bastion/match_session_towers.gd")
 const ViewGd := preload("res://src/games/bastion/match_session_view.gd")
 const WavesGd := preload("res://src/games/bastion/match_session_waves.gd")
@@ -56,6 +58,7 @@ var _income_wave: int = 0
 var _teams: Dictionary[int, Dictionary] = {}
 var _positions: Dictionary[int, Dictionary] = {}
 var _next_unit_serial: int = 1
+var _setup: SetupStateGd = null
 
 
 static func create(p_bundle: BastionBlueprintBundle, p_seed: int) -> BastionMatchSession:
@@ -87,6 +90,9 @@ static func create(p_bundle: BastionBlueprintBundle, p_seed: int) -> BastionMatc
 			"towers": [],
 			"path": PackedInt32Array(),
 		}
+	session._setup = SetupStateGd.create(p_bundle)
+	if session._setup == null:
+		return null
 	return session
 
 
@@ -100,23 +106,9 @@ func begin_match() -> bool:
 	return true
 
 
-## 互设障碍阶段放一个障碍。本章只过 `BastionPathGuard`：点数预算、盲设与揭示
-## 退点是 D5，不在这里假装已经有了。
+## 互设障碍阶段放一个障碍。提交只验槽位 / 预算 / 锁定；封路在揭示时退点。
 func try_place_obstacle(team_id: int, node_id: int, prototype_id: int) -> bool:
-	if phase != PHASE_SETUP:
-		return false
-	var team: Dictionary = _team(team_id)
-	if team.is_empty():
-		return false
-	var locked: bool = team["locked"]
-	if locked:
-		return false
-	var existing: Array = team["obstacles"]
-	var candidate: Dictionary = {"node_id": node_id, "prototype_id": prototype_id}
-	if not GuardGd.allows_obstacle(bundle, team_id, existing, candidate):
-		return false
-	existing.append(candidate)
-	return true
+	return SetupGd.try_place(self, team_id, node_id, prototype_id)
 
 
 ## 四个建造意图。全部先验后改，任何一条不满足就整笔不发生（宪法第二条：
@@ -160,16 +152,7 @@ func tower_at(team_id: int, slot_id: int) -> Dictionary:
 
 
 func lock_setup(team_id: int) -> bool:
-	if phase != PHASE_SETUP:
-		return false
-	var team: Dictionary = _team(team_id)
-	if team.is_empty():
-		return false
-	var locked: bool = team["locked"]
-	if locked:
-		return false
-	team["locked"] = true
-	return true
+	return SetupGd.try_lock(self, team_id)
 
 
 ## 推进一个权威 tick。阶段切换、生成、行进、核心伤害、胜负都在这里发生。
@@ -251,16 +234,63 @@ func unit_states(team_id: int) -> Array[Dictionary]:
 func hash_state() -> String:
 	return ViewGd.hash_state(self)
 
+
+func feed_setup_hasher(hasher: StateHasher) -> void:
+	_setup.feed_hasher(hasher)
+
+
+func setup_points_left(team_id: int) -> int:
+	return _setup.points_left(team_id)
+
+
+func setup_points_spent(team_id: int) -> int:
+	return _setup.points_spent(team_id)
+
+
+func setup_points_refunded(team_id: int) -> int:
+	return _setup.points_refunded(team_id)
+
+
+func setup_revealed() -> bool:
+	return _setup.revealed
+
+
+func team_setup_locked(team_id: int) -> bool:
+	return _setup.is_locked(team_id)
+
+
+func visible_obstacles(viewer_team_id: int) -> Array[Dictionary]:
+	return _setup.visible_placements(viewer_team_id)
+
+
+func setup_authority_obstacles(team_id: int) -> Array[Dictionary]:
+	return _setup.authority_placements(team_id)
+
+
+func setup_commands() -> Array[Dictionary]:
+	return _setup.command_log()
+
+
+func setup_command_count() -> int:
+	return _setup.command_count()
+
+
+func setup_hash_tape() -> String:
+	return _setup.hash_tape()
+
+
+func setup_battlefield_hash() -> String:
+	return _setup.battlefield_hash()
+
+
+static func replay_setup(
+	p_bundle: BastionBlueprintBundle, p_seed: int, commands: Array
+) -> BastionMatchSession:
+	return SetupGd.replay(p_bundle, p_seed, commands)
+
+
 func _tick_setup() -> void:
-	var both_locked: bool = true
-	for team_id: int in BastionBlueprintBundle.TEAMS:
-		var team: Dictionary = _team(team_id)
-		var locked: bool = team["locked"]
-		if not locked:
-			both_locked = false
-	if both_locked or _phase_tick >= bundle.economy_value("setup_ticks"):
-		WavesGd.freeze_lanes(self)
-		_enter(PHASE_PREP)
+	SetupGd.on_tick(self)
 
 
 func _tick_prep() -> void:

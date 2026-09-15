@@ -3,12 +3,16 @@ extends RefCounted
 
 ## 「任意时刻至少保留一条从出兵点到核心的合法路径」（CD-22 §4.3）的实现。
 ##
-## 两个用法，同一份判据：
+## 三处用法，同一份判据：
 ##
 ## - **发布前**：`problems(bundle)` 在空布障的初始拓扑上跑一遍，蓝图本身就封死
 ##   的路不许发布，问题码形状照 `AuthoringReachabilityCodes`；
-## - **运行时**：`allows_obstacle()` 在接受一次布障之前，先把这次放置**算进去**
-##   再重算可达性，不可达就拒绝该次操作而不是事后回滚。
+## - **运行时提交**：`slot_allows_placement()` 验槽位 / 白名单 / 占用。互设障碍
+##   阶段的提案还没上图（pending 不是活图），所以提交时不在这里判封路；
+## - **运行时揭示**：`lanes_are_open()` 在 `MatchSetupState.reveal()` 里对整份
+##   提案重跑，非法放置 LIFO 撤销并退点（CD-22 §4.1 第 6、7 步）。
+## - **`allows_obstacle()`** 仍是「把它算进去之后还走得通」的增量判据，D2 测试
+##   与任何需要当场问一句的调用方继续用它。
 ##
 ## 障碍语义全部来自 `BastionPlayStubs.OBSTACLES`（占位桩，CD-63 §1.2 / §1.3 仍
 ## 延期），边图与节点来自 `BastionBlueprintBundle`，搜索本体是与玩法无关的
@@ -169,7 +173,17 @@ static func lane_graph(
 	return {"nodes": nodes, "edges": edges, "blocked": blocked}
 
 
-## 单次放置的合法性：必须落在本队的障碍槽上、原型在该槽白名单里、槽未被占。
+## 单次放置的槽位合法性：必须落在本队的障碍槽上、原型在该槽白名单里、槽未被占。
+## 不含封路——封路是揭示时对整份提案重跑的事。
+static func slot_allows_placement(
+	bundle: BastionBlueprintBundle,
+	team_id: int,
+	existing: Array,
+	candidate: Dictionary
+) -> bool:
+	return _placement_is_legal(bundle, team_id, existing, candidate)
+
+
 static func _placement_is_legal(
 	bundle: BastionBlueprintBundle,
 	team_id: int,

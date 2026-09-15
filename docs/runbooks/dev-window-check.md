@@ -54,11 +54,11 @@ Worktree 端口偏移见 README「并行工作区」；本文件不复述端口�
 
 ---
 
-## 本刀：M6 D1–D4（BASTION 离线玩法底座）
+## 本刀：M6 D5（互设障碍阶段，离线）
 
-**窗口验收：无。** 不是省事，是这四章的性质——它们全部在 `game/src/ugc/`、`game/src/simulation/` 与 `game/src/games/bastion/` 里，**没有接任何场景、没有任何入口按钮、没有一行表现代码**。BASTION 第一次有画面是 **E4 客户端对局壳**；在那之前打开窗口看到的仍然是 TRAPRUSH 大厅，与本刀无关。
+**窗口验收：无。** 不是省事，是这一章的性质——`MatchSetupState` 住在 `game/src/games/bastion/` 里，**没有接任何场景、没有任何入口按钮、没有一行表现代码**。BASTION 第一次有画面是 **E4 客户端对局壳**；在那之前打开窗口看到的仍然是 TRAPRUSH 大厅，与本刀无关。本章的「盲」只在离线会话视图上成立，**不得**据此说协议层已经藏住了对方布局（那是 E1，且 CD-63 §1.6 未拍）。
 
-人类要确认这四章成立，走命令行，不走窗口：
+人类要确认本章成立，走命令行，不走窗口：
 
 ```bash
 npm run typecheck
@@ -67,7 +67,7 @@ npm run redline-scan
 npm run test:gut:full
 ```
 
-预期：四条全绿。GUT 全量里本刀新增四份脚本共 75 项：`test_bastion_blueprint_contract.gd`（29）、`test_bastion_path_guard.gd`（16）、`test_bastion_match_session.gd`（14）、`test_bastion_towers_and_economy.gd`（16）。
+预期：四条全绿。本刀新增 `game/tests/unit/test_bastion_match_setup.gd`：预算超支拒绝、非槽位拒绝、锁定后改动拒绝、盲设视图、封死路径在揭示时撤销并退点、布障磁带可回放。
 
 想亲眼看一眼底座在动，可以只跑这一组：
 
@@ -78,20 +78,35 @@ npm run test:gut:full
 ### 本刀不测
 
 - 任何窗口行为（本刀没有）；
-- 协议帧、匹配、结算写库（E1 / E3）；
-- 官方蓝图（E2）、客户端对局壳（E4）、S1 主大厅壳（F1）；
-- 互设障碍的点数预算 / 盲设 / 揭示 / 退点（D5）；
-- TRAPRUSH 的任何行为——本刀一个字没碰它，`SimulationBundle` 的 wire 有金标摘要钉着逐字节不变。
+- 隐藏布障的协议层裁剪（E1 / CD-63 §1.6 未拍）；
+- 队长与队内投票（M7）；
+- 官方蓝图（E2）、对局进程（E3）、客户端对局壳（E4）、S1 主大厅壳（F1）；
+- TRAPRUSH 的任何行为——本刀一个字没碰它。
 
 ### 诚实边界
 
 - **D 段交完不等于 M6 能开一局给人看。** 九个原型的数值全部是 `game/src/games/bastion/play_stubs.gd` 的占位桩（[CD-63 §1.2 / §1.3](../../Confirmed-docs/60-plan/63-open-decisions.md) 仍延期），不是产品表；
 - 没有真人走查过任何 BASTION 画面，因为还没有画面；
+- 下一刀 E1 被章节计划 §5.2 第 3、6 项挡住，AI 不得自选开工；
 - M5 带走的两处遗留（乱序 / 重复包未严格注入、TRAPRUSH 可玩性签署只对旧那一版成立）不因本刀消失。
 
 ---
 
-## 上一刀（已合入）：测试期 VPS Web 分发（M-Export 剩余）
+## 上一刀（已合入）：M6 D1–D4（BASTION 离线玩法底座）
+
+**窗口验收：无。** 不是省事，是这四章的性质——它们全部在 `game/src/ugc/`、`game/src/simulation/` 与 `game/src/games/bastion/` 里，**没有接任何场景、没有任何入口按钮、没有一行表现代码**。BASTION 第一次有画面是 **E4 客户端对局壳**。
+
+人类确认这四章成立走命令行：`npm run typecheck` / `npm test` / `npm run redline-scan` / `npm run test:gut:full`。GUT 里当时新增四份脚本：`test_bastion_blueprint_contract.gd`、`test_bastion_path_guard.gd`、`test_bastion_match_session.gd`、`test_bastion_towers_and_economy.gd`。
+
+### 诚实边界（当时写下的，仍然成立）
+
+- **D 段交完不等于 M6 能开一局给人看**；
+- 没有真人走查过任何 BASTION 画面，因为还没有画面；
+- M5 带走的两处遗留不因那四章消失。
+
+---
+
+## 更早（已合入）：测试期 VPS Web 分发（M-Export 剩余）
 
 **需要三后端**（联机路径）。Solo 可先不启后端。VPS 上的 Nginx 是本刀窗口验收对象；开发机用静态服务验证「打开 `/` 就会钉页主机」。
 
