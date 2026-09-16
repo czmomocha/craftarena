@@ -9,6 +9,7 @@ const MatchJoinSessionGd := preload("res://src/client/match_join_session.gd")
 const MatchLobbyHudGd := preload("res://src/client/match_lobby_hud.gd")
 const MatchPlaySessionGd := preload("res://src/client/match_play_session.gd")
 const OfficialTraprushCoursesGd := preload("res://src/shared/official_traprush_courses.gd")
+const OfficialBastionBlueprintsGd := preload("res://src/shared/official_bastion_blueprints.gd")
 const ClientAudioGd := preload("res://src/client/client_audio.gd")
 const AudioSettingsEntryGd := preload("res://src/client/audio_settings_entry.gd")
 const MatchLobbyDirectorJoinGd := preload("res://src/client/match_lobby_director_join.gd")
@@ -43,11 +44,11 @@ func try_apply_server_host(raw_host: String) -> bool:
 
 
 func try_quick() -> bool:
-	return _matchmake(func() -> bool: return host.join.try_quick(host.selected_course_id(), host.selected_seats()))
+	return MatchLobbyDirectorJoinGd.try_matchmake(host, false)
 
 
 func try_create_room() -> bool:
-	return _matchmake(func() -> bool: return host.join.try_create_room(host.selected_course_id(), host.selected_seats()))
+	return MatchLobbyDirectorJoinGd.try_matchmake(host, true)
 
 
 func try_join_room(raw_code: String) -> bool:
@@ -81,7 +82,7 @@ func try_solo() -> bool:
 		host.refresh_status()
 		return false
 	var id: String = host.selected_course_id()
-	if id == "":
+	if id == "" or OfficialBastionBlueprintsGd.is_id(id):
 		host.offline.last_error = "unknown_course"
 		host.refresh_status()
 		return false
@@ -174,6 +175,8 @@ func _in_live_match() -> bool:
 
 
 func _own_finished() -> bool:
+	if host.play != null and host.play.is_bastion() and host.play.bastion != null:
+		return host.play.bastion.result != 0 or host.play.bastion.phase == BastionMatchSession.PHASE_SETTLED
 	var follow: MatchSnapshotFollow = host.active_follow()
 	if follow == null or not follow.has_snapshot:
 		return false
@@ -266,6 +269,7 @@ func try_leave_play() -> bool:
 	host.last_sent_command = PackedByteArray()
 	host.stage.reset_interp()
 	host.stage.clear_play_overlay()
+	MatchLobbyStageBastion.show_traprush(host)
 	host.refresh_status()
 	return true
 
@@ -338,11 +342,17 @@ func try_fetch_settlement() -> bool:
 		return false
 	if host.play.state != MatchPlaySessionGd.STATE_IN_MATCH or host.join.has_settlement:
 		return false
-	var follow: MatchSnapshotFollow = host.active_follow()
-	if follow == null or not follow.has_snapshot:
-		return false
-	if not MatchLobbyHudGd.all_players_finished(follow.players):
-		return false
+	if host.play.is_bastion():
+		if host.play.bastion == null or not host.play.bastion.has_snapshot:
+			return false
+		if host.play.bastion.phase != BastionMatchSession.PHASE_SETTLED and host.play.bastion.result == 0:
+			return false
+	else:
+		var follow: MatchSnapshotFollow = host.active_follow()
+		if follow == null or not follow.has_snapshot:
+			return false
+		if not MatchLobbyHudGd.all_players_finished(follow.players):
+			return false
 	if not host.join.try_get_settlement():
 		return false
 	host.dispatch_pending()
@@ -361,28 +371,6 @@ func after_join_http() -> void:
 func _join_action(action: Callable) -> bool:
 	host.chrome.release_focus()
 	if host.join == null or host.offline_playing():
-		return false
-	if not action.call():
-		return false
-	host.dispatch_pending()
-	host.refresh_status()
-	return true
-
-
-func _matchmake(action: Callable) -> bool:
-	host.chrome.release_focus()
-	if host.join == null or host.offline_playing():
-		return false
-	if host.selected_seats() == 0:
-		return false
-	var id: String = host.selected_course_id()
-	if id == "":
-		host.join.fail_reason("unknown_course")
-		host.refresh_status()
-		return false
-	if not OfficialTraprushCoursesGd.is_id(id):
-		host.join.fail_reason("http_official_only")
-		host.refresh_status()
 		return false
 	if not action.call():
 		return false

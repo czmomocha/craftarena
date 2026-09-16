@@ -48,6 +48,8 @@ var server_edit: LineEdit = null
 var play_hud: OverlayGd = OverlayGd.new()
 var _on_camera_zoom: Callable = Callable()
 var _on_camera_pan: Callable = Callable()
+var _on_pick: Callable = Callable()
+var _on_play_key: Callable = Callable()
 
 
 func attach(parent: Node, handlers: Dictionary) -> Window:
@@ -55,6 +57,8 @@ func attach(parent: Node, handlers: Dictionary) -> Window:
 		return window
 	_on_camera_zoom = _handler(handlers, "camera_zoom")
 	_on_camera_pan = _handler(handlers, "camera_pan")
+	_on_pick = _handler(handlers, "pick")
+	_on_play_key = _handler(handlers, "play_key")
 	if not Engine.is_editor_hint():
 		var host_viewport: Viewport = parent.get_viewport()
 		if host_viewport != null:
@@ -281,6 +285,11 @@ func settlement_visible() -> bool:
 func handle_window_input(event: InputEvent) -> void:
 	if window == null:
 		return
+	var key: InputEventKey = event as InputEventKey
+	if key != null:
+		if key.pressed and not key.echo and _on_play_key.is_valid():
+			_on_play_key.call(key.keycode)
+		return
 	var mouse: InputEventMouseButton = event as InputEventMouseButton
 	if mouse != null:
 		_handle_mouse_button(mouse)
@@ -307,6 +316,8 @@ func _handle_mouse_button(mouse: InputEventMouseButton) -> void:
 	if click_hits_line_edit(mouse.position):
 		return
 	release_focus()
+	if mouse.button_index == MOUSE_BUTTON_LEFT and _on_pick.is_valid():
+		_on_pick.call(mouse.position)
 
 
 func _handle_mouse_motion(motion: InputEventMouseMotion) -> void:

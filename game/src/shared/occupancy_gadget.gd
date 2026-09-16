@@ -24,7 +24,22 @@ const KIND_RUBBLE: String = "rubble"
 const KIND_OBSTACLE_CORE: String = "obstacle_core"
 const KIND_PENDULUM: String = "pendulum"
 const KIND_ICE: String = "ice"
+const KIND_BASTION_CORE: String = "bastion_core"
+const KIND_BASTION_CORE_B: String = "bastion_core_b"
+const KIND_BASTION_BUILD_SLOT: String = "bastion_build_slot"
+const KIND_BASTION_OBSTACLE_SLOT: String = "bastion_obstacle_slot"
+const KIND_BASTION_TOWER_ARROW: String = "bastion_tower_arrow"
+const KIND_BASTION_TOWER_CANNON: String = "bastion_tower_cannon"
+const KIND_BASTION_TOWER_FROST: String = "bastion_tower_frost"
+const KIND_BASTION_UNIT_SWIFT: String = "bastion_unit_swift"
+const KIND_BASTION_UNIT_HEAVY: String = "bastion_unit_heavy"
+const KIND_BASTION_UNIT_SWARM: String = "bastion_unit_swarm"
+const KIND_BASTION_OBSTACLE_BARRICADE: String = "bastion_obstacle_barricade"
+const KIND_BASTION_OBSTACLE_SLOW: String = "bastion_obstacle_slow"
+const KIND_BASTION_OBSTACLE_DIVERTER: String = "bastion_obstacle_diverter"
+const KIND_BASTION_PATH: String = "bastion_path"
 const TrapsGd := preload("res://src/shared/occupancy_gadget_traps.gd")
+const BastionGd := preload("res://src/shared/occupancy_gadget_bastion.gd")
 
 
 static func attach(parent: Node3D, kind: String, yaw_bam: int) -> bool:
@@ -62,8 +77,9 @@ static func attach(parent: Node3D, kind: String, yaw_bam: int) -> bool:
 		KIND_ICE:
 			TrapsGd.fill_ice(gadget)
 		_:
-			gadget.free()
-			return false
+			if not BastionGd.fill(gadget, kind):
+				gadget.free()
+				return false
 	gadget.rotation.y = yaw_radians(yaw_bam)
 	gadget.set_meta("kind", kind)
 	parent.add_child(gadget)

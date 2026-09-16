@@ -112,16 +112,16 @@ repo/
 │  │  ├─ gut/
 │  │  └─ authoring_editor/       # 内部开发 EditorPlugin；可自动启用本机 godot_ai，插件本身不入库
 │  ├─ src/
-│  │  ├─ shared/                 # ids/schema/commands/events/protocol；D4 数值唯一落点 `placeholder_spec.gd`；BASTION 帧 `protocol/bastion_frame_codec.gd`（E1，v1 type 5/6）
+│  │  ├─ shared/                 # ids/schema/commands/events/protocol；D4 数值唯一落点 `placeholder_spec.gd`；BASTION 帧 `protocol/bastion_frame_codec.gd`（E1，v1 type 5/6）；占位剪影 `occupancy_gadget.gd` + traps/bastion（E4 加 BASTION 种类）
 │  │  ├─ simulation/             # fixed-point world/systems/rng/spatial/replay；World 门面 `simulation_world.gd` + query/move
 │  │  ├─ ugc/                    # compiler/validator/bytecode_vm/migration；Bundle 门面 `simulation_bundle.gd` + decode/bags；拓扑编译门面 `traprush_topology_compiler.gd` + bags/fields；Rule VM 门面 `rule_vm.gd` + opcodes/codec/compiler/dispatch/host/apply；内容签名 `content_sign.gd`；玩家代签 `content_submit.gd`；内容补丁 `content_patch.gd`；内容目录 `content_catalog.gd`
 │  │  ├─ server/                 # Godot Headless match/replication/result
-│  │  ├─ client/                 # platform/input/prediction/presentation；大厅门面 `match_lobby_shell.gd` + chrome/net/sampler/stage/hud/director；匹配门面 `match_join_session.gd` + codec/accept；联机音频源 `match_audio_source.gd`
+│  │  ├─ client/                 # platform/input/prediction/presentation；大厅门面 `match_lobby_shell.gd` + chrome/net/sampler/stage/hud/director/runtime；BASTION 场 `bastion_field_map.gd` + follow/hud/interact（E4）；匹配门面 `match_join_session.gd` + codec/accept；联机音频源 `match_audio_source.gd`
 │  │  ├─ audio/                  # 游戏无关音频模块（自愿等同第二十三条）；仅 `audio_backend.gd` 碰 AudioServer / AudioStreamPlayer / AudioStreamPlayer3D / AudioListener3D；`audio_music_director.gd` 交叉淡入淡出；玩法映射不在此目录
 │  │  ├─ creator/                # shared shell/edit_commands/preview；Preview 门面 `authoring_preview.gd` + bootstrap/intents/scan/view；Preview 映射门面 `authoring_preview_map.gd` + convert/occupancy/gizmos/overlay/player；Preview 窗口门面 `authoring_preview_shell.gd` + chrome/sampler/hud/play/view；编辑门面 `authoring_editor_shell.gd` + chrome/place/follow
 │  │  └─ games/
 │  │     ├─ traprush/            # 对局门面 `match_session.gd` + bootstrap/intents/scan/view/patch；灰盒门面 `graybox_course.gd` + layout/assemble/play；探针门面 `course_completion_probe.gd` + heuristic/search；玩法音效路由 `traprush_audio_router.gd` + observe
-│  │     └─ bastion/             # 对局门面 `match_session.gd` + waves/towers/view/setup；`match_setup_state.gd`（CD-22 §7.2）；`match_session_wire.gd`（E1 会话→帧）；占位数值 `play_stubs.gd`；封路守卫 `path_guard.gd`
+│  │     └─ bastion/             # 对局门面 `match_session.gd` + waves/towers/view/setup；`match_setup_state.gd`（CD-22 §7.2）；`match_session_wire.gd`（E1 会话→帧）；占位数值 `play_stubs.gd`；封路守卫 `path_guard.gd`；玩法音效路由 `audio_router.gd` + observe（E4）
 │  ├─ content/
 │  │  ├─ official/               # `traprush/` 五张课；`bastion/blueprint_01.json`（M6 E2）
 │  │  ├─ locale/                 # 本地化 CSV（`craft_arena.*` 键）；解析见 `shared/ui_copy.gd`

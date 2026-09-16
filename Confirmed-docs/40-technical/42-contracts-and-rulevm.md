@@ -119,7 +119,7 @@ components     以组件名为键的对象；未知键拒绝；允许空袋
 
 ### 1.4 音频 Cue Bank v1
 
-表现层目录，**不进** `SimulationWorld` / `hash_state` / 协议帧。id allowlist 的所有者是 `game/src/shared/schema/audio_cue_catalog.gd`（创作者只能引用已登记 id，见 [CD-31 §5](../30-ugc/31-ugc-principles.md)）。bank JSON 在 `game/content/audio/banks/`。体积、采样率、声道与时长上限见 [CD-11 §8.3](../10-product/11-scope-and-platforms.md)，本表不复述数字。stream 路径必须以 `res://content/audio/` 开头、以 `.ogg` 结尾，且文件存在。
+表现层目录，**不进** `SimulationWorld` / `hash_state` / 协议帧。id allowlist 的所有者是 `game/src/shared/schema/audio_cue_catalog.gd`（创作者只能引用已登记 id，见 [CD-31 §5](../30-ugc/31-ugc-principles.md)）。bank JSON 在 `game/content/audio/banks/`。体积、采样率、声道与时长上限见 [CD-11 §8.3](../10-product/11-scope-and-platforms.md)，本表不复述数字。stream 路径必须以 `res://content/audio/` 开头、以 `.ogg` 结尾，且文件存在。BASTION E4（2026-09-16）的 `game/src/games/bastion/audio_router.gd` 只映射到本 catalog 已有 id，**不新增 cue、不入库新 OGG**；新素材仍须宪法第十八条。来源见 [CD-91 D.4](../90-reference/91-decision-log.md) `bastion_e4_audio`。
 
 ```text
 schema_version = 1

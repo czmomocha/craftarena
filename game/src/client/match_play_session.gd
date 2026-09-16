@@ -20,6 +20,7 @@ const MatchLocalPredictGd := preload("res://src/client/match_local_predict.gd")
 const MatchMoveFacingGd := preload("res://src/client/match_move_facing.gd")
 const MatchProtocolRttGd := preload("res://src/client/match_protocol_rtt.gd")
 const MatchSnapshotFollowGd := preload("res://src/client/match_snapshot_follow.gd")
+const MatchGameplayGd := preload("res://src/shared/match_gameplay.gd")
 const PlayerIntentNames := preload("res://src/shared/commands/player_intent_names.gd")
 
 const STATE_IDLE: String = "idle"
@@ -31,6 +32,7 @@ const _YAW_OMITTED: int = -1
 var state: String = STATE_IDLE
 var websocket_url: String = ""
 var follow: MatchSnapshotFollowGd = MatchSnapshotFollowGd.new()
+var bastion: BastionSnapshotFollow = null
 var predict: MatchLocalPredictGd = MatchLocalPredictGd.new()
 var rtt: MatchProtocolRttGd = MatchProtocolRttGd.new()
 var last_command: PackedByteArray = PackedByteArray()
@@ -86,6 +88,9 @@ func try_begin(join: MatchJoinSessionGd, gateway_base: String) -> bool:
 		return false
 	websocket_url = url
 	follow = MatchSnapshotFollowGd.new()
+	bastion = null
+	if join.gameplay == MatchGameplayGd.BASTION:
+		bastion = BastionSnapshotFollow.new()
 	predict = MatchLocalPredictGd.new()
 	rtt.reset()
 	if not predict.bind_slot(join.seat):
@@ -114,6 +119,7 @@ func try_leave() -> bool:
 	state = STATE_IDLE
 	websocket_url = ""
 	follow = MatchSnapshotFollowGd.new()
+	bastion = null
 	predict = MatchLocalPredictGd.new()
 	rtt.reset()
 	last_command = PackedByteArray()
@@ -130,6 +136,8 @@ func on_binary(bytes: PackedByteArray, now_ms: int = -1) -> bool:
 	var pong_ok: bool = pong.get("ok", false)
 	if pong_ok:
 		return true
+	if bastion != null:
+		return bastion.apply_frame(bytes)
 	if not follow.apply_frame(bytes):
 		return false
 	predict.on_authoritative_tick(follow.tick)
@@ -142,8 +150,21 @@ func try_encode_probe(now_ms: int) -> PackedByteArray:
 	return rtt.try_emit_ping(now_ms)
 
 
+func is_bastion() -> bool:
+	return bastion != null
+
+
+func try_encode_bastion(bytes: PackedByteArray) -> PackedByteArray:
+	if state != STATE_IN_MATCH or bastion == null or bytes.is_empty():
+		return PackedByteArray()
+	last_command = bytes
+	return bytes
+
+
 func try_encode_intent(intent_name: String, dx: int, dz: int, yaw_bam: int) -> PackedByteArray:
 	if state != STATE_IN_MATCH:
+		return PackedByteArray()
+	if bastion != null:
 		return PackedByteArray()
 	if intent_name == PlayerIntentNames.INTERACT:
 		return PackedByteArray()
@@ -180,6 +201,8 @@ func try_encode_move_axes(forward: bool, back: bool, left: bool, right: bool, st
 
 func status_view() -> Dictionary:
 	var follow_view: Dictionary = follow.status_view()
+	if bastion != null:
+		follow_view = bastion.status_view()
 	var rtt_view: Dictionary = rtt.status_view()
 	return {
 		"state": state,

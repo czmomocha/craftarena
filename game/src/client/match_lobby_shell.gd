@@ -13,6 +13,7 @@ const MatchOfflineSessionGd := preload("res://src/client/match_offline_session.g
 const MatchPlaySessionGd := preload("res://src/client/match_play_session.gd")
 const MatchSnapshotFollowGd := preload("res://src/client/match_snapshot_follow.gd")
 const OfficialTraprushCoursesGd := preload("res://src/shared/official_traprush_courses.gd")
+const OfficialBastionBlueprintsGd := preload("res://src/shared/official_bastion_blueprints.gd")
 const ServerEndpointGd := preload("res://src/client/server_endpoint.gd")
 const SettlementPanelGd := preload("res://src/shared/match_settlement_panel.gd")
 const PlaySplitTrackerGd := preload("res://src/shared/play_split_tracker.gd")
@@ -121,7 +122,10 @@ func selected_course_id() -> String:
 	var trimmed: String = course_id_text().strip_edges()
 	if trimmed == "":
 		return OfficialTraprushCoursesGd.DEFAULT_ID
-	return OfficialTraprushCoursesGd.normalize_id(trimmed)
+	var course: String = OfficialTraprushCoursesGd.normalize_id(trimmed)
+	if course != "":
+		return course
+	return OfficialBastionBlueprintsGd.normalize_id(trimmed)
 func seats_text() -> String:
 	return chrome.seats_text()
 func set_seats_text(text: String) -> void:
@@ -210,12 +214,15 @@ func status_view() -> Dictionary:
 	var play_view: Dictionary = {} if play == null else play.status_view()
 	var offline_view: Dictionary = {} if offline == null else offline.status_view()
 	var server_error: String = "" if endpoint == null else endpoint.error_line()
-	return MatchLobbyHudGd.build_view(
+	var view: Dictionary = MatchLobbyHudGd.build_view(
 		join_view, play_view, offline_view, stage.mapped_counts(), active_follow(),
 		stage.camera_follow_slot(offline_playing(), play), selected_course_id(), selected_seats(),
 		control_plane_base, gateway_base, server_error, is_window_visible(), offline_playing(),
 		stage.wayfind
 	)
+	view.merge(MatchLobbyStageBastion.mapped_overlay(self))
+	view.merge(MatchLobbyStageBastion.hud_view(self))
+	return view
 func status_label_text() -> String:
 	return chrome.status_text()
 func fps_label_text() -> String:
@@ -233,7 +240,7 @@ func settlement_panel_visible() -> bool:
 func try_advance_interp() -> bool:
 	if not stage.try_advance_interp(is_window_visible(), play_interp_step, active_follow()):
 		return false
-	_apply_snapshot_map()
+	apply_snapshot_map()
 	return true
 func interp_progress() -> int:
 	return stage.interp_t
@@ -248,9 +255,9 @@ func allows_online_writes() -> bool:
 func handle_window_input(event: InputEvent) -> void:
 	chrome.handle_window_input(event)
 func try_camera_zoom(steps: int) -> bool:
-	return map != null and map.try_zoom(steps)
+	return MatchLobbyRuntime.try_zoom(self, steps)
 func try_camera_pan(relative: Vector2) -> bool:
-	return map != null and map.try_pan(relative)
+	return MatchLobbyRuntime.try_pan(self, relative)
 func try_copy_invite() -> bool: return chrome.try_copy_invite()
 func refresh_status() -> void:
 	_refresh_status()
@@ -278,15 +285,10 @@ func dispatch_pending() -> void:
 	net.dispatch(control_plane_base, join, _refresh_status)
 func apply_course_document(path: String) -> void:
 	course_path = path
+	MatchLobbyStageBastion.show_traprush(self)
 	stage.apply_course(path)
 func apply_snapshot_map() -> void:
-	_apply_snapshot_map()
-func _apply_snapshot_map() -> void:
-	var follow: MatchSnapshotFollowGd = active_follow()
-	stage.sync_interp(follow)
-	var session: TraprushMatchSession = null if offline == null else offline.session
-	if stage.apply_snapshot(follow, stage.interp_t, play, offline_playing(), sampler.play_moving, play_anim, session):
-		_refresh_status()
+	MatchLobbyRuntime.apply_snapshot(self)
 func ensure_net() -> void:
 	if net != null:
 		return
@@ -307,71 +309,13 @@ func online_busy() -> bool:
 		return false
 	return play.state == MatchPlaySessionGd.STATE_CONNECTING or play.state == MatchPlaySessionGd.STATE_IN_MATCH
 func _process(delta: float) -> void:
-	director.sync_music()
-	if live_io and not offline_playing() and net != null:
-		net.poll_queue_clock(delta, queue_poll_s, join, offline_playing(), try_poll)
-		var follow: MatchSnapshotFollowGd = active_follow()
-		var finished: bool = follow != null and follow.has_snapshot and MatchLobbyHudGd.all_players_finished(follow.players)
-		net.poll_settlement_clock(delta, queue_poll_s, join, play, finished, try_fetch_settlement)
-		last_sent_command = net.poll_gateway(
-			play, last_sent_command, on_socket_open, on_binary, on_socket_close, _send_protocol_probe
-		)
-	if window == null or not window.visible:
-		if frame_rate != null:
-			frame_rate.reset()
-		return
-	if frame_rate != null:
-		frame_rate.sample(delta)
-	if map != null:
-		map.advance_camera(delta)  # 必须先于 apply_players，见 advance_camera 注释
-	if offline_playing():
-		try_advance_interp()
-		_apply_snapshot_map()
-		return
-	if chrome.edit_has_focus():
-		try_advance_interp()
-		return
-	sampler.drive_keyboard(self)
-	try_advance_interp()
-func _physics_process(_delta: float) -> void:
-	if not offline_playing() or window == null or not window.visible:
-		return
-	offline.try_advance()
-	if not chrome.edit_has_focus():
-		sampler.drive_keyboard(self)
-	stage.pump_play_audio(offline)
+	MatchLobbyRuntime.on_process(self, delta)
+func _physics_process(delta: float) -> void:
+	MatchLobbyRuntime.on_physics(self, delta)
 func _take_sample(sample: Dictionary) -> PackedByteArray:
-	return sampler.take(sample, _note_command, _apply_snapshot_map)
+	return sampler.take(sample, _note_command, apply_snapshot_map)
 func _ensure_window() -> void:
-	if window != null:
-		return
-	window = chrome.attach(self, {
-		"quick": try_quick,
-		"create": try_create_room,
-		"join": try_join_room,
-		"solo": try_solo,
-		"creator": try_open_creator,
-		"plaza": try_open_plaza,
-		"account": try_open_account,
-		"settings": try_open_settings,
-		"cancel": try_cancel,
-		"poll": try_poll,
-		"sprint": _on_sprint,
-		"apply_server": try_apply_server_host,
-		"edit_submitted": _on_edit_submitted,
-		"close": _on_close_requested,
-		"window_input": handle_window_input,
-		"camera_zoom": try_camera_zoom,
-		"camera_pan": try_camera_pan,
-		"copy_invite": try_copy_invite,
-	})
-	stage.mount(window)
-	stage.bind_facade(self)
-	add_child(window)
-	stage.ensure_rig()
-	apply_course_document(course_path)
-	chrome.sync_server_edit(control_plane_base)
-	window.gui_release_focus()
+	MatchLobbyRuntime.ensure_window(self)
 func _on_http_completed(result: int, response_code: int, _headers: PackedStringArray, body: PackedByteArray) -> void:
 	if net == null:
 		return

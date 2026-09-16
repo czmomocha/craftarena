@@ -6,12 +6,15 @@ extends RefCounted
 const MatchJoinSessionGd := preload("res://src/client/match_join_session.gd")
 const MatchPlaySessionGd := preload("res://src/client/match_play_session.gd")
 const OfficialTraprushCoursesGd := preload("res://src/shared/official_traprush_courses.gd")
+const OfficialBastionBlueprintsGd := preload("res://src/shared/official_bastion_blueprints.gd")
 const PlazaHttpGd := preload("res://src/client/content_plaza_http.gd")
 
 
 static func after_join_http(host: MatchLobbyShell, begin_play: Callable) -> void:
 	if host.join != null and host.join.content_id != "":
 		_apply_joined_content(host)
+	elif host.join != null and host.join.blueprint != "":
+		MatchLobbyRuntime.apply_blueprint_document(host, host.join.blueprint)
 	elif host.join != null and host.join.course != "":
 		var path: String = OfficialTraprushCoursesGd.document_path(host.join.course)
 		if path != "":
@@ -21,6 +24,39 @@ static func after_join_http(host: MatchLobbyShell, begin_play: Callable) -> void
 			if begin_play.is_valid():
 				begin_play.call()
 	host.refresh_status()
+
+
+static func try_matchmake(host: MatchLobbyShell, create_room: bool) -> bool:
+	host.chrome.release_focus()
+	if host.join == null or host.offline_playing():
+		return false
+	var id: String = host.selected_course_id()
+	if id == "":
+		host.join.fail_reason("unknown_course")
+		host.refresh_status()
+		return false
+	var started: bool = false
+	if OfficialBastionBlueprintsGd.is_id(id):
+		if create_room:
+			started = host.join.try_create_room_blueprint(id)
+		else:
+			started = host.join.try_quick_blueprint(id)
+	elif OfficialTraprushCoursesGd.is_id(id):
+		if host.selected_seats() == 0:
+			return false
+		if create_room:
+			started = host.join.try_create_room(id, host.selected_seats())
+		else:
+			started = host.join.try_quick(id, host.selected_seats())
+	else:
+		host.join.fail_reason("http_official_only")
+		host.refresh_status()
+		return false
+	if not started:
+		return false
+	host.dispatch_pending()
+	host.refresh_status()
+	return true
 
 
 static func try_create_room_plaza(host: MatchLobbyShell, content_id: String, version: int) -> bool:

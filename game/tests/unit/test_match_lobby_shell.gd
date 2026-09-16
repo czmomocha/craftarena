@@ -1129,7 +1129,7 @@ func test_solo_anim_starts_idle_then_run() -> void:
 	assert_false(_shell.try_sample_play_move(true, false, false, false).is_empty())
 	assert_eq(_shell.map.anim_state(0), PlayAnimState.RUN)
 	assert_true(_shell.try_sample_play_move(false, false, false, false).is_empty())
-	_shell._apply_snapshot_map()
+	_shell.apply_snapshot_map()
 	assert_eq(_shell.map.anim_state(0), PlayAnimState.IDLE)
 
 
@@ -1144,7 +1144,7 @@ func test_solo_jump_sets_jump_then_land() -> void:
 	var hopped_y: int = hopped.get("y", 0)
 	assert_eq(hopped_y, spawn_y + TraprushPlayStubs.JUMP_DY)
 	assert_eq(_shell.map.anim_state(0), PlayAnimState.JUMP)
-	_shell._apply_snapshot_map()
+	_shell.apply_snapshot_map()
 	assert_almost_eq(
 		_shell.map.camera_node().position.y,
 		camera_y,
@@ -1154,14 +1154,14 @@ func test_solo_jump_sets_jump_then_land() -> void:
 	var saw_land: bool = false
 	for _tick: int in range(48):
 		assert_true(_shell.offline.try_advance())
-		_shell._apply_snapshot_map()
+		_shell.apply_snapshot_map()
 		var state: String = _shell.map.anim_state(0)
 		if state == PlayAnimState.LAND:
 			saw_land = true
 			break
 		assert_eq(state, PlayAnimState.JUMP)
 	assert_true(saw_land)
-	_shell._apply_snapshot_map()
+	_shell.apply_snapshot_map()
 	assert_eq(_shell.map.anim_state(0), PlayAnimState.IDLE)
 
 

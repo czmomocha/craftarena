@@ -47,6 +47,29 @@ func test_attach_builds_named_gadget_children() -> void:
 	add_child_autofree(core_host)
 	assert_true(OccupancyGadget.attach(core_host, OccupancyGadget.KIND_OBSTACLE_CORE, 0))
 	assert_not_null(OccupancyGadget.gadget_node(core_host))
+	var bastion_kinds: PackedStringArray = [
+		OccupancyGadget.KIND_BASTION_CORE,
+		OccupancyGadget.KIND_BASTION_CORE_B,
+		OccupancyGadget.KIND_BASTION_BUILD_SLOT,
+		OccupancyGadget.KIND_BASTION_OBSTACLE_SLOT,
+		OccupancyGadget.KIND_BASTION_TOWER_ARROW,
+		OccupancyGadget.KIND_BASTION_TOWER_CANNON,
+		OccupancyGadget.KIND_BASTION_TOWER_FROST,
+		OccupancyGadget.KIND_BASTION_UNIT_SWIFT,
+		OccupancyGadget.KIND_BASTION_UNIT_HEAVY,
+		OccupancyGadget.KIND_BASTION_UNIT_SWARM,
+		OccupancyGadget.KIND_BASTION_OBSTACLE_BARRICADE,
+		OccupancyGadget.KIND_BASTION_OBSTACLE_SLOW,
+		OccupancyGadget.KIND_BASTION_OBSTACLE_DIVERTER,
+		OccupancyGadget.KIND_BASTION_PATH,
+	]
+	for kind: String in bastion_kinds:
+		var kind_host: Node3D = Node3D.new()
+		add_child_autofree(kind_host)
+		assert_true(OccupancyGadget.attach(kind_host, kind, 0), kind)
+		var kind_gadget: Node3D = OccupancyGadget.gadget_node(kind_host)
+		assert_not_null(kind_gadget, kind)
+		assert_gte(kind_gadget.get_child_count(), 1, kind)
 
 
 func test_lift_path_is_pure_y() -> void:

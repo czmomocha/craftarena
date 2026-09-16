@@ -54,42 +54,71 @@ Worktree 端口偏移见 README「并行工作区」；本文件不复述端口�
 
 ---
 
-## 本刀：M6 E3（对局进程 + 匹配 HTTP + 结算队伍）
+## 本刀：M6 E4（客户端 BASTION 对局壳）
 
-**窗口验收：无。** 不是省事，是这一章的性质——玩法判别位、结算 `teams[]` 和 `--gameplay=bastion` 分派都住在 HTTP / Headless 对局进程里，**没有接任何场景、没有任何入口按钮、没有一行表现代码**。BASTION 第一次有画面是 **E4 客户端对局壳**；在那之前打开窗口看到的仍然是 TRAPRUSH 大厅，与本刀无关。匹配 HTTP 已认 `blueprint_01`，但大厅入口还不会发这个 body。
+本刀**第一次有画面**。占位剪影、自绘大厅、复用已登记 cue；不是定稿美术，也不是 S1。
 
-人类要确认本章成立，走命令行，不走窗口：
+走「共用启动」0.1 + 0.2。需要**两个**窗口化客户端（同一套 `npm run dev` 后端）。第二窗再跑一次 0.2。
 
-```bash
-npm run typecheck
-npm test
-npm run redline-scan
-npm run test:gut:full
-```
+### 1. 课 id 改成官方蓝图
 
-预期：四条全绿。本刀新增 / 扩的断言包括：匹配 body 缺省仍是 TRAPRUSH、`course` / `content` / `blueprint` 三者互斥、BASTION 锁 2 席、迁移 `0015` 旧行仍可读、结算带 `teams[]` 时 409 幂等仍成立、`--gameplay=bastion` 编官方蓝图进 `BastionMatchSession`、SETUP 快照按席位裁剪。
+两边的课程输入框都改成 `blueprint_01`（不要用 `course_01`）。点 3D 区域让输入框失焦。
 
-想亲眼看一眼分派在动，可以只跑这一组：
+预期：状态行仍是 `join=idle`。失败：填完立刻 Solo 成功（蓝图 id 必须被拒为 `unknown_course`，Solo 只认 TRAPRUSH 课）。
 
-```powershell
-& $env:GODOT4_CONSOLE --headless --path game -s res://addons/gut/gut_cmdln.gd -gdir=res://tests/unit -gprefix=test_match_server_boot_bastion -gexit
-```
+### 2. 开同一间 BASTION 房
+
+窗 A：**创建房间**。状态行出现房间码。把房间码复制到窗 B，点 **加入房间**。
+
+预期：两边都进入连接 / 对局；3D 里出现两座核心（青绿 / 砖红剪影）、一圈建造槽与障碍槽、路上的浅色路标；状态行含 `phase=setup`，**不含** `pads=`。失败：仍是 TRAPRUSH 跑道与 `pads=`；或 HTTP 4xx（课 id 没发出 `blueprint` body）。
+
+### 3. 盲设障碍（只看见自己的）
+
+布障阶段：左键点**本方**障碍槽（棕垫），按 `1` 放路障 / `2` 减速 / `3` 分流门。看对面窗口。
+
+预期：本窗立刻只在下一帧权威快照后出现障碍剪影；**对面窗口在锁定前看不到这个障碍**。失败：点下去本地就长出塔/障碍却对局进程还没回快照（预测）；或对面在 `phase=setup` 时已经看见你的布局。
+
+### 4. 锁定并揭示
+
+两边都按 `L`。
+
+预期：状态行出现 `locked=1`，随后 `phase=prep`；两边都能看见对方刚才放的障碍；能听到已登记的确认 / 传送类 cue（不是新 OGG）。失败：按 `L` 没反应（输入框还占着焦点）；或揭示后对方障碍仍不可见。
+
+### 5. 建塔 / 升级 / 出售
+
+左键点本方建造槽（灰蓝垫），按 `1` 箭塔 / `2` 火炮 / `3` 冰霜。再按 `U` 升级、`X` 出售。滚轮缩放，中键拖平移。
+
+预期：塔剪影只在权威快照到达后出现或变大/消失；状态行 `gold=` 随快照变；选中槽有黄边。失败：本地先长出塔再被服务器纠正；或按键被大厅按钮吞掉。
+
+### 6. 波次与结算（可看到即可）
+
+等到 `phase=waves`。状态行应有 `wave=n/5`、`cores=a/b`、`leaked=a/b`、`remain=`。核心剪影还在。不必坐满 5 分钟；看到出兵在路上走即本章窗口成立。若核心归零，状态行出现 `result=` / `phase=settled`。
+
+预期：兵是占位剪影沿路标走；没有 `pads=`。失败：画面停在 handshake、或切回 TRAPRUSH 跑道。
 
 ### 本刀不测
 
-- 任何窗口行为（本刀没有）；
-- 客户端跟从 BASTION 快照 / 建造交互 / HUD（E4）；
-- BASTION 音效素材（E4，§5.2 第 8 项仍待拍）；
-- 蓝图 Edit（M7）；
 - S1 主大厅壳（F1）；
-- TRAPRUSH 的帧布局与课表——本刀加字段，不改旧必填键。
+- 新产品向 BASTION OGG（E4 只复用已登记 cue）；
+- 产品数值（仍是 `play_stubs.gd`）；
+- 蓝图 Edit / 2v2（M7）；
+- TRAPRUSH 课表与帧布局。
 
 ### 诚实边界
 
-- **E3 交完不等于 M6 能开一局给人看。** 进程已有、画面还没有；九个原型的数值全部是 `game/src/games/bastion/play_stubs.gd` 的占位桩（[CD-63 §1.2 / §1.3](../../Confirmed-docs/60-plan/63-open-decisions.md) 仍延期），不是产品表；
-- 没有真人走查过任何 BASTION 画面，因为还没有画面；
-- 下一刀 E4 被章节计划 §5.2 第 8 项挡住（BASTION 音效素材），AI 不得自选开工；
-- M5 带走的两处遗留（乱序 / 重复包未严格注入、TRAPRUSH 可玩性签署只对旧那一版成立）不因本刀消失。
+- **占位剪影不是定稿美术**，颜色断言不进测试；
+- 音效是 TRAPRUSH 那套已登记 cue，不是 BASTION 专用音色；
+- 结算只有状态行 token，没有 S1 结算面板；
+- 九个原型的数值仍是占位桩；
+- M5 带走的两处遗留（乱序 / 重复包、旧可玩性签署对象）不因本刀消失。
+
+---
+
+## 上一刀（已合入）：M6 E3（对局进程 + 匹配 HTTP + 结算队伍）
+
+**窗口验收：无。** 玩法判别位、结算 `teams[]` 和 `--gameplay=bastion` 分派都住在 HTTP / Headless 对局进程里。E4 之前打开窗口看到的仍然是 TRAPRUSH 大厅。匹配 HTTP 已认 `blueprint_01`，但 E3 大厅入口还不会发这个 body。
+
+人类当时靠命令行确认：`npm run typecheck` / `npm test` / `npm run redline-scan` / `npm run test:gut:full`。
 
 ---
 

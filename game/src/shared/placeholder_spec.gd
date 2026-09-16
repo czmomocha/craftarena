@@ -256,6 +256,23 @@ const FX_PULSE_AMPLITUDE: float = 0.12
 ## 未开的开关传送：旋翼停、亮度压到这个系数。占位表现值。
 const FX_PORTAL_LOCKED_MODULATE: float = 0.4
 
+## BASTION 占位色板（M6 E4）。不是产品材质；核心 / 槽 / 塔 / 兵 / 障碍都从这里读。
+const BASTION_CORE_A_ALBEDO: Color = Color(0.18, 0.72, 0.62)
+const BASTION_CORE_B_ALBEDO: Color = Color(0.82, 0.38, 0.28)
+const BASTION_BUILD_SLOT_ALBEDO: Color = Color(0.42, 0.48, 0.58)
+const BASTION_OBSTACLE_SLOT_ALBEDO: Color = Color(0.55, 0.42, 0.32)
+const BASTION_SELECTED_ALBEDO: Color = Color(0.98, 0.86, 0.28)
+const BASTION_PATH_ALBEDO: Color = Color(0.62, 0.68, 0.58, 0.55)
+const BASTION_TOWER_ARROW_ALBEDO: Color = Color(0.72, 0.78, 0.32)
+const BASTION_TOWER_CANNON_ALBEDO: Color = Color(0.82, 0.48, 0.22)
+const BASTION_TOWER_FROST_ALBEDO: Color = Color(0.42, 0.72, 0.92)
+const BASTION_UNIT_SWIFT_ALBEDO: Color = Color(0.95, 0.82, 0.28)
+const BASTION_UNIT_HEAVY_ALBEDO: Color = Color(0.55, 0.42, 0.62)
+const BASTION_UNIT_SWARM_ALBEDO: Color = Color(0.82, 0.55, 0.22)
+const BASTION_OBSTACLE_BARRICADE_ALBEDO: Color = Color(0.58, 0.48, 0.38)
+const BASTION_OBSTACLE_SLOW_ALBEDO: Color = Color(0.38, 0.62, 0.82, 0.7)
+const BASTION_OBSTACLE_DIVERTER_ALBEDO: Color = Color(0.72, 0.32, 0.68)
+
 ## Preview 走路可达性问题 gizmos。
 const REACH_ALBEDO: Color = Color(1.0, 0.82, 0.2)
 

@@ -84,7 +84,7 @@ func _initialize() -> void:
 		shell.offline._publish()
 	))
 	rows.append(_measure("  _apply_snapshot_map", frames, func() -> void:
-		shell._apply_snapshot_map()
+		shell.apply_snapshot_map()
 	))
 	rows.append(_measure("  _refresh_status", frames, func() -> void:
 		shell._refresh_status()
