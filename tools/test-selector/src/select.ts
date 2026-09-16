@@ -41,16 +41,40 @@ const ALWAYS_FULL_PREFIXES = [
  */
 const INERT_SUFFIXES = [".md", "/.gitignore"] as const;
 
+/**
+ * 图只扫 `.gd`。改文案 CSV 若当「非 .gd」会把整层 fast 全跑一遍（F1 实测
+ * Windows 约 50 分钟）。这份表只被 `UiCopy` 解析，别名进图即可。
+ */
+const GAME_PATH_ALIASES: Readonly<Record<string, string>> = {
+	"game/content/locale/craft_arena.csv": "game/src/shared/ui_copy.gd",
+};
+
+function posixPath(path: string): string {
+	return path.replaceAll("\\", "/");
+}
+
+function canonicalizeGamePath(path: string): string {
+	const normalized = posixPath(path);
+	return GAME_PATH_ALIASES[normalized] ?? normalized;
+}
+
 export function selectAffected(
 	repoRoot: string,
 	changedPaths: readonly string[],
 	graph: DependencyGraph = buildGraph(repoRoot),
 ): Selection {
-	const gameChanges = changedPaths.filter(
-		(path) =>
-			path.startsWith("game/") &&
-			!INERT_SUFFIXES.some((suffix) => path.endsWith(suffix)),
-	);
+	const gameChanges = [
+		...new Set(
+			changedPaths
+				.map(posixPath)
+				.filter(
+					(path) =>
+						path.startsWith("game/") &&
+						!INERT_SUFFIXES.some((suffix) => path.endsWith(suffix)),
+				)
+				.map(canonicalizeGamePath),
+		),
+	];
 	if (gameChanges.length === 0) {
 		return {
 			kind: "none",

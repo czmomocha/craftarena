@@ -44,7 +44,7 @@ func test_open_window_quick_play_ready_begins_play() -> void:
 	assert_eq(_shell.window.title, UiCopy.text(MatchLobbyShell.TITLE))
 	assert_eq(_shell.window.size, MatchLobbyShell.WINDOW_SIZE)
 	assert_eq(_shell.window.min_size, MatchLobbyShell.WINDOW_MIN_SIZE)
-	assert_eq(_shell.window.mode, Window.MODE_MAXIMIZED)
+	assert_eq(_shell.window.mode, Window.MODE_WINDOWED)
 	assert_false(_shell.window.exclusive)
 	assert_false(_shell.window.transient)
 	assert_true(_shell.window.own_world_3d)
@@ -197,7 +197,7 @@ func test_hud_buttons_do_not_steal_space_and_window_is_dev_default() -> void:
 	_shell = _open_shell()
 	assert_eq(_shell.window.size, MatchLobbyShell.WINDOW_SIZE)
 	assert_eq(_shell.window.min_size, MatchLobbyShell.WINDOW_MIN_SIZE)
-	assert_eq(_shell.window.mode, Window.MODE_MAXIMIZED)
+	assert_eq(_shell.window.mode, Window.MODE_WINDOWED)
 	# C4 第 6 章回归守卫：嵌入子窗口**不得**自己设 content_scale。
 	# 设了会让 UI 画的位置与鼠标命中的位置错开 1/factor 倍（实测 4K 屏上点
 	# Solo play 命中 Poll），且布局撑到基准宽后右侧被切出可视区。

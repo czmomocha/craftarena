@@ -208,14 +208,14 @@ s2.set("solo_mode", false)  # true 时显示 CD-13 离线横幅
 [display]
 window/size/viewport_width=1920
 window/size/viewport_height=1080
-window/size/mode=2
-window/size/window_width_override=1600
-window/size/window_height_override=900
+window/size/mode=0
+window/size/window_width_override=1920
+window/size/window_height_override=1080
 window/stretch/mode="canvas_items"
 window/stretch/aspect="expand"
 ```
 
-UI 基准是 1920×1080，开发机窗口是 1600×900 最大化——**两者不是一回事**，且基准只作用于主窗口。嵌入子窗口（Editor / Preview）另有约束，所有者是 [CD-11 §8.2 第 2 条](../../Confirmed-docs/10-product/11-scope-and-platforms.md)，本文件不复述。
+UI 基准是 1920×1080，开发机默认窗口与基准同尺寸且窗口化——**两者概念上仍不是一回事**，且基准只作用于主窗口。嵌入子窗口（Editor / Preview）另有约束，所有者是 [CD-11 §8.2 第 2 条](../../Confirmed-docs/10-product/11-scope-and-platforms.md)，本文件不复述。
 
 ### 3.6 字体（已完成，2026-09-13）
 

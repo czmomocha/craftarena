@@ -61,7 +61,7 @@ export GODOT_AI_DISABLE_TELEMETRY=true
 - CD-51 §5 要求的 20 个输入动作，移动类绑定 physical keycode；玩法推击 / 冲刺 / 复位走 `shove` / `sprint` / `reset_checkpoint`（F / Shift / R），不再只认物理键；
 - 脚本与场景文件名 `snake_case`；
 - 运行时字体 `gui/theme/custom_font` 指向 `res://content/ui/fonts/craftarena_sans_sc_regular.otf`（2026-09-13 入包；自绘大厅 / HUD / `Label3D` 不挂 theme，靠这一项兜底）。路径唯一所有者是 `game/src/shared/ui_font.gd`；重新生成子集的步骤在 `tools/font-subset/README.md`（Python + fontTools，**不进 CI**）；
-- UI 分辨率基准 1920×1080（D4，见 [CD-11 §8.2](Confirmed-docs/10-product/11-scope-and-platforms.md)），按 `canvas_items` / `expand` 等比缩放；开发机运行窗仍是 1600×900 最大化，写在 `window_width_override` / `window_height_override` 上。**代码创建的嵌入子窗口不得自己设 `content_scale_*`**：`gui_embed_subwindows = true` 下它渲染不生效、输入生效，会让鼠标命中与画面错位；
+- UI 分辨率基准 1920×1080（D4，见 [CD-11 §8.2](Confirmed-docs/10-product/11-scope-and-platforms.md)），按 `canvas_items` / `expand` 等比缩放；开发机运行窗是窗口化，默认 override 与基准同尺寸。**代码创建的嵌入子窗口不得自己设 `content_scale_*`**：`gui_embed_subwindows = true` 下它渲染不生效、输入生效，会让鼠标命中与画面错位；
 - 启动场景 `res://src/client/main.tscn`，打印一行结构化启动日志并打开机关狂奔匹配大厅（代码创建 Window，相邻快照采样后的玩家位姿、所选官方赛道占用与可破坏箱映射为 1 米占位盒，classified portal 画 gizmo 条，检查点垫标 `order` 且唯一 `order` 连线，最新快照直播名次标到玩家盒上方；本席 Move/Jump 在最新权威上叠加本地 overlay；大厅 WASD 写入 8 向离散水平朝向，玩家盒带面向标记；快速游戏 / 建房发送官方赛道 id 与本场人数，按码加入跟从该房课程与人数；Solo play 走本地内嵌权威并持续显示「离线试玩，成绩不上传」；HUD 第一行是运行时帧率读数（`FrameRateMeter`，`FPS 60`，首窗之前 `FPS --`，每 0.5 s 刷新一次，窗口隐藏时丢弃半窗；观察工具，不进裁决、不进快照、不发网络，不锁帧率目标）；Headless 不发起 live HTTP/WS）。
 
 这些设置由 `game/tests/unit/test_project_contract.gd` 断言守护，改坏了跑测试就会红。
@@ -95,7 +95,7 @@ export GODOT_AI_DISABLE_TELEMETRY=true
 | slow 层（官方赛道完整搜索） | `npm run test:gut:slow` | 7 s |
 | 四个目录全跑，**CI 每次 PR 跑的就是它** | `npm run test:gut:full` | 24.4 s |
 
-`test:gut:affected` 扫 `preload` / `load` 的 `res://` 字面量建反向依赖图，按 `git diff` 算出受影响的 fast 层脚本。它**只服务本地循环，从来不是门禁**——算错方向一律偏向多跑：`game/` 下的非 `.gd` 改动、`tests/support/`、`addons/`、图里没有的路径都直接退回 fast 层全量；实参不是字面量的 `load()` 会把依赖它的脚本标成「永远跑」。加 `--dry-run` 只看会跑什么、不真跑。
+`test:gut:affected` 扫 `preload` / `load` 的 `res://` 字面量建反向依赖图，按 `git diff` 算出受影响的 fast 层脚本。它**只服务本地循环，从来不是门禁**——算错方向一律偏向多跑：`game/` 下的非 `.gd` 改动（例外：文案表 `content/locale/craft_arena.csv` 按 `ui_copy.gd` 进图）、`tests/support/`、`addons/`、图里没有的路径都直接退回 fast 层全量；实参不是字面量的 `load()` 会把依赖它的脚本标成「永远跑」。加 `--dry-run` 只看会跑什么、不真跑。
 
 分 fast / slow 只是为了本地能少跑一层，**两层都是每次 PR 的门禁**。整套 GUT 在 2026-09-01 从 354.6 s 掉到 24.4 s，主因是[定点数快路径](docs/audits/2026-09-01-offline-frame-cost.md)，不是少测了。
 

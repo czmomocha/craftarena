@@ -70,6 +70,8 @@ func test_open_still_shows_the_match_window_public_api() -> void:
 	assert_not_null(
 		_shell.window.get_node("VBoxContainer/MatchActions/%s" % MatchLobbyShellGd.QUICK_NAME)
 	)
+	assert_not_null(_shell.window.get_node_or_null("WindowSizeHud"))
+	assert_true(_action_visible(MatchLobbyChromeGd.HOME_NAME))
 
 
 func test_show_home_hides_the_match_window() -> void:
@@ -101,8 +103,26 @@ func test_enter_bastion_pins_blueprint_and_hides_traprush_only_actions() -> void
 	assert_false(_action_visible(MatchLobbyChromeGd.SOLO_NAME))
 	assert_false(_action_visible(MatchLobbyChromeGd.CREATOR_NAME))
 	assert_true(_action_visible(MatchLobbyChromeGd.QUICK_NAME))
+	assert_true(_action_visible(MatchLobbyChromeGd.HOME_NAME))
 	assert_true(_shell.try_quick())
 	assert_true(_shell.join.pending_body().contains("blueprint_01"))
+
+
+func test_channel_back_home_button_returns_to_s1() -> void:
+	_shell = _open_shell()
+	assert_true(_shell.try_enter_channel(MatchGameplayGd.TRAPRUSH))
+	var home: Button = _shell.window.get_node_or_null(
+		"VBoxContainer/MatchActions/%s" % MatchLobbyChromeGd.HOME_NAME
+	) as Button
+	assert_not_null(home)
+	if home == null:
+		return
+	assert_true(home.visible)
+	assert_eq(home.text, UiCopyGd.text(UiCopyGd.BACK_TO_LOBBY))
+	assert_eq(home.focus_mode, Control.FOCUS_NONE)
+	home.pressed.emit()
+	assert_false(_shell.is_window_visible())
+	assert_true(MatchLobbyHomeGd.is_home_visible(_shell))
 
 
 func test_channel_close_returns_to_home() -> void:

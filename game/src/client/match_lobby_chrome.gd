@@ -12,8 +12,9 @@ const ServerEndpointGd := preload("res://src/client/server_endpoint.gd")
 const ClientAudioGd := preload("res://src/client/client_audio.gd")
 
 const TITLE: String = UiCopy.WINDOW_TRAPRUSH
-const WINDOW_SIZE: Vector2i = Vector2i(1280, 720)
-const WINDOW_MIN_SIZE: Vector2i = Vector2i(960, 540)
+const WINDOW_SIZE: Vector2i = PlaceholderSpec.UI_BASE_SIZE
+const WINDOW_MIN_SIZE: Vector2i = Vector2i(1280, 720)
+const HOME_NAME: String = "BackHome"
 const QUICK_NAME: String = "QuickPlay"
 const CREATE_NAME: String = "CreateRoom"
 const JOIN_NAME: String = "JoinRoom"
@@ -67,7 +68,7 @@ func attach(parent: Node, handlers: Dictionary) -> Window:
 	window.title = UiCopy.text(TITLE)
 	window.size = WINDOW_SIZE
 	window.min_size = WINDOW_MIN_SIZE
-	window.mode = Window.MODE_MAXIMIZED
+	window.mode = Window.MODE_WINDOWED
 	window.exclusive = false
 	window.transient = false
 	window.own_world_3d = true
@@ -103,6 +104,8 @@ func attach(parent: Node, handlers: Dictionary) -> Window:
 	var on_cancel: Callable = _handler(handlers, "cancel")
 	var on_poll: Callable = _handler(handlers, "poll")
 	var on_sprint: Callable = _handler(handlers, "sprint")
+	var on_home: Callable = _handler(handlers, "home")
+	_add_button(row, HOME_NAME, UiCopy.BACK_TO_LOBBY, on_home)
 	_add_button(row, QUICK_NAME, UiCopy.QUICK_PLAY, on_quick)
 	_add_button(row, CREATE_NAME, UiCopy.CREATE_ROOM, on_create)
 	_add_button(row, JOIN_NAME, UiCopy.JOIN_ROOM, on_join)

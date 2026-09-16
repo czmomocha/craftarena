@@ -131,9 +131,11 @@ static func camera_offset_for_distance(distance: float) -> Vector3:
 
 # UI（D4：分辨率基准 1920×1080）
 
-## UI 的设计基准分辨率，不是窗口尺寸。落点是**主窗口**的 stretch
+## UI 的设计基准分辨率。落点是**主窗口**的 stretch
 ## （project.godot `display/window/stretch/mode=canvas_items`），由
-## `test_project_contract.gd` 断言两处是同一个数。
+## `test_project_contract.gd` 断言 viewport 与本常量是同一个数。
+## 开发机默认窗口 override 目前也等于这个数（窗口化，见 CD-11 §8.2 第 2 条），
+## 用户仍可缩放；两者概念上仍不是一回事。
 ##
 ## **嵌入子窗口不得自己设 `content_scale_*`。** `gui_embed_subwindows = true` 的
 ## 子窗口，`content_scale` 在渲染路径不生效、输入路径生效，于是画出来的按钮与

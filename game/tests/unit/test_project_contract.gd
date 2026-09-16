@@ -116,7 +116,7 @@ func test_ui_base_resolution_is_the_d4_baseline() -> void:
 
 
 func test_dev_run_window_override_is_not_product_fov() -> void:
-	# 开发机运行窗仍是 1600×900 最大化（CD-21 §3.2 / CD-53 §4 的实现落点）。
+	# 开发机运行窗与 UI 基准同尺寸、窗口化（CD-11 §8.2 第 2 条，2026-09-16）。
 	# 接线前它写在 viewport_* 上；UI 基准接管 viewport_* 之后，它搬到 override。
 	var width_raw: Variant = ProjectSettings.get_setting("display/window/size/window_width_override", 0)
 	var height_raw: Variant = ProjectSettings.get_setting("display/window/size/window_height_override", 0)
@@ -127,9 +127,8 @@ func test_dev_run_window_override_is_not_product_fov() -> void:
 	var width: int = width_raw
 	var height: int = height_raw
 	var mode: int = mode_raw
-	assert_eq(width, 1600)
-	assert_eq(height, 900)
-	assert_eq(mode, 2)
+	assert_eq(Vector2i(width, height), PlaceholderSpec.UI_BASE_SIZE)
+	assert_eq(mode, 0)
 
 
 func test_project_contains_no_dotnet_sources() -> void:

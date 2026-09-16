@@ -52,6 +52,19 @@ test("non-.gd changes under game/ fall back to the whole fast tier", () => {
 	assert.equal(selection.kind, "full");
 });
 
+test("locale csv is a UiCopy change, not a full fast fallback", () => {
+	const repoRoot = join(FIXTURES_DIR, "../../..");
+	const selection = selectAffected(repoRoot, [
+		"game/content/locale/craft_arena.csv",
+	]);
+	assert.equal(selection.kind, "subset");
+	if (selection.kind !== "subset") {
+		return;
+	}
+	assert.ok(selection.scripts.includes("res://tests/unit/test_ui_copy.gd"));
+	assert.ok(!selection.scripts.includes("res://tests/unit/test_fixed.gd"));
+});
+
 test("shared test fixtures fall back to the whole fast tier", () => {
 	const selection = selectAffected(SAMPLE, ["game/tests/support/helper.gd"]);
 	assert.equal(selection.kind, "full");

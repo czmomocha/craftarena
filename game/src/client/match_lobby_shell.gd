@@ -25,6 +25,7 @@ const WINDOW_MIN_SIZE: Vector2i = MatchLobbyChromeGd.WINDOW_MIN_SIZE
 const DEFAULT_CONTROL_PLANE: String = ServerEndpointGd.DEFAULT_CONTROL_PLANE
 const DEFAULT_GATEWAY: String = ServerEndpointGd.DEFAULT_GATEWAY
 const DEFAULT_QUEUE_POLL_S: float = 1.0
+const HOME_NAME: String = MatchLobbyChromeGd.HOME_NAME
 const QUICK_NAME: String = MatchLobbyChromeGd.QUICK_NAME
 const CREATE_NAME: String = MatchLobbyChromeGd.CREATE_NAME
 const JOIN_NAME: String = MatchLobbyChromeGd.JOIN_NAME

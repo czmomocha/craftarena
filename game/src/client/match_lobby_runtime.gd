@@ -10,6 +10,7 @@ const MatchLobbyHomeGd := preload("res://src/client/match_lobby_home.gd")
 const OfficialBastionBlueprintsGd := preload("res://src/shared/official_bastion_blueprints.gd")
 const RouterGd := preload("res://src/games/bastion/audio_router.gd")
 const CatalogGd := preload("res://src/ugc/bastion_prototype_catalog.gd")
+const WindowSizeHudGd := preload("res://src/client/window_size_hud.gd")
 
 
 static func on_process(shell: MatchLobbyShell, delta: float) -> void:
@@ -83,6 +84,7 @@ static func ensure_window(shell: MatchLobbyShell) -> void:
 		"plaza": shell.try_open_plaza,
 		"account": shell.try_open_account,
 		"settings": shell.try_open_settings,
+		"home": shell.try_show_home,
 		"cancel": shell.try_cancel,
 		"poll": shell.try_poll,
 		"sprint": shell._on_sprint,
@@ -102,6 +104,7 @@ static func ensure_window(shell: MatchLobbyShell) -> void:
 	MatchLobbyStageBastion.mount(shell)
 	shell.stage.bind_facade(shell)
 	shell.add_child(shell.window)
+	WindowSizeHudGd.attach(shell.window)
 	MatchLobbyHomeGd.ensure(shell)
 	shell.stage.ensure_rig()
 	shell.apply_course_document(shell.course_path)
