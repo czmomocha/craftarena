@@ -3,6 +3,7 @@ extends GutTest
 ## C4 本地化键：CSV 表 + UiCopy。不入字体、不改 HUD 字段名、不改协议。
 
 const UiCopyGd := preload("res://src/shared/ui_copy.gd")
+const UiCopyS1Gd := preload("res://src/shared/ui_copy_s1.gd")
 const MatchLobbyShellGd := preload("res://src/client/match_lobby_shell.gd")
 const MatchOfflineSessionGd := preload("res://src/client/match_offline_session.gd")
 
@@ -21,25 +22,10 @@ func before_each() -> void:
 ## 是「加了 `const X` 却忘了往 `ALL_KEYS` 里加一行」——漏登记的键不会被字体缺字
 ## 断言和导出自检看到，于是缺翻译、缺字形都无人过问。这条直接比对两者。
 func test_every_declared_key_is_registered() -> void:
-	var script: GDScript = load("res://src/shared/ui_copy.gd") as GDScript
-	assert_not_null(script)
-	if script == null:
-		return
-	var registered: PackedStringArray = UiCopyGd.ALL_KEYS
-	var declared: Array[String] = []
-	for name: Variant in script.get_script_constant_map():
-		var value: Variant = script.get_script_constant_map()[name]
-		if typeof(value) != TYPE_STRING:
-			continue
-		var text: String = value
-		if not text.begins_with("craft_arena."):
-			continue
-		declared.append(text)
-		assert_true(registered.has(text), "常量 %s = %s 没登记进 ALL_KEYS" % [name, text])
-	assert_gt(declared.size(), 0, "一个键常量都没扫到，反射方式多半失效了")
-
+	_assert_script_keys_registered("res://src/shared/ui_copy.gd", UiCopyGd.ALL_KEYS)
+	_assert_script_keys_registered("res://src/shared/ui_copy_s1.gd", UiCopyS1Gd.ALL_KEYS)
 	var seen: Dictionary = {}
-	for key: String in registered:
+	for key: String in _all_keys():
 		assert_false(seen.has(key), "ALL_KEYS 里 %s 重复登记" % key)
 		seen[key] = true
 
@@ -48,8 +34,9 @@ func test_table_covers_every_key_in_both_locales() -> void:
 	assert_true(UiCopyGd.ensure_loaded())
 	assert_true(UiCopyGd.has_locale("en"))
 	assert_true(UiCopyGd.has_locale("zh_CN"))
-	assert_gt(UiCopyGd.ALL_KEYS.size(), 0)
-	for key: String in UiCopyGd.ALL_KEYS:
+	var keys: PackedStringArray = _all_keys()
+	assert_gt(keys.size(), 0)
+	for key: String in keys:
 		assert_true(key.begins_with("craft_arena."), key)
 		var english: String = UiCopyGd.text(key, "en")
 		var chinese: String = UiCopyGd.text(key, "zh_CN")
@@ -122,6 +109,30 @@ func test_src_has_no_cd13_banner_literal() -> void:
 	for dir_path: String in ["res://src/client", "res://src/creator", "res://src/shared"]:
 		offenders.append_array(_scan_literal(dir_path, CD13_ZH))
 	assert_eq(offenders, [] as Array[String], "CD-13 那句只能住在 locale CSV")
+
+
+func _all_keys() -> PackedStringArray:
+	var keys: PackedStringArray = UiCopyGd.ALL_KEYS.duplicate()
+	keys.append_array(UiCopyS1Gd.ALL_KEYS)
+	return keys
+
+
+func _assert_script_keys_registered(path: String, registered: PackedStringArray) -> void:
+	var script: GDScript = load(path) as GDScript
+	assert_not_null(script, "读不到 %s" % path)
+	if script == null:
+		return
+	var declared: int = 0
+	for name: Variant in script.get_script_constant_map():
+		var value: Variant = script.get_script_constant_map()[name]
+		if typeof(value) != TYPE_STRING:
+			continue
+		var text: String = value
+		if not text.begins_with("craft_arena."):
+			continue
+		declared += 1
+		assert_true(registered.has(text), "%s 常量 %s = %s 没登记进 ALL_KEYS" % [path, name, text])
+	assert_gt(declared, 0, "%s 一个键常量都没扫到" % path)
 
 
 func _scan_literal(dir_path: String, needle: String) -> Array[String]:

@@ -1,4 +1,4 @@
-[gd_scene load_steps=22 format=3]
+[gd_scene load_steps=23 format=3]
 
 [ext_resource type="Theme" path="res://content/ui/theme/craft_arena.tres" id="1_theme"]
 [ext_resource type="Script" path="res://src/client/ui/scripts/rounded_gradient.gd" id="2_grad"]
@@ -13,6 +13,7 @@
 [ext_resource type="Texture2D" path="res://content/ui/assets/nav_icon_settings.png" id="11_navset"]
 [ext_resource type="Shader" path="res://content/ui/shaders/feather_left.gdshader" id="12_feather"]
 [ext_resource type="Script" path="res://src/client/ui/scripts/press_feedback.gd" id="13_press"]
+[ext_resource type="Script" path="res://src/client/ui/scripts/s1_lobby.gd" id="14_s1"]
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_art"]
 shader = ExtResource("12_feather")
@@ -89,6 +90,7 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 theme = ExtResource("1_theme")
+script = ExtResource("14_s1")
 
 [node name="Background" type="ColorRect" parent="."]
 layout_mode = 1
@@ -141,7 +143,7 @@ text = "Craft Arena"
 [node name="Subtitle" type="Label" parent="Layout/TopBar/Row/TitleBox"]
 layout_mode = 2
 theme_type_variation = &"NavSubtitle"
-text = "工坊竞技场"
+text = ""
 
 [node name="Spacer" type="Control" parent="Layout/TopBar/Row"]
 layout_mode = 2
@@ -164,7 +166,7 @@ theme_override_constants/separation = 2
 [node name="Nickname" type="Label" parent="Layout/TopBar/Row/IdentityBox"]
 layout_mode = 2
 theme_type_variation = &"NavTitle"
-text = "Maker_042"
+text = ""
 
 [node name="GuestChip" type="TextureRect" parent="Layout/TopBar/Row/IdentityBox"]
 custom_minimum_size = Vector2(153, 33)
@@ -269,17 +271,17 @@ theme_override_styles/panel = SubResource("StyleBoxFlat_chip_dark")
 [node name="Label" type="Label" parent="Layout/Main/Columns/Left/TraprushCard/Content/VBox/ChipRow/OpenChip"]
 layout_mode = 2
 theme_type_variation = &"ChipLabel"
-text = "开放中 OPEN"
+text = ""
 
 [node name="Title" type="Label" parent="Layout/Main/Columns/Left/TraprushCard/Content/VBox"]
 layout_mode = 2
 theme_type_variation = &"DisplayChannelTitle"
-text = "TRAPRUSH 机关狂奔"
+text = ""
 
 [node name="Desc" type="Label" parent="Layout/Main/Columns/Left/TraprushCard/Content/VBox"]
 layout_mode = 2
 theme_type_variation = &"BodyText"
-text = "穿越机关与道具，破坏障碍，抢占传送网络的最快路线"
+text = ""
 
 [node name="CardSpacer" type="Control" parent="Layout/Main/Columns/Left/TraprushCard/Content/VBox"]
 layout_mode = 2
@@ -291,7 +293,7 @@ custom_minimum_size = Vector2(220, 56)
 layout_mode = 2
 size_flags_horizontal = 0
 theme_type_variation = &"ButtonOnGradient"
-text = "进入频道 ENTER"
+text = ""
 script = ExtResource("13_press")
 
 [node name="BastionCard" type="Button" parent="Layout/Main/Columns/Left"]
@@ -299,7 +301,6 @@ custom_minimum_size = Vector2(0, 300)
 layout_mode = 2
 focus_mode = 0
 flat = true
-disabled = true
 script = ExtResource("13_press")
 
 [node name="Base" type="Panel" parent="Layout/Main/Columns/Left/BastionCard"]
@@ -347,17 +348,17 @@ theme_override_styles/panel = SubResource("StyleBoxFlat_chip_dark")
 [node name="Label" type="Label" parent="Layout/Main/Columns/Left/BastionCard/Content/VBox/ChipRow/ComingChip"]
 layout_mode = 2
 theme_type_variation = &"ChipLabel"
-text = "即将推出 COMING SOON 🔒"
+text = ""
 
 [node name="Title" type="Label" parent="Layout/Main/Columns/Left/BastionCard/Content/VBox"]
 layout_mode = 2
 theme_type_variation = &"DisplayChannelTitle"
-text = "BASTION + 双塔要塞"
+text = ""
 
 [node name="Desc" type="Label" parent="Layout/Main/Columns/Left/BastionCard/Content/VBox"]
 layout_mode = 2
 theme_type_variation = &"BodyText"
-text = "赛前互设障碍布阵，赛中建造炮塔，先破对方双塔者胜"
+text = ""
 
 [node name="CardSpacer" type="Control" parent="Layout/Main/Columns/Left/BastionCard/Content/VBox"]
 layout_mode = 2
@@ -368,10 +369,10 @@ mouse_filter = 2
 custom_minimum_size = Vector2(220, 56)
 layout_mode = 2
 size_flags_horizontal = 0
-disabled = true
-text = "尚未开放"
+text = ""
 
 [node name="Overlay" type="Panel" parent="Layout/Main/Columns/Left/BastionCard"]
+visible = false
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -420,7 +421,7 @@ theme_override_constants/separation = 0
 [node name="Zh" type="Label" parent="Layout/Main/Columns/NavColumn/NavCharacter/Row/Texts"]
 layout_mode = 2
 theme_type_variation = &"NavTitle"
-text = "角色选择"
+text = ""
 
 [node name="En" type="Label" parent="Layout/Main/Columns/NavColumn/NavCharacter/Row/Texts"]
 layout_mode = 2
@@ -472,7 +473,7 @@ theme_override_constants/separation = 0
 [node name="Zh" type="Label" parent="Layout/Main/Columns/NavColumn/NavMyContent/Row/Texts"]
 layout_mode = 2
 theme_type_variation = &"NavTitle"
-text = "我的内容"
+text = ""
 
 [node name="En" type="Label" parent="Layout/Main/Columns/NavColumn/NavMyContent/Row/Texts"]
 layout_mode = 2
@@ -493,7 +494,7 @@ theme_override_styles/panel = SubResource("StyleBoxFlat_count_chip")
 [node name="L" type="Label" parent="Layout/Main/Columns/NavColumn/NavMyContent/Row/Chips/Draft"]
 layout_mode = 2
 theme_type_variation = &"ChipLabel"
-text = "草稿 2"
+text = ""
 
 [node name="Published" type="PanelContainer" parent="Layout/Main/Columns/NavColumn/NavMyContent/Row/Chips"]
 layout_mode = 2
@@ -503,7 +504,7 @@ theme_override_styles/panel = SubResource("StyleBoxFlat_count_chip")
 [node name="L" type="Label" parent="Layout/Main/Columns/NavColumn/NavMyContent/Row/Chips/Published"]
 layout_mode = 2
 theme_type_variation = &"ChipLabel"
-text = "已发布 1"
+text = ""
 
 [node name="RowSpacer" type="Control" parent="Layout/Main/Columns/NavColumn/NavMyContent/Row"]
 layout_mode = 2
@@ -550,7 +551,7 @@ theme_override_constants/separation = 0
 [node name="Zh" type="Label" parent="Layout/Main/Columns/NavColumn/NavWorkshop/Row/Texts"]
 layout_mode = 2
 theme_type_variation = &"NavTitle"
-text = "公共内容广场"
+text = ""
 
 [node name="En" type="Label" parent="Layout/Main/Columns/NavColumn/NavWorkshop/Row/Texts"]
 layout_mode = 2
@@ -602,7 +603,7 @@ theme_override_constants/separation = 0
 [node name="Zh" type="Label" parent="Layout/Main/Columns/NavColumn/NavSettings/Row/Texts"]
 layout_mode = 2
 theme_type_variation = &"NavTitle"
-text = "设置"
+text = ""
 
 [node name="En" type="Label" parent="Layout/Main/Columns/NavColumn/NavSettings/Row/Texts"]
 layout_mode = 2
@@ -631,7 +632,7 @@ layout_mode = 2
 [node name="Online" type="Label" parent="Layout/DevBar/Row"]
 layout_mode = 2
 theme_type_variation = &"OnlineCaption"
-text = "● 在线 ONLINE"
+text = ""
 
 [node name="Spacer1" type="Control" parent="Layout/DevBar/Row"]
 layout_mode = 2
@@ -646,7 +647,7 @@ theme_override_styles/panel = SubResource("StyleBoxFlat_hint")
 [node name="Label" type="Label" parent="Layout/DevBar/Row/HintBox"]
 layout_mode = 2
 theme_type_variation = &"StatusCaption"
-text = "离线提示位"
+text = ""
 
 [node name="Spacer2" type="Control" parent="Layout/DevBar/Row"]
 layout_mode = 2
@@ -656,4 +657,4 @@ mouse_filter = 2
 [node name="Version" type="Label" parent="Layout/DevBar/Row"]
 layout_mode = 2
 theme_type_variation = &"MonoCaption"
-text = "v0.2.1-dev · build 1042"
+text = ""

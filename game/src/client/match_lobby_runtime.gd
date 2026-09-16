@@ -6,6 +6,7 @@ extends RefCounted
 
 const MatchGameplayGd := preload("res://src/shared/match_gameplay.gd")
 const MatchLobbyHudGd := preload("res://src/client/match_lobby_hud.gd")
+const MatchLobbyHomeGd := preload("res://src/client/match_lobby_home.gd")
 const OfficialBastionBlueprintsGd := preload("res://src/shared/official_bastion_blueprints.gd")
 const RouterGd := preload("res://src/games/bastion/audio_router.gd")
 const CatalogGd := preload("res://src/ugc/bastion_prototype_catalog.gd")
@@ -101,6 +102,7 @@ static func ensure_window(shell: MatchLobbyShell) -> void:
 	MatchLobbyStageBastion.mount(shell)
 	shell.stage.bind_facade(shell)
 	shell.add_child(shell.window)
+	MatchLobbyHomeGd.ensure(shell)
 	shell.stage.ensure_rig()
 	shell.apply_course_document(shell.course_path)
 	shell.chrome.sync_server_edit(shell.control_plane_base)

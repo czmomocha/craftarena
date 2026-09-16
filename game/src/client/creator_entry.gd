@@ -29,6 +29,7 @@ extends Node
 const AuthoringDraftStoreGd := preload("res://src/creator/authoring_draft_store.gd")
 const AuthoringEditorShellGd := preload("res://src/creator/authoring_editor_shell.gd")
 const AuthoringSurfaceNamesGd := preload("res://src/creator/authoring_surface_names.gd")
+const MatchLobbyHomeGd := preload("res://src/client/match_lobby_home.gd")
 
 ## 玩家包里的草稿落点。与内部开发插件的 `user://authoring_draft.json` 分开：
 ## 同一台开发机上两条入口互相覆盖草稿，是没人能复现的丢失。
@@ -40,6 +41,7 @@ var draft_path: String = DRAFT_PATH
 ## 打开创作时把大厅窗口收起来。并排的 Editor + Preview 已经占满主视口，
 ## 底下再压一个最大化的大厅窗只会抢输入焦点。
 var lobby_window: Window = null
+var host: MatchLobbyShell = null
 var live_io: bool = false
 var control_plane_base: String = ""
 var http_transport: Callable = Callable()
@@ -68,6 +70,7 @@ static func ensure(shell: MatchLobbyShell, existing: CreatorEntry) -> CreatorEnt
 	if entry == null:
 		return null
 	entry.lobby_window = shell.window
+	entry.host = shell
 	_copy_live(shell, entry)
 	shell.add_child(entry)
 	return entry
@@ -120,6 +123,9 @@ func status_view() -> Dictionary:
 
 
 func _set_lobby_visible(visible: bool) -> void:
+	if host != null:
+		MatchLobbyHomeGd.set_lobby_visible(host, visible)
+		return
 	if lobby_window == null or not is_instance_valid(lobby_window):
 		return
 	lobby_window.visible = visible
@@ -143,6 +149,7 @@ func _submit_live(body: Dictionary) -> Dictionary:
 
 
 static func _copy_live(shell: MatchLobbyShell, entry: CreatorEntry) -> void:
+	entry.host = shell
 	entry.live_io = shell.live_io
 	entry.control_plane_base = shell.control_plane_base
 

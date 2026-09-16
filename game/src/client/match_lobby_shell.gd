@@ -6,6 +6,7 @@ extends Node
 const MatchJoinSessionGd := preload("res://src/client/match_join_session.gd")
 const MatchLobbyChromeGd := preload("res://src/client/match_lobby_chrome.gd")
 const MatchLobbyHudGd := preload("res://src/client/match_lobby_hud.gd")
+const MatchLobbyHomeGd := preload("res://src/client/match_lobby_home.gd")
 const MatchLobbyNetGd := preload("res://src/client/match_lobby_net.gd")
 const MatchLobbySamplerGd := preload("res://src/client/match_lobby_sampler.gd")
 const MatchLobbyStageGd := preload("res://src/client/match_lobby_stage.gd")
@@ -63,6 +64,8 @@ var creator: CreatorEntry = null
 var plaza: ContentPlazaEntry = null
 var account: AccountEntry = null
 var settings: AudioSettingsEntry = null
+var home_screen: Control = null
+var home_surface: String = ""
 var window: Window = null
 var live_io: bool = false
 var web_platform: bool = false
@@ -98,12 +101,14 @@ func open() -> bool:
 	if live_io:
 		ensure_net()
 		net.ensure_http(_on_http_completed)
+	MatchLobbyHomeGd.note_channel_shown(self)
 	window.visible = true
 	_refresh_status()
 	return true
 func show_window() -> bool:
 	if window == null:
 		return false
+	MatchLobbyHomeGd.note_channel_shown(self)
 	chrome.show_window()
 	_refresh_status()
 	return true
@@ -174,6 +179,14 @@ func try_open_account() -> bool: return director.try_open_account()
 func try_close_account() -> bool: return director.try_close_account()
 func try_open_settings() -> bool: return director.try_open_settings()
 func try_close_settings() -> bool: return director.try_close_settings()
+func try_show_home() -> bool:
+	return MatchLobbyHomeGd.try_show_home(self)
+func try_enter_channel(gameplay: String) -> bool:
+	return MatchLobbyHomeGd.try_enter_channel(self, gameplay)
+func hide_for_overlay() -> void:
+	MatchLobbyHomeGd.hide_for_overlay(self)
+func restore_from_overlay() -> void:
+	MatchLobbyHomeGd.restore_from_overlay(self)
 func try_stop_offline() -> bool: return director.try_stop_offline()
 func try_cancel() -> bool: return director.try_cancel()
 func try_leave_play() -> bool: return director.try_leave_play()
@@ -287,6 +300,8 @@ func apply_course_document(path: String) -> void:
 	course_path = path
 	MatchLobbyStageBastion.show_traprush(self)
 	stage.apply_course(path)
+func apply_blueprint_document(blueprint_id: String) -> void:
+	MatchLobbyRuntime.apply_blueprint_document(self, blueprint_id)
 func apply_snapshot_map() -> void:
 	MatchLobbyRuntime.apply_snapshot(self)
 func ensure_net() -> void:
@@ -333,7 +348,8 @@ func _send_protocol_probe() -> void:
 		return
 	net.send_probe(play.try_encode_probe(Time.get_ticks_msec()))
 func _on_close_requested() -> void:
-	hide_window()
+	if not try_show_home():
+		hide_window()
 func _on_edit_submitted(_text: String) -> void:
 	chrome.release_focus()
 func _on_sprint() -> void:

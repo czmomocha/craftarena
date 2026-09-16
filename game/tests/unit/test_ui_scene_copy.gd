@@ -6,26 +6,42 @@ extends GutTest
 ## 以及 `.tscn` 的 `text` 清空、在 `_ready()` 里填。后者的好处正是这个文件要钉住的：
 ## **漏接一个键会显示为空白**，而不是继续显示一句翻译器够不到的中文。
 ##
-## 这里只覆盖**已迁移**的两个场景。S1 / S2 仍有硬编码中文，是下一刀的事，
+## 这里只覆盖**已迁移**的场景。S2 仍有硬编码中文，是第三批的事，
 ## 清单见 `PENDING_SCENES`——写在代码里而不是只写在文档里，因为文档不会在
-## 有人「顺手」把 S1 也接了一半的时候提醒任何人。
+## 有人「顺手」把 S2 也接了一半的时候提醒任何人。
 
 const UiCopyGd := preload("res://src/shared/ui_copy.gd")
+const UiCopyS1Gd := preload("res://src/shared/ui_copy_s1.gd")
 
+const S1_SCENE: String = "res://src/client/ui/scenes/s1_lobby.tscn"
 const S3_SCENE: String = "res://src/client/ui/scenes/s3_workshop.tscn"
 const CARD_SCENE: String = "res://src/client/ui/scenes/components/content_card.tscn"
 
 ## 已迁移：这些场景的 `text` / `placeholder_text` 必须零中文。
-const MIGRATED_SCENES: Array[String] = [S3_SCENE, CARD_SCENE]
+const MIGRATED_SCENES: Array[String] = [S1_SCENE, S3_SCENE, CARD_SCENE]
 
-## 未迁移：UI 接线第一批的剩余前置。列在这里是为了让「还欠着什么」可执行，
+## 未迁移：第三批。列在这里是为了让「还欠着什么」可执行，
 ## 迁完一个就从这里挪到上面那个数组。
 const PENDING_SCENES: Array[String] = [
-	"res://src/client/ui/scenes/s1_lobby.tscn",
 	"res://src/client/ui/scenes/s2_matchmaking.tscn",
 ]
 
 ## 本刀新增的键。分屏前缀的落点，两种 locale 都必须有真值。
+const S1_KEYS: Array[String] = [
+	UiCopyS1Gd.BRAND_SUBTITLE,
+	UiCopyS1Gd.CHIP_OPEN,
+	UiCopyS1Gd.TRAPRUSH_TITLE,
+	UiCopyS1Gd.TRAPRUSH_DESC,
+	UiCopyS1Gd.ENTER,
+	UiCopyS1Gd.BASTION_TITLE,
+	UiCopyS1Gd.BASTION_DESC,
+	UiCopyS1Gd.NAV_CHARACTER,
+	UiCopyS1Gd.NAV_MY_CONTENT,
+	UiCopyS1Gd.NAV_WORKSHOP,
+	UiCopyS1Gd.NAV_SETTINGS,
+	UiCopyS1Gd.STATUS_ONLINE,
+]
+
 const S3_KEYS: Array[String] = [
 	UiCopyGd.S3_TITLE,
 	UiCopyGd.S3_TAB_LATEST,
@@ -86,8 +102,8 @@ func test_migrated_scenes_author_no_chinese() -> void:
 
 func test_the_scan_is_not_vacuous() -> void:
 	# 反例：上面那条的期望值是空数组，而一个什么都没读到的扫描同样给出空数组。
-	# 未迁移的两个场景现在必然含中文，所以它们同时为空 = 扫描函数坏了，不是迁移干净了。
-	# S1 / S2 迁完之后这条会红，那时把它们移进 MIGRATED_SCENES 即可。
+	# 未迁移的场景现在必然含中文，所以它们同时为空 = 扫描函数坏了，不是迁移干净了。
+	# S2 迁完之后这条会红，那时把它移进 MIGRATED_SCENES 即可。
 	for path: String in PENDING_SCENES:
 		assert_gt(
 			_authored_cjk_lines(path).size(),
@@ -97,7 +113,8 @@ func test_the_scan_is_not_vacuous() -> void:
 
 
 func test_new_keys_resolve_in_both_locales() -> void:
-	var keys: Array[String] = S3_KEYS.duplicate()
+	var keys: Array[String] = S1_KEYS.duplicate()
+	keys.append_array(S3_KEYS)
 	keys.append_array(CARD_KEYS)
 	for key: String in keys:
 		for locale: String in ["en", "zh_CN"]:
@@ -116,6 +133,34 @@ func test_plays_count_is_a_format_string() -> void:
 	# 写死的「次游玩」，卡片上的数字就会消失，而不是报错。
 	for locale: String in ["en", "zh_CN"]:
 		assert_string_contains(UiCopyGd.text(UiCopyGd.CARD_PLAYS_COUNT, locale), "%s")
+
+
+func test_s1_fills_its_chrome_at_runtime() -> void:
+	var packed: PackedScene = load(S1_SCENE) as PackedScene
+	assert_not_null(packed, "S1 场景必须能加载")
+	if packed == null:
+		return
+	var root: Node = packed.instantiate()
+	add_child_autofree(root)
+
+	var subtitle: Label = root.get_node_or_null("Layout/TopBar/Row/TitleBox/Subtitle") as Label
+	assert_not_null(subtitle, "S1 副标题节点路径变了")
+	if subtitle != null:
+		assert_eq(subtitle.text, UiCopyGd.text(UiCopyS1Gd.BRAND_SUBTITLE), "副标题没有从 UiCopy 填上")
+
+	var enter: Button = root.get_node_or_null(
+		"Layout/Main/Columns/Left/TraprushCard/Content/VBox/CTA"
+	) as Button
+	assert_not_null(enter, "S1 进入频道按钮路径变了")
+	if enter != null:
+		assert_eq(enter.text, UiCopyGd.text(UiCopyS1Gd.ENTER))
+
+	var workshop: Label = root.get_node_or_null(
+		"Layout/Main/Columns/NavColumn/NavWorkshop/Row/Texts/Zh"
+	) as Label
+	assert_not_null(workshop, "S1 广场导航路径变了")
+	if workshop != null:
+		assert_eq(workshop.text, UiCopyGd.text(UiCopyS1Gd.NAV_WORKSHOP))
 
 
 func test_s3_fills_its_chrome_at_runtime() -> void:
@@ -202,11 +247,27 @@ func test_demo_entries_are_not_in_the_locale_table() -> void:
 	assert_gt(entries.size(), 0, "占位数据为空，这条断言就没有对象了")
 
 	var table_titles: Array[String] = []
-	for key: String in UiCopyGd.ALL_KEYS:
+	var keys: PackedStringArray = UiCopyGd.ALL_KEYS.duplicate()
+	keys.append_array(UiCopyS1Gd.ALL_KEYS)
+	for key: String in keys:
 		table_titles.append(UiCopyGd.text(key, "zh_CN"))
 	for entry: Dictionary in entries:
 		var title: String = str(entry["title"])
 		assert_false(
 			table_titles.has(title),
 			"占位赛道名 %s 混进了本地化表" % title
+		)
+
+	var s1: GDScript = load("res://src/client/ui/scripts/s1_lobby.gd") as GDScript
+	assert_not_null(s1, "S1 脚本必须能加载")
+	if s1 == null:
+		return
+	var constants: Dictionary = s1.get_script_constant_map()
+	for name: String in ["DEMO_NICKNAME", "DEMO_DRAFT_CHIP", "DEMO_PUBLISHED_CHIP", "DEMO_VERSION"]:
+		var raw: Variant = constants.get(name, "")
+		var value: String = str(raw)
+		assert_false(value.is_empty(), "%s 不见了" % name)
+		assert_false(
+			table_titles.has(value),
+			"S1 占位文案 %s 混进了本地化表" % value
 		)

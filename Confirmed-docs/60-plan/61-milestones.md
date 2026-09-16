@@ -19,8 +19,8 @@
 | 进行中 | M3（表现层增强不阻塞 M3 退出，归 M-Art；深化段已收口的表现不再挡本号） |
 | M5 退出记录 | 2026-09-13 人类签署，结论 **「基本通过」**（不是无保留的「通过」）。依据：A1–C6 十一章全交；五张官方课 `npm run bot-run` 全 `completable`；GUT 1645/1645；[可玩性签署：TRAPRUSH](../../docs/runbooks/playability-signoff-traprush.md) 八项均为「通过」。**两处已知缺口随本号带走，不因退出而消失**：[网络故障人工检查](../../docs/runbooks/network-fault-check.md) 九项中乱序与重复包**未严格注入**（macOS `dnctl` 无对应开关，待 Linux `tc netem`）；签署对象是当前自绘大厅 + 占位美术 + 占位数值那一版，换 UI / 定稿美术 / 改 D-F4·F5·F6 后结论不自动延续 |
 | 部分交付 | M-Export（C1 三预设；**Web 游玩分发两刀已交**；Android / iOS 排到一期收尾；公开 TLS / PR 沙盒排到 **M7 之后**）；M-Art（C4 契约与第一批 `.glb`；字体入包与 S3 已交；与 F 线重叠项已交） |
-| 下一动 | **M6**（含 UI 接线第二批 S1 主大厅壳）。章节拆分见 [M6 章节计划](../../docs/plans/m6-bastion-1v1.md)（11 章，D1 → F2；实现级计划，不是本文件的替代）。**D1–E4 已交**（E4：2026-09-16）。**下一刀是 F1**（S1 主大厅壳），不提前、不单独开工。E4 音效按诚实边界复用已登记 cue，无新 OGG，见 [CD-91 D.4](../90-reference/91-decision-log.md) `bastion_e4_audio`。**测试期 VPS Web 分发已交**（2026-09-14；人类 2026-09-15 确认部署与测试已自行走过）。测试期继续明文 `http`/`ws` + 自备 VPS 链接和端口。S1 仍在 **M6 主大厅壳章之内**，不提前。S3 三项设计缺口仍待产品输入，见 [ui-wiring.md §2.2](../../docs/runbooks/ui-wiring.md) |
-| 未开工（顺序，不是冻结） | 公开 TLS / 每个 PR 的 Web 沙盒（**M7 之后**）；**产品 UI 接线**第二、三批（S1 在 M6 章内）；M6、M7；Android / iOS 烟测（一期收尾）；角色选择界面（紧跟主大厅壳，不提前开工） |
+| 下一动 | **M6 F2**（退出验收 + TRAPRUSH 可玩性重签）。章节拆分见 [M6 章节计划](../../docs/plans/m6-bastion-1v1.md)（11 章，D1 → F2；实现级计划，不是本文件的替代）。**D1–F1 已交**（F1：2026-09-16）。**下一刀是 F2**。E4 音效按诚实边界复用已登记 cue，无新 OGG，见 [CD-91 D.4](../90-reference/91-decision-log.md) `bastion_e4_audio`。S1 主大厅壳已接线（F1）：落地是 `s1_lobby.tscn`，频道仍是自绘 Window，`project.godot` 全局 theme 仍不挂。**F1 让 M5 那份 TRAPRUSH 可玩性签署作废，须在 F2 重签。** **测试期 VPS Web 分发已交**（2026-09-14；人类 2026-09-15 确认部署与测试已自行走过）。测试期继续明文 `http`/`ws` + 自备 VPS 链接和端口。S3 三项设计缺口仍待产品输入，见 [ui-wiring.md §2.2](../../docs/runbooks/ui-wiring.md) |
+| 未开工（顺序，不是冻结） | 公开 TLS / 每个 PR 的 Web 沙盒（**M7 之后**）；**产品 UI 接线第三批**（S2 / S4 / S5 / S6）；M6 F2、M7；Android / iOS 烟测（一期收尾）；角色选择界面（紧跟主大厅壳，不提前开工） |
 | 纠偏闸门 | **已解除**（2026-09-03）。C0–C5 不是里程碑号。此后本文件进度顺序生效 |
 | 解冻后顺序 | 创作者可测（已收口）→ F 线（已收口）→ Web 游玩分发（第一刀已收口）→ 可玩性深化（已收口）→ M-Art 剩余已拍板项 → **M4a** → M4b → M5 → **字体入包 → UI 接线第一批（S3 广场）** → **测试期 VPS Web 分发（M-Export 剩余）** → M6 / M7（含 **UI 接线第二批 S1 主大厅壳**）→ **公开 TLS / 每个 PR 的 Web 沙盒** → **UI 接线第三批（S2 / S4 / S5 / S6）** → **一期收尾**（Android / iOS 烟测、触控 UI） |
 
@@ -331,12 +331,12 @@
 产出（剩余）：
 
 - ~~字体入包~~ **已交**（2026-09-13）。曾于 2026-09-12 从一期收尾提前，排在 M5 退出之后、UI 接线第一批之前。成果：Noto Sans SC 常用 3500 字子集（∪ 项目补集 ∪ 可打印 ASCII，约 800 KB）入库并接线，按 OFL 的 RFN 约束改名 `CraftArena Sans SC`；GUT 断言本地化表与两张字表零缺字；`--package-check` 新增 `ui_font_loadable`。子集范围由人类 2026-09-13 拍板。口径与已知边界见 [CD-11 §8.2 第 3 条](../10-product/11-scope-and-platforms.md#82-表现规格d42026-08-26-拍板当前生效值)，重跑步骤在 `tools/font-subset/README.md`；
-- **产品 UI 接线（三批，2026-09-12 拍板）**。UI 基础包已于 2026-09-11 落库（`game/content/ui/theme/`、`game/src/client/ui/`、`docs/runbooks/ui-wiring.md`），当前是纯静态资产，运行时无任何引用，因此接线时机可自由择时。分批如下，**一批一刀，不合并**：
+- **产品 UI 接线（三批，2026-09-12 拍板）**。UI 基础包已于 2026-09-11 落库（`game/content/ui/theme/`、`game/src/client/ui/`、`docs/runbooks/ui-wiring.md`）。第一批 S3 与第二批 S1 已接线；S2 / S4 / S5 / S6 仍待。分批如下，**一批一刀，不合并**：
 
   | 批次 | 接什么 | 时机 | 前置 |
   |---|---|---|---|
   | 第一批 | ~~S3 公共内容广场，替换 `content_plaza_entry.gd`~~ **已交（2026-09-13）** | M5 退出之后 | 四项前置 + 接线均已交。**只换视图**：tab / HTTP / 选中 / Solo / 建房逻辑与公开 API 未动。三项缺口待设计输入，见 [ui-wiring.md §2.2](../../docs/runbooks/ui-wiring.md) |
-  | 第二批 | S1 主大厅，替换 `match_lobby_*` 自绘窗口 | **M6 主大厅壳章之内**，随 BASTION 双玩法入口一起落 | 第一批已交；同一刀整节替换 [开发机窗口验收](../../docs/runbooks/dev-window-check.md) 的「共用启动」 |
+  | 第二批 | ~~S1 主大厅，替换 `match_lobby_*` 自绘窗口~~ **已交（F1，2026-09-16）** | **M6 主大厅壳章之内** | 落地壳是 `s1_lobby.tscn`；频道仍是自绘 Window；全局 theme 仍不挂。**让 M5 可玩性签署作废，须 F2 重签** |
   | 第三批 | S2 匹配屏 + S4 账号 + S5 我的内容 + S6 局内 HUD | 第二批之后 | S4 / S5 / S6 尚未设计，需先出设计稿 |
 
   不提前、不跳批、不在 M5 C6 期间接任何一屏——C6 要签的可玩性清单描述的是现有自绘大厅，换 UI 会让刚签的验收对象当场作废（宪法第九条）。
@@ -405,13 +405,13 @@
 
 ### M6：BASTION 最小 1v1
 
-状态：**进行中**。**D1–E4 已交**（E4：2026-09-16），**F1 起未开工**。章节拆分见 [M6 章节计划](../../docs/plans/m6-bastion-1v1.md)（11 章：D1 契约与蓝图编译 → D2 寻路与封路守卫 → D3 阶段机与波次 → D4 炮塔与经济 → D5 互设障碍 → E1 实时帧 → E2 官方蓝图 → E3 对局进程与匹配 → E4 客户端对局壳 → F1 UI 接线第二批 S1 → F2 退出验收）。那是实现级计划，本节仍是产出与退出条件的所有者。
+状态：**进行中**。**D1–F1 已交**（F1：2026-09-16），**F2 起未开工**。章节拆分见 [M6 章节计划](../../docs/plans/m6-bastion-1v1.md)（11 章：D1 契约与蓝图编译 → D2 寻路与封路守卫 → D3 阶段机与波次 → D4 炮塔与经济 → D5 互设障碍 → E1 实时帧 → E2 官方蓝图 → E3 对局进程与匹配 → E4 客户端对局壳 → F1 UI 接线第二批 S1 → F2 退出验收）。那是实现级计划，本节仍是产出与退出条件的所有者。
 
 **2026-09-15 人类拍板两项**（结论与未覆盖范围见 [CD-91 D.4](../90-reference/91-decision-log.md)）：蓝图编译产物是独立新类型、不动 Bundle v2 与 Component Schema v1（`bastion_blueprint_bundle`）；M6 最小集 = 3 塔 + 3 兵 + 3 障碍，只锁「M6 用哪九个」、数值仍是占位桩（`bastion_minimum_set_m6`，口径在 [CD-22 当前生效值](../20-gameplay/22-bastion.md)）。**D1 由此解锁**。同日开工 E1 时另拍两项：v1 加 type 5/6 与 intent id 7–12、不升协议大版本（`bastion_realtime_frames`）；隐藏布障走服务端裁剪（`hidden_state_sync`）。同日开工 E2 时另拍一项：第一张官方蓝图 = 对称双线（`official_bastion_blueprint_01`）。同日开工 E3 时另拍两项：匹配 HTTP 加可选 `gameplay`、官方蓝图走独立 `blueprint`（`match_http_gameplay`）；结算 HTTP 加可选 `teams[]`、复用 `mvpSlot`（`settlement_http_teams`）。E4 音效按本章诚实边界复用已登记 cue（`bastion_e4_audio`），无新 OGG；新素材入库仍须宪法第十八条。
 
-**D1–E4 交了什么、没交什么**：交的是**全离线的玩法底座**加上 **E1 协议帧**加上 **E2 第一张官方蓝图**加上 **E3 对局进程 / 匹配 / 结算**加上 **E4 客户端对局壳**——BASTION 蓝图 bundle v1 与编译器、九个原型的白名单、占位数值单一配置源、与玩法无关的确定性边图搜索、「不得完全封路」守卫、五阶段会话与镜像波次与核心伤害与胜负、炮塔与经济（含四类伪造建造的反例）、互设障碍的点数预算与盲设揭示退点与布障磁带、type 5/6 实时帧与 intent id 7–12、布障阶段服务端裁剪、`blueprint_01` 对称双线（手写 AuthoringDocument + 双端 id 白名单）、MatchServer 按玩法分派、匹配 HTTP 玩法判别位与官方 `blueprint`、结算 HTTP 可选 `teams[]`、快照跟从 / 建造交互（无预测）/ HUD tokens / 布障只画本方 / `bastion_audio_router.gd` 复用已登记 cue。**没交**：S1 主大厅壳（F1）。**第一次有画面是 E4。** 数值全部是 `game/src/games/bastion/play_stubs.gd` 的占位桩（[CD-63 §1.2 / §1.3](63-open-decisions.md) 仍延期）。大厅入口仍是自绘 `Window`（课 id 填 `blueprint_01`）；S1 接线会让 M5 那份可玩性签署作废，须在 F2 重签。官方蓝图 id 已落，**匹配 HTTP 已认 `blueprint_01`**。
+**D1–F1 交了什么、没交什么**：交的是**全离线的玩法底座**加上 **E1 协议帧**加上 **E2 第一张官方蓝图**加上 **E3 对局进程 / 匹配 / 结算**加上 **E4 客户端对局壳**加上 **F1 S1 主大厅壳**——BASTION 蓝图 bundle v1 与编译器、九个原型的白名单、占位数值单一配置源、与玩法无关的确定性边图搜索、「不得完全封路」守卫、五阶段会话与镜像波次与核心伤害与胜负、炮塔与经济（含四类伪造建造的反例）、互设障碍的点数预算与盲设揭示退点与布障磁带、type 5/6 实时帧与 intent id 7–12、布障阶段服务端裁剪、`blueprint_01` 对称双线（手写 AuthoringDocument + 双端 id 白名单）、MatchServer 按玩法分派、匹配 HTTP 玩法判别位与官方 `blueprint`、结算 HTTP 可选 `teams[]`、快照跟从 / 建造交互（无预测）/ HUD tokens / 布障只画本方 / `bastion_audio_router.gd` 复用已登记 cue、`s1_lobby.tscn` 落地壳与双玩法频道入口（关频道窗回 S1；BASTION 卡开放；角色选择 / 我的内容可见但禁用）。**没交**：F2 退出验收与 TRAPRUSH 可玩性重签；S2 匹配屏；角色选择功能；BASTION 单人对 AI / 蓝图 Edit（M7）。**第一次有画面是 E4。** 数值全部是 `game/src/games/bastion/play_stubs.gd` 的占位桩（[CD-63 §1.2 / §1.3](63-open-decisions.md) 仍延期）。频道入口仍是自绘 `Window`（TRAPRUSH 默认 `course_01`，BASTION 钉 `blueprint_01` / 2 席）。**F1 已让 M5 那份可玩性签署作废，须在 F2 重签。** 官方蓝图 id 已落，**匹配 HTTP 已认 `blueprint_01`**。
 
-**UI 接线第二批 S1 主大厅壳在本号 F1 章内**；它落地后 M5 的 TRAPRUSH 可玩性签署结论作废、须在 F2 重签（见上「M5 退出记录」第 2 条）。
+**UI 接线第二批 S1 主大厅壳已在本号 F1 落地**；M5 的 TRAPRUSH 可玩性签署结论作废、须在 F2 重签（见上「M5 退出记录」第 2 条）。
 
 产出：
 

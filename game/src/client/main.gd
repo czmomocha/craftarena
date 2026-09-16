@@ -1,7 +1,8 @@
 extends Node
 
 ## Client boot scene. Prints a structured boot line for Headless smoke,
-## then opens the TRAPRUSH match lobby (code-created Window) and maps the
+## then opens the S1 main lobby (home) and, after a channel is chosen,
+## the TRAPRUSH / BASTION match Window, and maps the
 ## default official course occupancy, destructible placeholders,
 ## compiled portal-link gizmos, checkpoint-order gizmos, and live
 ## standing labels from the latest snapshot. Solo play starts a local
@@ -65,6 +66,8 @@ func _ready() -> void:
 		if room != "":
 			lobby.set_room_code_text(room)
 			lobby.try_join_room(room)
+		else:
+			lobby.try_show_home()
 
 
 static func _format_log_line(event: String, fields: Dictionary) -> String:

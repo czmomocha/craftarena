@@ -1,6 +1,6 @@
 # Craft Arena UI 基础包 · 接线说明
 
-> **状态（2026-09-13）：资产已落库，四项前置已清完，运行时尚未接线。**
+> **状态（2026-09-16）：资产已落库，四项前置已清完，S3 与 S1 已接线。**
 >
 > - **排期的所有者是 [CD-61 §2 M-Art](../../Confirmed-docs/60-plan/61-milestones.md#m-art表现与美术)**，本文件不复述（宪法第二十六条）。三批：S3 广场 → S1 主大厅（M6 主大厅壳章内）→ S2 / S4 / S5 / S6。
 > - 第一批四项前置全部已交（均 2026-09-13）：**字体入包**（[CD-11 §8.2 第 3 条](../../Confirmed-docs/10-product/11-scope-and-platforms.md)，见 [§3.5](#36-字体已完成2026-09-13)）；**两个校验脚本进 CI**（见 [§0](#0-两个校验脚本已进-ci2026-09-13)）；**S3 + 卡片文案迁 `UiCopy`**（见 [§0.3](#03-文案迁-uicopy-的真实口径)）；**本文件按仓库实际落点重写**（本次）。
@@ -61,11 +61,11 @@
 
 #### 已迁移与未迁移
 
-**已迁移**：`s3_workshop.tscn`、`components/content_card.tscn`（第一批的实际目标）。两个文件的 `text` 已清空，运行时由 `_apply_copy()` / `_apply()` 从 `UiCopy` 填。
+**已迁移**：`s1_lobby.tscn`、`s3_workshop.tscn`、`components/content_card.tscn`。文件的 `text` 已清空，运行时由 `_apply_copy()` / `_apply()` 从 `UiCopy` 填。S1 的键在 `ui_copy_s1.gd`（E9 拆文件），查表仍走 `UiCopy.text()`。占位假数据（昵称、草稿数、版本号）留在 `s1_lobby.gd` 的 `DEMO_*`，不进 CSV。
 
-**未迁移**：`s1_lobby.tscn`（18 处）、`s2_matchmaking.tscn`（52 处）。它们分别属于第二批（M6）和第三批，且 `s1_lobby.tscn` 目前**没有脚本**，迁移要顺带新建 `s1_lobby.gd`。拆开是为了让第一批的接线不被两个远期屏幕挡住（宪法第九条：一次变更只解决一个主要问题）。
+**未迁移**：`s2_matchmaking.tscn`（52 处）。属于第三批。
 
-这份清单是**可执行的**，不只是文字：`game/tests/unit/test_ui_scene_copy.gd` 的 `PENDING_SCENES` 就是上面那两个文件，并且有一条反例断言要求它们**确实还含中文**——迁完之后那条会红，提醒把它们移进 `MIGRATED_SCENES`。
+这份清单是**可执行的**，不只是文字：`game/tests/unit/test_ui_scene_copy.gd` 的 `PENDING_SCENES` 现在只剩 S2，并且有一条反例断言要求它**确实还含中文**——迁完之后那条会红，提醒把它移进 `MIGRATED_SCENES`。
 
 #### 为什么清空 `.tscn` 而不是留着当占位
 
@@ -98,6 +98,7 @@ game/
 │       ├── press_feedback.gd         按压反馈，只能挂 BaseButton
 │       ├── rounded_gradient.gd       同步 shader 的 rect_size
 │       ├── spinner.gd
+│       ├── s1_lobby.gd               主大厅视图（F1）：填文案、发 intent，不开战
 │       ├── s2_matchmaking.gd
 │       └── s3_workshop.gd
 └── tools/ui/
@@ -108,16 +109,24 @@ game/
 
 注意 `scenes/` 与 `scripts/` 是**平级**的两个目录，场景和组件都在 `scenes/` 下（组件在 `scenes/components/`）。历史版本的本文件写的是 `screens/` 与 `components/` 两个顶层目录，那是源项目的形状，本仓库从来没有过。
 
-`s1_lobby.tscn` **没有脚本**，是纯静态场景；`s2` / `s3` 有。
+`s1_lobby.tscn` **有脚本**（F1：`s1_lobby.gd`）；`s2` / `s3` 有。
 
 ## 2. 当前接线状态
 
 | 屏 | 场景 | 运行时 | 接线批次 |
 |---|---|---|---|
-| S1 主大厅 | `s1_lobby.tscn` | 仍是 `match_lobby_shell.gd` 自绘 `Window` | 第二批（M6） |
-| S2 匹配 | `s2_matchmaking.tscn` | 同上（大厅窗口内的输入框与按钮） | 第三批 |
+| S1 主大厅 | `s1_lobby.tscn` | **已接线**（2026-09-16）：主视口落地壳；频道仍是自绘 Window | 第二批（M6 F1）✅ |
+| S2 匹配 | `s2_matchmaking.tscn` | 频道窗口内的输入框与按钮仍是自绘 | 第三批 |
 | S3 广场 | `s3_workshop.tscn` | **已接线**（2026-09-13）：`content_plaza_entry.gd` 的视图 | 第一批 ✅ |
 | S4 / S5 / S6 | — | — | 第三批，尚无设计稿 |
+
+### 2.0 S1 怎么接的
+
+**换了落地壳，没换频道窗。** `s1_lobby.gd` 是视图：从 `UiCopy` 填设计稿文案、把 BASTION 卡改成开放态、点卡发 `channel_requested`。频道成员、匹配、3D 场仍在 `MatchLobbyShell` 的自绘 Window 里（公开 API `open()` / `try_quick()` 等一字未改）。玩家启动走 `try_show_home()`；测试与 `?room=` / `?edit=` 仍先看到频道窗。关频道窗回 S1。广场 / 账号 / 设置 / 创作按进入时的表面还原，不会从 S1 进 overlay 再被强制弹到频道窗。
+
+角色选择与「我的内容」留在设计树里但禁用——删掉是改设计，启用却什么都不发生更糟（与 S3 灰掉排序 / 搜索同一条）。CD-12 树里 BASTION 的「单人对 AI」与「蓝图编辑」属 M7，频道窗里对应的是把 TRAPRUSH 专用的 Solo / 创作 / 冲刺藏起来，不是接那两项。
+
+`project.godot` 仍不挂全局 theme。
 
 ### 2.1 S3 怎么接的
 

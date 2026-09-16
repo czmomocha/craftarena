@@ -7,6 +7,7 @@ extends Node
 const AudioServiceGd := preload("res://src/audio/audio_service.gd")
 const AudioSettingsGd := preload("res://src/audio/audio_settings.gd")
 const ClientAudioGd := preload("res://src/client/client_audio.gd")
+const MatchLobbyHomeGd := preload("res://src/client/match_lobby_home.gd")
 
 const WINDOW_NAME: String = "SettingsWindow"
 const MUTE_NAME: String = "AudioMute"
@@ -16,6 +17,7 @@ const SLIDER_PREFIX: String = "Bus_"
 var window: Window = null
 var mute_box: CheckBox = null
 var lobby_window: Window = null
+var host: MatchLobbyShell = null
 var _sliders: Dictionary = {}
 
 
@@ -24,6 +26,7 @@ static func ensure(shell: MatchLobbyShell, existing: AudioSettingsEntry) -> Audi
 		return existing
 	var entry := new()
 	entry.lobby_window = shell.window
+	entry.host = shell
 	shell.add_child(entry)
 	return entry
 
@@ -146,6 +149,9 @@ func _on_close() -> void:
 
 
 func _set_lobby_visible(visible: bool) -> void:
+	if host != null:
+		MatchLobbyHomeGd.set_lobby_visible(host, visible)
+		return
 	if lobby_window == null or not is_instance_valid(lobby_window):
 		return
 	lobby_window.visible = visible

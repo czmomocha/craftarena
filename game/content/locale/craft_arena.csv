@@ -119,3 +119,15 @@ craft_arena.s3.note,Titles come from the system word bank · no free text · unv
 craft_arena.card.unverified_badge,Completability unverified ?,未验证可完成 ?
 craft_arena.card.action_edit_reuse,Edit / Reuse,编辑/复用
 craft_arena.card.plays_count,%s plays,%s 次游玩
+craft_arena.s1.brand_subtitle,Workshop Arena,工坊竞技场
+craft_arena.s1.chip_open,OPEN,开放中 OPEN
+craft_arena.s1.traprush_title,TRAPRUSH,TRAPRUSH 机关狂奔
+craft_arena.s1.traprush_desc,"Race through traps and items, break obstacles, and take the fastest route on the portal network",穿越机关与道具，破坏障碍，抢占传送网络的最快路线
+craft_arena.s1.enter,ENTER,进入频道 ENTER
+craft_arena.s1.bastion_title,BASTION,BASTION + 双塔要塞
+craft_arena.s1.bastion_desc,"Place hidden obstacles before the match, build towers during it, and break the enemy cores first",赛前互设障碍布阵，赛中建造炮塔，先破对方双塔者胜
+craft_arena.s1.nav_character,Character,角色选择
+craft_arena.s1.nav_my_content,My Content,我的内容
+craft_arena.s1.nav_workshop,Public Workshop,公共内容广场
+craft_arena.s1.nav_settings,Settings,设置
+craft_arena.s1.status_online,● ONLINE,● 在线 ONLINE

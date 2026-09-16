@@ -47,7 +47,7 @@ describe("M6 chapter plan is landed as a plan, not as a start signal", () => {
 		const plan = read(PLAN);
 		// D1–D4 之前这里钉的是「没有一行实现」。那句话在 D1 之后就假了，直接删掉
 		// 等于把门禁拆了，所以换成三件仍然为真、同样容易被顺手抹掉的事。
-		assert.match(plan, /D1–E4 已交，F1 起未开工/);
+		assert.match(plan, /D1–F1 已交，F2 起未开工/);
 		assert.match(plan, /game\/src\/games\/bastion\//);
 		// 「第一次有画面是 E4」必须留在章节清单的引子里，不能只活在 §8 那张
 		// 故障注入表的行文里——那样这条断言会被自己的文档描述喂饱。
@@ -97,6 +97,7 @@ describe("M6 chapter plan is landed as a plan, not as a start signal", () => {
 		assert.match(decisions, /match_http_gameplay = optional_field_default_traprush/);
 		assert.match(decisions, /settlement_http_teams = optional_array_reuse_mvp_slot/);
 		assert.match(decisions, /bastion_e4_audio = reuse_registered_cues/);
+		assert.match(decisions, /ui_wiring_s1 = home_shell_dual_channel/);
 
 		// CD-63 §1.2 / §1.3 只被迁出「M6 用哪九个」，完整清单与数值仍延期。
 		const open = read("Confirmed-docs/60-plan/63-open-decisions.md");
@@ -139,8 +140,9 @@ describe("M6 chapter plan is landed as a plan, not as a start signal", () => {
 		const live = read("Confirmed-docs/60-plan/61-milestones.md");
 		const m6 = headingSection(live, "### M6：", "### M7：");
 		assert.match(m6, /m6-bastion-1v1\.md/);
-		assert.match(m6, /F1 起未开工/);
-		assert.match(m6, /E4 已交/);
+		assert.match(m6, /F1 已交/);
+		assert.match(m6, /F2 起未开工/);
+		assert.match(m6, /E4 客户端对局壳/);
 		// 「交了什么」必须和「没交什么」写在一起，否则下一个读者会以为 M6 快好了。
 		assert.match(m6, /第一次有画面是 E4/);
 		assert.match(m6, /S1|主大厅/);

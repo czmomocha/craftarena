@@ -139,7 +139,7 @@ const AUDIO_SFX: String = "craft_arena.ui.audio_sfx"
 const AUDIO_UI: String = "craft_arena.ui.audio_ui"
 const AUDIO_AMBIENCE: String = "craft_arena.ui.audio_ambience"
 
-## 产品 UI 基础包的键按屏分前缀（`craft_arena.s3.*`、`craft_arena.card.*` …），
+## 产品 UI 基础包的键按屏分前缀（`craft_arena.s1.*`、`craft_arena.s3.*`、`craft_arena.card.*` …），
 ## 人类 2026-09-13 拍板。上面的 `craft_arena.ui.*` 是自绘壳那一套，两套并存到
 ## 对应屏接线完成为止——S3 接线（UI 接线第一批）会删掉 `content_plaza_entry.gd`，
 ## 届时 `plaza_*` 那批键随它一起删。

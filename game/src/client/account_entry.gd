@@ -6,6 +6,7 @@ extends Node
 ## Publish and matchmaking tickets stay unbound.
 
 const CatalogGd := preload("res://src/ugc/account_catalog.gd")
+const MatchLobbyHomeGd := preload("res://src/client/match_lobby_home.gd")
 
 const WINDOW_NAME: String = "AccountWindow"
 const USERNAME_NAME: String = "AccountUsername"
@@ -21,6 +22,7 @@ var username_edit: LineEdit = null
 var password_edit: LineEdit = null
 var status: Label = null
 var lobby_window: Window = null
+var host: MatchLobbyShell = null
 var catalog: CatalogGd = CatalogGd.new()
 var last_document: Dictionary = {}
 
@@ -30,6 +32,7 @@ static func ensure(shell: MatchLobbyShell, existing: AccountEntry) -> AccountEnt
 		return existing
 	var entry := new()
 	entry.lobby_window = shell.window
+	entry.host = shell
 	shell.add_child(entry)
 	return entry
 
@@ -174,6 +177,9 @@ func _on_close() -> void:
 
 
 func _set_lobby_visible(visible: bool) -> void:
+	if host != null:
+		MatchLobbyHomeGd.set_lobby_visible(host, visible)
+		return
 	if lobby_window == null or not is_instance_valid(lobby_window):
 		return
 	lobby_window.visible = visible

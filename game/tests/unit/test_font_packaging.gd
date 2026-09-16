@@ -11,6 +11,7 @@ extends GutTest
 ## 于是"这个子集到底包含什么"这个问题在包里就能回答。
 
 const UiCopyGd := preload("res://src/shared/ui_copy.gd")
+const UiCopyS1Gd := preload("res://src/shared/ui_copy_s1.gd")
 
 const FONT_PATH: String = UiFont.FONT_PATH
 const LICENSE_PATH: String = "res://content/ui/fonts/OFL-1.1.txt"
@@ -144,7 +145,9 @@ func test_locale_table_is_fully_covered() -> void:
 	if font == null:
 		return
 	var missing: Array[int] = []
-	for key: String in UiCopyGd.ALL_KEYS:
+	var keys: PackedStringArray = UiCopyGd.ALL_KEYS.duplicate()
+	keys.append_array(UiCopyS1Gd.ALL_KEYS)
+	for key: String in keys:
 		for locale: String in ["en", "zh_CN"]:
 			var text: String = UiCopyGd.text(key, locale)
 			missing.append_array(_missing(font, text))

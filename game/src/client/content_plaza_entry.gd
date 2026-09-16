@@ -24,6 +24,7 @@ const PlazaGd := preload("res://src/ugc/content_plaza.gd")
 const PlazaHttpGd := preload("res://src/client/content_plaza_http.gd")
 const HttpGd := preload("res://src/client/control_plane_http.gd")
 const JoinCodecGd := preload("res://src/client/match_join_codec.gd")
+const MatchLobbyHomeGd := preload("res://src/client/match_lobby_home.gd")
 const WorkshopScene := preload("res://src/client/ui/scenes/s3_workshop.tscn")
 
 const WINDOW_NAME: String = "PlazaWindow"
@@ -42,6 +43,7 @@ const WINDOW_MIN_SIZE: Vector2i = Vector2i(1024, 640)
 var window: Window = null
 var screen: Control = null
 var lobby_window: Window = null
+var host: MatchLobbyShell = null
 var tab: String = PlazaGd.TAB_NEWEST
 var items: Array = []
 var selected_id: String = ""
@@ -67,6 +69,7 @@ static func ensure(shell: MatchLobbyShell, existing: ContentPlazaEntry) -> Conte
 		return existing
 	var entry := new()
 	entry.lobby_window = shell.window
+	entry.host = shell
 	shell.add_child(entry)
 	return entry
 
@@ -316,6 +319,9 @@ func _on_close() -> void:
 
 
 func _set_lobby_visible(visible: bool) -> void:
+	if host != null:
+		MatchLobbyHomeGd.set_lobby_visible(host, visible)
+		return
 	if lobby_window == null or not is_instance_valid(lobby_window):
 		return
 	lobby_window.visible = visible
