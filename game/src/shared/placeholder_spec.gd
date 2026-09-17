@@ -146,6 +146,8 @@ const UI_BASE_SIZE: Vector2i = Vector2i(1920, 1080)
 const HUD_CLOCK_FONT_SIZE: int = 28
 const HUD_SPLIT_FONT_SIZE: int = 16
 const HUD_STATUS_FONT_SIZE: int = 13
+## 开发期窗口尺寸 overlay 的不透明度。不是产品色。
+const WINDOW_SIZE_HUD_MODULATE: Color = Color(1.0, 1.0, 1.0, 0.85)
 const LABEL3D_FONT_SIZE: int = 28
 const LABEL3D_PIXEL_SIZE: float = 0.008
 const LABEL3D_OUTLINE_SIZE: int = 6

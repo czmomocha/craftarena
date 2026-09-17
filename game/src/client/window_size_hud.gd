@@ -34,7 +34,7 @@ func _ready() -> void:
 	horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	vertical_alignment = VERTICAL_ALIGNMENT_BOTTOM
 	add_theme_font_size_override("font_size", PlaceholderSpec.HUD_STATUS_FONT_SIZE)
-	modulate = Color(1.0, 1.0, 1.0, 0.85)
+	modulate = PlaceholderSpec.WINDOW_SIZE_HUD_MODULATE
 	var win: Window = get_window()
 	if win != null and not win.size_changed.is_connected(refresh):
 		win.size_changed.connect(refresh)
