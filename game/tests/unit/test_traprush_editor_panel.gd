@@ -783,6 +783,40 @@ func test_layout_split_ratio_keeps_panes_side_by_side() -> void:
 	AuthoringWindowLayout.reset_split()
 
 
+func test_host_size_reads_main_window_client_pixels() -> void:
+	_shell = AuthoringEditorShell.create(AuthoringSurfaceNames.INTERNAL_DEV)
+	add_child(_shell)
+	assert_true(_shell.open())
+	var main: Window = AuthoringWindowLayout.main_window_of(_shell)
+	assert_not_null(main)
+	var host: Vector2i = AuthoringWindowLayout.host_size_of(_shell)
+	assert_gte(host.x, main.size.x)
+	assert_gte(host.y, main.size.y)
+	assert_gte(host.x, 1600)
+	assert_eq(_shell.window.size, AuthoringWindowLayout.editor_rect(host).size)
+
+
+func test_embed_meta_grows_panes_with_host() -> void:
+	_shell = AuthoringEditorShell.create(AuthoringSurfaceNames.INTERNAL_DEV)
+	add_child(_shell)
+	assert_true(_shell.open())
+	assert_true(_shell.open_preview())
+	Engine.set_meta(AuthoringWindowLayout.EMBED_SIZE_META, Vector2i(2560, 1440))
+	AuthoringWindowLayout.apply_pair(_shell.window, _shell.preview.window, _shell)
+	var host: Vector2i = AuthoringWindowLayout.host_size_of(_shell)
+	assert_gte(host.x, 2560)
+	assert_gte(host.y, 1440)
+	var editor_r: Rect2i = AuthoringWindowLayout.editor_rect(host)
+	var preview_r: Rect2i = AuthoringWindowLayout.preview_rect(host)
+	assert_eq(_shell.window.size, editor_r.size)
+	assert_eq(_shell.preview.window.size, preview_r.size)
+	assert_eq(
+		editor_r.size.x + preview_r.size.x + AuthoringWindowLayout.MARGIN * 2 + AuthoringWindowLayout.GAP,
+		host.x
+	)
+	assert_eq(_shell.window.size.y, host.y - AuthoringWindowLayout.MARGIN * 2)
+
+
 func _editor_right_of_preview_is_false() -> bool:
 	var editor_right: int = _shell.window.position.x + _shell.window.size.x
 	return editor_right <= _shell.preview.window.position.x

@@ -33,6 +33,7 @@ var drag_axis: String = ""
 var camera_panning: bool = false
 var guides: FloorGd = FloorGd.new()
 var _host_shell: AuthoringEditorShell = null
+var _last_host_size: Vector2i = Vector2i.ZERO
 
 
 func is_alive() -> bool:
@@ -225,11 +226,17 @@ func _bind_resize(shell: AuthoringEditorShell) -> void:
 		window.size_changed.connect(_on_pane_resized)
 	if shell == null or not shell.is_inside_tree():
 		return
+	var main: Window = LayoutGd.main_window_of(shell)
+	if main != null and not main.size_changed.is_connected(_on_host_resized):
+		main.size_changed.connect(_on_host_resized)
 	var viewport: Viewport = shell.get_viewport()
-	if viewport == null:
-		return
-	if not viewport.size_changed.is_connected(_on_host_resized):
+	if viewport != null and not viewport.size_changed.is_connected(_on_host_resized):
 		viewport.size_changed.connect(_on_host_resized)
+	var tree: SceneTree = shell.get_tree()
+	if tree != null and not tree.process_frame.is_connected(_poll_host_size):
+		tree.process_frame.connect(_poll_host_size)
+	if not window.tree_exiting.is_connected(_unbind_resize):
+		window.tree_exiting.connect(_unbind_resize)
 
 
 func bind_preview(preview_window: Window) -> void:
@@ -237,6 +244,34 @@ func bind_preview(preview_window: Window) -> void:
 		return
 	if not preview_window.size_changed.is_connected(_on_pane_resized):
 		preview_window.size_changed.connect(_on_pane_resized)
+
+
+func _unbind_resize() -> void:
+	if window != null and is_instance_valid(window) and window.size_changed.is_connected(_on_pane_resized):
+		window.size_changed.disconnect(_on_pane_resized)
+	if _host_shell == null or not is_instance_valid(_host_shell) or not _host_shell.is_inside_tree():
+		return
+	var main: Window = LayoutGd.main_window_of(_host_shell)
+	if main != null and main.size_changed.is_connected(_on_host_resized):
+		main.size_changed.disconnect(_on_host_resized)
+	var viewport: Viewport = _host_shell.get_viewport()
+	if viewport != null and viewport.size_changed.is_connected(_on_host_resized):
+		viewport.size_changed.disconnect(_on_host_resized)
+	var tree: SceneTree = _host_shell.get_tree()
+	if tree != null and tree.process_frame.is_connected(_poll_host_size):
+		tree.process_frame.disconnect(_poll_host_size)
+
+
+func _poll_host_size() -> void:
+	if not is_alive() or window == null or not is_instance_valid(window) or not window.visible:
+		return
+	if _host_shell == null or not is_instance_valid(_host_shell):
+		return
+	var size: Vector2i = LayoutGd.host_size_of(_host_shell)
+	if size == _last_host_size:
+		return
+	_last_host_size = size
+	_on_host_resized()
 
 
 func _on_host_resized() -> void:

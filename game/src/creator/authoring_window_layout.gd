@@ -1,9 +1,9 @@
 class_name AuthoringWindowLayout
 extends RefCounted
 
-## Embedded Editor + Preview panes inside the main viewport.
-## Positions use the **host viewport** (project 1920×1080), not the 1600
-## window override — otherwise Preview sits on top of Editor.
+## Embedded Editor + Preview panes inside the main window.
+## Subwindows ignore `canvas_items` stretch, so layout uses the **main
+## Window client pixels** (`Window.size`), not the 1920×1080 design viewport.
 ## `gui_embed_subwindows` stays true (Web, and the 4K `content_scale_*` trap).
 ## Default split is half/half. Panes follow host resize and stay user-resizable.
 ## Chrome layout, not gameplay geometry: do not copy these into placeholder_spec.
@@ -15,6 +15,7 @@ const FALLBACK_PANE_SIZE: Vector2i = Vector2i(948, 1064)
 const PANE_MIN_SIZE: Vector2i = Vector2i(480, 360)
 const SPLIT_MIN: float = 0.28
 const SPLIT_MAX: float = 0.72
+const EMBED_SIZE_META: StringName = &"craft_arena_game_view_size"
 
 static var split_ratio: float = 0.5
 static var _applying: bool = false
@@ -27,22 +28,44 @@ static func reset_split() -> void:
 	_applying = false
 	_expected_editor = Vector2i.ZERO
 	_expected_preview = Vector2i.ZERO
+	if Engine.has_meta(EMBED_SIZE_META):
+		Engine.remove_meta(EMBED_SIZE_META)
+
+
+static func main_window_of(host: Node) -> Window:
+	if host == null or not is_instance_valid(host) or not host.is_inside_tree():
+		return null
+	var probe: Node = host
+	if host is Window:
+		var parent: Node = host.get_parent()
+		if parent != null:
+			probe = parent
+	return probe.get_window()
 
 
 static func host_size_of(host: Node) -> Vector2i:
-	if host == null or not is_instance_valid(host) or not host.is_inside_tree():
+	var main: Window = main_window_of(host)
+	if main == null:
 		return FALLBACK_HOST
-	var parent: Node = host.get_parent()
-	var probe: Node = host
-	if host is Window and parent != null:
-		probe = parent
-	var viewport: Viewport = probe.get_viewport()
-	if viewport == null:
+	var size: Vector2i = main.size
+	var viewport: Viewport = main.get_viewport()
+	if viewport != null:
+		var visible: Vector2 = viewport.get_visible_rect().size
+		if int(visible.x) > size.x:
+			size.x = int(visible.x)
+		if int(visible.y) > size.y:
+			size.y = int(visible.y)
+	if Engine.has_meta(EMBED_SIZE_META):
+		var raw: Variant = Engine.get_meta(EMBED_SIZE_META)
+		if raw is Vector2i:
+			var embed: Vector2i = raw
+			if embed.x > size.x:
+				size.x = embed.x
+			if embed.y > size.y:
+				size.y = embed.y
+	if size.x < 64 or size.y < 64:
 		return FALLBACK_HOST
-	var raw: Vector2 = viewport.get_visible_rect().size
-	if raw.x < 64.0 or raw.y < 64.0:
-		return FALLBACK_HOST
-	return Vector2i(int(raw.x), int(raw.y))
+	return size
 
 
 static func pane_size(host: Vector2i) -> Vector2i:
@@ -70,15 +93,20 @@ static func panes_overlap(host: Vector2i) -> bool:
 
 
 static func apply_editor(window: Window, host: Node = null) -> void:
-	_place(window, editor_rect(host_size_of(host)), true)
+	var size: Vector2i = host_size_of(host)
+	_sync_main_window(host, size)
+	_place(window, editor_rect(size), true)
 
 
 static func apply_preview(window: Window, host: Node = null) -> void:
-	_place(window, preview_rect(host_size_of(host)), false)
+	var size: Vector2i = host_size_of(host)
+	_sync_main_window(host, size)
+	_place(window, preview_rect(size), false)
 
 
 static func apply_pair(editor: Window, preview: Window, host: Node = null) -> void:
 	var size: Vector2i = host_size_of(host)
+	_sync_main_window(host, size)
 	_place(editor, editor_rect(size), true)
 	_place(preview, preview_rect(size), false)
 
@@ -106,6 +134,23 @@ static func note_user_resize(editor: Window, preview: Window, host: Node = null)
 	apply_pair(editor, preview, host)
 
 
+static func _sync_main_window(host: Node, size: Vector2i) -> void:
+	if _applying:
+		return
+	if DisplayServer.get_name() == "headless":
+		return
+	if not Engine.has_meta(EMBED_SIZE_META):
+		return
+	var main: Window = main_window_of(host)
+	if main == null:
+		return
+	if main.size.x >= size.x and main.size.y >= size.y:
+		return
+	_applying = true
+	main.size = Vector2i(maxi(main.size.x, size.x), maxi(main.size.y, size.y))
+	_applying = false
+
+
 static func _pane_height(host: Vector2i) -> int:
 	var height: int = host.y - MARGIN * 2
 	if height < PANE_MIN_SIZE.y:
@@ -115,6 +160,8 @@ static func _pane_height(host: Vector2i) -> int:
 
 static func _pane_widths(host: Vector2i, ratio: float) -> Vector2i:
 	var available: int = host.x - MARGIN * 2 - GAP
+	if available < PANE_MIN_SIZE.x * 2:
+		available = PANE_MIN_SIZE.x * 2
 	var left: int = roundi(float(available) * ratio)
 	if left < PANE_MIN_SIZE.x:
 		left = PANE_MIN_SIZE.x

@@ -11,9 +11,12 @@ extends EditorPlugin
 
 const HostGd := preload("res://src/creator/authoring_editor_plugin_host.gd")
 const GodotAiEnableGd := preload("res://addons/authoring_editor/godot_ai_enable.gd")
+const LayoutGd := preload("res://src/creator/authoring_window_layout.gd")
+const GAME_VIEW_NAMES: PackedStringArray = ["GameView", "EmbeddedProcess"]
 
 var _host: HostGd = null
 var _draft_store: AuthoringDraftStore = null
+var _last_embed: Vector2i = Vector2i.ZERO
 
 
 func _enter_tree() -> void:
@@ -22,13 +25,54 @@ func _enter_tree() -> void:
 	_draft_store = AuthoringDraftStore.new()
 	_host.draft_store = _draft_store
 	add_tool_menu_item(HostGd.MENU_ITEM, _on_open_authoring)
+	set_process(true)
 
 
 func _exit_tree() -> void:
+	set_process(false)
+	if Engine.has_meta(LayoutGd.EMBED_SIZE_META):
+		Engine.remove_meta(LayoutGd.EMBED_SIZE_META)
 	remove_tool_menu_item(HostGd.MENU_ITEM)
 	if _host != null:
 		_host.detach()
 		_host = null
+
+
+func _process(_delta: float) -> void:
+	if not EditorInterface.is_playing_scene():
+		if _last_embed != Vector2i.ZERO:
+			_last_embed = Vector2i.ZERO
+			if Engine.has_meta(LayoutGd.EMBED_SIZE_META):
+				Engine.remove_meta(LayoutGd.EMBED_SIZE_META)
+		return
+	var embed: Vector2i = _game_view_size()
+	if embed.x < 64 or embed.y < 64:
+		return
+	if embed == _last_embed:
+		return
+	_last_embed = embed
+	Engine.set_meta(LayoutGd.EMBED_SIZE_META, embed)
+
+
+func _game_view_size() -> Vector2i:
+	var base: Node = EditorInterface.get_base_control()
+	if base == null:
+		return Vector2i.ZERO
+	for view_name: String in GAME_VIEW_NAMES:
+		var found: Node = base.find_child(view_name, true, false)
+		if found is Control:
+			var panel: Control = found
+			var parent: Node = panel.get_parent()
+			if parent is Control:
+				var wrapper: Control = parent
+				if wrapper.size.x > panel.size.x or wrapper.size.y > panel.size.y:
+					panel = wrapper
+			if panel.size.x >= 64.0 and panel.size.y >= 64.0:
+				return Vector2i(panel.size)
+	var screen: Control = EditorInterface.get_editor_main_screen()
+	if screen != null and screen.size.x >= 64.0 and screen.size.y >= 64.0:
+		return Vector2i(screen.size)
+	return Vector2i.ZERO
 
 
 func _try_enable_local_godot_ai() -> void:
