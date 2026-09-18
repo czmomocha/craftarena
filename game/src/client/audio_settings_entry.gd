@@ -1,17 +1,21 @@
 class_name AudioSettingsEntry
 extends Node
 
-## Lobby settings window: five bus sliders + mute. Close applies and
-## persists through AudioService. No locale hot-switch, no graphics.
+## Lobby settings window: five bus sliders + mute + HUD / button colours.
+## Close applies and persists through AudioService and HudSettings.
+## No locale hot-switch, no graphics quality, no keybinds.
 
 const AudioServiceGd := preload("res://src/audio/audio_service.gd")
 const AudioSettingsGd := preload("res://src/audio/audio_settings.gd")
 const ClientAudioGd := preload("res://src/client/client_audio.gd")
 const MatchLobbyHomeGd := preload("res://src/client/match_lobby_home.gd")
+const HudSettingsGd := preload("res://src/client/hud_settings.gd")
 
 const WINDOW_NAME: String = "SettingsWindow"
 const MUTE_NAME: String = "AudioMute"
 const CLOSE_NAME: String = "SettingsClose"
+const TEXT_COLOR_NAME: String = "HudTextColor"
+const BUTTON_COLOR_NAME: String = "ButtonFontColor"
 const SLIDER_PREFIX: String = "Bus_"
 
 var window: Window = null
@@ -19,6 +23,8 @@ var mute_box: CheckBox = null
 var lobby_window: Window = null
 var host: MatchLobbyShell = null
 var _sliders: Dictionary = {}
+var text_picker: ColorPickerButton = null
+var button_picker: ColorPickerButton = null
 
 
 static func ensure(shell: MatchLobbyShell, existing: AudioSettingsEntry) -> AudioSettingsEntry:
@@ -64,8 +70,8 @@ func _ensure_window() -> void:
 	window = Window.new()
 	window.name = WINDOW_NAME
 	window.title = UiCopy.text(UiCopy.WINDOW_SETTINGS)
-	window.size = Vector2i(520, 420)
-	window.min_size = Vector2i(400, 320)
+	window.size = Vector2i(520, 520)
+	window.min_size = Vector2i(400, 400)
 	window.exclusive = false
 	window.transient = false
 	window.close_requested.connect(_on_close)
@@ -88,6 +94,8 @@ func _ensure_window() -> void:
 	_add_slider(root, AudioSettingsGd.BUS_SFX, UiCopy.AUDIO_SFX)
 	_add_slider(root, AudioSettingsGd.BUS_UI, UiCopy.AUDIO_UI)
 	_add_slider(root, AudioSettingsGd.BUS_AMBIENCE, UiCopy.AUDIO_AMBIENCE)
+	text_picker = _add_color(root, TEXT_COLOR_NAME, UiCopy.HUD_TEXT_COLOR, _on_text_color)
+	button_picker = _add_color(root, BUTTON_COLOR_NAME, UiCopy.BUTTON_FONT_COLOR, _on_button_color)
 	var close_btn: Button = Button.new()
 	close_btn.name = CLOSE_NAME
 	close_btn.text = UiCopy.text(UiCopy.BACK_TO_LOBBY)
@@ -113,6 +121,21 @@ func _add_slider(root: BoxContainer, bus: String, copy_key: String) -> void:
 	_sliders[bus] = slider
 
 
+func _add_color(root: BoxContainer, node_name: String, copy_key: String, handler: Callable) -> ColorPickerButton:
+	var label: Label = Label.new()
+	label.name = "%sLabel" % node_name
+	label.text = UiCopy.text(copy_key)
+	root.add_child(label)
+	var picker: ColorPickerButton = ColorPickerButton.new()
+	picker.name = node_name
+	picker.edit_alpha = false
+	picker.custom_minimum_size = Vector2(72, 28)
+	picker.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	picker.color_changed.connect(handler)
+	root.add_child(picker)
+	return picker
+
+
 func _refresh() -> void:
 	var svc: AudioServiceGd = ClientAudioGd.service
 	if svc == null:
@@ -124,6 +147,12 @@ func _refresh() -> void:
 			continue
 		var slider: HSlider = _sliders[bus]
 		slider.set_value_no_signal(svc.settings.get_bus_db(bus))
+	if host != null and host.chrome != null:
+		var hud: HudSettingsGd = host.chrome.hud_settings
+		if text_picker != null:
+			text_picker.color = hud.text_color
+		if button_picker != null:
+			button_picker.color = hud.button_color
 
 
 func _on_bus(value: float, bus: String) -> void:
@@ -138,10 +167,25 @@ func _on_mute(pressed: bool) -> void:
 	ClientAudioGd.service.set_muted(pressed)
 
 
-func _persist() -> void:
-	if ClientAudioGd.service == null:
+func _on_text_color(color: Color) -> void:
+	if host == null or host.chrome == null:
 		return
-	ClientAudioGd.service.settings.save()
+	host.chrome.hud_settings.text_color = color
+	host.chrome.apply_colors()
+
+
+func _on_button_color(color: Color) -> void:
+	if host == null or host.chrome == null:
+		return
+	host.chrome.hud_settings.button_color = color
+	host.chrome.apply_colors()
+
+
+func _persist() -> void:
+	if ClientAudioGd.service != null:
+		ClientAudioGd.service.settings.save()
+	if host != null and host.chrome != null:
+		host.chrome.hud_settings.save()
 
 
 func _on_close() -> void:

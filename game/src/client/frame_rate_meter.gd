@@ -1,7 +1,7 @@
 class_name FrameRateMeter
 extends Label
 
-## 运行时帧率读数（一行 `FPS 60`），挂在大厅 HUD 的状态行**上面**。
+## 运行时帧率读数（一行 `FPS 60`），贴在对局窗**左下角**。
 ##
 ## 自己数帧再除，而不是读 `Engine.get_frames_per_second()`：后者取引擎内部
 ## 的滚动平均，单元测试喂不进固定 delta，断言只能写成「大概 60」。这里的

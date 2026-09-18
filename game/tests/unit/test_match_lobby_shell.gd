@@ -8,7 +8,7 @@ extends GutTest
 ## Own-seat accepted_count tints course pads done / current / pending.
 ## Own-seat finish_tick tints the finish zone; HUD shows pads/floor/finish/crates/hazards/result.
 ## Online matches sample protocol RTT after a pong; HUD then shows rtt= / rtt_n=.
-## HUD 第一行是 FrameRateMeter 的帧率读数：可见帧才计，窗口隐藏丢弃半窗。
+## HUD 第一行是开发期状态行；`FPS` 贴左下角：可见帧才计，窗口隐藏丢弃半窗。
 ## Online all-finished GET writes settled=; Solo never GETs. Client never POSTs.
 ## Reset rising-edge returns to the last accepted pad without dropping progress.
 ## Online overlay stays off latest live crates, solid hazards, and latest remote capsules.
@@ -172,10 +172,9 @@ func test_frame_rate_row_counts_visible_frames_only() -> void:
 	_shell = _open_shell()
 	var fps: FrameRateMeter = _shell.window.find_child(MatchLobbyShell.FPS_NAME, true, false)
 	assert_not_null(fps)
-	# 帧率是 HUD 的**第一行**，不是状态行的一部分：状态行只在事件发生时重画，
+	# 帧率贴左下角，不在顶栏 VBox 里：状态行只在事件发生时重画，
 	# 帧率必须每帧累计，掺进去就得每帧重写整行状态。
-	assert_eq(fps.get_index(), 0)
-	assert_eq(fps.get_parent().name, "VBoxContainer")
+	assert_eq(fps.get_parent(), _shell.window)
 	assert_eq(_shell.fps_label_text(), FrameRateMeter.PLACEHOLDER)
 	assert_eq(fps.text, FrameRateMeter.PLACEHOLDER)
 	# 60 帧 × 0.01 s：第 50 帧满 0.5 s 刷新一次，50 / 0.5 = 100。再喂 10 帧
@@ -487,7 +486,7 @@ func test_buttons_exist_and_live_io_stays_off_in_tests() -> void:
 	assert_not_null(_shell.window.get_node("VBoxContainer/MatchActions/%s" % MatchLobbyShell.QUICK_NAME))
 	assert_not_null(_shell.window.get_node("VBoxContainer/MatchActions/%s" % MatchLobbyShell.CREATE_NAME))
 	assert_not_null(_shell.window.get_node("VBoxContainer/MatchActions/%s" % MatchLobbyShell.SOLO_NAME))
-	assert_not_null(_shell.window.get_node("VBoxContainer/%s" % MatchLobbyShell.ROOM_NAME))
+	assert_not_null(_shell.window.find_child(MatchLobbyShell.ROOM_NAME, true, false))
 	assert_eq(_shell.play_move_step, Fixed.SCALE / 16)
 	assert_eq(_shell.play_interp_step, Fixed.SCALE / 2)
 

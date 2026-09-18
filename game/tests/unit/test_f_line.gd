@@ -245,8 +245,9 @@ func test_solo_shell_opens_course_f_playable() -> void:
 	var offset: Vector3 = PlaceholderSpec.camera_offset_for_distance(shell.map.camera_distance)
 	var horizontal: float = sqrt(offset.x * offset.x + offset.z * offset.z)
 	assert_almost_eq(rad_to_deg(atan2(offset.y, horizontal)), 45.0, 0.0001)
-	assert_true(shell.try_camera_pan(Vector2(80.0, 0.0)))
-	assert_gt(shell.map.camera_pan.length(), 0.0)
+	assert_false(shell.try_camera_pan(Vector2(80.0, 0.0)))
+	assert_eq(shell.map.camera_pan.length(), 0.0)
+	assert_false(shell.try_camera_orbit(Vector2(40.0, 0.0)))
 
 
 func test_solo_unknown_course_sets_offline_error() -> void:

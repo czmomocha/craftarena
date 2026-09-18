@@ -107,6 +107,8 @@ craft_arena.ui.audio_music,Music,音乐
 craft_arena.ui.audio_sfx,Sound effects,音效
 craft_arena.ui.audio_ui,Interface,界面
 craft_arena.ui.audio_ambience,Ambience,环境
+craft_arena.ui.hud_text_color,HUD text,界面字色
+craft_arena.ui.button_font_color,Button text,按钮字色
 craft_arena.s3.title,Public Workshop,公共内容广场
 craft_arena.s3.tab_latest,LATEST,最新 LATEST
 craft_arena.s3.tab_rating,RATING,评分 RATING

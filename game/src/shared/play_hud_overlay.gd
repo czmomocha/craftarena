@@ -11,6 +11,7 @@ const SPLIT_NAME: String = "Split"
 const GUIDE_NAME: String = "Guide"
 const SETBACK_NAME: String = "Setback"
 const ITEMS_NAME: String = "Items"
+const ROOT_NAME: String = "PlayHud"
 const ClockGd := preload("res://src/shared/play_clock.gd")
 const PanelGd := preload("res://src/shared/match_settlement_panel.gd")
 
@@ -20,46 +21,46 @@ var guide: Label = null
 var setback: Label = null
 var items: Label = null
 var panel: PanelContainer = null
+var root: VBoxContainer = null
 
 
-func attach(window: Window, toolbar: Control) -> void:
-	if window == null or toolbar == null:
+func attach(window: Window, _toolbar: Control = null) -> void:
+	if window == null:
 		return
-	clock = Label.new()
-	clock.name = CLOCK_NAME
-	clock.add_theme_font_size_override("font_size", PlaceholderSpec.HUD_CLOCK_FONT_SIZE)
-	clock.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
-	toolbar.add_child(clock)
-	var insert_at: int = 0
-	var fps: Node = toolbar.get_node_or_null("Fps")
-	if fps != null:
-		insert_at = fps.get_index() + 1
-	toolbar.move_child(clock, insert_at)
-	split = Label.new()
-	split.name = SPLIT_NAME
-	split.add_theme_font_size_override("font_size", PlaceholderSpec.HUD_SPLIT_FONT_SIZE)
-	toolbar.add_child(split)
-	toolbar.move_child(split, insert_at + 1)
-	# 「下一个目标在哪」。与计时同一条工具栏，因为它和计时一样是每一秒都要瞟一眼
-	# 的东西；放进 3D 世界标签会被赛道几何挡住，那正是传送之后最需要它的时刻。
-	guide = Label.new()
-	guide.name = GUIDE_NAME
-	guide.add_theme_font_size_override("font_size", PlaceholderSpec.HUD_SPLIT_FONT_SIZE)
-	toolbar.add_child(guide)
-	toolbar.move_child(guide, insert_at + 2)
-	# 「刚才为什么被打回」。只在失败后的窗口期出现，见 PlaySetback.SHOW_TICKS。
-	setback = Label.new()
-	setback.name = SETBACK_NAME
-	setback.add_theme_font_size_override("font_size", PlaceholderSpec.HUD_SPLIT_FONT_SIZE)
-	setback.add_theme_color_override("font_color", PlaceholderSpec.HAZARD_ALBEDO)
-	toolbar.add_child(setback)
-	toolbar.move_child(setback, insert_at + 3)
-	items = Label.new()
-	items.name = ITEMS_NAME
-	items.add_theme_font_size_override("font_size", PlaceholderSpec.HUD_SPLIT_FONT_SIZE)
-	toolbar.add_child(items)
-	toolbar.move_child(items, insert_at + 4)
+	root = VBoxContainer.new()
+	root.name = ROOT_NAME
+	root.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	root.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
+	root.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+	root.grow_vertical = Control.GROW_DIRECTION_BEGIN
+	root.offset_right = -8.0
+	root.offset_bottom = -36.0
+	root.add_theme_constant_override("separation", 2)
+	window.add_child(root)
+	clock = _make_label(CLOCK_NAME, PlaceholderSpec.HUD_CLOCK_FONT_SIZE)
+	split = _make_label(SPLIT_NAME, PlaceholderSpec.HUD_SPLIT_FONT_SIZE)
+	guide = _make_label(GUIDE_NAME, PlaceholderSpec.HUD_SPLIT_FONT_SIZE)
+	setback = _make_label(SETBACK_NAME, PlaceholderSpec.HUD_SPLIT_FONT_SIZE)
+	items = _make_label(ITEMS_NAME, PlaceholderSpec.HUD_SPLIT_FONT_SIZE)
+	apply_text_color(PlaceholderSpec.HUD_TEXT_COLOR)
 	panel = PanelGd.attach(window)
+
+
+func apply_text_color(color: Color) -> void:
+	for label: Label in [clock, split, guide, setback, items]:
+		if label == null:
+			continue
+		label.add_theme_color_override("font_color", color)
+
+
+func _make_label(node_name: String, font_size: int) -> Label:
+	var label: Label = Label.new()
+	label.name = node_name
+	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	label.add_theme_font_size_override("font_size", font_size)
+	root.add_child(label)
+	return label
 
 
 func apply(view: Dictionary) -> void:

@@ -41,6 +41,7 @@ extends Node3D
 const MatchSnapshotFollowGd := preload("res://src/client/match_snapshot_follow.gd")
 const PlayersGd := preload("res://src/client/match_snapshot_map_players.gd")
 const GuideGd := preload("res://src/client/match_snapshot_map_guide.gd")
+const MatchCameraViewGd := preload("res://src/client/match_camera_view.gd")
 
 const CAMERA_NAME: String = "SnapshotCamera"
 const LIGHT_NAME: String = "SnapshotLight"
@@ -62,6 +63,8 @@ const REMOTE_ALBEDO: Color = PlaceholderSpec.REMOTE_ALBEDO
 var follow_slot: int = -1
 var camera_distance: float = PlaceholderSpec.CAMERA_DISTANCE
 var camera_pan: Vector3 = Vector3.ZERO
+var camera_yaw_deg: float = PlaceholderSpec.CAMERA_YAW_DEG
+var camera_pitch_deg: float = PlaceholderSpec.CAMERA_PITCH_DEG
 ## 跳变滑行见 CameraFollowTransition。follow_grounded：空中冻高度，同层 hop 不抬镜头。
 var follow_transition: CameraFollowTransition = CameraFollowTransition.new()
 var follow_grounded: bool = true
@@ -147,34 +150,19 @@ func guide_count() -> int:
 
 
 func try_zoom(steps: int) -> bool:
-	if steps == 0:
-		return false
-	var next: float = PlaceholderSpec.clamp_camera_distance(
-		camera_distance - float(steps) * PlaceholderSpec.CAMERA_ZOOM_STEP
-	)
-	if next == camera_distance:
-		return false
-	camera_distance = next
-	_aim_camera()
-	return true
+	return MatchCameraViewGd.try_zoom(self, steps)
 
 
 func try_pan(relative: Vector2) -> bool:
-	if relative.x == 0.0 and relative.y == 0.0:
-		return false
-	var right: Vector3 = Vector3(1.0, 0.0, -1.0).normalized()
-	var along: Vector3 = Vector3(-1.0, 0.0, -1.0).normalized()
-	var next: Vector3 = camera_pan
-	next += right * relative.x * PlaceholderSpec.CAMERA_PAN_SENS
-	next += along * relative.y * PlaceholderSpec.CAMERA_PAN_SENS
-	next.y = 0.0
-	if next.length() > PlaceholderSpec.CAMERA_PAN_LIMIT:
-		next = next.normalized() * PlaceholderSpec.CAMERA_PAN_LIMIT
-	if next.is_equal_approx(camera_pan):
-		return false
-	camera_pan = next
-	_aim_camera()
-	return true
+	return MatchCameraViewGd.try_pan(self, relative)
+
+
+func try_orbit(relative: Vector2) -> bool:
+	return MatchCameraViewGd.try_orbit(self, relative)
+
+
+func reset_view() -> void:
+	MatchCameraViewGd.reset_view(self)
 
 
 ## 复用已有席位节点：只写位姿与座位色，不 free、也不重新 instantiate。

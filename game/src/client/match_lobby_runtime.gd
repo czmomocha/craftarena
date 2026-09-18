@@ -12,6 +12,7 @@ const OfficialTraprushCoursesGd := preload("res://src/shared/official_traprush_c
 const RouterGd := preload("res://src/games/bastion/audio_router.gd")
 const CatalogGd := preload("res://src/ugc/bastion_prototype_catalog.gd")
 const WindowSizeHudGd := preload("res://src/client/window_size_hud.gd")
+const MatchCameraViewGd := preload("res://src/client/match_camera_view.gd")
 
 
 static func on_process(shell: MatchLobbyShell, delta: float) -> void:
@@ -98,6 +99,7 @@ static func ensure_window(shell: MatchLobbyShell) -> void:
 		"window_input": shell.handle_window_input,
 		"camera_zoom": shell.try_camera_zoom,
 		"camera_pan": shell.try_camera_pan,
+		"camera_orbit": shell.try_camera_orbit,
 		"copy_invite": shell.try_copy_invite,
 		"pick": func(screen: Vector2) -> bool:
 			return try_pick(shell, screen),
@@ -181,15 +183,40 @@ static func try_key(shell: MatchLobbyShell, keycode: int) -> bool:
 
 
 static func try_zoom(shell: MatchLobbyShell, steps: int) -> bool:
-	if _bastion_live(shell):
-		return MatchLobbyStageBastion.try_zoom(shell, steps)
-	return shell.map != null and shell.map.try_zoom(steps)
+	return MatchCameraViewGd.try_zoom(_camera_host(shell), steps)
 
 
 static func try_pan(shell: MatchLobbyShell, relative: Vector2) -> bool:
-	if _bastion_live(shell):
-		return MatchLobbyStageBastion.try_pan(shell, relative)
-	return shell.map != null and shell.map.try_pan(relative)
+	if _view_locked(shell):
+		return false
+	return MatchCameraViewGd.try_pan(_camera_host(shell), relative)
+
+
+static func try_orbit(shell: MatchLobbyShell, relative: Vector2) -> bool:
+	if _view_locked(shell):
+		return false
+	return MatchCameraViewGd.try_orbit(_camera_host(shell), relative)
+
+
+static func reset_match_camera(shell: MatchLobbyShell) -> void:
+	if shell.map != null:
+		shell.map.reset_view()
+	var field: BastionFieldMap = MatchLobbyStageBastion.field_of(shell)
+	if field != null:
+		field.reset_view()
+
+
+static func _camera_host(shell: MatchLobbyShell) -> Node:
+	var field: BastionFieldMap = MatchLobbyStageBastion.field_of(shell)
+	if field != null and field.visible:
+		return field
+	return shell.map
+
+
+static func _view_locked(shell: MatchLobbyShell) -> bool:
+	if shell.offline_playing():
+		return true
+	return shell.play != null and shell.play.state == shell.play.STATE_IN_MATCH
 
 
 static func _note_bastion(shell: MatchLobbyShell, bytes: PackedByteArray, event: String) -> bool:

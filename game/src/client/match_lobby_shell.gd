@@ -273,6 +273,8 @@ func try_camera_zoom(steps: int) -> bool:
 	return MatchLobbyRuntime.try_zoom(self, steps)
 func try_camera_pan(relative: Vector2) -> bool:
 	return MatchLobbyRuntime.try_pan(self, relative)
+func try_camera_orbit(relative: Vector2) -> bool:
+	return MatchLobbyRuntime.try_orbit(self, relative)
 func try_copy_invite() -> bool: return chrome.try_copy_invite()
 func refresh_status() -> void:
 	_refresh_status()

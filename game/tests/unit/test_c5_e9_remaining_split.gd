@@ -18,6 +18,7 @@ const CATALOG_PATHS: PackedStringArray = [
 const MAP_PATHS: PackedStringArray = [
 	"res://src/client/match_snapshot_map.gd",
 	"res://src/client/match_snapshot_map_players.gd",
+	"res://src/client/match_camera_view.gd",
 ]
 
 

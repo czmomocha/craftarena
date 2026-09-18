@@ -98,14 +98,17 @@ const CAMERA_OFFSET: Vector3 = Vector3(
 ## Godot `Camera3D.fov` 的默认值。**D4 没给 FOV**，所以维持默认；显式写在这里
 ## 是为了让下一个想改镜头的人必须改 spec，而不是在某个 map 里悄悄设一个数。
 const CAMERA_FOV_DEG: float = 75.0
-## 滚轮调距：默认距离仍是 CAMERA_DISTANCE（D4 未答，不许改默认）。只允许在
-## 斜 45° 上走近/拉远，不改方位角与俯角。
+## 滚轮调距：默认距离仍是 CAMERA_DISTANCE（D4 未答，不许改默认）。
 const CAMERA_DISTANCE_MIN: float = 8.0
 const CAMERA_DISTANCE_MAX: float = 20.0
 const CAMERA_ZOOM_STEP: float = 1.25
-## 中键拖移的水平平移上限（米）。不是自由旋转。
+## 中键拖移的水平平移上限（米）。开局后锁定。
 const CAMERA_PAN_LIMIT: float = 4.0
 const CAMERA_PAN_SENS: float = 0.012
+## 开局前右键拖视线。开局还原 45° 并锁定。不是对局内自由旋转。
+const CAMERA_ORBIT_SENS: float = 0.25
+const CAMERA_PITCH_MIN_DEG: float = 15.0
+const CAMERA_PITCH_MAX_DEG: float = 80.0
 const LIGHT_ROTATION_DEG: Vector3 = Vector3(-50.0, -30.0, 0.0)
 
 ## 跟随锚点一帧内位移超过这么多米，就判为**跳变**（传送 / 复位），由
@@ -126,8 +129,15 @@ static func clamp_camera_distance(distance: float) -> float:
 
 
 static func camera_offset_for_distance(distance: float) -> Vector3:
+	return camera_offset_at(distance, CAMERA_YAW_DEG, CAMERA_PITCH_DEG)
+
+
+static func camera_offset_at(distance: float, yaw_deg: float, pitch_deg: float) -> Vector3:
 	var d: float = clamp_camera_distance(distance)
-	return Vector3(d / 2.0, d * _SIN_45, d / 2.0)
+	var pitch: float = deg_to_rad(pitch_deg)
+	var yaw: float = deg_to_rad(yaw_deg)
+	var horizontal: float = d * cos(pitch)
+	return Vector3(horizontal * sin(yaw), d * sin(pitch), horizontal * cos(yaw))
 
 # UI（D4：分辨率基准 1920×1080）
 
@@ -146,6 +156,10 @@ const UI_BASE_SIZE: Vector2i = Vector2i(1920, 1080)
 const HUD_CLOCK_FONT_SIZE: int = 28
 const HUD_SPLIT_FONT_SIZE: int = 16
 const HUD_STATUS_FONT_SIZE: int = 13
+## 对局窗状态行 / FPS / 局内读出默认字色。可在设置里用调色板覆盖。
+const HUD_TEXT_COLOR: Color = Color.BLACK
+## 对局窗按钮默认字色。可在设置里用调色板覆盖。
+const BUTTON_FONT_COLOR: Color = Color.BLACK
 ## 开发期窗口尺寸 overlay 的不透明度。不是产品色。
 const WINDOW_SIZE_HUD_MODULATE: Color = Color(1.0, 1.0, 1.0, 0.85)
 const LABEL3D_FONT_SIZE: int = 28

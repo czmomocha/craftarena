@@ -4,6 +4,8 @@ extends RefCounted
 ## Spawn / visual / camera helpers for MatchSnapshotMap.
 ## Public apply_players stays on the map facade so this file stays under E9.
 
+const MatchCameraViewGd := preload("res://src/client/match_camera_view.gd")
+
 
 static func spawn_player(map: MatchSnapshotMap, slot: int, body: Dictionary) -> void:
 	var pose: Dictionary = map._pose_from_player(body)
@@ -81,7 +83,7 @@ static func aim_camera(map: MatchSnapshotMap) -> void:
 	if camera == null:
 		return
 	var anchor: Vector3 = map.follow_transition.anchor + map.camera_pan
-	camera.position = anchor + PlaceholderSpec.camera_offset_for_distance(map.camera_distance)
+	camera.position = anchor + MatchCameraViewGd.offset_of(map)
 	look_at_target(camera, anchor)
 
 

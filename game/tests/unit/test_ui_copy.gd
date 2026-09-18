@@ -4,6 +4,7 @@ extends GutTest
 
 const UiCopyGd := preload("res://src/shared/ui_copy.gd")
 const UiCopyS1Gd := preload("res://src/shared/ui_copy_s1.gd")
+const MatchLobbyChromeGd := preload("res://src/client/match_lobby_chrome.gd")
 const MatchLobbyShellGd := preload("res://src/client/match_lobby_shell.gd")
 const MatchOfflineSessionGd := preload("res://src/client/match_offline_session.gd")
 
@@ -108,7 +109,12 @@ func test_lobby_buttons_read_the_table() -> void:
 	if quick != null:
 		assert_eq(quick.text, UiCopyGd.text(UiCopyGd.QUICK_PLAY))
 	assert_eq(shell.window.title, UiCopyGd.text(UiCopyGd.WINDOW_TRAPRUSH))
-	var server: LineEdit = shell.window.get_node("VBoxContainer/ServerActions/%s" % MatchLobbyShellGd.SERVER_NAME) as LineEdit
+	var server: LineEdit = shell.window.get_node(
+		"VBoxContainer/%s/ServerActions/%s" % [
+			MatchLobbyChromeGd.FIELDS_NAME,
+			MatchLobbyShellGd.SERVER_NAME,
+		]
+	) as LineEdit
 	assert_not_null(server)
 	if server != null:
 		assert_eq(server.placeholder_text, UiCopyGd.text(UiCopyGd.SERVER_HOST))

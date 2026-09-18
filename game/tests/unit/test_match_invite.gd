@@ -44,10 +44,20 @@ func test_lobby_invite_box_is_host_and_code() -> void:
 	_shell = MatchLobbyShellGd.create()
 	add_child(_shell)
 	assert_true(_shell.open())
-	var invite: LineEdit = _shell.window.get_node("VBoxContainer/InviteActions/%s" % MatchLobbyChromeGd.INVITE_NAME) as LineEdit
+	var invite: LineEdit = _shell.window.get_node(
+		"VBoxContainer/%s/InviteActions/%s" % [
+			MatchLobbyChromeGd.FIELDS_NAME,
+			MatchLobbyChromeGd.INVITE_NAME,
+		]
+	) as LineEdit
 	assert_not_null(invite)
 	assert_false(invite.editable)
-	var copy: Button = _shell.window.get_node("VBoxContainer/InviteActions/%s" % MatchLobbyChromeGd.COPY_INVITE_NAME) as Button
+	var copy: Button = _shell.window.get_node(
+		"VBoxContainer/%s/InviteActions/%s" % [
+			MatchLobbyChromeGd.FIELDS_NAME,
+			MatchLobbyChromeGd.COPY_INVITE_NAME,
+		]
+	) as Button
 	assert_not_null(copy)
 	assert_eq(copy.text, UiCopy.text(UiCopy.COPY_INVITE))
 	assert_true(_shell.join.try_quick())

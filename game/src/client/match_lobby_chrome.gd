@@ -8,6 +8,8 @@ extends RefCounted
 
 const FrameRateMeterGd := preload("res://src/client/frame_rate_meter.gd")
 const MatchLobbyCourseSelectGd := preload("res://src/client/match_lobby_course_select.gd")
+const MatchLobbyChromeLayoutGd := preload("res://src/client/match_lobby_chrome_layout.gd")
+const HudSettingsGd := preload("res://src/client/hud_settings.gd")
 const OfficialTraprushCoursesGd := preload("res://src/shared/official_traprush_courses.gd")
 const ServerEndpointGd := preload("res://src/client/server_endpoint.gd")
 const ClientAudioGd := preload("res://src/client/client_audio.gd")
@@ -36,6 +38,7 @@ const SERVER_NAME: String = "ServerHost"
 const APPLY_SERVER_NAME: String = "ApplyServer"
 const FPS_NAME: String = "Fps"
 const STATUS_NAME: String = "Status"
+const FIELDS_NAME: String = MatchLobbyChromeLayoutGd.FIELDS_NAME
 const OverlayGd := preload("res://src/shared/play_hud_overlay.gd")
 const MatchInviteGd := preload("res://src/client/match_invite.gd")
 
@@ -48,8 +51,10 @@ var seats_edit: LineEdit = null
 var invite_edit: LineEdit = null
 var server_edit: LineEdit = null
 var play_hud: OverlayGd = OverlayGd.new()
+var hud_settings: HudSettingsGd = HudSettingsGd.new()
 var _on_camera_zoom: Callable = Callable()
 var _on_camera_pan: Callable = Callable()
+var _on_camera_orbit: Callable = Callable()
 var _on_pick: Callable = Callable()
 var _on_play_key: Callable = Callable()
 
@@ -59,6 +64,7 @@ func attach(parent: Node, handlers: Dictionary) -> Window:
 		return window
 	_on_camera_zoom = _handler(handlers, "camera_zoom")
 	_on_camera_pan = _handler(handlers, "camera_pan")
+	_on_camera_orbit = _handler(handlers, "camera_orbit")
 	_on_pick = _handler(handlers, "pick")
 	_on_play_key = _handler(handlers, "play_key")
 	if not Engine.is_editor_hint():
@@ -86,10 +92,7 @@ func attach(parent: Node, handlers: Dictionary) -> Window:
 	root.offset_top = 8
 	root.offset_right = -8
 	window.add_child(root)
-	frame_rate = FrameRateMeterGd.new()
-	frame_rate.name = FPS_NAME
-	frame_rate.add_theme_font_size_override("font_size", PlaceholderSpec.HUD_STATUS_FONT_SIZE)
-	root.add_child(frame_rate)
+	hud_settings.load_or_default()
 	status = Label.new()
 	status.name = STATUS_NAME
 	status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -120,38 +123,14 @@ func attach(parent: Node, handlers: Dictionary) -> Window:
 	_add_button(row, PLAZA_NAME, UiCopy.PLAZA, _handler(handlers, "plaza"))
 	_add_button(row, ACCOUNT_NAME, UiCopy.ACCOUNT, _handler(handlers, "account"))
 	_add_button(row, SETTINGS_NAME, UiCopy.SETTINGS, _handler(handlers, "settings"))
-	var server_row: HBoxContainer = HBoxContainer.new()
-	server_row.name = "ServerActions"
-	root.add_child(server_row)
 	var on_submit: Callable = _handler(handlers, "edit_submitted")
-	server_edit = _make_edit(SERVER_NAME, UiCopy.text(UiCopy.SERVER_HOST), 64, "", on_submit)
-	server_edit.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	server_row.add_child(server_edit)
-	var on_apply: Callable = _handler(handlers, "apply_server")
-	_add_button(server_row, APPLY_SERVER_NAME, UiCopy.APPLY_SERVER, on_apply)
-	room_edit = _make_edit(ROOM_NAME, UiCopy.text(UiCopy.ROOM_CODE), 6, "", on_submit)
-	root.add_child(room_edit)
-	course_select = MatchLobbyCourseSelectGd.new()
-	course_select.setup(_handler(handlers, "course_selected"))
-	root.add_child(course_select)
-	seats_edit = _make_edit(
-		SEATS_NAME,
-		str(OfficialTraprushCoursesGd.DEFAULT_SEATS),
-		1,
-		str(OfficialTraprushCoursesGd.DEFAULT_SEATS),
-		on_submit
-	)
-	root.add_child(seats_edit)
-	var invite_row: HBoxContainer = HBoxContainer.new()
-	invite_row.name = "InviteActions"
-	root.add_child(invite_row)
-	invite_edit = _make_edit(INVITE_NAME, "", 80, "", Callable())
-	invite_edit.editable = false
-	invite_edit.focus_mode = Control.FOCUS_NONE
-	invite_edit.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	invite_row.add_child(invite_edit)
-	_add_button(invite_row, COPY_INVITE_NAME, UiCopy.COPY_INVITE, _handler(handlers, "copy_invite"))
+	MatchLobbyChromeLayoutGd.build_fields(self, root, handlers, on_submit)
+	frame_rate = FrameRateMeterGd.new()
+	frame_rate.name = FPS_NAME
+	frame_rate.add_theme_font_size_override("font_size", PlaceholderSpec.HUD_STATUS_FONT_SIZE)
+	MatchLobbyChromeLayoutGd.dock_fps(frame_rate, window)
 	play_hud.attach(window, root)
+	apply_colors()
 	return window
 
 
@@ -234,6 +213,10 @@ func fps_text() -> String:
 	if frame_rate == null:
 		return ""
 	return frame_rate.fps_text()
+
+
+func apply_colors() -> void:
+	MatchLobbyChromeLayoutGd.apply_colors(self)
 
 
 func sync_play_hud(view: Dictionary) -> void:
@@ -320,9 +303,13 @@ func _handle_mouse_button(mouse: InputEventMouseButton) -> void:
 
 
 func _handle_mouse_motion(motion: InputEventMouseMotion) -> void:
-	if (motion.button_mask & MOUSE_BUTTON_MASK_MIDDLE) == 0:
-		return
 	if click_hits_line_edit(motion.position):
+		return
+	if (motion.button_mask & MOUSE_BUTTON_MASK_RIGHT) != 0:
+		if _on_camera_orbit.is_valid():
+			_on_camera_orbit.call(motion.relative)
+		return
+	if (motion.button_mask & MOUSE_BUTTON_MASK_MIDDLE) == 0:
 		return
 	if _on_camera_pan.is_valid():
 		_on_camera_pan.call(motion.relative)
@@ -358,11 +345,20 @@ func _handler(handlers: Dictionary, key: String) -> Callable:
 	return handler
 
 
-func _add_button(row: BoxContainer, node_name: String, copy_key: String, handler: Callable) -> void:
+func _add_button(
+	row: BoxContainer,
+	node_name: String,
+	copy_key: String,
+	handler: Callable,
+	expand: bool = true
+) -> void:
 	var button: Button = Button.new()
 	button.name = node_name
 	button.text = UiCopy.text(copy_key)
-	button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	if expand:
+		button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	else:
+		button.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	button.focus_mode = Control.FOCUS_NONE
 	if handler.is_valid():
 		button.pressed.connect(func() -> void:

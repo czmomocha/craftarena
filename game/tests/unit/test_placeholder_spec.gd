@@ -72,6 +72,12 @@ func test_camera_distance_and_fov_are_unchanged_placeholders() -> void:
 	var near_h: float = sqrt(near.x * near.x + near.z * near.z)
 	assert_almost_eq(rad_to_deg(atan2(far.y, far_h)), 45.0, ANGLE_EPSILON)
 	assert_almost_eq(rad_to_deg(atan2(near.y, near_h)), 45.0, ANGLE_EPSILON)
+	var pitched: Vector3 = PlaceholderSpec.camera_offset_at(
+		PlaceholderSpec.CAMERA_DISTANCE, PlaceholderSpec.CAMERA_YAW_DEG, PlaceholderSpec.CAMERA_PITCH_DEG
+	)
+	assert_almost_eq(pitched.x, PlaceholderSpec.CAMERA_OFFSET.x, ANGLE_EPSILON)
+	assert_almost_eq(pitched.y, PlaceholderSpec.CAMERA_OFFSET.y, ANGLE_EPSILON)
+	assert_almost_eq(pitched.z, PlaceholderSpec.CAMERA_OFFSET.z, ANGLE_EPSILON)
 	assert_eq(PlaceholderSpec.clamp_camera_distance(0.0), PlaceholderSpec.CAMERA_DISTANCE_MIN)
 	assert_eq(PlaceholderSpec.clamp_camera_distance(99.0), PlaceholderSpec.CAMERA_DISTANCE_MAX)
 

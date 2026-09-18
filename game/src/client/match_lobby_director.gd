@@ -101,6 +101,7 @@ func try_solo() -> bool:
 	if not host.offline.try_begin(host.course_path, host.web_platform):
 		host.refresh_status()
 		return false
+	MatchLobbyRuntime.reset_match_camera(host)
 	host.apply_course_document(host.course_path)
 	host.apply_snapshot_map()
 	host.refresh_status()
@@ -216,6 +217,7 @@ func try_solo_plaza(content_id: String = "") -> bool:
 	if not host.offline.try_begin_bundle(bundle):
 		host.refresh_status()
 		return false
+	MatchLobbyRuntime.reset_match_camera(host)
 	host.stage.apply_bundle(bundle)
 	host.plaza.try_close()
 	host.apply_snapshot_map()
@@ -310,6 +312,8 @@ func on_socket_open() -> bool:
 	if host.play == null:
 		return false
 	var ok: bool = host.play.on_open()
+	if ok:
+		MatchLobbyRuntime.reset_match_camera(host)
 	host.refresh_status()
 	return ok
 
