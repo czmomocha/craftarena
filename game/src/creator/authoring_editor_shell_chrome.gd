@@ -17,6 +17,7 @@ const TraprushEditorPanelGd := preload("res://src/creator/traprush_editor_panel.
 const AuthoringValidatorPanelGd := preload("res://src/creator/authoring_validator_panel.gd")
 const LayoutGd := preload("res://src/creator/authoring_window_layout.gd")
 const PointerGd := preload("res://src/creator/authoring_editor_shell_pointer.gd")
+const PointerCameraGd := preload("res://src/creator/authoring_editor_shell_pointer_camera.gd")
 const FloorGd := preload("res://src/creator/authoring_preview_map_floor.gd")
 const PublishGd := preload("res://src/creator/authoring_editor_shell_publish.gd")
 const GizmoGd := preload("res://src/creator/authoring_editor_transform_gizmo.gd")
@@ -107,6 +108,7 @@ func ensure(shell: AuthoringEditorShell, handlers: Dictionary) -> void:
 	map.ensure_rig()
 	if validator != null:
 		validator.mount(map, AuthoringSurfaceNames.allows_validator_details(shell.surface))
+	PointerCameraGd.apply_passthrough_mouse_filters(root)
 	if not window.window_input.is_connected(_on_window_input):
 		window.window_input.connect(_on_window_input)
 	LayoutGd.apply_editor(window, shell)

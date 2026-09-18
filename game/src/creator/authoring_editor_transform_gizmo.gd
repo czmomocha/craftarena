@@ -42,11 +42,12 @@ static func try_pick_axis(
 	var root: Node3D = map.get_node_or_null(ROOT_NAME) as Node3D
 	if root == null or not root.visible:
 		return ""
-	var best_t: float = 256.0
+	var max_t: float = ConvertGd.pick_range(map)
+	var best_t: float = max_t
 	var best_axis: String = ""
 	for axis: String in [AXIS_X, AXIS_Y, AXIS_Z]:
 		var aabb: AABB = _axis_aabb(root.position, axis)
-		var t: float = ConvertGd.ray_aabb_t(origin, direction, aabb)
+		var t: float = ConvertGd.ray_aabb_t(origin, direction, aabb, max_t)
 		if t < 0.0 or t >= best_t:
 			continue
 		best_t = t

@@ -12,7 +12,7 @@ static func handle_button(
 ) -> bool:
 	if chrome == null or chrome.map == null:
 		return false
-	if _hits_gui(chrome, mouse.position):
+	if hits_gui(chrome, mouse.position):
 		return false
 	if mouse.button_index == MOUSE_BUTTON_WHEEL_UP or mouse.button_index == MOUSE_BUTTON_WHEEL_DOWN:
 		if not mouse.pressed:
@@ -43,10 +43,45 @@ static func handle_motion(
 	return false
 
 
-static func _hits_gui(chrome: AuthoringEditorShellChrome, _point: Vector2) -> bool:
-	if chrome.window == null or not is_instance_valid(chrome.window):
+static func hits_gui(chrome: AuthoringEditorShellChrome, _point: Vector2) -> bool:
+	if chrome == null or chrome.window == null or not is_instance_valid(chrome.window):
 		return false
-	var hovered: Control = chrome.window.gui_get_hovered_control()
-	if hovered == null:
+	return hits_interactive_control(chrome.window.gui_get_hovered_control())
+
+
+## Layout containers and Labels are not picks. Walk parents so a SpinBox's
+## inner LineEdit still counts as the spin.
+static func hits_interactive_control(hovered: Control) -> bool:
+	var node: Node = hovered
+	while node != null:
+		var control: Control = node as Control
+		if control != null and _is_interactive_type(control):
+			return true
+		node = node.get_parent()
+	return false
+
+
+## Empty chrome must not eat 3D clicks; buttons / spins / lists still stop.
+static func apply_passthrough_mouse_filters(node: Node) -> void:
+	if node == null:
+		return
+	var control: Control = node as Control
+	if control != null and _should_ignore_mouse(control):
+		control.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	for child: Node in node.get_children():
+		apply_passthrough_mouse_filters(child)
+
+
+static func _is_interactive_type(control: Control) -> bool:
+	return (
+		control is BaseButton
+		or control is SpinBox
+		or control is OptionButton
+		or control is ItemList
+	)
+
+
+static func _should_ignore_mouse(control: Control) -> bool:
+	if control == null or _is_interactive_type(control):
 		return false
-	return hovered is BaseButton or hovered is SpinBox or hovered is OptionButton or hovered is ItemList
+	return control is Container or control is Label

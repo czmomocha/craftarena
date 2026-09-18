@@ -151,7 +151,8 @@ static func try_entity_from_ray(
 ) -> Dictionary:
 	if map == null:
 		return {"ok": false}
-	var best_t: float = 256.0
+	var max_t: float = pick_range(map)
+	var best_t: float = max_t
 	var best_id: int = 0
 	var found: bool = false
 	for child: Node in map.get_children():
@@ -166,7 +167,7 @@ static func try_entity_from_ray(
 			continue
 		var entity_id: int = id_text.to_int()
 		var aabb: AABB = AABB(mesh.position - half, half * 2.0)
-		var t: float = _ray_aabb_t(origin, direction, aabb)
+		var t: float = _ray_aabb_t(origin, direction, aabb, max_t)
 		if t < 0.0 or t >= best_t:
 			continue
 		best_t = t
@@ -177,13 +178,28 @@ static func try_entity_from_ray(
 	return {"ok": true, "id": best_id}
 
 
-static func ray_aabb_t(origin: Vector3, dir: Vector3, aabb: AABB) -> float:
-	return _ray_aabb_t(origin, dir, aabb)
+## Camera far plane when the map has a Camera3D; otherwise unbounded.
+static func pick_range(map: Node3D) -> float:
+	if map != null:
+		for child: Node in map.get_children():
+			var camera: Camera3D = child as Camera3D
+			if camera != null and camera.far > 0.0:
+				return camera.far
+	return INF
 
 
-static func _ray_aabb_t(origin: Vector3, dir: Vector3, aabb: AABB) -> float:
+static func ray_aabb_t(
+	origin: Vector3, dir: Vector3, aabb: AABB, max_t: float = -1.0
+) -> float:
+	var far_t: float = max_t
+	if far_t <= 0.0:
+		far_t = INF
+	return _ray_aabb_t(origin, dir, aabb, far_t)
+
+
+static func _ray_aabb_t(origin: Vector3, dir: Vector3, aabb: AABB, max_t: float) -> float:
 	var t0: float = 0.0
-	var t1: float = 256.0
+	var t1: float = max_t
 	var i: int = 0
 	while i < 3:
 		var origin_i: float = origin[i]

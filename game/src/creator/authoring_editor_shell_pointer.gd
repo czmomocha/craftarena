@@ -35,7 +35,7 @@ static func _handle_button(chrome: AuthoringEditorShellChrome, mouse: InputEvent
 		chrome.dragging = false
 		chrome.drag_axis = ""
 		return
-	if chrome.window.gui_get_hovered_control() != null:
+	if CameraGd.hits_gui(chrome, mouse.position):
 		return
 	if chrome.tools == null or chrome.map == null:
 		return
