@@ -260,7 +260,8 @@ Undo / Redo 是会话内对成功命令派生的反向 payload（`place`↔`remo
 | 第三张官方 TRAPRUSH 赛道 | `game/content/official/traprush/course_03.json` |
 | 第四张官方 TRAPRUSH 赛道 | `game/content/official/traprush/course_04.json` |
 | 第五张官方 TRAPRUSH 赛道 | `game/content/official/traprush/course_05.json` |
-| F 线示范课 | `game/content/official/traprush/course_f_playable.json`（不计入 M5 官方课 3～5 张；HTTP 匹配仍只 01–05） |
+| 第六张官方 TRAPRUSH 赛道 | `game/content/official/traprush/course_06.json` |
+| F 线示范课 | `game/content/official/traprush/course_f_playable.json`（不计入 M5 官方课 3～5 张；HTTP 匹配认 01–06） |
 | SimulationBundle | `game/src/ugc/simulation_bundle.gd` + decode / bags / optional（v2：`assets` 袋 + 每袋 `asset_id`/`gameplay_version`；可选袋 `movers` / `conveyors` / `launches` / `switches` / `gates` / `energy_walls` / `portal_switches` / `spikes` / `flames` / `crushers` / `rollers` / `rubbles` / `obstacle_cores` / `pendulums` / `ices` 不进 required，省略与空数组等价，旧编译体仍可解码；`movers` / `conveyors` / `launches` / `switches` / `gates` / `spikes` / `crushers` / `pendulums` / `ices` 几何都住在 `solids`，本袋只带行为，`entity_id` 必须能在 `solids` 里找到；`energy_walls` / `rubbles` / `obstacle_cores` 几何和耐久住在 `destructibles`，本袋只带 `entity_id`；`portal_switches` 几何住在 `portals`，本袋只带 `link_group`；`flames` / `rollers` 几何住在 `hazards`，本袋只带 `entity_id`；v1 仍解码并迁移到内置"占满一格"资产；**第 23 个袋 `environment`** 是天空选择，条目恰好 `entity_id` + `sky_id`，至多一个，**没有几何、不注册资产**，因此不受「袋的资产对必须出现在 `assets` 里」那条约束——它也是**唯一空时不 emit** 的袋，这正是已发布内容 `to_dictionary()` 逐字节不变的原因；**解码不查天空目录**，任何 `sky_id` ≥ 0 都接受，认不认识是编译期的门禁） |
 | Rule VM 解释器 | `game/src/ugc/rule_vm.gd` + opcodes / codec / compiler / dispatch / host / apply（v1 信封；`OnMatchStarted` / `OnEveryTicks`；Query / Logic / Action 子集；Preview 安全点重编译，公开对局禁止） |
 | TRAPRUSH 拓扑编译 | `game/src/ugc/traprush_topology_compiler.gd` + bags / fields / triggers（资产准入在这里；不读 `zone.shape`；天空 id 准入也在这里，多于一个 `environment` 实体或未登记 `sky_id` 整份拒绝） |

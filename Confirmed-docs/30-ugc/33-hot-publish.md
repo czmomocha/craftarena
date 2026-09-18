@@ -63,7 +63,7 @@
 玩家包**不得**持有 `CONTENT_SIGN_KEY`。玩家路径是**一条鉴权接口内签完入库**，禁止「先取 signature 再调 `POST /content/publish`」（两跳 = 可重放能力票）。
 
 1. 客户端：验证器全绿 → 编译 SimulationBundle → 用现有 Godot `ContentSign.hash_hex` 算 ContentHash（公开算法，不是密钥）→ 只上传 bundle + hash；**不带 signature、不自报 version、不自报 `content_id`**。
-2. 控制面：会话鉴权（Guest 或正式号均可；测试期不做 CAPTCHA / 邮箱）→ 拒官方课 id（`course_01`…`course_05`）→ 校验 bundle 形状 → **服务端分配 `content_id`**（避开官方 id）→ 分配下一 version → 进程内 HMAC 代签 → 同一事务写入并切 `latest`（沿用 M4b）→ 回显 id / version / hash / latest。
+2. 控制面：会话鉴权（Guest 或正式号均可；测试期不做 CAPTCHA / 邮箱）→ 拒官方课 id（`course_01`…`course_06`）→ 校验 bundle 形状 → **服务端分配 `content_id`**（避开官方 id）→ 分配下一 version → 进程内 HMAC 代签 → 同一事务写入并切 `latest`（沿用 M4b）→ 回显 id / version / hash / latest。
 3. 每条内容绑定主人身份；别人不能对同一 id 递增版本。这覆盖此前「发布 HTTP 仍不绑账号」。
 4. 现有 `POST /content/publish` **保留**，仅测试 / 持钥工具；玩家按钮永不调用。
 5. P0/P1 补丁仍用同一把钥；**本决策不动补丁接口**。

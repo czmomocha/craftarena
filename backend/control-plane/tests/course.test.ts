@@ -167,6 +167,14 @@ describe("control plane official course select", () => {
 			assert.equal(fifth.statusCode, 201);
 			assert.equal(fifth.json<MatchmakingJoinResponse>().course, "course_05");
 
+			const sixth = await app.inject({
+				method: "POST",
+				url: "/matchmaking/rooms",
+				payload: { course: "course_06" },
+			});
+			assert.equal(sixth.statusCode, 201);
+			assert.equal(sixth.json<MatchmakingJoinResponse>().course, "course_06");
+
 			const extra = await app.inject({
 				method: "POST",
 				url: "/matchmaking/quick",

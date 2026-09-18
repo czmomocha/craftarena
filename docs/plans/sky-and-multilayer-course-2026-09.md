@@ -48,19 +48,18 @@
 - locale 文案键在本章加（A1 刻意没加）；
 - 已知未排除项：两张源图的**左右接缝**没测过。`PanoramaSkyMaterial` 横向环绕，源图若不是严格等距圆柱投影，接缝处可能断裂。A1 的居中裁只动上下不动左右，没引入新接缝问题，也没排除源图自带的。
 
-### A3 多层官方课 `course_06`（未开工）
+### A3 多层官方课 `course_06`（已交，2026-09-18）
 
 **常审**；匹配白名单那一处按深审对待。
 
 - **7 层，`y ∈ {-6, -4, -2, 0, 2, 4, 6}`**，起点在最底层、终点在最顶层，**相隔 6 层**，全部落在 ±8 格出界盒内（`out_of_range_reset.gd` 的 `STUB_HALF`，该盒**含 Y**、以世界原点为中心）；
 - **层距必须 2 格，不能 1 格**。层距 1 格时上层地板会直接堵住下层的站立位：地板占 `[k-0.5, k+0.5]`，站在其上的胶囊中心在 `k+0.6875`，而 `k+1` 那格占 `[k+0.5, k+1.5]`，中心落在里面就是 blocked；
-- **最底层满铺**，掉下去永远落在地板上、不触发出界重生，代价只是重爬。建议底盘 13×13（x、z ∈ [-6,6]），上层几何收在 ±5 格内，这样任何缝隙掉落都必然接到底盘；
-- **6 处竖直转移优先用弹射垫和电梯，少用传送门**。`course_completion_probe.gd` 的动作集只有「8 向走整格 / Jump / UseItem / 等一 tick」，而**跳跃爬不上一整格**（该文件原话：「占位跳跃冲量不够爬一整格，人要靠传送」）；传送门的启发式只允许最多两次中转，6 段全靠传送门会让探针预算耗尽，"可完赛"就从硬结论退化成弱证据；
-- **顶层两层不放弹射垫**：`LAUNCH_DY` 峰值约 4 格，在 `y = 6` 起跳会冲到 `y = 10`，越过出界盒直接被重生；
-- 实体数约 350–400（现有官方课的 5–6 倍）。**不手写 JSON**，用开发期脚本走真实 `EditCommand` 路径构建 `AuthoringSession` 再 `export_document`，产物过 `content-validator`——课程和创作者用同一条写入路径，不出现"只有生成器能造出来的课"；
-- 白名单三处 + 课表行：`official_traprush_courses.gd` 的 `MATCH_IDS`、`backend/contracts/src/official_courses.ts` 的 enum、[CD-21](../../Confirmed-docs/20-gameplay/21-traprush.md) 课表；
-- 探针要补一份**手写 route**（照 `course_01` 的 `--route=safe` 先例），让完赛是硬结论；
-- `course_06` 必须在 F2 签署前进 `npm run bot-run` 集合与[可玩性签署清单](../runbooks/playability-signoff-traprush.md)。
+- **最底层满铺** 13×13（x、z ∈ [-6,6]），掉下去永远落在地板上、不触发出界重生，代价只是重爬；
+- **竖直转移落地为三对双向传送门 + 三座电梯**。计划原文优先弹射垫，但 `LAUNCH_DY` 峰值约 4.25 格，同 xz 上层地板会在上升途中被从下方顶到，所以弹射垫 0 个。顶层两层本来就不能放弹射垫（会冲出 ±8）。探针启发式只允许两次传送中转，三跳的完赛硬结论走手写脚本（`course_06_scripts.gd`），不走 A*；
+- 实体 396（350–400 档）。**不手写 JSON**，`TraprushCourse06Builder` 走真实 `EditCommand` `place` 路径构建 `AuthoringSession` 再 `export_document`；
+- 白名单三处 + 课表行已扩：`official_traprush_courses.gd` 的 `MATCH_IDS`、`backend/contracts/src/official_courses.ts` 的 enum、[CD-21](../../Confirmed-docs/20-gameplay/21-traprush.md) 课表；
+- `--bot-run` 缺省覆盖六张；`--route=safe` 仍只对 `course_01`；
+- `course_06` 已进 `npm run bot-run` 集合。F2 重签时须覆盖本课——**不代签**。
 
 ## 4. A1 最硬的那条证据
 

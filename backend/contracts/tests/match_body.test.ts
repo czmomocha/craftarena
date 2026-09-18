@@ -83,6 +83,7 @@ describe("match body content object", () => {
 			"invalid_content",
 		);
 		assert.equal(isReservedMatchContentId("course_05"), true);
+		assert.equal(isReservedMatchContentId("course_06"), true);
 		assert.equal(isReservedMatchContentId("course_f_playable"), true);
 		assert.equal(isReservedMatchContentId("ugc_aabbccddeeff00112233445566778899"), false);
 		assert.equal(isReservedMatchContentId("blueprint_01"), true);

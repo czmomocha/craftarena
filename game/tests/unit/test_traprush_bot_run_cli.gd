@@ -64,10 +64,11 @@ func test_forbid_portal_rejects_junk() -> void:
 
 func test_default_courses_are_the_official_match_ids() -> void:
 	var ids: PackedStringArray = BotRunCli.resolve_courses(PackedStringArray())
-	assert_eq(ids.size(), 5)
+	assert_eq(ids.size(), 6)
 	assert_eq(ids, OfficialTraprushCourses.all_match_ids())
 	assert_eq(ids[0], OfficialTraprushCourses.COURSE_01)
 	assert_eq(ids[4], OfficialTraprushCourses.COURSE_05)
+	assert_eq(ids[5], OfficialTraprushCourses.COURSE_06)
 	assert_eq(
 		BotRunCli.resolve_courses(PackedStringArray(["--course=course_f_playable"])),
 		PackedStringArray([OfficialTraprushCourses.COURSE_F_PLAYABLE])
