@@ -1,6 +1,6 @@
 # ADR-0004 多 Agent 并行开发的启用时机与架构选型（Cursor 版）
 
-- 状态：**已拍板**（2026-08-21 八项决策见 §8；2026-08-23 决策 8 执行结论见 §8.1）。**2026-09-09**：决策 4「禁止向 `main` 提交/推送」被 `git_workflow = trunk_direct_after_auth` 覆盖；现行口径见 [CD-52 §1.1](../../Confirmed-docs/50-engineering/52-ai-workflow.md)。本 ADR 其余项（并行时机、Bugbot、worktree）仍有效。
+- 状态：**已拍板**（2026-08-21 八项决策见 §8；2026-08-23 决策 8 执行结论见 §8.1）。**2026-09-09**：决策 4「禁止向 `main` 提交/推送」被 `git_workflow = trunk_direct_after_auth` 覆盖；现行口径见 [CD-52 §1.1](../../Confirmed-docs/50-engineering/52-ai-workflow.md)。本 ADR 其余项（并行时机、Bugbot、worktree）仍有效。**2026-09-19**：`.cursor/agents/` 角色表从 6 份扩到 12 份（新增主管 + 控制面 / UGC / 客户端 / 可玩性 / 文档五个落点角色），见 [CD-52 §5.3 / §5.4](../../Confirmed-docs/50-engineering/52-ai-workflow.md) 与 `cursor_agents = supervisor_and_eleven_roles`。**决策 3（审查不建 Agent）与决策 5（上限 3、先跑 2、第 3 域未开）都未被推翻**：主管只是把 §5.1 的 prompt 纪律写成文件，不是对「Cursor 没有编排运行时」这一判定的翻案。
 - 日期：2026-08-21（初稿，基于 CodeBuddy Code 能力） / 2026-08-21（**本版：改写为 Cursor 实际能力并拍板**） / 2026-08-23（§8.1 工具链评审执行）
 - 提出背景：M0 已退出（2026-08-20），M1 尚未启动。项目负责人询问「多 Agent 何时真正 run 起来」以及「自建 / 用现成 CLI 编排 / 用 Multica 类平台」
 - 改写原因：初稿的架构选型建立在 CodeBuddy Code 的 **Agent Teams**、agent frontmatter 的 **`tools:` 白名单**、**`.worktreeinclude`**、**`worktree.symlinkDirectories`** 四项能力之上。经核对 Cursor 官方文档，**这四项 Cursor 全都没有**。初稿的时机判据（§3、§4.1、§4.2）与工具无关，本版保留；架构选型（§5）与落地清单（§6）整段重写

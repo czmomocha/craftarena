@@ -18,6 +18,7 @@
 | 审查分级 | 深审 / 常审 / 轻审，见 §3 |
 | 开发机窗口 | [dev-window-check.md](../../docs/runbooks/dev-window-check.md)；「真机」留给导出包 |
 | 并行 | 2 域；第 3 域未开 |
+| Agent 角色 | `.cursor/agents/` 12 份：主管 + 11 个落点角色，见 §5.3。审查仍**不建文件** |
 | Godot MCP | 唯一主 MCP = Godot AI；不进 CI、不进玩家包 |
 
 ## 1. 角色分工
@@ -105,7 +106,9 @@ AI 不得用"代码看起来正确"代替运行证据。
 
 后三行不得留空（D9，解冻后仍有效）。口径见 [纠偏方案 §5.2 / §5.3](../../docs/plans/course-correction-2026-08.md) 与 [章粒度下限与审查分级](../../.cursor/rules/chapter-granularity-and-review.mdc)。
 
-`隔离方式` 必填。阶段 A（§5.1 的四条退出条件未全绿）只允许 `无`，即单 Agent 串行、共享当前 checkout。阶段 B 起必须填 `worktree` 或 `cloud`：**Cursor 的 subagent 默认共享父 Agent 的 checkout，不显式要求隔离会静默互相覆盖。** 不得留空。
+`隔离方式` 必填，不得留空。取值含义：`无` = 单域串行、共享当前 checkout；`worktree` / `cloud` = 同时有第二个域在写。
+
+2026-09-09 `git_workflow = trunk_direct_after_auth` 之后默认落地是 `main`，所以**单域串行的章写 `无`**（任务单里写 `main` 是同义表述）。只有真的派出两个域并行写，才必须给每个域 `worktree` 或 `cloud`：**Cursor 的 subagent 默认共享父 Agent 的 checkout，不显式要求隔离会静默互相覆盖。** 这一段覆盖原先「阶段 B 起必须填 `worktree` 或 `cloud`」——判据从阶段编号改为「本刀是否真有两个域同时写」。
 
 功能任务应控制在**半天到两天**可验证的粒度。**一章必须是一条完整链路的闭合，规模约为纠偏前的 5 倍**（D9，解冻后仍有效）；颜色、单个 HUD 字段、按钮焦点、窗口尺寸、Label 前缀不再单独成章。禁止用"实现完整 UGC 平台"这类无法审查的任务驱动 Agent。任务结束时由人类验证后立刻提交 `main`（人类说「提交」才 commit），不要让未提交产出跨夜留在 worktree 里（Cursor 托管 worktree 会自动清理，见 [CD-62](../60-plan/62-risk-register.md)）。提交粒度见 [§3.1](#31-提交粒度完整章节)。
 
@@ -213,19 +216,39 @@ $j.jobs | ForEach-Object { "$($_.name)  $($_.conclusion)" }
 
 ### 5.3 角色
 
-按任务临时分工。角色定义在 `.cursor/agents/`：
+按任务临时分工，一个角色对应一批**互不重叠的落点**。角色定义在 `.cursor/agents/`：
 
-| 角色 | 文件 | 职责 |
+| 角色 | 文件 | 主要落点 |
 |---|---|---|
-| 架构 Agent | `architecture.md` | 维护边界、ADR 和 Schema |
-| 玩法 Agent | `gameplay.md` | 实现 TRAPRUSH/BASTION System |
-| 编辑器 Agent | `editor.md` | EditCommand、UI 和 Preview |
-| 网络 Agent | `networking.md` | 命令、快照、重连和回放 |
-| 测试 Agent | `testing.md` | 生成测试、恶意输入和性能场景 |
-| 资产 Agent | `assets.md` | 生成占位资源并执行导入检查 |
-| 审查 | **不建文件** | 由 Bugbot 承担。Cursor subagent 继承父 Agent 的全部工具，做不成硬只读 |
+| 主管 Agent | `supervisor.md` | 接单、判断是不是一章、拆解、路由、汇总证据交人类。见 §5.4 |
+| 架构 Agent | `architecture.md` | `game/src/shared/`、`backend/contracts/`、`Confirmed-docs/40-technical/`、`docs/adr/` |
+| 玩法 Agent | `gameplay.md` | `game/src/simulation/`、`game/src/games/` |
+| 网络 Agent | `networking.md` | `game/src/server/`、网关与 MatchHost 的协议部分 |
+| 控制面 Agent | `backend.md` | `backend/control-plane/`、SQLite、`infra/`、`tools/dev-launcher/` |
+| 编辑器 Agent | `editor.md` | `game/src/creator/` |
+| UGC Agent | `ugc.md` | `game/src/ugc/`、`tools/content-validator/`、`game/content/official/` |
+| 客户端 Agent | `client.md` | `game/src/client/`、`game/src/audio/`、Web 与字体导出工具 |
+| 资产 Agent | `assets.md` | `game/content/assets/`、`game/content/audio/`、`tools/asset-budget/` |
+| 可玩性 Agent | `playtest.md` | `tools/bot-runner/`、`tools/replay-inspector/`、`play_stubs.gd` 实验与可玩性清单草案 |
+| 测试 Agent | `testing.md` | `game/tests/`、红线扫描与 CI 门禁脚本 |
+| 文档 Agent | `docs.md` | `Confirmed-docs/`（`40-technical/` 除外）、`docs/runbooks/`、`docs/plans/`、CD-91 覆盖链 |
+| 审查 | **不建文件** | 由 Bugbot 与人类承担。Cursor subagent 继承父 Agent 的全部工具，做不成硬只读 |
 
-frontmatter 只有 `name`、`description`、`model`、`readonly`、`is_background`。没有 `tools` 白名单。这些文件**不**等于已经开启多域并行。
+frontmatter 只有 `name`、`description`、`model`、`readonly`、`is_background`。没有 `tools` 白名单。**这些文件不等于已经开启多域并行**——并行上限仍是 §5.2 的 2 域。
+
+一章的**主实现只交给一个角色**；其余角色只补自己那块落点（测试、文档、资产）。两个角色不得并列改同一批文件。
+
+### 5.4 主管角色
+
+`supervisor.md` 把 §5.1–§5.3 与任务单模板（§3）固化成一份可复用的 prompt：接单答五问（输入 / 输出 / 不做 / 里程碑归属 / 审查级别）→ 判断是不是一章（粒度 5×）→ 按 §5.3 路由 → 汇总运行证据与开发机窗口编号步骤 → 交人类。
+
+**它是 prompt 纪律，不是运行时编排能力**（宪法第二十四条）。[ADR-0004 §5.1](../../docs/adr/0004-multi-agent-adoption-timing-and-architecture.md) 已核实：Cursor 没有 Agent Teams，没有共享任务列表，子 Agent 之间没有消息、以干净上下文启动、嵌套限两层。因此主管必须把上下文写进每个子 Agent 的 prompt，且不得声称子 Agent 之间会自行协调。
+
+主管的三条硬约束：
+
+1. **默认串行单域**，「隔离方式」写 `无`；并行写最多 2 域且每域必须 `worktree` / `cloud`；**第 3 域禁止开**，升到 3 须人类另一次拍板（§5.2）；
+2. **不得代替人类拍板**：命中 [CD-63](../60-plan/63-open-decisions.md) 未决项、宪法第十八条门禁项、跳 [CD-61](../60-plan/61-milestones.md) 开工顺序、代签人类清单，都必须给「选项 + 推荐 + 代价」后停住；
+3. **不得承担审查**，也不得把子 Agent 的审查结论当门禁。
 
 任何 Agent 产物都必须进入同一代码库、同一测试门禁和同一人类审批流程。
 

@@ -7,11 +7,25 @@ import { fileURLToPath } from "node:url";
 const REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), "../../..");
 const AGENTS_DIR = join(REPO_ROOT, ".cursor/agents");
 const ALLOWED_KEYS = ["name", "description", "model", "readonly", "is_background"] as const;
-const EXPECTED_NAMES = ["architecture", "gameplay", "editor", "networking", "testing", "assets"] as const;
+const CD52_PATH = join(REPO_ROOT, "Confirmed-docs/50-engineering/52-ai-workflow.md");
+const EXPECTED_NAMES = [
+	"supervisor",
+	"architecture",
+	"gameplay",
+	"networking",
+	"backend",
+	"editor",
+	"ugc",
+	"client",
+	"assets",
+	"playtest",
+	"testing",
+	"docs",
+] as const;
 const FORBIDDEN_NAMES = ["review", "reviewer", "auditor", "bugbot"] as const;
 
 describe(".cursor/agents", () => {
-	it("defines the six CD-52 roles and no review agent", () => {
+	it("defines the twelve CD-52 roles and no review agent", () => {
 		const files = readdirSync(AGENTS_DIR)
 			.filter((name) => name.endsWith(".md"))
 			.sort();
@@ -37,6 +51,22 @@ describe(".cursor/agents", () => {
 			assert.match(source, /worktree/i);
 			assert.match(source, /Bugbot/);
 		}
+	});
+
+	it("keeps the CD-52 role table in sync with what is on disk", () => {
+		const cd52 = readFileSync(CD52_PATH, "utf8");
+		for (const name of EXPECTED_NAMES) {
+			assert.ok(
+				cd52.includes(`\`${name}.md\``),
+				`CD-52 §5.3 does not list ${name}.md`,
+			);
+		}
+	});
+
+	it("keeps the supervisor from raising the parallelism cap on its own", () => {
+		const supervisor = readFileSync(join(AGENTS_DIR, "supervisor.md"), "utf8");
+		assert.match(supervisor, /第 3 域禁止/);
+		assert.match(supervisor, /不是运行时编排器/);
 	});
 });
 
