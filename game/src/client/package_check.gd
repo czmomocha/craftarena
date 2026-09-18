@@ -62,6 +62,7 @@ static func _run_checks(failures: Array[String]) -> Dictionary:
 	_record(checks, failures, "hazard_roller_visual_loadable", _fitted_prop_loadable(SharedVisualAssetCatalog.HAZARD_ROLLER_SCENE_PATH), true)
 	_record(checks, failures, "locale_table_loadable", _locale_table_loadable(), true)
 	_record(checks, failures, "ui_font_loadable", _ui_font_loadable(), true)
+	_record(checks, failures, "sky_textures_loadable", _sky_textures_loadable(), true)
 	_record(checks, failures, "user_draft_roundtrip", _user_draft_roundtrip(), true)
 	_record(checks, failures, "no_mcp_autoload", not _autoload_names().has(MCP_AUTOLOAD), true)
 	_record(checks, failures, "runtime_material", _runtime_material_ok(), true)
@@ -200,6 +201,33 @@ static func _ui_font_loadable() -> bool:
 	if font == null:
 		return false
 	return font.has_char(UiFont.PROBE_CHAR.unicode_at(0))
+
+
+## Every registered sky in `SharedSkyCatalog`, loaded as a texture and measured.
+##
+## This check carries more weight than the visual ones above, because the sky
+## panoramas are the first runtime textures that do **not** ship inside a
+## `.glb`, and `npm run asset-budget` only walks `.glb` (`ASSET_EXTENSION` in
+## `tools/asset-budget/src/discover.ts`). CD-11 §8.1 gives them their own
+## budget row and names this check as one of the two things standing in for the
+## missing CI gate, so it has to assert the budget, not just the load.
+##
+## Measuring the 2:1 ratio is the part that would otherwise rot silently: the
+## panorama is mapped onto a full sphere, so a texture that is merely *present*
+## at the wrong aspect still loads, still renders, and only looks wrong.
+##
+## The budget predicate itself lives on `SharedSkyCatalog` so the counter-cases
+## can feed it a constructed `ImageTexture` instead of committing an oversized
+## panorama just to prove this check bites.
+static func _sky_textures_loadable() -> bool:
+	for sky_id: int in range(SharedSkyCatalog.SKY_ID_MAX + 1):
+		var path: String = SharedSkyCatalog.texture_path(sky_id)
+		if path.is_empty():
+			return false
+		var texture: Texture2D = ResourceLoader.load(path) as Texture2D
+		if not SharedSkyCatalog.texture_meets_budget(texture):
+			return false
+	return true
 
 
 static func _ui_font_name() -> String:

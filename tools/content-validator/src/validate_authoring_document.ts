@@ -1,5 +1,6 @@
 import { loadJsonFile, validateJsonSchema, type JsonSchemaError } from "./json_schema.ts";
 import { AUTHORING_DOCUMENT_SCHEMA_PATH } from "./paths.ts";
+import { SKY_ID_MAX } from "./sky_catalog.ts";
 import { validateComponentRecord } from "./validate_component.ts";
 
 type JsonObject = { readonly [key: string]: unknown };
@@ -41,6 +42,8 @@ export function validateAuthoringDocument(instance: unknown): JsonSchemaError[] 
 		}
 	}
 
+	pushEnvironmentErrors(errors, instance.entities);
+
 	for (const [entityId, entity] of records) {
 		const portal = portalBody(entity);
 		if (portal === undefined) {
@@ -60,6 +63,47 @@ export function validateAuthoringDocument(instance: unknown): JsonSchemaError[] 
 	}
 
 	return errors;
+}
+
+/**
+ * 天空选择的两条语义。这是 `TraprushTopologyCompiler._collect_environment` 的镜像
+ * ——**发布前门禁**，不是 `AuthoringWorld.put` 的不变量：编辑中的草稿在
+ * GDScript 侧摆两片天不会当场被拒，但那份文档编译不出来，也就发布不了。本工具查
+ * 的是仓库里的发布候选（官方课与正反例），所以按编译器口径判。`sky_id` 的结构
+ * （键集、int、非负）已由 component Schema 覆盖，这里不重复。
+ */
+function pushEnvironmentErrors(errors: JsonSchemaError[], entities: readonly unknown[]): void {
+	let seen = 0;
+	for (const [index, entity] of entities.entries()) {
+		const skyId = environmentSkyId(entity);
+		if (skyId === undefined) {
+			continue;
+		}
+		seen += 1;
+		if (seen > 1) {
+			errors.push({
+				path: `$.entities/${index}/components/environment`,
+				message: "at most one environment entity per content",
+			});
+		}
+		if (skyId > SKY_ID_MAX) {
+			errors.push({
+				path: `$.entities/${index}/components/environment/sky_id`,
+				message: "sky_id is not registered in the sky catalog",
+			});
+		}
+	}
+}
+
+function environmentSkyId(entity: unknown): number | undefined {
+	if (!isObject(entity) || !isObject(entity.components)) {
+		return undefined;
+	}
+	const environment = entity.components.environment;
+	if (!isObject(environment) || typeof environment.sky_id !== "number") {
+		return undefined;
+	}
+	return Number.isInteger(environment.sky_id) ? environment.sky_id : undefined;
 }
 
 function transformOnCell(entity: JsonObject, cell: number): boolean {

@@ -18,6 +18,7 @@ const COLLABORATOR_PATHS: PackedStringArray = [
 	"res://src/client/match_lobby_net.gd",
 	"res://src/client/match_lobby_sampler.gd",
 	"res://src/client/match_lobby_stage.gd",
+	"res://src/client/match_lobby_stage_sky.gd",
 	SHELL_PATH,
 ]
 

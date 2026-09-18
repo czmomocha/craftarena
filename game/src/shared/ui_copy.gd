@@ -79,6 +79,9 @@ const PLACE_RUBBLE: String = "craft_arena.ui.place_rubble"
 const PLACE_OBSTACLE_CORE: String = "craft_arena.ui.place_obstacle_core"
 const PLACE_PENDULUM: String = "craft_arena.ui.place_pendulum"
 const PLACE_ICE: String = "craft_arena.ui.place_ice"
+const SKY: String = "craft_arena.ui.sky"
+const SKY_PASTEL_RIDGE: String = "craft_arena.ui.sky_pastel_ridge"
+const SKY_LOWPOLY_MESA: String = "craft_arena.ui.sky_lowpoly_mesa"
 const MARK_CORNER: String = "craft_arena.ui.mark_corner"
 const FILL_SOLIDS: String = "craft_arena.ui.fill_solids"
 const COPY_ENTITY: String = "craft_arena.ui.copy_entity"
@@ -217,6 +220,9 @@ const ALL_KEYS: PackedStringArray = [
 	PLACE_OBSTACLE_CORE,
 	PLACE_PENDULUM,
 	PLACE_ICE,
+	SKY,
+	SKY_PASTEL_RIDGE,
+	SKY_LOWPOLY_MESA,
 	MARK_CORNER,
 	FILL_SOLIDS,
 	COPY_ENTITY,
@@ -298,13 +304,13 @@ static func ensure_loaded() -> bool:
 	if _loaded:
 		return not _tables.is_empty()
 	_loaded = true
-	_tables = _parse_csv_file()
+	_tables = UiCopyTable.parse(TABLE_PATH)
 	return not _tables.is_empty()
 
 
 ## Exported-package diagnostics. Does not touch the cached tables.
 static func parse_stats() -> Dictionary:
-	var from_file: Dictionary = _parse_csv_file()
+	var from_file: Dictionary = UiCopyTable.parse(TABLE_PATH)
 	var zh: Dictionary = _locale_bag(from_file, ZH_LOCALE)
 	return {
 		"locales": from_file.keys(),
@@ -356,43 +362,3 @@ static func _locale_bag(tables: Dictionary, locale: String) -> Dictionary:
 	if typeof(raw) != TYPE_DICTIONARY:
 		return {}
 	return raw
-
-
-static func _parse_csv_file() -> Dictionary:
-	var file: FileAccess = FileAccess.open(TABLE_PATH, FileAccess.READ)
-	if file == null:
-		return {}
-	var header: PackedStringArray = file.get_csv_line(",")
-	if header.size() > 0:
-		header[0] = header[0].replace("\uFEFF", "").strip_edges()
-	var tables: Dictionary = {}
-	if header.size() < 2 or header[0] != "keys":
-		file.close()
-		return tables
-	for col: int in range(1, header.size()):
-		tables[String(header[col])] = {}
-	while not file.eof_reached():
-		var row: PackedStringArray = file.get_csv_line(",")
-		if _row_is_blank(row):
-			continue
-		var key: String = String(row[0]).strip_edges()
-		if key == "" or key.begins_with("#"):
-			continue
-		for col: int in range(1, mini(row.size(), header.size())):
-			var locale: String = String(header[col])
-			var existing: Variant = tables.get(locale, null)
-			if typeof(existing) != TYPE_DICTIONARY:
-				continue
-			var bag: Dictionary = existing
-			bag[key] = String(row[col])
-			tables[locale] = bag
-	file.close()
-	return tables
-
-
-static func _row_is_blank(fields: PackedStringArray) -> bool:
-	if fields.is_empty():
-		return true
-	if fields.size() == 1 and fields[0] == "":
-		return true
-	return false

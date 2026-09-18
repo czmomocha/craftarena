@@ -1,0 +1,10 @@
+{
+	"schema_version": 1,
+	"entity_id": 90,
+	"components": {
+		"environment": {
+			"sky_id": 0,
+			"texture": "res://content/assets/sky/sky_pastel_ridge.png"
+		}
+	}
+}

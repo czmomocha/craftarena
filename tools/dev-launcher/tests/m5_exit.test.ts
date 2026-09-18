@@ -207,7 +207,7 @@ describe("M5 C6 exit checklists", () => {
 		assert.match(testing, /发布候选[\s\S]{0,120}仍未签|仍未签[\s\S]{0,120}发布候选/);
 	});
 
-	it("points both always-on rules at M6 after VPS web distribute lands", () => {
+	it("points both always-on rules at one named chapter, not a milestone", () => {
 		for (const path of [
 			".cursor/rules/complete-chapter-prs.mdc",
 			".cursor/rules/course-correction-freeze.mdc",
@@ -216,11 +216,13 @@ describe("M5 C6 exit checklists", () => {
 			assert.match(rule, /^alwaysApply: true$/m);
 			assert.match(rule, /字体入包/, `${path}: must keep font packaging in the delivered trail`);
 			assert.match(rule, /测试期 VPS Web 分发/, `${path}: VPS web test distribute stays in the trail`);
-			// M6 开工后指针收窄到具体章（D1、D5……），不再停在整号。
+			// M6 开工后指针收窄到具体章（D1、D5……），不再停在整号。2026-09-17
+			// 起「天空盒与多层官方课」A1–A3 插在 F1 之后、F2 之前，所以指针也可以
+			// 指向插入段的某一章 —— 但仍必须是**一章**，不是一个段名或整号。
 			assert.match(
 				rule,
-				/下一刀 = M6 [DEF]\d|现在可以开工\*\*：\*\*M6 [DEF]\d/,
-				`${path}: next action must name one M6 chapter`,
+				/下一刀 = (M6 [DEF]\d|天空盒 A\d)|现在可以开工\*\*：\*\*(M6 [DEF]\d|天空盒 A\d)/,
+				`${path}: next action must name one chapter (M6 D1/E1/F1… or 天空盒 A1/A2/A3)`,
 			);
 			assert.match(rule, /M7 之后/, `${path}: TLS and PR sandbox stay after M7`);
 			assert.doesNotMatch(rule, /下一实现刀是 C6|下一刀 = \*\*M5 C6\*\*/);
@@ -230,6 +232,20 @@ describe("M5 C6 exit checklists", () => {
 				rule,
 				/下一刀 = M6 \/ M7|现在可以开工\*\*：\*\*M6 \/ M7/,
 				`${path}: milestone-wide pointer is stale once M6 has chapters`,
+			);
+			// 插入段不得把 M6 的未退出状态盖掉：指针挪到 A2 之后，最容易发生的
+			// 误读就是「M6 已经好了」。两份规则都必须同时说出 F2 还没开工。
+			assert.match(
+				rule,
+				/M6 F2 仍未开工/,
+				`${path}: the insert must not hide that M6 F2 has not started`,
+			);
+			// A1 交了契约与贴图，但画面要到 A2 才有。这句一旦被抹掉，下一个会话
+			// 会以为天空已经能看见，然后去「修」一个并不存在的回归。
+			assert.match(
+				rule,
+				/第一次看见天空是 A2/,
+				`${path}: A1 ships no visible sky; keep that sentence`,
 			);
 		}
 	});

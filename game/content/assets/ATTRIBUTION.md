@@ -57,6 +57,8 @@ CC0 允许个人、教育与**商业**用途，无署名义务。原始包内 `L
 | `pickups/pickup_bomb.tscn` | 内部 Mesh 占位 | F 线 FC 爆破球 |
 | `pickups/pickup_dash.tscn` | 内部 Mesh 占位 | F 线 FC 冲刺 |
 | `spawns/spawn_marker.tscn` | 内部 Mesh 占位 | F 线 FC 出生点标记 |
+| `sky/sky_pastel_ridge.png` | 本地 AI 生成工具（图像） | 全景天空，`sky_id=0`（默认天空）；烘焙链路见 §2.2 |
+| `sky/sky_lowpoly_mesa.png` | 本地 AI 生成工具（图像） | 全景天空，`sky_id=1`；烘焙链路见 §2.2 |
 
 ## 2.1 平台运行时音频（B2，2026-09-11）
 
@@ -88,9 +90,28 @@ CC0 允许个人、教育与**商业**用途，无署名义务。原始包内 `L
 | `../../audio/music/theme_end.ogg` | F 线内部 WAV 转码 | 无第三方许可 | 2026-09-11 |
 | `../../audio/music/theme_edit.ogg` | F 线内部 WAV 转码 | 无第三方许可 | 2026-09-11 |
 
+## 2.2 全景天空贴图（A1，2026-09-17）
+
+人类 2026-09-17 确认这两张图是**本地 AI 生成工具的产物（自有）**，不是第三方素材，因此**没有**第三方许可条款原文需要归档。按 [CD-11 §8](../../../Confirmed-docs/10-product/11-scope-and-platforms.md)「资产来源（2026-08-30 拍板）」，AI 生成工具的产物可作为正式平台资产。**不要把它们标成 CC0 或任何具体第三方协议**——那是编的。
+
+语义 `sky_id` → 路径的唯一解析点是 `game/src/shared/sky_catalog.gd`；贴图路径不进 SimulationBundle，所以换图不产生新内容版本、不动 ContentHash。
+
+**烘焙链路**（可重跑，完整命令与实测数字在 [资产烘焙 runbook §4](../../../docs/runbooks/asset-bake.md)）：
+
+| 产物 | 源文件（`_source_refs/temp_image/traprush/`，**不入 Git**） | 源尺寸 / 体积 | 居中裁切 | 产物尺寸 / 体积 |
+|---|---|---|---|---|
+| `sky/sky_pastel_ridge.png` | `360__equirectangular_panorama_.png` | 5504×3072 / 15,593,435 B | 5504×2752 @ y=160 | 1024×512 / 399,770 B |
+| `sky/sky_lowpoly_mesa.png` | `Stylized_low_poly_game_sky_dom.png` | 5504×3072 / 16,987,692 B | 5504×2752 @ y=160 | 1024×512 / 508,421 B |
+
+源图是 1.79:1，不是 `PanoramaSkyMaterial` 要的 2:1，所以**先居中裁到 2:1 再等比缩**；直接缩会把地平线压扭约 11%。两张图的地平线都在垂直中部，裁掉的上下各 160 px 分别是平坦渐变天空与平坦地面，故取居中值。
+
+烘焙工具是仓库内的 `game/tools/assets/bake_panorama.gd`（纯 Godot，**零新依赖**）。runbook §2 的 `@gltf-transform/cli resize` 在这里用不上——它只改 GLB 内嵌贴图。
+
+**入库形态**：每张只有 `.png` + `.png.import` 两个文件。导入设置为无损（`compress/mode=0`）、`detect_3d/compress_to=0`、`mipmaps/generate=true`；三项的理由见 runbook §4.4。**`detect_3d/compress_to=0` 不是可选项**：默认值 `1` 会在这张图被 3D 引用时让引擎自动重写 `.import` 改成 VRAM 压缩，而 Web 预设刻意关了 VRAM 压缩导入。
+
 ## 3. 维护规则
 
 1. **入库即登记**。新增任何 `.glb` / 贴图 / 音频都要在本文件加一行，无论来源；
 2. **第三方资产必须记许可条款原文位置**，不能只写"CC0"；
-3. 所有 `.glb` 仍须过 [CD-11 §8.1](../../../Confirmed-docs/10-product/11-scope-and-platforms.md) 的单资产预算（`npm run asset-budget`）；音频过 [CD-11 §8.3](../../../Confirmed-docs/10-product/11-scope-and-platforms.md)（随 `npm test`）；
+3. 所有 `.glb` 仍须过 [CD-11 §8.1](../../../Confirmed-docs/10-product/11-scope-and-platforms.md) 的单资产预算（`npm run asset-budget`）；音频过 [CD-11 §8.3](../../../Confirmed-docs/10-product/11-scope-and-platforms.md)（随 `npm test`）。**独立贴图（非 GLB 内嵌）不在 `asset-budget` 里**——`tools/asset-budget/src/discover.ts` 的 `ASSET_EXTENSION = ".glb"` 只扇 `.glb`，所以 §2.2 那两张 PNG 的尺寸与体积**不受那条 CI 门禁覆盖**（宪法第二十四条：不得把它说成已被预算门禁覆盖）；
 4. 玩家上传模型、音频与贴图仍是 [CD-11 §5](../../../Confirmed-docs/10-product/11-scope-and-platforms.md) 的不做项，本文件不适用于 UGC。

@@ -12,6 +12,9 @@ const PackageCheckGd := preload("res://src/client/package_check.gd")
 const ALWAYS_MANDATORY: PackedStringArray = [
 	"courses_readable",
 	"locale_table_loadable",
+	# 天空贴图这条按名字钉住，而不是只靠 `ok == true`：CD-11 §8.1 点名它是那一档
+	# 预算**没有 CI 门禁**时的两处替代保障之一，被整条删掉的话 `ok` 照样是 true。
+	"sky_textures_loadable",
 	"user_draft_roundtrip",
 	"no_mcp_autoload",
 	"runtime_material",

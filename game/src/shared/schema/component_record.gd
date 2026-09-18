@@ -114,6 +114,8 @@ static func _named_component_is_valid(component_name: String, body: Dictionary) 
 			return _replication_is_valid(body)
 		SharedComponentNames.GAMEPLAY_ASSET:
 			return _gameplay_asset_is_valid(body)
+		SharedComponentNames.ENVIRONMENT:
+			return _environment_is_valid(body)
 		_:
 			return false
 
@@ -270,6 +272,14 @@ static func _tower_is_valid(body: Dictionary) -> bool:
 
 static func _replication_is_valid(body: Dictionary) -> bool:
 	return _exactly(body, PackedStringArray(["policy_id"])) and _int_at_least(body, "policy_id", 0)
+
+
+## 天空选择。这里**只做结构校验**：键集精确、int、非负。「这个 id 认不认识」与
+## 「一份内容里至多一个 environment 实体」是**语义**校验，落在编译期的
+## `SharedSkyCatalog` 与 content-validator——与 `gameplay_asset` 同一条分工
+## （ADR-0006 Q5），因为 AuthoringWorld 允许存在草稿态引用，编译才是发布门禁。
+static func _environment_is_valid(body: Dictionary) -> bool:
+	return _exactly(body, PackedStringArray(["sky_id"])) and _int_at_least(body, "sky_id", 0)
 
 
 ## 引用平台内置资产的不可变玩法版本。只校验形状与下界；`asset_id` 是否登记、

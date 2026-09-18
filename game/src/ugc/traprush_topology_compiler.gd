@@ -36,6 +36,12 @@ extends RefCounted
 ## lattice-cell asset, so the three official courses and every existing
 ## AuthoringWorld compile to byte-identical occupancy.
 ##
+## Sky selection rides on the `environment` component and compiles into the
+## optional `environment` bag (see `_collect_environment`). More than one
+## `environment` entity, or a `sky_id` missing from `SharedSkyCatalog`, fails the
+## whole compile. No `environment` component means an empty bag, which
+## `to_dictionary()` omits — so a world without a sky compiles byte-identically.
+##
 ## `zone.shape` is **not** read here. Since v2 the authoritative collision comes
 ## from the asset, and `zone` goes back to CD-42 §1's original meaning (触发与
 ## 查询区域). Before v2 the shape a creator authored was silently discarded,
@@ -93,6 +99,10 @@ static func compile(world: AuthoringWorld) -> SimulationBundle:
 	var finish_list: Array = occupancy["finish"]
 	if finish_list.size() > 1:
 		return null
+	var environment_result: Dictionary = _collect_environment(world)
+	if not environment_result.get("ok", false):
+		return null
+	var environment_list: Array = environment_result["environment"]
 	var assets: Array[Dictionary] = FieldsGd.asset_entries(used_assets, world.grid.cell)
 	if assets.is_empty() and not used_assets.is_empty():
 		return null
@@ -124,4 +134,38 @@ static func compile(world: AuthoringWorld) -> SimulationBundle:
 		SimulationBundle.FIELD_PENDULUMS: occupancy["pendulums"],
 		SimulationBundle.FIELD_ICES: occupancy["ices"],
 	}
+	# 没选天空 → 不写这个键 → `to_dictionary()` 与本章之前逐字节一致。
+	if not environment_list.is_empty():
+		body[SimulationBundle.FIELD_ENVIRONMENT] = environment_list
 	return SimulationBundle.from_dictionary(body)
+
+
+## 天空选择：带 `environment` 组件的实体 → `environment` 袋。这里**是**发布门禁，
+## 所以查 `SharedSkyCatalog`（解码期不查，见该文件头的三级门禁表）。两条拒绝都让
+## 整份编译返回 `null`，与本文件其它失败语义一致：
+##
+## 1. 多于一个 `environment` 实体——一份内容只有一片天，两片没有可解释的裁决；
+## 2. `sky_id` 不在目录里——认不出的天空不该被发布出去。
+##
+## 组件没有几何、也不引用资产，所以不进 `used_assets`，不写 `transform`。
+static func _collect_environment(world: AuthoringWorld) -> Dictionary:
+	var entries: Array[Dictionary] = []
+	for entity_id: int in world.entity_ids():
+		var record: SharedComponentRecord = world.get_record(entity_id)
+		if record == null:
+			return {"ok": false}
+		if not record.components.has(SharedComponentNames.ENVIRONMENT):
+			continue
+		if not entries.is_empty():
+			return {"ok": false}
+		var raw: Variant = record.components[SharedComponentNames.ENVIRONMENT]
+		if typeof(raw) != TYPE_DICTIONARY:
+			return {"ok": false}
+		var component_body: Dictionary = raw
+		if typeof(component_body.get("sky_id", null)) != TYPE_INT:
+			return {"ok": false}
+		var sky_id: int = component_body["sky_id"]
+		if not SharedSkyCatalog.is_known(sky_id):
+			return {"ok": false}
+		entries.append({"entity_id": entity_id, "sky_id": sky_id})
+	return {"ok": true, "environment": entries}

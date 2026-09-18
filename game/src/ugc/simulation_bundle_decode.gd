@@ -285,6 +285,8 @@ static func from_dictionary(data: Dictionary) -> SimulationBundle:
 	bundle.portal_switches = portal_switch_list
 	if not OptionalGd.assign_trap_bags(bundle, body, solid_ids, hazard_ids, destructible_ids):
 		return null
+	if not OptionalGd.assign_environment_bag(bundle, body):
+		return null
 	return bundle
 
 

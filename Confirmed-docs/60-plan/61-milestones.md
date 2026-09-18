@@ -19,10 +19,10 @@
 | 进行中 | M3（表现层增强不阻塞 M3 退出，归 M-Art；深化段已收口的表现不再挡本号） |
 | M5 退出记录 | 2026-09-13 人类签署，结论 **「基本通过」**（不是无保留的「通过」）。依据：A1–C6 十一章全交；五张官方课 `npm run bot-run` 全 `completable`；GUT 1645/1645；[可玩性签署：TRAPRUSH](../../docs/runbooks/playability-signoff-traprush.md) 八项均为「通过」。**两处已知缺口随本号带走，不因退出而消失**：[网络故障人工检查](../../docs/runbooks/network-fault-check.md) 九项中乱序与重复包**未严格注入**（macOS `dnctl` 无对应开关，待 Linux `tc netem`）；签署对象是当前自绘大厅 + 占位美术 + 占位数值那一版，换 UI / 定稿美术 / 改 D-F4·F5·F6 后结论不自动延续 |
 | 部分交付 | M-Export（C1 三预设；**Web 游玩分发两刀已交**；Android / iOS 排到一期收尾；公开 TLS / PR 沙盒排到 **M7 之后**）；M-Art（C4 契约与第一批 `.glb`；字体入包与 S3 已交；与 F 线重叠项已交） |
-| 下一动 | **M6 F2**（退出验收 + TRAPRUSH 可玩性重签）。章节拆分见 [M6 章节计划](../../docs/plans/m6-bastion-1v1.md)（11 章，D1 → F2；实现级计划，不是本文件的替代）。**D1–F1 已交**（F1：2026-09-16）。**下一刀是 F2**。E4 音效按诚实边界复用已登记 cue，无新 OGG，见 [CD-91 D.4](../90-reference/91-decision-log.md) `bastion_e4_audio`。S1 主大厅壳已接线（F1）：落地是 `s1_lobby.tscn`，频道仍是自绘 Window，`project.godot` 全局 theme 仍不挂。**F1 让 M5 那份 TRAPRUSH 可玩性签署作废，须在 F2 重签。** **测试期 VPS Web 分发已交**（2026-09-14；人类 2026-09-15 确认部署与测试已自行走过）。测试期继续明文 `http`/`ws` + 自备 VPS 链接和端口。S3 三项设计缺口仍待产品输入，见 [ui-wiring.md §2.2](../../docs/runbooks/ui-wiring.md) |
-| 未开工（顺序，不是冻结） | 公开 TLS / 每个 PR 的 Web 沙盒（**M7 之后**）；**产品 UI 接线第三批**（S2 / S4 / S5 / S6）；M6 F2、M7；Android / iOS 烟测（一期收尾）；角色选择界面（紧跟主大厅壳，不提前开工） |
+| 下一动 | **天空盒与多层官方课 A3**（多层官方课 `course_06`）。2026-09-17 人类拍板插在 **M6 F1 之后、F2 之前**，三章 A1 → A2 → A3，计划见 [天空盒与多层官方课](../../docs/plans/sky-and-multilayer-course-2026-09.md)；不是新里程碑号，不发明 M8。**A1 已交**（2026-09-17：Component Schema v1 第 20 个组件 `environment`、SimulationBundle 第 23 个可选袋「空时省略」、两张 1024×512 全景贴图入库）。**A2 已交**（2026-09-18：对局壳 / Preview / Editor 挂 `Camera3D.environment`，IBL 显式关闭，创作者下拉走 `place` / `set_component`）。插这一段的理由是**只签一次**：F2 要重签 TRAPRUSH 可玩性，而天空与新课都会改变被签对象，放在 F2 之后就要再作废一次。**M6 F2 仍未开工**，排在 A3 之后。M6 章节拆分见 [M6 章节计划](../../docs/plans/m6-bastion-1v1.md)（11 章，D1 → F2；实现级计划，不是本文件的替代）。**M6 D1–F1 已交**（F1：2026-09-16）。E4 音效按诚实边界复用已登记 cue，无新 OGG，见 [CD-91 D.4](../90-reference/91-decision-log.md) `bastion_e4_audio`。S1 主大厅壳已接线（F1）：落地是 `s1_lobby.tscn`，频道仍是自绘 Window，`project.godot` 全局 theme 仍不挂。**F1 让 M5 那份 TRAPRUSH 可玩性签署作废，须在 F2 重签。** **测试期 VPS Web 分发已交**（2026-09-14；人类 2026-09-15 确认部署与测试已自行走过）。测试期继续明文 `http`/`ws` + 自备 VPS 链接和端口。S3 三项设计缺口仍待产品输入，见 [ui-wiring.md §2.2](../../docs/runbooks/ui-wiring.md) |
+| 未开工（顺序，不是冻结） | 天空盒与多层官方课 **A3**（A1 / A2 已交）；公开 TLS / 每个 PR 的 Web 沙盒（**M7 之后**）；**产品 UI 接线第三批**（S2 / S4 / S5 / S6）；M6 F2、M7；Android / iOS 烟测（一期收尾）；角色选择界面（紧跟主大厅壳，不提前开工） |
 | 纠偏闸门 | **已解除**（2026-09-03）。C0–C5 不是里程碑号。此后本文件进度顺序生效 |
-| 解冻后顺序 | 创作者可测（已收口）→ F 线（已收口）→ Web 游玩分发（第一刀已收口）→ 可玩性深化（已收口）→ M-Art 剩余已拍板项 → **M4a** → M4b → M5 → **字体入包 → UI 接线第一批（S3 广场）** → **测试期 VPS Web 分发（M-Export 剩余）** → M6 / M7（含 **UI 接线第二批 S1 主大厅壳**）→ **公开 TLS / 每个 PR 的 Web 沙盒** → **UI 接线第三批（S2 / S4 / S5 / S6）** → **一期收尾**（Android / iOS 烟测、触控 UI） |
+| 解冻后顺序 | 创作者可测（已收口）→ F 线（已收口）→ Web 游玩分发（第一刀已收口）→ 可玩性深化（已收口）→ M-Art 剩余已拍板项 → **M4a** → M4b → M5 → **字体入包 → UI 接线第一批（S3 广场）** → **测试期 VPS Web 分发（M-Export 剩余）** → M6 D1–F1（含 **UI 接线第二批 S1 主大厅壳**）→ **天空盒与多层官方课 A1 → A2 → A3**（插入段，2026-09-17 拍板）→ **M6 F2** → M7 → **公开 TLS / 每个 PR 的 Web 沙盒** → **UI 接线第三批（S2 / S4 / S5 / S6）** → **一期收尾**（Android / iOS 烟测、触控 UI） |
 
 ## 1. 开发顺序
 
@@ -44,6 +44,10 @@
   → UI 接线第一批：S3 公共内容广场（**2026-09-13 已交**；分批表见 §2 M-Art）
   → 测试期 VPS Web 分发（M-Export 剩余 / 第二刀；**已交**。明文 `http`/`ws` + 自备 VPS；不是公开 TLS，不是每个 PR 的沙盒）
   → BASTION（M6 / M7；主大厅壳双玩法入口随 BASTION 落地，UI 接线第二批 S1 在此章内，不提前）
+      · M6 D1–F1 已交
+      · 插入：天空盒与多层官方课（A1 → A2 → A3；2026-09-17 人类拍板排在 **M6 F1 之后、F2 之前**，
+        理由是 F2 那次可玩性重签要一次性覆盖新 UI + 天空 + 新课；不是新里程碑号，不发明 M8）
+      · M6 F2（退出验收 + TRAPRUSH 可玩性重签）→ M7
   → 公开 TLS / 每个 PR 的 Web 沙盒（仍属 M-Export 产出，2026-09-14 拍板推迟到 **M7 之后**）
   → UI 接线第三批：S2 匹配屏 + S4 / S5 / S6（S6 局内 HUD 尚未设计）
   → 角色选择界面（紧跟主大厅壳；2026-09-10 立项，不发明新里程碑号，不提前开工）
@@ -340,6 +344,7 @@
   | 第三批 | S2 匹配屏 + S4 账号 + S5 我的内容 + S6 局内 HUD | 第二批之后 | S4 / S5 / S6 尚未设计，需先出设计稿 |
 
   不提前、不跳批、不在 M5 C6 期间接任何一屏——C6 要签的可玩性清单描述的是现有自绘大厅，换 UI 会让刚签的验收对象当场作废（宪法第九条）。
+- **天空盒与多层官方课（插入段，2026-09-17 人类拍板）**。三章 A1 → A2 → A3，排在 **M6 F1 之后、F2 之前**，章节拆分与边界见 [天空盒与多层官方课](../../docs/plans/sky-and-multilayer-course-2026-09.md)（实现级计划，不是本文件的替代）。**A1 已交**（2026-09-17）：Component Schema v1 加第 20 个组件 `environment`（恰好 `sky_id`，复用 `place` / `set_component`，**不新增第四个 EditCommand op**）；SimulationBundle 加第 23 个**可选表现袋**，空时省略，所以 `course_01` 的 `COURSE_01_BUNDLE_DIGEST` 与 26 个 wire 键两条金标**一个字未改仍绿**——已发布内容的 ContentHash 没有移动（宪法第六条）；两张 1024×512 全景贴图入库（预算档位见 [CD-11 §8.1](../10-product/11-scope-and-platforms.md)，入库形态见 [CD-51 §5.1](../50-engineering/51-dev-environment.md)）。**A2 已交**（2026-09-18）：对局壳 / Preview / Editor 三处挂 `Camera3D.environment`（不挂 `WorldEnvironment`），IBL 显式关闭，创作者下拉走已有 `place` / `set_component`。A3 交多层官方课 `course_06`（7 层、层距 2 格、底层满铺、终点与起点相隔 6 层）并进匹配白名单。
 - 按 `asset_id` 解析视觉（F 线 FC，已交）；
 - 传送门模型（F 线 FC 占位；深化段可补专用模型，若仍无模型须诚实标注）；
 - ~~clip / 绑定动画~~ **已交**（2026-09-05，路线 A）：`PlayAnimVisual` 把 C4 八态接到角色视觉，四态播 clip、四态程序化姿态；角色资产换 `animal-cat.glb`。只在 Solo / Preview 接线（v1 快照缺 `vy` / `stun`）。动画时长与过渡仍属 CD-63。口径见 [CD-21 §3.4](../20-gameplay/21-traprush.md)；

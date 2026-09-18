@@ -48,6 +48,8 @@ const FIELD_RUBBLES: String = "rubbles"
 const FIELD_OBSTACLE_CORES: String = "obstacle_cores"
 const FIELD_PENDULUMS: String = "pendulums"
 const FIELD_ICES: String = "ices"
+## 天空选择。第 23 个袋，也是唯一**空时不 emit** 的袋，见 `to_dictionary`。
+const FIELD_ENVIRONMENT: String = "environment"
 ## v2 里**可省略**的袋。省略与空数组等价，所以旧内容（三张官方课、任何已存的
 ## AuthoringDocument）不重新编译也照常解码。加袋因此不是 Schema 破坏性变更。
 const OPTIONAL_FIELDS: PackedStringArray = [
@@ -66,6 +68,7 @@ const OPTIONAL_FIELDS: PackedStringArray = [
 	FIELD_OBSTACLE_CORES,
 	FIELD_PENDULUMS,
 	FIELD_ICES,
+	FIELD_ENVIRONMENT,
 ]
 
 var cell: int = 0
@@ -105,6 +108,9 @@ var obstacle_cores: Array[Dictionary] = []
 var pendulums: Array[Dictionary] = []
 ## 冰面：几何在 `solids`，本袋只带方向。支撑时按走路步长滑。
 var ices: Array[Dictionary] = []
+## 天空：**没有几何**，条目恰好 `entity_id` + `sky_id`，也不注册资产——所以它不受
+## 「袋的资产对必须出现在 `assets` 里」那条约束。至多一个条目：一份内容一片天。
+var environment: Array[Dictionary] = []
 
 
 static func from_dictionary(data: Dictionary) -> SimulationBundle:
@@ -181,7 +187,7 @@ func to_dictionary() -> Dictionary:
 	var ice_list: Array = []
 	for item: Dictionary in ices:
 		ice_list.append(item.duplicate(true))
-	return {
+	var wire: Dictionary = {
 		FIELD_SCHEMA_VERSION: SCHEMA_VERSION,
 		FIELD_CELL: cell,
 		FIELD_SOURCE_REVISION: source_revision,
@@ -209,6 +215,16 @@ func to_dictionary() -> Dictionary:
 		FIELD_PENDULUMS: pendulum_list,
 		FIELD_ICES: ice_list,
 	}
+	# 其余 22 个袋照旧**总是** emit（哪怕是空数组），一个字不改。只有 `environment`
+	# 空时省略：ContentHash 覆盖本函数的输出（CD-42 当前生效值「内容签名」），
+	# 而没选天空的已发布内容必须继续算出同一个哈希（宪法第六条）。金标是
+	# `test_bastion_blueprint_contract.gd` 的 `COURSE_01_BUNDLE_DIGEST` 与 26 键。
+	if not environment.is_empty():
+		var environment_list: Array = []
+		for item: Dictionary in environment:
+			environment_list.append(item.duplicate(true))
+		wire[FIELD_ENVIRONMENT] = environment_list
+	return wire
 
 
 ## 该 asset_id 在本 bundle 内的权威碰撞袋；未引用的 id 返回空字典。

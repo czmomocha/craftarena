@@ -134,6 +134,7 @@ export GODOT_AI_DISABLE_TELEMETRY=true
 | 目录 | 平台资产放 `game/content/assets/<类别>/`（如 `characters/`）；`game/addons/` 属第三方插件，**不受平台预算约束** |
 | 贴图 | `.glb.import` 必须设 `gltf/embedded_image_handling=3`（**Embed as Uncompressed**）。默认值 `1`（Extract）会把内嵌贴图解包成外部图片文件，同一份像素入库两遍、LFS 配额翻倍，也让"一个资产一个文件"失效 |
 | 入库形态 | 每个资产只有两个文件：`.glb`（LFS）与 `.glb.import`。出现同名解包贴图即为配置回退 |
+| 独立运行时贴图 | **不内嵌在 GLB 里**的运行时贴图（第一例是全景天空）以 `.png`（LFS）+ `.png.import` 两个文件入库，落点同样是 `game/content/assets/<类别>/`。两项导入设置必须手动确认：`compress/mode` 保持无损（引擎默认值 `0`，不要改），**`detect_3d/compress_to` 必须从默认 `1` 改成 `0`**。后者是本行存在的唯一理由：默认值下 Godot 一旦检测到这张图被 3D 使用，就会**自动重写 `.import`** 改成 VRAM 压缩，而 `game/export_presets.cfg` 的 Web 预设关着 VRAM 压缩——那条路径在开发机上悄悄生效、只在导出包里暴露。预算档位见 [CD-11 §8.1](../10-product/11-scope-and-platforms.md)（**不在** `asset-budget` 的 CI 门禁内），烘焙命令见[资产烘焙 runbook §4](../../docs/runbooks/asset-bake.md) |
 | 预算 | 单个资产必须过 [CD-11 §8.1](../10-product/11-scope-and-platforms.md)。由 `npm run asset-budget` 机械判定并进 CI。扫描跳过 `addons/`（第三方插件）与 `_source_refs/`（见下行），并认 `.gdignore`（**递归**，与 Godot 4.7.2 实测一致）；显式指定路径时这两层跳过都不生效 |
 | 面数档位 | 由 glTF 是否含 `skin` 决定，**不看文件名** |
 | 判不出就拒 | 认不出的贴图格式、非三角 primitive、LFS 指针一律失败，不放过 |

@@ -35,7 +35,8 @@
 				"build_slot": { "$ref": "#/$defs/build_slot" },
 				"tower": { "$ref": "#/$defs/tower" },
 				"replication": { "$ref": "#/$defs/replication" },
-				"gameplay_asset": { "$ref": "#/$defs/gameplay_asset" }
+				"gameplay_asset": { "$ref": "#/$defs/gameplay_asset" },
+				"environment": { "$ref": "#/$defs/environment" }
 			}
 		}
 	},
@@ -293,6 +294,15 @@
 			"properties": {
 				"asset_id": { "type": "integer", "minimum": 1 },
 				"gameplay_version": { "type": "integer", "minimum": 1 }
+			}
+		},
+		"environment": {
+			"description": "TRAPRUSH sky selection. World-level presentation semantics, not a thing standing on a cell: transform is ignored even when present. Only the semantic sky_id travels; the texture path never enters SimulationBundle (ADR-0006 Q4 = A), so replacing a sky texture produces no new content version. This schema checks structure only; whether the id is registered and whether a document carries at most one environment entity are semantic gates in game/src/shared/sky_catalog.gd plus the compiler and content-validator.",
+			"type": "object",
+			"additionalProperties": false,
+			"required": ["sky_id"],
+			"properties": {
+				"sky_id": { "type": "integer", "minimum": 0 }
 			}
 		}
 	}

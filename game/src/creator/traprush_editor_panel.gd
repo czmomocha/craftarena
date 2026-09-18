@@ -88,6 +88,7 @@ func adopt_world(world: AuthoringWorld) -> void:
 	_next_order = next_order
 	if cursor != null:
 		cursor.set_cell(next_x, 0, 0)
+	TraprushEditorPanelSky.sync_panel(self, world)
 
 
 func mount(p_host: AuthoringEditorShell) -> void:
@@ -133,6 +134,7 @@ func mount(p_host: AuthoringEditorShell) -> void:
 	add_child(floor_row)
 	_add_button(floor_row, FLOOR_UP_NAME, UiCopy.FLOOR_UP, floor_up)
 	_add_button(floor_row, FLOOR_DOWN_NAME, UiCopy.FLOOR_DOWN, floor_down)
+	TraprushEditorPanelSky.attach(self)
 	# 批量生成只给 internal_dev（CD-32）。
 	if host != null and AuthoringSurfaceNames.allows_batch_generate(host.surface):
 		batch = BatchGd.new()
@@ -286,6 +288,7 @@ func next_conveyor_yaw_bam() -> int:
 
 
 func sync_params() -> void:
+	TraprushEditorPanelSky.sync_panel(self, _world())
 	if params != null:
 		params.sync_selection()
 
@@ -383,14 +386,11 @@ func _world_has(entity_id: int) -> bool:
 		return false
 	return host.session.world.has_entity(entity_id)
 
-
 func _dangling_target_ids() -> Dictionary:
 	return IdsGd.dangling_target_ids(_world())
 
-
 func _pending_pair_entity_id() -> int:
 	return IdsGd.pending_pair_entity_id(_world(), _pending_portal_id)
-
 
 func _world() -> AuthoringWorld:
 	if host == null or host.session == null:

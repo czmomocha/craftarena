@@ -1,6 +1,9 @@
 # 资产烘焙与预算（runbook）
 
-生成工具（TRELLIS、混元 3D 等）的产物贴图通常是 4096，单文件动辄几十 MB，**过不了 [CD-11 §8.1](../../Confirmed-docs/10-product/11-scope-and-platforms.md) 的准入线**。本文是把它压到预算内、再确认它真的合格的两条命令。
+生成工具（TRELLIS、混元 3D 等）的产物贴图通常是 4096，单文件动辄几十 MB，**过不了 [CD-11 §8.1](../../Confirmed-docs/10-product/11-scope-and-platforms.md) 的准入线**。本文是把它压到预算内、再确认它真的合格的那几条命令。
+
+- **GLB（含内嵌贴图）** 走 §1–§3：`@gltf-transform/cli` 烘焙 + `npm run asset-budget` 门禁；
+- **独立贴图（非 GLB）** 走 §4：`@gltf-transform` 对它无用，改用 Godot 自己的 `Image`，且**不在 `asset-budget` 门禁里**（见 §4.5）。
 
 - 预算数值的所有者是 **CD-11 §8.1**，本文不复述，只调用；
 - 观察数据见 [烘焙试验记录](../plans/asset-bake-trial-2026-08.md)（一次本机试验，不是规范）；
@@ -148,7 +151,107 @@ rm -f game/.godot/uid_cache.bin                    # 否则会残留已删文件
 "$GODOT4" --headless --path game -- --package-check
 ```
 
-## 4. 还没做的事
+## 4. 独立全景贴图（非 GLB）
+
+### 4.1 为什么不走 §2
+
+§2 的 `npx @gltf-transform/cli resize` **只改 GLB 内嵌贴图**。它的输入输出都是 `.glb`，对一个独立的 `.png` 无从下手——glTF 容器里没有那张图，也就没有它能遍历的 `Texture` 节点。
+
+所以独立贴图用 **Godot 自己**烘焙：`Image.load_from_file` → `get_region`（裁切）→ `resize`（`INTERPOLATE_LANCZOS`）→ `save_png`。零新依赖，不触[宪法第十八条](../../AGENTS.md)的新依赖门禁，也不用在离线机器上拉 173 个包。
+
+脚本是 `game/tools/assets/bake_panorama.gd`，形状照 `game/tools/ui/validate_theme.gd`（`extends SceneTree` + `--script`）。
+
+> **`--script` 的退出码不可信。** 脚本自身解析失败时引擎仍然 **exit 0**（同一个坑记在 [CD-53](../../Confirmed-docs/50-engineering/53-testing-and-ci.md) 的「产品 UI 主题与场景静态校验」那一行与 [ui-wiring.md §0.2](ui-wiring.md)）。所以脚本打印 `RESULT: PASS` / `RESULT: FAIL`，**调用方必须断言 stdout 里有 `RESULT: PASS`**，不能只看 `$?`。
+
+### 4.2 命令
+
+参数是 `<src> <dest> [width] [height]`，缺省 `1024 512`。`src` 可以在项目外——两张源图在 `_source_refs/` 下，被 `.gitignore` 排除，所以传绝对路径。
+
+Windows（PowerShell）：
+
+```powershell
+cd <repo>
+$src = "$PWD/game/content/assets/_source_refs/temp_image/traprush"
+$out = (& $env:GODOT4_CONSOLE --headless --path game `
+    --script res://tools/assets/bake_panorama.gd -- `
+    "$src/360__equirectangular_panorama_.png" `
+    "res://content/assets/sky/sky_pastel_ridge.png" 2>&1 | Out-String)
+$out
+if ($out -notmatch "RESULT: PASS") { throw "bake failed" }   # 别只看退出码
+```
+
+macOS / Linux：
+
+```bash
+src=game/content/assets/_source_refs/temp_image/traprush
+out=$("$GODOT4" --headless --path game \
+    --script res://tools/assets/bake_panorama.gd -- \
+    "$PWD/$src/360__equirectangular_panorama_.png" \
+    "res://content/assets/sky/sky_pastel_ridge.png" 2>&1)
+echo "$out"
+grep -q "RESULT: PASS" <<<"$out" || { echo "bake failed" >&2; exit 1; }
+```
+
+第二张把源文件换成 `Stylized_low_poly_game_sky_dom.png`、产物换成 `sky_lowpoly_mesa.png`。**文件名必须逐字匹配** `game/src/shared/sky_catalog.gd` 的 `TEXTURE_PATHS`，改名会让那份目录解析不到图。
+
+烘焙完导入一次，然后确认 `game/content/assets/sky/` 下**只有四个文件**（两张 `.png` + 两份 `.import`），没有额外解包物：
+
+```powershell
+& $env:GODOT4_CONSOLE --headless --path game --import
+```
+
+### 4.3 实测数字（Windows 11，Godot 4.7.2-stable，2026-09-17）
+
+目标规格 **1024×512（2:1）** 由人类 2026-09-17 拍板：`PanoramaSkyMaterial` 的[官方文档](https://docs.godotengine.org/en/stable/classes/class_panoramaskymaterial.html)推荐 2:1，且 1024×512 无损约 2 MB 显存/张。
+
+两张源图都是 5504×3072，比例 **1.79:1，不是 2:1**。所以**先居中裁到 2:1（5504×2752，上下各去 160 px）再等比缩**；直接缩到 1024×512 会把地平线压扭约 11%。裁切值由脚本按目标比例算，两张都落在 **y=160**：
+
+| 产物 | 源文件 | 源尺寸 | 源体积 | 裁切 | 产物尺寸 | 产物体积 |
+|---|---|---|---|---|---|---|
+| `sky/sky_pastel_ridge.png` | `360__equirectangular_panorama_.png` | 5504×3072 | 15,593,435 B（14.87 MB） | 5504×2752 @ y=160 | 1024×512 | **399,770 B**（390.4 KB） |
+| `sky/sky_lowpoly_mesa.png` | `Stylized_low_poly_game_sky_dom.png` | 5504×3072 | 16,987,692 B（16.20 MB） | 5504×2752 @ y=160 | 1024×512 | **508,421 B**（496.5 KB） |
+
+**居中裁为什么对这两张成立**（换图时必须重新看一眼，别默认）：两张图的地平线都在垂直中部，裁掉的上下各 160 px 分别是平坦渐变天空与平坦地面，没有丢内容。若某张源图的地平线明显偏离中部，改脚本传入的目标比例或裁切位置，**并把实际用的值与理由补进本表**。
+
+### 4.4 导入设置：三项，都不是默认值里就对的
+
+入库形态每张只有 `.png` + `.png.import`。`game/export_presets.cfg` 的 **Web 预设刻意关掉了 VRAM 压缩**（`vram_texture_compression/for_desktop=false` / `for_mobile=false`），所以导入必须停在无损：
+
+| 项 | 值 | 理由 |
+|---|---|---|
+| `compress/mode` | `0`（Lossless） | Web 预设没开 VRAM 压缩导入，选 VRAM 格式会让 Godot 拒绝导出 Web 预设。**这一项是引擎默认值**，不用改，但换图后要确认它没被动过 |
+| `detect_3d/compress_to` | `0`（Disabled） | **默认是 `1`，必须手动改。** 默认值下 Godot 一旦检测到这张图被 3D 引用，就会**自动重写 `.import`** 改成 VRAM 压缩——那正是会在 Web 包里缺压缩格式、画面炸掉的路径。现在看不出问题，**接线后才会在开发机上自动变脏**，极难查 |
+| `mipmaps/generate` | `true` | **默认是 `false`，本刀手动改。** 天空以大倾角采样，无 mipmap 会闪。代价是显存从 1.5 MB 涨到 2.0 MB/张（见下） |
+
+对照 `game/content/ui/assets/*.png.import`：那些 2D UI 贴图留着 `detect_3d/compress_to=1`，因为 2D 用途不会触发 `detect_3d`。**天空是 3D 用途，这是差别所在**，别照抄 UI 那份。
+
+改完必须 `--import` 一遍，并**实测引擎到底写了什么**，不要只读 `.import` 文本：
+
+```powershell
+& $env:GODOT4_CONSOLE --headless --path game --import
+Select-String -Path game/content/assets/sky/*.png.import `
+    -Pattern "compress/mode|mipmaps/generate|detect_3d/compress_to|vram_texture"
+```
+
+2026-09-17 实测，两张的 `.import` 在 `--import` 之后**逐字保留**了手改值（引擎没有回写）：
+
+```text
+"vram_texture": false
+compress/mode=0
+mipmaps/generate=true
+detect_3d/compress_to=0
+```
+
+加载产物核对，两张一致：`CompressedTexture2D`，`1024x512`，`Image.get_format()` = **4（`FORMAT_RGB8`，即未做块压缩）**，`has_mipmaps()` = `true`，mipmap 层数 10，texel 数据 **2,097,153 B ≈ 2.0 MB**。这条印证了「1024×512 无损约 2 MB 显存/张」——**该数字是含 mipmap 的**；不开 mipmap 时底层是 1024×512×3 = 1,572,864 B ≈ 1.5 MB。
+
+### 4.5 诚实边界
+
+- **`npm run asset-budget` 不覆盖独立贴图。** `tools/asset-budget/src/discover.ts` 的 `ASSET_EXTENSION = ".glb"`（第 44 行）只扇 `.glb`，所以这两张 PNG 的尺寸与体积**不在那条 CI 门禁里**。不得把它们说成已被预算门禁覆盖（[宪法第二十四条](../../AGENTS.md)）。机械校验由另外两处补：`--package-check` 的条目与 GUT 断言；
+- `detect_3d` 的自动重写是**编辑器期**行为，触发点是这张图第一次被 3D 材质引用。本刀只证明了「手改值在 `--import` 后不被回写」；「接线后也不被回写」要等真正有 3D 引用的那一刀在开发机上确认；
+- 这两张图的**左右接缝是否严丝合缝没有测**。`PanoramaSkyMaterial` 会横向环绕，源图若本身不是严格等距圆柱投影，接缝处可能有断裂。居中裁切只动上下、不动左右，所以本刀没有引入新的接缝问题，但也没有排除源图自带的；
+- 烘焙是**入库前的一次性预处理**，和 §2 同一个边界：入库物是产物 PNG，不是脚本的输出流水线。
+
+## 5. 还没做的事
 
 - **自动化烘焙流水线**（CI 内烘焙、按用途分档的独立参数、产物自动入库）**不在 C4**，人类 2026-08-30 明确。第 2 节是一条手动命令，不是流水线。**批量本身不需要流水线**：对一批文件逐个跑同一条命令不引入新工具、不进 CI、不分档，与"流水线"是两件事（判断依据见 `docs/plans/course-correction-2026-08.md` 的 C4 边界）；
 - 按用途分档（baseColor / ORM / normal 各自不同上限）没有实现。CD-11 §8.1 是全用途同一档 512，`resize` 也就一刀切。烘焙试验 §5.1、§5.3 记录了分档的收益与"ORM / normal 不能转 JPEG"的坑，等流水线立项时再用；

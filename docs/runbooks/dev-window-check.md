@@ -54,7 +54,74 @@ Worktree 端口偏移见 README「并行工作区」；本文件不复述端口�
 
 ---
 
-## 本刀：大厅回退 + 窗口化默认尺寸
+## 本刀：天空盒 A2（天空渲染与创作者选择）
+
+**不需要 0.1。** 走共用启动 0.2。验收对象是当前 worktree（`F:/study/craftarena-wt-sky-a1`，分支 `feat/sky-a1`），**不要**用远程 `main` 冒充本章——`main` 上还没有渲染接线。
+
+### 1. TRAPRUSH 频道看见默认天空
+
+点左卡进入机关狂奔。先不要点单人试玩。
+
+预期：3D 场背景是粉彩群山全景（粉 / 青的山脊），**不是**引擎默认清屏色（深灰或黑）。失败：背景仍是纯色清屏。
+
+### 2. 角色亮度没有被天空提亮
+
+同一扇窗点 **单人试玩**，看本席那只猫。
+
+预期：猫的固有色大致和接线前一样，**不是**被天空环境光整体提亮或染成另一套色。失败：猫明显比地块/占位色块更「发光」，像被天空 IBL 照了一层。
+
+### 3. BASTION 频道没有这片天
+
+点 **返回大厅**，点右卡进入 BASTION。
+
+预期：战场背景**不是**那张全景天空（BASTION 仍是自己的灯光与清屏）。失败：BASTION 场也铺上了粉彩群山——那就是误挂了 `WorldEnvironment`。
+
+### 4. 创作者下拉换天空，Preview 跟着变
+
+再回大厅，点 **创作课程**。FloorRow（上楼 / 下楼）下面应有独立一行 **天空** + 下拉。locale 为 zh 时两项是 **粉彩群山** / **积木荒原**（en：Pastel mountains / Block mesa）。
+
+预期：默认选中粉彩群山。改成积木荒原：编辑器 3D 场立刻换成另一张天（色块更硬的荒原）。点 **预览**：Preview 窗口是同一张天。再改回粉彩群山，两边一起回来。失败：没有下拉；选项显示成键名 `craft_arena.ui.sky_*`；中文是豆腐块；或 Preview 不跟着变。
+
+### 5. 左右接缝（记账，不是接线失败）
+
+在编辑器或频道窗里水平转镜头（中键平移或绕场看一圈地平线）。
+
+预期：天空是围着的球，不是贴在远处的一张平面。若接缝处有一条竖向断裂，**记下来**，不要当成本刀接线失败——源图未必是严格等距圆柱投影，计划 §3 A2 已登记。失败：镜头转了天空却不跟着转。
+
+### 本刀不测
+
+- 多层官方课 `course_06`（A3）；
+- 公开对局里热改天空（`environment` 是 P2，公开对局不允许运行中换天）；
+- Web 导出天空糊不糊（若糊，先看 A1 的 `.import`：`Detect 3D → Compress To = Disabled`）；
+- F2 可玩性重签（仍作废，排在 A3 之后）。
+
+### 诚实边界
+
+- IBL 关掉是有意的：猫走 `baseColor + ORM + normal`，开着会被天空改亮度；占位色块是 UNSHADED、地块贴图挂 emissive，本来就不受影响；
+- 独立贴图**不在** `npm run asset-budget` 的 CI 门禁里（它只扫 `.glb`）；
+- M5 那份 TRAPRUSH 可玩性签署仍然作废，须在 **M6 F2** 重签，届时一并覆盖 S1 新 UI + 天空 + `course_06`。
+
+---
+
+## 上一刀（已合入）：天空盒 A1（契约与贴图入库）
+
+**开发机窗口步骤：无。**
+
+原因：A1 只交了契约与资产——`environment` 组件、SimulationBundle 第 23 个可选袋、`sky_catalog.gd`、两张入库贴图。**没有任何一行渲染接线**，所以开窗看到的画面与上一刀逐像素相同（对局背景仍是引擎默认清屏色）。**第一次看见天空是 A2。**
+
+代替它的是三条 headless 命令（不是 CI 门禁，宪法第二十四条）：
+
+| # | 命令（worktree 根） | 预期 | 失败 |
+|---|---|---|---|
+| 1 | `& $env:GODOT4_CONSOLE --headless --path game -- --package-check` | JSON 里 `sky_textures_loadable: true`，整体 `ok: true` | 该项为 `false` = 贴图没进包、尺寸不是 2:1、或宽度超 1024 |
+| 2 | `npm run test:gut:fast` | 全绿，且 `test_bastion_blueprint_contract.gd` 的 `test_simulation_bundle_wire_is_byte_identical_to_before_this_chapter` 为绿 | 那条金标红 = 第 23 个袋没有「空时省略」，已发布内容的 ContentHash 被移动了（宪法第六条） |
+| 3 | `npm test` | 全绿（含 `gdscript_sync` 的 `sky_id_max` 对齐与 10 个新 fixture） | `sky_id_max` 不齐 = `sky_catalog.gd` 与 TS 镜像漂了 |
+
+想亲眼确认两张贴图本身对不对，用编辑器看：`& $env:GODOT4 --editor --path game`，在 FileSystem 里点 `content/assets/sky/` 下两张 `.png`。预期：`1024×512`、**Compress Mode = Lossless**、**Detect 3D → Compress To = Disabled**、Mipmaps 开。
+
+---
+
+## 上一刀（已合入）：大厅回退 + 窗口化默认尺寸
 
 走「共用启动」0.2。不需要 0.1。
 
@@ -82,14 +149,14 @@ Worktree 端口偏移见 README「并行工作区」；本文件不复述端口�
 
 预期：频道窗仍有第一行 **返回大厅**；课 id `blueprint_01`；没有单人试玩。点返回大厅回到 S1。失败：BASTION 把这颗按钮藏了。
 
-### 本刀不测
+### 当时不测
 
 - S2 / S4 / S5 / S6；角色选择功能；
 - BASTION 单人对 AI / 蓝图 Edit；
 - 把 `craft_arena.tres` 挂到全局 theme；
 - F2 可玩性重签。
 
-### 诚实边界
+### 当时的诚实边界
 
 - 返回大厅**不**取消进行中的对局（与关窗相同，离场仍走取消）；
 - 右下角尺寸是开发期 overlay，不是产品文案、不进 locale；

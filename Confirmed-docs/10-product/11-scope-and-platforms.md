@@ -170,6 +170,21 @@
 
 来源与被覆盖关系见 [CD-91 D.1](../90-reference/91-decision-log.md)；观察数据见 [烘焙试验记录](../../docs/plans/asset-bake-trial-2026-08.md)（那份文档是一次本机试验，**不是**本表的所有者）。
 
+**独立运行时贴图另算一档（2026-09-17 拍板，当前生效值）。** 上表四项只机械约束 `.glb`：`npm run asset-budget` 的 `ASSET_EXTENSION` 就是 `.glb`（`tools/asset-budget/src/discover.ts`），不内嵌在 GLB 里、直接入库的贴图根本不在它的扫描范围内。这一档因此必须单独写出来，而不是被默认为"已经被 512 那行覆盖了"。
+
+| 项 | 上限 |
+|---|---|
+| 全景天空贴图边长（每张，2:1） | 1024 × 512 |
+| 单张独立贴图文件体积 | 2 MB |
+
+三条边界：
+
+1. **这一档没有 CI 门禁。** 上表那句"由 `npm run asset-budget` 机械判定并进 CI"对本档**不成立**（宪法第二十四条）。替代保障是两处：`--package-check` 的 `sky_textures_loadable`（尺寸与 2:1 比例）与 GUT 的字节数断言。两者都不是 PR 门禁里的资产预算步骤；
+2. **1024 × 512 无损 RGB8 含 mipmap 约 2.0 MB 显存/张**（2026-09-17 实测：不开 mipmap 是 1,572,864 B，开 10 层 mipmap 是 2,097,153 B）。两张天空都在包里，但一局只挂一张；
+3. 本档只覆盖**平台**贴图。玩家仍不能上传任意贴图（见第 5 节不做项）；创作者只能在已入库的天空 id 之间选，id 表在 `game/src/shared/sky_catalog.gd`。
+
+来源见 [CD-91](../90-reference/91-decision-log.md) 键 `traprush_sky_selection`；入库形态与导入设置的所有者是 [CD-51 §5.1](../50-engineering/51-dev-environment.md)。
+
 ### 8.2 表现规格（D4，2026-08-26 拍板；当前生效值）
 
 [纠偏方案 D4](../../docs/plans/course-correction-2026-08.md) 的数值表在此落地。此前这些值只以"占位常量"形式活在代码里，本节起本文档是它们的所有者；实现侧的单一配置源是 [`game/src/shared/placeholder_spec.gd`](../../game/src/shared/placeholder_spec.gd)，两者冲突以本节为准。
@@ -187,6 +202,8 @@
 | UI 安全区 | **D4 未回答**。一期无移动端导出，无刘海与手势条要避让；触控 UI 立项（D7）时必须补答 | — |
 | 描边 | 不做（D8），可读性靠色块 + 明度分区 | — |
 | 中英文字体 | 思源黑体 / Noto Sans SC，子集化入包。子集范围 = 常用 3500 字 ∪ 项目补集 ∪ 可打印 ASCII | **是**（2026-09-13，见下第 3 条） |
+| TRAPRUSH 天空挂点 | `Camera3D.environment`，**不**挂 `WorldEnvironment`。对局窗里 TRAPRUSH 与 BASTION 共用同一个 `World3D`，挂世界级 Environment 会把 BASTION 也染成同一片天 | **是**（A2，2026-09-18） |
+| TRAPRUSH 天空 IBL | ambient / reflection **Disabled**。天空只当背景；角色 `animal-cat.glb` 走 `baseColor + ORM + normal`，开着会被天空环境光改亮度 | **是**（A2，2026-09-18） |
 
 四条边界：
 

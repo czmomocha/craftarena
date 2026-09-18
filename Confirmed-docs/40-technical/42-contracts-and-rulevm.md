@@ -14,7 +14,7 @@
 | 项 | 当前口径 |
 |---|---|
 | 定点 | Q48.16，向零截断；数字只在 §1.1 |
-| Schema | Component v1 + Bundle v2（`gameplay_asset`）+ 音频 cue bank v1。**BASTION 蓝图不进 Bundle v2**：2026-09-15 人类拍板，编译产物是独立新类型（自带 `schema_version` 与玩法判别键），Bundle v2 的 22 个袋与 `to_dictionary()` 一个字节不动；蓝图本身仍是一份 `AuthoringDocument`，**Component v1 不改**。来源见 [CD-91 D.4](../90-reference/91-decision-log.md) `bastion_blueprint_bundle` |
+| Schema | Component v1（**20 个组件**，第 20 个是 2026-09-17 的 `environment`）+ Bundle v2（`gameplay_asset`；**现行 23 个袋**，第 23 个是 `environment`）+ 音频 cue bank v1。**BASTION 蓝图不进 Bundle v2**：2026-09-15 人类拍板，编译产物是独立新类型（自带 `schema_version` 与玩法判别键），**关于 BASTION 这条仍然为真——Bundle v2 没有为它加过任何袋**；蓝图本身仍是一份 `AuthoringDocument`，**Component v1 不改**。第 23 个袋是 TRAPRUSH 天空选择，**空时省略**，所以**已发布 TRAPRUSH 内容的 `to_dictionary()` 仍逐字节不变**（金标 `COURSE_01_BUNDLE_DIGEST` 与 26 键在 `game/tests/unit/test_bastion_blueprint_contract.gd`，一个字未改仍绿）。来源见 [CD-91 D.4](../90-reference/91-decision-log.md) `bastion_blueprint_bundle` 与 [D.3](../90-reference/91-decision-log.md) `traprush_sky_selection` |
 | BASTION 蓝图 bundle | **v1 已落地**（M6 D1，2026-09-15）。`backend/contracts/schemas/bastion_blueprint_bundle.schema.json` + `game/src/ugc/bastion_blueprint_bundle.gd`，恰好 12 个键：`schema_version`（恒 1）/ `gameplay`（恒 `"bastion"`，显式玩法判别位）/ `cell` / `source_revision` / `cores` / `spawns` / `build_slots` / `obstacle_slots` / `waypoints` / `edges` / `waves` / `economy`。两个 wire 互不相认：TRAPRUSH bundle 喂进 BASTION 解码器被拒，反之亦然；`SimulationBundle.to_dictionary()` 由 `test_bastion_blueprint_contract.gd` 的金标摘要钉住逐字节不变。wire 里**不含任何塔 / 兵数值**，那些是 `game/src/games/bastion/play_stubs.gd` 的占位桩 |
 | BASTION 蓝图的作者映射 | 蓝图输入仍是一份普通 `AuthoringDocument`，**Component v1 一个字节不改**。角色由 `zone.tags` 声明：`bastion_core` / `bastion_spawn` / `bastion_build_slot` / `bastion_obstacle_slot` / `bastion_route` / `bastion_wave` / `bastion_config`，各自需要的组件见 `game/src/ugc/bastion_blueprint_compiler.gd` 文件头。**一处借用需要人类知情**：v1 没有「对局配置」组件，而加一个是 Schema 破坏性变更（宪法第十八条），所以八个经济标量落在 `bastion_config` 实体的 `score.tallies` 上（v1 里唯一契约是「字符串键 → 整数、不锁具体统计项」的槽）。将来真加了配置组件，改 `BastionBlueprintCompilerBags.read_config` 一处 |
 | PLAYER 意图 | Move / Jump / Reset / UseItem / Shove / **SprintIntent（id=6）**。BASTION 线上 id（2026-09-15，M6 E1，type=5）：7=BuildTower / 8=UpgradeTower / 9=SellTower / 10=SetTowerPriority / 11=PlaceObstacle / 12=LockSetup。`DonateResourceIntent` 仍无 id（M7）。`InteractIntent` 仍无 id。帧布局只在 [CD-43 §1](43-networking-and-replay.md#1-序列化分工) |
@@ -49,6 +49,7 @@
 | `tower` | 等级、射程、冷却、目标策略 | BASTION |
 | `replication` | 复制策略 | 两玩法 |
 | `gameplay_asset` | 引用平台资产的不可变玩法版本 | 两玩法 |
+| `environment` | 天空选择（语义 id，不含贴图路径） | TRAPRUSH |
 
 字段的英文标识符、JSON 形状与校验落点见 [§1.2](#12-字段标识符v1)。槽位语义、具体数值和复制策略表仍见 [CD-63](../60-plan/63-open-decisions.md)，不得从本表自行补全。
 
@@ -108,6 +109,7 @@ components     以组件名为键的对象；未知键拒绝；允许空袋
 | `tower` | `level` ≥ 1，`attack_range`，`cooldown_ticks` ≥ 0，`target_priority` ∈ `front` / `nearest` / `strongest` / `weakest`（[CD-22 §5.1](../20-gameplay/22-bastion.md)） |
 | `replication` | `policy_id` ≥ 0（0 为空；策略表未锁，[CD-43](43-networking-and-replay.md) 未命名模式） |
 | `gameplay_asset` | `asset_id` ≥ 1，`gameplay_version` ≥ 1。**只是引用**：尺寸、挂点、视觉都不在这里；`asset_id` 必须已登记在平台内置资产清单且版本为当前版本，由编译期把关（[ADR-0006](../../docs/adr/0006-gameplay-asset-contract.md)）。缺省视为"占满一格" |
+| `environment` | 恰好 `sky_id` ≥ 0 一个键。世界级表现语义，**不是摆在格子上的东西**：`transform` 带着也被忽略，缺 `transform` 不算错。**贴图路径不在这里**（ADR-0006 Q4 = A，换天空贴图不产生新内容版本、不改 ContentHash）；`sky_id` 是否已登记、以及「一份内容至多一个 `environment` 实体」都是**语义**校验，落编译期与 content-validator，记录级只校验结构。缺省视为 `SharedSkyCatalog.DEFAULT_SKY_ID` |
 
 `box` 另需 `hx`/`hy`/`hz`；`sphere` 需 `radius`；`capsule` 需 `radius` 与 `cylinder_height`（与 `KinematicCapsule` 同名）；`platform_prefab` 需 `prefab_id` ≥ 1。
 
@@ -259,9 +261,11 @@ Undo / Redo 是会话内对成功命令派生的反向 payload（`place`↔`remo
 | 第四张官方 TRAPRUSH 赛道 | `game/content/official/traprush/course_04.json` |
 | 第五张官方 TRAPRUSH 赛道 | `game/content/official/traprush/course_05.json` |
 | F 线示范课 | `game/content/official/traprush/course_f_playable.json`（不计入 M5 官方课 3～5 张；HTTP 匹配仍只 01–05） |
-| SimulationBundle | `game/src/ugc/simulation_bundle.gd` + decode / bags / optional（v2：`assets` 袋 + 每袋 `asset_id`/`gameplay_version`；可选袋 `movers` / `conveyors` / `launches` / `switches` / `gates` / `energy_walls` / `portal_switches` / `spikes` / `flames` / `crushers` / `rollers` / `rubbles` / `obstacle_cores` / `pendulums` / `ices` 不进 required，省略与空数组等价，旧编译体仍可解码；`movers` / `conveyors` / `launches` / `switches` / `gates` / `spikes` / `crushers` / `pendulums` / `ices` 几何都住在 `solids`，本袋只带行为，`entity_id` 必须能在 `solids` 里找到；`energy_walls` / `rubbles` / `obstacle_cores` 几何和耐久住在 `destructibles`，本袋只带 `entity_id`；`portal_switches` 几何住在 `portals`，本袋只带 `link_group`；`flames` / `rollers` 几何住在 `hazards`，本袋只带 `entity_id`；v1 仍解码并迁移到内置"占满一格"资产） |
+| SimulationBundle | `game/src/ugc/simulation_bundle.gd` + decode / bags / optional（v2：`assets` 袋 + 每袋 `asset_id`/`gameplay_version`；可选袋 `movers` / `conveyors` / `launches` / `switches` / `gates` / `energy_walls` / `portal_switches` / `spikes` / `flames` / `crushers` / `rollers` / `rubbles` / `obstacle_cores` / `pendulums` / `ices` 不进 required，省略与空数组等价，旧编译体仍可解码；`movers` / `conveyors` / `launches` / `switches` / `gates` / `spikes` / `crushers` / `pendulums` / `ices` 几何都住在 `solids`，本袋只带行为，`entity_id` 必须能在 `solids` 里找到；`energy_walls` / `rubbles` / `obstacle_cores` 几何和耐久住在 `destructibles`，本袋只带 `entity_id`；`portal_switches` 几何住在 `portals`，本袋只带 `link_group`；`flames` / `rollers` 几何住在 `hazards`，本袋只带 `entity_id`；v1 仍解码并迁移到内置"占满一格"资产；**第 23 个袋 `environment`** 是天空选择，条目恰好 `entity_id` + `sky_id`，至多一个，**没有几何、不注册资产**，因此不受「袋的资产对必须出现在 `assets` 里」那条约束——它也是**唯一空时不 emit** 的袋，这正是已发布内容 `to_dictionary()` 逐字节不变的原因；**解码不查天空目录**，任何 `sky_id` ≥ 0 都接受，认不认识是编译期的门禁） |
 | Rule VM 解释器 | `game/src/ugc/rule_vm.gd` + opcodes / codec / compiler / dispatch / host / apply（v1 信封；`OnMatchStarted` / `OnEveryTicks`；Query / Logic / Action 子集；Preview 安全点重编译，公开对局禁止） |
-| TRAPRUSH 拓扑编译 | `game/src/ugc/traprush_topology_compiler.gd` + bags / fields / triggers（资产准入在这里；不读 `zone.shape`） |
+| TRAPRUSH 拓扑编译 | `game/src/ugc/traprush_topology_compiler.gd` + bags / fields / triggers（资产准入在这里；不读 `zone.shape`；天空 id 准入也在这里，多于一个 `environment` 实体或未登记 `sky_id` 整份拒绝） |
+| TRAPRUSH 天空目录 | `game/src/shared/sky_catalog.gd`（`sky_id` → 贴图路径；**id 只增不减**，移除会让旧内容重编译失败；`SKY_ID_MAX` 被 `tools/content-validator/src/gdscript_sync.ts` 镜像到 TS。三级门禁：解码不查、编译查、渲染回退默认天空） |
+| TRAPRUSH 天空渲染 | `game/src/shared/sky_environment.gd`（只给 `Camera3D.environment`，从不挂 `WorldEnvironment`；ambient / reflection 显式 Disabled。对局壳 `match_lobby_stage_sky.gd`，Preview `authoring_preview_sky.gd`，编辑器下拉 `traprush_editor_panel_sky.gd`，写入仍走已有 `place` / `set_component`） |
 | TRAPRUSH 拓扑加载 | `game/src/games/traprush/traprush_topology_loader.gd`（半长来自 `assets`；只接受 `box`） |
 | 周期机关固体切换 | `game/src/games/traprush/hazard_cycle.gd` |
 | 地刺 / 喷火 / 压板 | `game/src/games/traprush/trap_cycle.gd`（`spike` 被支撑才烫；`flame` 永远非固体、半周期开时重叠才烫；`crusher` 重叠且非乘客才 crush。可选袋只带 `entity_id`，不进快照） |

@@ -1,0 +1,19 @@
+{
+	"schema_version": 2,
+	"cell": 65536,
+	"source_revision": 1,
+	"assets": [],
+	"pads": [],
+	"portals": [],
+	"finish": [],
+	"destructibles": [],
+	"hazards": [],
+	"solids": [],
+	"pickups": [],
+	"environment": [
+		{
+			"entity_id": 90,
+			"sky_id": 1
+		}
+	]
+}

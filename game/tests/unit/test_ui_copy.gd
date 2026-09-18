@@ -56,7 +56,7 @@ func test_offline_banner_zh_is_the_cd13_sentence() -> void:
 
 
 func test_loader_uses_engine_csv_line() -> void:
-	var file: FileAccess = FileAccess.open("res://src/shared/ui_copy.gd", FileAccess.READ)
+	var file: FileAccess = FileAccess.open("res://src/shared/ui_copy_table.gd", FileAccess.READ)
 	assert_not_null(file)
 	if file == null:
 		return
@@ -69,6 +69,16 @@ func test_loader_uses_engine_csv_line() -> void:
 	assert_false(
 		source.contains("source.substr(i, 1)"),
 		"不要把已证伪的按字符拆行器留在生产路径"
+	)
+	var facade: FileAccess = FileAccess.open("res://src/shared/ui_copy.gd", FileAccess.READ)
+	assert_not_null(facade)
+	if facade == null:
+		return
+	var facade_source: String = facade.get_as_text()
+	facade.close()
+	assert_false(
+		facade_source.contains("source.substr(i, 1)"),
+		"门面也不得把已证伪的按字符拆行器留在生产路径"
 	)
 
 

@@ -25,6 +25,9 @@ const REPLICATION: String = "replication"
 ## 引用平台内置 GameplayAsset 的不可变玩法版本（ADR-0006）。缺省视为
 ## `SharedGameplayAssetCatalog.LATTICE_CELL_ID`，即"占满一格"。
 const GAMEPLAY_ASSET: String = "gameplay_asset"
+## TRAPRUSH 天空选择。世界级表现语义，不是一个摆在格子上的东西：`transform`
+## 就算带着也被忽略。id 目录与三级门禁分工见 `game/src/shared/sky_catalog.gd`。
+const ENVIRONMENT: String = "environment"
 
 const ALL: PackedStringArray = [
 	TRANSFORM,
@@ -46,6 +49,7 @@ const ALL: PackedStringArray = [
 	TOWER,
 	REPLICATION,
 	GAMEPLAY_ASSET,
+	ENVIRONMENT,
 ]
 
 

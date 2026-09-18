@@ -131,3 +131,6 @@ craft_arena.s1.nav_my_content,My Content,我的内容
 craft_arena.s1.nav_workshop,Public Workshop,公共内容广场
 craft_arena.s1.nav_settings,Settings,设置
 craft_arena.s1.status_online,● ONLINE,● 在线 ONLINE
+craft_arena.ui.sky,Sky,天空
+craft_arena.ui.sky_pastel_ridge,Pastel mountains,粉彩群山
+craft_arena.ui.sky_lowpoly_mesa,Block mesa,积木荒原

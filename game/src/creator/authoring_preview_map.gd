@@ -14,6 +14,7 @@ const GizmosGd := preload("res://src/creator/authoring_preview_map_gizmos.gd")
 const OverlayGd := preload("res://src/creator/authoring_preview_map_overlay.gd")
 const PlayerGd := preload("res://src/creator/authoring_preview_map_player.gd")
 const FloorGd := preload("res://src/creator/authoring_preview_map_floor.gd")
+const SkyGd := preload("res://src/creator/authoring_preview_sky.gd")
 
 const CAMERA_NAME: String = "PreviewCamera"
 const LIGHT_NAME: String = "PreviewLight"
@@ -61,7 +62,6 @@ var player_marks: PlayerGd = PlayerGd.new()
 static func meters_from_fixed(value: int) -> float:
 	return ConvertGd.meters_from_fixed(value)
 
-
 static func yaw_radians_from_bam(yaw_bam: int) -> float:
 	return ConvertGd.yaw_radians_from_bam(yaw_bam)
 
@@ -99,6 +99,7 @@ func ensure_rig() -> void:
 
 func rebuild(world: AuthoringWorld) -> void:
 	ensure_rig()
+	SkyGd.apply(self, world)
 	if _built_fingerprint_matches(world):
 		_skipped_count += 1
 		return

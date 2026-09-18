@@ -1,0 +1,16 @@
+{
+	"schema_version": 1,
+	"cell": 65536,
+	"revision": 1,
+	"entities": [
+		{
+			"schema_version": 1,
+			"entity_id": 90,
+			"components": {
+				"environment": {
+					"sky_id": 7
+				}
+			}
+		}
+	]
+}

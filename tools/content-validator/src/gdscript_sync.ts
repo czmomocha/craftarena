@@ -36,8 +36,10 @@ import {
 	SHARED_IDS_PATH,
 	SIMULATION_BUNDLE_PATH,
 	SIMULATION_BUNDLE_SCHEMA_PATH,
+	SKY_CATALOG_PATH,
 	TOWER_TARGET_PRIORITIES_PATH,
 } from "./paths.ts";
+import { SKY_ID_MAX } from "./sky_catalog.ts";
 
 export type SyncMismatch = {
 	readonly name: string;
@@ -111,6 +113,17 @@ export function collectGdscriptSchemaMismatches(): SyncMismatch[] {
 			name: "component_schema_version",
 			expected: String(COMPONENT_SCHEMA_VERSION),
 			actual: String(componentSchemaVersion),
+		});
+	}
+
+	// 天空目录上界。少了这条，谁在 GDScript 里加第三张天空、忘了改 TS，
+	// content-validator 就会继续把 `sky_id = 2` 当未知 id 拒掉，而编译器已经放行。
+	const skyIdMax = parseIntConstant(readFileSync(SKY_CATALOG_PATH, "utf8"), "SKY_ID_MAX");
+	if (skyIdMax !== SKY_ID_MAX) {
+		mismatches.push({
+			name: "sky_id_max",
+			expected: String(SKY_ID_MAX),
+			actual: String(skyIdMax),
 		});
 	}
 

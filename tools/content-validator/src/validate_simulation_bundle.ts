@@ -1,5 +1,6 @@
 import { loadJsonFile, validateJsonSchema, type JsonSchemaError } from "./json_schema.ts";
 import { SIMULATION_BUNDLE_SCHEMA_PATH } from "./paths.ts";
+import { SKY_ID_MAX } from "./sky_catalog.ts";
 
 type JsonObject = { readonly [key: string]: unknown };
 
@@ -46,11 +47,35 @@ export function validateSimulationBundle(instance: unknown): JsonSchemaError[] {
 		pushDuplicateIds(errors, instance[bag], `$.${bag}`);
 	}
 	pushAssetErrors(errors, instance);
+	pushEnvironmentErrors(errors, instance);
 	pushSolidBackedErrors(errors, instance);
 	pushDestructibleBackedErrors(errors, instance);
 	pushPortalBackedErrors(errors, instance);
 	pushHazardBackedErrors(errors, instance);
 	return errors;
+}
+
+/**
+ * 天空 id 是否已登记。**「至多一个条目」由 Schema 的 `maxItems` 表达**，与
+ * `SimulationBundleOptional.assign_environment_bag` 同一条；这里只补 Schema 表达
+ * 不了的那一半——`sky_id` 的上界镜像自 GDScript 目录，见 `sky_catalog.ts` 注释里
+ * 「校验器查目录、解码器不查」的理由。
+ */
+function pushEnvironmentErrors(errors: JsonSchemaError[], instance: JsonObject): void {
+	const list = instance.environment;
+	if (!Array.isArray(list)) {
+		return;
+	}
+	for (const [index, item] of list.entries()) {
+		const skyId = isObject(item) ? integerOrUndefined(item.sky_id) : undefined;
+		if (skyId === undefined || skyId <= SKY_ID_MAX) {
+			continue;
+		}
+		errors.push({
+			path: `$.environment/${index}/sky_id`,
+			message: "sky_id is not registered in the sky catalog",
+		});
+	}
 }
 
 function pushSolidBackedErrors(errors: JsonSchemaError[], instance: JsonObject): void {

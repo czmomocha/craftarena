@@ -19,6 +19,7 @@ const MatchStandingMapGd := preload("res://src/client/match_standing_map.gd")
 const GateCycleGd := preload("res://src/games/traprush/gate_cycle.gd")
 const ClientAudioGd := preload("res://src/client/client_audio.gd")
 const MatchOfflineSessionGd := preload("res://src/client/match_offline_session.gd")
+const SkyGd := preload("res://src/client/match_lobby_stage_sky.gd")
 
 const MAP_NAME: String = "SnapshotMap"
 const COURSE_NAME: String = "CourseMap"
@@ -113,6 +114,7 @@ func apply_course(path: String) -> void:
 		links.apply_path(path)
 	if orders != null:
 		orders.apply_path(path)
+	SkyGd.apply_from_path(map, path)
 
 
 func apply_bundle(bundle: SimulationBundle) -> void:
@@ -131,6 +133,7 @@ func apply_bundle(bundle: SimulationBundle) -> void:
 		links.apply_bundle(bundle)
 	if orders != null:
 		orders.apply_bundle(bundle)
+	SkyGd.apply_from_bundle(map, bundle)
 
 
 func mapped_counts() -> Dictionary:

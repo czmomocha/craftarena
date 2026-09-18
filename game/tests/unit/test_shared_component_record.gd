@@ -9,13 +9,15 @@ const SharedTowerTargetPriorities := preload("res://src/shared/schema/tower_targ
 const StateHasher := preload("res://src/shared/protocol/state_hasher.gd")
 
 
-func test_catalog_lists_the_nineteen_locked_components() -> void:
-	# 18 个是 CD-42 §1 首版组件；第 19 个是 ADR-0006 的 `gameplay_asset`。
-	assert_eq(SharedComponentNames.ALL.size(), 19)
+func test_catalog_lists_the_twenty_locked_components() -> void:
+	# 18 个是 CD-42 §1 首版组件；第 19 个是 ADR-0006 的 `gameplay_asset`；
+	# 第 20 个是 TRAPRUSH 天空选择 `environment`（2026-09-17）。
+	assert_eq(SharedComponentNames.ALL.size(), 20)
 	assert_true(SharedComponentNames.contains("transform"))
 	assert_true(SharedComponentNames.contains("inventory"))
 	assert_true(SharedComponentNames.contains("tower"))
 	assert_true(SharedComponentNames.contains("gameplay_asset"))
+	assert_true(SharedComponentNames.contains("environment"))
 	assert_false(SharedComponentNames.contains("script"))
 	assert_false(SharedComponentNames.contains("NodePath"))
 	# 视觉网格永远不是组件字段：视觉走 latest，不进权威数据（ADR-0006 Q4）。

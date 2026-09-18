@@ -81,6 +81,47 @@ static func parse_optional_solid_refs(
 	return {"ok": true, "items": items}
 
 
+## 天空袋条目。**不查** `SharedSkyCatalog`：已发布内容必须按它发布时的形状裁决
+## （ADR-0006 §1.4），天空目录之后怎么加行都不能让老内容解不开。「id 认不认识」
+## 是编译期与 content-validator 的门禁；渲染端认不出就回退默认天空。
+static func parse_environment(body: Dictionary) -> Dictionary:
+	if body.size() != 2:
+		return {}
+	if not BagsGd.int_at_least(body, "entity_id", 1):
+		return {}
+	if not BagsGd.int_at_least(body, "sky_id", 0):
+		return {}
+	return {
+		"entity_id": body["entity_id"],
+		"sky_id": body["sky_id"],
+	}
+
+
+## 至多一个条目：一份内容只有一片天。省略与空数组等价，所以不带该键的已发布 v2
+## wire 照旧解码。本袋没有几何，因此不与 `solids` / `hazards` 等做跨袋引用检查。
+static func assign_environment_bag(bundle: SimulationBundle, body: Dictionary) -> bool:
+	var items: Array[Dictionary] = []
+	if not body.has(SimulationBundle.FIELD_ENVIRONMENT):
+		bundle.environment = items
+		return true
+	var raw: Variant = body[SimulationBundle.FIELD_ENVIRONMENT]
+	if typeof(raw) != TYPE_ARRAY:
+		return false
+	var list: Array = raw
+	if list.size() > 1:
+		return false
+	for item: Variant in list:
+		if typeof(item) != TYPE_DICTIONARY:
+			return false
+		var bag: Dictionary = item
+		var parsed: Dictionary = parse_environment(bag)
+		if parsed.is_empty():
+			return false
+		items.append(parsed)
+	bundle.environment = items
+	return true
+
+
 static func parse_yaw_bag(body: Dictionary) -> Dictionary:
 	if body.size() != 2:
 		return {}

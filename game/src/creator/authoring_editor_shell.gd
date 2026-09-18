@@ -199,6 +199,10 @@ func try_remove(entity_id: int) -> bool:
 	return try_edit({"op": "remove", "entity_id": entity_id})
 
 
+func try_set_sky(entity_id: int, sky_id: int) -> bool:
+	return AuthoringEditorShellPlaceSky.try_set_sky(self, entity_id, sky_id)
+
+
 func undo() -> bool:
 	if session == null:
 		return false
