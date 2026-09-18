@@ -8,6 +8,7 @@ const MatchGameplayGd := preload("res://src/shared/match_gameplay.gd")
 const MatchLobbyHudGd := preload("res://src/client/match_lobby_hud.gd")
 const MatchLobbyHomeGd := preload("res://src/client/match_lobby_home.gd")
 const OfficialBastionBlueprintsGd := preload("res://src/shared/official_bastion_blueprints.gd")
+const OfficialTraprushCoursesGd := preload("res://src/shared/official_traprush_courses.gd")
 const RouterGd := preload("res://src/games/bastion/audio_router.gd")
 const CatalogGd := preload("res://src/ugc/bastion_prototype_catalog.gd")
 const WindowSizeHudGd := preload("res://src/client/window_size_hud.gd")
@@ -90,6 +91,9 @@ static func ensure_window(shell: MatchLobbyShell) -> void:
 		"sprint": shell._on_sprint,
 		"apply_server": shell.try_apply_server_host,
 		"edit_submitted": shell._on_edit_submitted,
+		"course_selected": func(id: String) -> void:
+			shell.chrome.release_focus()
+			shell.set_course_id_text(id),
 		"close": shell._on_close_requested,
 		"window_input": shell.handle_window_input,
 		"camera_zoom": shell.try_camera_zoom,
@@ -118,6 +122,30 @@ static func apply_blueprint_document(shell: MatchLobbyShell, blueprint_id: Strin
 		return
 	shell.course_path = path
 	MatchLobbyStageBastion.apply_path(shell, path)
+
+
+static func preview_selected_course(shell: MatchLobbyShell) -> void:
+	if shell.window == null or shell.online_busy():
+		return
+	var id: String = shell.selected_course_id()
+	if OfficialBastionBlueprintsGd.is_id(id):
+		if shell.offline_playing():
+			shell.director.try_stop_offline()
+		apply_blueprint_document(shell, id)
+		shell.refresh_status()
+		return
+	var path: String = OfficialTraprushCoursesGd.document_path(id)
+	if path == "":
+		return
+	var resume_solo: bool = shell.offline_playing() and shell.course_path != path
+	if resume_solo:
+		shell.director.try_stop_offline()
+	if shell.course_path != path:
+		shell.apply_course_document(path)
+	if resume_solo:
+		shell.director.try_solo()
+		return
+	shell.refresh_status()
 
 
 static func try_pick(shell: MatchLobbyShell, screen: Vector2) -> bool:

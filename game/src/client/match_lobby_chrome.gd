@@ -7,6 +7,7 @@ extends RefCounted
 ## applies scale on the input path only — 4K measured hit offset).
 
 const FrameRateMeterGd := preload("res://src/client/frame_rate_meter.gd")
+const MatchLobbyCourseSelectGd := preload("res://src/client/match_lobby_course_select.gd")
 const OfficialTraprushCoursesGd := preload("res://src/shared/official_traprush_courses.gd")
 const ServerEndpointGd := preload("res://src/client/server_endpoint.gd")
 const ClientAudioGd := preload("res://src/client/client_audio.gd")
@@ -42,7 +43,7 @@ var window: Window = null
 var frame_rate: FrameRateMeterGd = null
 var status: Label = null
 var room_edit: LineEdit = null
-var course_edit: LineEdit = null
+var course_select: MatchLobbyCourseSelectGd = null
 var seats_edit: LineEdit = null
 var invite_edit: LineEdit = null
 var server_edit: LineEdit = null
@@ -130,14 +131,9 @@ func attach(parent: Node, handlers: Dictionary) -> Window:
 	_add_button(server_row, APPLY_SERVER_NAME, UiCopy.APPLY_SERVER, on_apply)
 	room_edit = _make_edit(ROOM_NAME, UiCopy.text(UiCopy.ROOM_CODE), 6, "", on_submit)
 	root.add_child(room_edit)
-	course_edit = _make_edit(
-		COURSE_ID_NAME,
-		OfficialTraprushCoursesGd.DEFAULT_ID,
-		32,
-		OfficialTraprushCoursesGd.DEFAULT_ID,
-		on_submit
-	)
-	root.add_child(course_edit)
+	course_select = MatchLobbyCourseSelectGd.new()
+	course_select.setup(_handler(handlers, "course_selected"))
+	root.add_child(course_select)
 	seats_edit = _make_edit(
 		SEATS_NAME,
 		str(OfficialTraprushCoursesGd.DEFAULT_SEATS),
@@ -185,14 +181,14 @@ func set_room_code_text(text: String) -> void:
 
 
 func course_id_text(fallback: String) -> String:
-	if course_edit == null:
+	if course_select == null:
 		return fallback
-	return course_edit.text
+	return course_select.selected_id(fallback)
 
 
 func set_course_id_text(text: String) -> void:
-	if course_edit != null:
-		course_edit.text = text
+	if course_select != null:
+		course_select.set_selected_id(text)
 
 
 func seats_text() -> String:
@@ -333,18 +329,19 @@ func _handle_mouse_motion(motion: InputEventMouseMotion) -> void:
 
 
 func click_hits_line_edit(point: Vector2) -> bool:
-	for edit: LineEdit in [server_edit, room_edit, course_edit, seats_edit, invite_edit]:
+	for edit: LineEdit in [server_edit, room_edit, seats_edit, invite_edit]:
 		if edit == null:
 			continue
 		if edit.get_global_rect().has_point(point):
 			return true
-	return false
+	return course_select != null and course_select.hits(point)
 
 
 func edit_has_focus() -> bool:
 	if window == null:
 		return false
-	return window.gui_get_focus_owner() is LineEdit
+	var owner: Control = window.gui_get_focus_owner()
+	return owner is LineEdit or owner is OptionButton
 
 
 func release_focus() -> void:

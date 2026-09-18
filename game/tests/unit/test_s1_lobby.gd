@@ -90,6 +90,10 @@ func test_enter_traprush_restores_channel_chrome_and_quick_play() -> void:
 	assert_eq(_shell.selected_course_id(), OfficialTraprushCoursesGd.DEFAULT_ID)
 	assert_true(_action_visible(MatchLobbyChromeGd.SOLO_NAME))
 	assert_true(_action_visible(MatchLobbyChromeGd.CREATOR_NAME))
+	var course: OptionButton = _shell.window.find_child(MatchLobbyChromeGd.COURSE_ID_NAME, true, false)
+	assert_not_null(course)
+	assert_eq(course.get_item_count(), OfficialTraprushCoursesGd.all_document_ids().size())
+	assert_false(course.disabled)
 	assert_true(_shell.try_quick())
 	assert_true(_shell.join.pending_body().contains("course_01"))
 
@@ -104,6 +108,11 @@ func test_enter_bastion_pins_blueprint_and_hides_traprush_only_actions() -> void
 	assert_false(_action_visible(MatchLobbyChromeGd.CREATOR_NAME))
 	assert_true(_action_visible(MatchLobbyChromeGd.QUICK_NAME))
 	assert_true(_action_visible(MatchLobbyChromeGd.HOME_NAME))
+	var course: OptionButton = _shell.window.find_child(MatchLobbyChromeGd.COURSE_ID_NAME, true, false)
+	assert_not_null(course)
+	assert_eq(course.get_item_count(), 1)
+	assert_eq(course.get_item_text(0), OfficialBastionBlueprintsGd.DEFAULT_ID)
+	assert_true(course.disabled)
 	assert_true(_shell.try_quick())
 	assert_true(_shell.join.pending_body().contains("blueprint_01"))
 

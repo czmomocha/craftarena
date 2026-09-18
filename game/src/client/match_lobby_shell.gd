@@ -124,6 +124,7 @@ func course_id_text() -> String:
 func set_course_id_text(text: String) -> void:
 	course_id = text
 	chrome.set_course_id_text(text)
+	MatchLobbyRuntime.preview_selected_course(self)
 func selected_course_id() -> String:
 	var trimmed: String = course_id_text().strip_edges()
 	if trimmed == "":

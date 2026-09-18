@@ -74,10 +74,14 @@ static func try_enter_channel(shell: MatchLobbyShell, gameplay: String) -> bool:
 	if shell.home_screen != null:
 		shell.home_screen.visible = false
 	if gameplay == MatchGameplayGd.BASTION:
+		if shell.chrome.course_select != null:
+			shell.chrome.course_select.populate_bastion(OfficialBastionBlueprintsGd.DEFAULT_ID)
 		shell.set_course_id_text(OfficialBastionBlueprintsGd.DEFAULT_ID)
 		shell.set_seats_text(str(MatchGameplayGd.BASTION_SEATS))
 		shell.apply_blueprint_document(OfficialBastionBlueprintsGd.DEFAULT_ID)
 	else:
+		if shell.chrome.course_select != null:
+			shell.chrome.course_select.populate_traprush(OfficialTraprushCoursesGd.DEFAULT_ID)
 		shell.set_course_id_text(OfficialTraprushCoursesGd.DEFAULT_ID)
 		shell.apply_course_document(OfficialTraprushCoursesGd.default_path())
 	var traprush: bool = gameplay == MatchGameplayGd.TRAPRUSH

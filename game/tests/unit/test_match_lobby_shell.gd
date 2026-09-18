@@ -238,11 +238,11 @@ func test_line_edit_focus_releases_outside_fields_and_on_play_actions() -> void:
 	assert_true(_shell.try_solo())
 	assert_false(seats.has_focus())
 	_shell.try_cancel()
-	var course: LineEdit = _shell.window.find_child(MatchLobbyShell.COURSE_ID_NAME, true, false)
+	var course: OptionButton = _shell.window.find_child(MatchLobbyShell.COURSE_ID_NAME, true, false)
 	assert_not_null(course)
 	course.grab_focus()
 	assert_true(course.has_focus())
-	_shell._on_edit_submitted(course.text)
+	course.emit_signal("item_selected", course.selected)
 	assert_false(course.has_focus())
 
 
@@ -613,6 +613,36 @@ func test_solo_uses_selected_official_course() -> void:
 	assert_eq(_shell.orders.checkpoint_count(), 4)
 	assert_true(_shell.offline.course_path.ends_with("course_03.json"))
 	assert_true(_shell.status_label_text().contains("course=4/5/1"))
+
+
+func test_course_select_is_dropdown_and_remounts_preview_without_solo() -> void:
+	_shell = _open_shell()
+	var course: OptionButton = _shell.window.find_child(MatchLobbyShell.COURSE_ID_NAME, true, false)
+	assert_not_null(course)
+	assert_eq(course.get_class(), "OptionButton")
+	assert_eq(course.get_item_count(), 7)
+	var seen: Dictionary = {}
+	for i: int in course.get_item_count():
+		seen[course.get_item_text(i)] = true
+	assert_true(seen.has("course_01"))
+	assert_true(seen.has("course_06"))
+	assert_true(seen.has("course_f_playable"))
+	assert_eq(_shell.course.pad_count(), 3)
+	assert_false(_shell.offline_playing())
+	var idx: int = -1
+	for i: int in course.get_item_count():
+		if course.get_item_text(i) == "course_03":
+			idx = i
+	assert_gt(idx, -1)
+	course.emit_signal("item_selected", idx)
+	assert_eq(_shell.course_id_text(), "course_03")
+	assert_eq(_shell.selected_course_id(), "course_03")
+	assert_eq(_shell.course.pad_count(), 4)
+	assert_false(_shell.offline_playing())
+	assert_true(_shell.status_label_text().contains("course_id=course_03"))
+	_shell.set_course_id_text("course_01")
+	assert_eq(_shell.course.pad_count(), 3)
+	assert_false(_shell.offline_playing())
 
 
 func test_sub_cell_snapshot_interpolates_remote_and_own_slot_stays_on_latest() -> void:
