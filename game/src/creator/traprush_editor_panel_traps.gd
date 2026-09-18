@@ -17,19 +17,25 @@ var panel: TraprushEditorPanel = null
 var _next_ice_yaw: int = 0
 
 
+func mount_into(row: Container) -> void:
+	if panel == null:
+		return
+	_add_button(row, PLACE_SPIKE_NAME, UiCopy.PLACE_SPIKE, place_next_spike)
+	_add_button(row, PLACE_FLAME_NAME, UiCopy.PLACE_FLAME, place_next_flame)
+	_add_button(row, PLACE_CRUSHER_NAME, UiCopy.PLACE_CRUSHER, place_next_crusher)
+	_add_button(row, PLACE_ROLLER_NAME, UiCopy.PLACE_ROLLER, place_next_roller)
+	_add_button(row, PLACE_RUBBLE_NAME, UiCopy.PLACE_RUBBLE, place_next_rubble)
+	_add_button(row, PLACE_CORE_NAME, UiCopy.PLACE_OBSTACLE_CORE, place_next_obstacle_core)
+	_add_button(row, PLACE_PENDULUM_NAME, UiCopy.PLACE_PENDULUM, place_next_pendulum)
+	_add_button(row, PLACE_ICE_NAME, UiCopy.PLACE_ICE, place_next_ice)
+
+
 func mount(p_panel: TraprushEditorPanel) -> void:
 	panel = p_panel
 	if get_child_count() > 0:
 		return
 	name = "TrapRow"
-	_add_button(PLACE_SPIKE_NAME, UiCopy.PLACE_SPIKE, place_next_spike)
-	_add_button(PLACE_FLAME_NAME, UiCopy.PLACE_FLAME, place_next_flame)
-	_add_button(PLACE_CRUSHER_NAME, UiCopy.PLACE_CRUSHER, place_next_crusher)
-	_add_button(PLACE_ROLLER_NAME, UiCopy.PLACE_ROLLER, place_next_roller)
-	_add_button(PLACE_RUBBLE_NAME, UiCopy.PLACE_RUBBLE, place_next_rubble)
-	_add_button(PLACE_CORE_NAME, UiCopy.PLACE_OBSTACLE_CORE, place_next_obstacle_core)
-	_add_button(PLACE_PENDULUM_NAME, UiCopy.PLACE_PENDULUM, place_next_pendulum)
-	_add_button(PLACE_ICE_NAME, UiCopy.PLACE_ICE, place_next_ice)
+	mount_into(self)
 
 
 func place_next_spike() -> bool:
@@ -84,10 +90,11 @@ func _place_kind(kind: String) -> bool:
 	)
 
 
-func _add_button(node_name: String, copy_key: String, handler: Callable) -> void:
+func _add_button(row: Container, node_name: String, copy_key: String, handler: Callable) -> void:
 	var button: Button = Button.new()
 	button.name = node_name
 	button.text = UiCopy.text(copy_key)
-	button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	button.focus_mode = Control.FOCUS_NONE
+	button.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 	button.pressed.connect(handler)
-	add_child(button)
+	row.add_child(button)

@@ -14,6 +14,7 @@ var _shell: AuthoringPreviewShell = null
 
 
 func after_each() -> void:
+	AuthoringWindowLayout.reset_split()
 	if _shell != null and is_instance_valid(_shell):
 		_shell.free()
 	_shell = null
@@ -32,10 +33,10 @@ func test_open_window_keeps_authoring_session() -> void:
 	var preview_r: Rect2i = AuthoringWindowLayout.preview_rect(host_size)
 	assert_eq(_shell.window.position, preview_r.position)
 	assert_eq(_shell.window.size, preview_r.size)
-	assert_eq(_shell.window.min_size, preview_r.size)
-	assert_true(_shell.window.unresizable)
+	assert_eq(_shell.window.min_size, AuthoringWindowLayout.PANE_MIN_SIZE)
+	assert_false(_shell.window.unresizable)
 	assert_false(_shell.window.wrap_controls)
-	assert_eq(_shell.window.max_size, preview_r.size)
+	assert_eq(_shell.window.max_size, Vector2i.ZERO)
 	# C4 第 6 章回归守卫：嵌入子窗口不得自己设 content_scale（渲染与鼠标命中
 	# 会错开）。D4 的 UI 基准由主窗口 stretch 承担。
 	assert_eq(_shell.window.content_scale_mode, Window.CONTENT_SCALE_MODE_DISABLED)

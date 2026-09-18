@@ -9,8 +9,12 @@ static func try_zoom(map: Node, steps: int) -> bool:
 	if map == null or steps == 0:
 		return false
 	var current: float = _float_at(map, "camera_distance", PlaceholderSpec.CAMERA_DISTANCE)
-	var next: float = PlaceholderSpec.clamp_camera_distance(
-		current - float(steps) * PlaceholderSpec.CAMERA_ZOOM_STEP
+	var min_d: float = _float_at(map, "camera_distance_min", PlaceholderSpec.CAMERA_DISTANCE_MIN)
+	var max_d: float = _float_at(map, "camera_distance_max", PlaceholderSpec.CAMERA_DISTANCE_MAX)
+	var next: float = clampf(
+		current - float(steps) * PlaceholderSpec.CAMERA_ZOOM_STEP,
+		min_d,
+		max_d
 	)
 	if next == current:
 		return false
@@ -32,8 +36,9 @@ static func try_pan(map: Node, relative: Vector2) -> bool:
 	next += right * relative.x * PlaceholderSpec.CAMERA_PAN_SENS
 	next += along * relative.y * PlaceholderSpec.CAMERA_PAN_SENS
 	next.y = 0.0
-	if next.length() > PlaceholderSpec.CAMERA_PAN_LIMIT:
-		next = next.normalized() * PlaceholderSpec.CAMERA_PAN_LIMIT
+	var limit: float = _float_at(map, "camera_pan_limit", PlaceholderSpec.CAMERA_PAN_LIMIT)
+	if next.length() > limit:
+		next = next.normalized() * limit
 	if next.is_equal_approx(current):
 		return false
 	map.set("camera_pan", next)

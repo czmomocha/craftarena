@@ -35,6 +35,7 @@ const ParamsGd := preload("res://src/creator/traprush_editor_panel_params.gd")
 const BatchGd := preload("res://src/creator/traprush_editor_panel_batch.gd")
 const IdsGd := preload("res://src/creator/traprush_editor_panel_ids.gd")
 const TrapsGd := preload("res://src/creator/traprush_editor_panel_traps.gd")
+const LayoutGd := preload("res://src/creator/traprush_editor_panel_layout.gd")
 
 var host: AuthoringEditorShell = null
 var cursor: CursorGd = null
@@ -44,8 +45,8 @@ var traps: TrapsGd = null
 var _next_entity_id: int = 1
 var _next_order: int = 0
 var _pending_portal_id: int = 0
-## 下一块传送带的朝向。每摆一块顺时针转 90°，摆四块就围出一圈，不另开方向面板。
-var _next_conveyor_yaw: int = 0
+## 传送带轴向：false = 左右（yaw 0），true = 上下（yaw 90°）。点击箭头按钮切换。
+var conveyor_vertical: bool = false
 var _next_launch_yaw: int = 0
 
 var floor_index: int:
@@ -78,7 +79,7 @@ var cell_z: int:
 
 func adopt_world(world: AuthoringWorld) -> void:
 	_pending_portal_id = 0
-	_next_conveyor_yaw = 0
+	conveyor_vertical = false
 	_next_launch_yaw = 0
 	var state: Dictionary = IdsGd.adopt_state(world)
 	var next_entity_id: int = state["next_entity_id"]
@@ -89,6 +90,7 @@ func adopt_world(world: AuthoringWorld) -> void:
 	if cursor != null:
 		cursor.set_cell(next_x, 0, 0)
 	TraprushEditorPanelSky.sync_panel(self, world)
+	LayoutGd.sync_conveyor_dir(self)
 
 
 func mount(p_host: AuthoringEditorShell) -> void:
@@ -100,42 +102,11 @@ func mount(p_host: AuthoringEditorShell) -> void:
 	cursor.mount()
 	if not cursor.cell_changed.is_connected(_refresh_host_status):
 		cursor.cell_changed.connect(_refresh_host_status)
-	var place_row: HBoxContainer = HBoxContainer.new()
-	place_row.name = "PlaceRow"
-	add_child(place_row)
-	_add_button(place_row, PLACE_CHECKPOINT_NAME, UiCopy.PLACE_CHECKPOINT, place_next_checkpoint)
-	_add_button(place_row, PLACE_PORTAL_NAME, UiCopy.PLACE_PORTAL, place_next_portal)
-	_add_button(place_row, REMOVE_LAST_NAME, UiCopy.REMOVE_LAST, remove_last)
-	var occupancy_row: HBoxContainer = HBoxContainer.new()
-	occupancy_row.name = "OccupancyRow"
-	add_child(occupancy_row)
-	_add_button(occupancy_row, PLACE_SOLID_NAME, UiCopy.PLACE_SOLID, place_next_solid)
-	_add_button(occupancy_row, PLACE_HAZARD_NAME, UiCopy.PLACE_HAZARD, place_next_hazard)
-	_add_button(occupancy_row, PLACE_CRATE_NAME, UiCopy.PLACE_CRATE, place_next_crate)
-	_add_button(occupancy_row, PLACE_FINISH_NAME, UiCopy.PLACE_FINISH, place_next_finish)
-	_add_button(occupancy_row, PLACE_MOVER_NAME, UiCopy.PLACE_MOVER, place_next_mover)
-	_add_button(occupancy_row, PLACE_CONVEYOR_NAME, UiCopy.PLACE_CONVEYOR, place_next_conveyor)
-	_add_button(occupancy_row, PLACE_LIFT_NAME, UiCopy.PLACE_LIFT, place_next_lift)
-	_add_button(occupancy_row, PLACE_LAUNCH_NAME, UiCopy.PLACE_LAUNCH, place_next_launch)
-	_add_button(occupancy_row, PLACE_SWITCH_NAME, UiCopy.PLACE_SWITCH, place_next_switch)
-	_add_button(occupancy_row, PLACE_GATE_NAME, UiCopy.PLACE_GATE, place_next_gate)
-	_add_button(occupancy_row, PLACE_ENERGY_WALL_NAME, UiCopy.PLACE_ENERGY_WALL, place_next_energy_wall)
-	_add_button(occupancy_row, PLACE_GATED_PORTAL_NAME, UiCopy.PLACE_GATED_PORTAL, place_next_gated_portal)
 	traps = TrapsGd.new()
 	add_child(traps)
-	traps.mount(self)
-	var pickup_row: HBoxContainer = HBoxContainer.new()
-	pickup_row.name = "PickupRow"
-	add_child(pickup_row)
-	_add_button(pickup_row, PLACE_BOMB_NAME, UiCopy.PLACE_BOMB, place_next_bomb)
-	_add_button(pickup_row, PLACE_DASH_NAME, UiCopy.PLACE_DASH, place_next_dash)
-	var floor_row: HBoxContainer = HBoxContainer.new()
-	floor_row.name = "FloorRow"
-	add_child(floor_row)
-	_add_button(floor_row, FLOOR_UP_NAME, UiCopy.FLOOR_UP, floor_up)
-	_add_button(floor_row, FLOOR_DOWN_NAME, UiCopy.FLOOR_DOWN, floor_down)
-	TraprushEditorPanelSky.attach(self)
-	# 批量生成只给 internal_dev（CD-32）。
+	traps.visible = false
+	traps.panel = self
+	LayoutGd.mount(self)
 	if host != null and AuthoringSurfaceNames.allows_batch_generate(host.surface):
 		batch = BatchGd.new()
 		add_child(batch)
@@ -218,15 +189,17 @@ func place_next_mover() -> bool:
 
 
 func place_next_conveyor() -> bool:
-	var yaw_bam: int = _next_conveyor_yaw
-	if not _place_occupancy(func(entity_id: int) -> bool:
+	var yaw_bam: int = next_conveyor_yaw_bam()
+	return _place_occupancy(func(entity_id: int) -> bool:
 		return host.try_place_conveyor(
 			entity_id, cursor.cell_x, cursor.cell_y, cursor.cell_z, yaw_bam
 		)
-	):
-		return false
-	_next_conveyor_yaw = (yaw_bam + Fixed.BAM_TURN / 4) % Fixed.BAM_TURN
-	return true
+	)
+
+
+func toggle_conveyor_axis() -> void:
+	conveyor_vertical = not conveyor_vertical
+	LayoutGd.sync_conveyor_dir(self)
 
 
 func place_next_lift() -> bool:
@@ -284,7 +257,9 @@ func place_next_ice() -> bool:
 
 
 func next_conveyor_yaw_bam() -> int:
-	return _next_conveyor_yaw
+	if conveyor_vertical:
+		return Fixed.BAM_TURN / 4
+	return 0
 
 
 func sync_params() -> void:
@@ -357,15 +332,7 @@ func _refresh_host_status() -> void:
 	if host != null:
 		host.refresh_status()
 	sync_params()
-
-
-func _add_button(row: HBoxContainer, node_name: String, copy_key: String, handler: Callable) -> void:
-	var button: Button = Button.new()
-	button.name = node_name
-	button.text = UiCopy.text(copy_key)
-	button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	button.pressed.connect(handler)
-	row.add_child(button)
+	LayoutGd.sync_conveyor_dir(self)
 
 
 func _peek_entity_id() -> int:

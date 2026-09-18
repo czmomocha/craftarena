@@ -22,7 +22,11 @@ const SHELL_PATHS: PackedStringArray = [
 	"res://src/creator/traprush_editor_panel_params.gd",
 	"res://src/creator/traprush_editor_panel_batch.gd",
 	"res://src/creator/authoring_editor_shell_pointer.gd",
+	"res://src/creator/authoring_editor_shell_pointer_camera.gd",
+	"res://src/creator/authoring_editor_transform_gizmo.gd",
 	"res://src/creator/authoring_preview_map_floor.gd",
+	"res://src/creator/authoring_preview_map_camera.gd",
+	"res://src/creator/traprush_editor_panel_layout.gd",
 ]
 
 

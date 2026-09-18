@@ -177,6 +177,10 @@ static func try_entity_from_ray(
 	return {"ok": true, "id": best_id}
 
 
+static func ray_aabb_t(origin: Vector3, dir: Vector3, aabb: AABB) -> float:
+	return _ray_aabb_t(origin, dir, aabb)
+
+
 static func _ray_aabb_t(origin: Vector3, dir: Vector3, aabb: AABB) -> float:
 	var t0: float = 0.0
 	var t1: float = 256.0

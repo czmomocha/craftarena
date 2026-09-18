@@ -21,6 +21,8 @@ const AuthoringWindowLayout := preload("res://src/creator/authoring_window_layou
 const AuthoringPreviewMapConvert := preload("res://src/creator/authoring_preview_map_convert.gd")
 const AuthoringPreviewMapFloor := preload("res://src/creator/authoring_preview_map_floor.gd")
 const PlayerIntentNames := preload("res://src/shared/commands/player_intent_names.gd")
+const MatchCameraView := preload("res://src/client/match_camera_view.gd")
+const GizmoGd := preload("res://src/creator/authoring_editor_transform_gizmo.gd")
 
 const CELL: int = 65536
 const EPS: float = 0.0001
@@ -29,6 +31,7 @@ var _shell: AuthoringEditorShell = null
 
 
 func after_each() -> void:
+	AuthoringWindowLayout.reset_split()
 	if _shell != null and is_instance_valid(_shell):
 		_shell.free()
 	_shell = null
@@ -378,10 +381,13 @@ func test_place_dash_at_spawn_lets_preview_sprint() -> void:
 	assert_eq(_shell.window.size, editor_r.size)
 	assert_eq(_shell.preview.window.size, preview_r.size)
 	assert_true(editor_r.position.x + editor_r.size.x <= preview_r.position.x)
-	assert_true(_shell.window.unresizable)
+	assert_false(_shell.window.unresizable)
+	assert_false(_shell.preview.window.unresizable)
 	assert_false(_shell.window.wrap_controls)
-	assert_eq(_shell.window.max_size, editor_r.size)
-	assert_eq(_shell.preview.window.max_size, preview_r.size)
+	assert_eq(_shell.window.min_size, AuthoringWindowLayout.PANE_MIN_SIZE)
+	assert_eq(_shell.preview.window.min_size, AuthoringWindowLayout.PANE_MIN_SIZE)
+	assert_eq(_shell.window.max_size, Vector2i.ZERO)
+	assert_eq(_shell.preview.window.max_size, Vector2i.ZERO)
 	assert_true(_editor_right_of_preview_is_false())
 	assert_true(_shell.preview.try_start_play(1, TraprushPlayStubs.CAPSULE_RADIUS, TraprushPlayStubs.CAPSULE_HEIGHT))
 	assert_eq(_shell.preview.preview.play_dash_count(), 1)
@@ -657,6 +663,124 @@ func test_mark_fill_copy_paste_and_delete() -> void:
 	_shell.chrome.selected_id = 3
 	assert_true(_shell.tools.batch.delete_selected())
 	assert_false(_shell.session.world.has_entity(3))
+
+
+func test_place_buttons_drop_place_prefix() -> void:
+	_shell = AuthoringEditorShell.create(AuthoringSurfaceNames.INTERNAL_DEV)
+	add_child(_shell)
+	assert_true(_shell.open())
+	var checkpoint: Button = _shell.tools.find_child(TraprushEditorPanel.PLACE_CHECKPOINT_NAME, true, false) as Button
+	assert_not_null(checkpoint)
+	assert_eq(checkpoint.text, UiCopy.text(UiCopy.PLACE_CHECKPOINT))
+	assert_false(checkpoint.text.contains("Place"))
+	assert_false(checkpoint.text.contains("放置"))
+	var conveyor: Button = _shell.tools.find_child(TraprushEditorPanel.PLACE_CONVEYOR_NAME, true, false) as Button
+	assert_not_null(conveyor)
+	assert_false(conveyor.text.contains("放置"))
+
+
+func test_conveyor_axis_toggle_keeps_yaw_until_clicked() -> void:
+	_shell = AuthoringEditorShell.create(AuthoringSurfaceNames.INTERNAL_DEV)
+	add_child(_shell)
+	assert_true(_shell.open())
+	assert_eq(_shell.tools.next_conveyor_yaw_bam(), 0)
+	assert_true(_shell.tools.place_next_conveyor())
+	assert_eq(_shell.tools.next_conveyor_yaw_bam(), 0)
+	var first: SharedComponentRecord = _shell.session.world.get_record(1)
+	var first_pose: Dictionary = first.components.get("transform", {})
+	assert_eq(_dict_int(first_pose, "yaw_bam", -1), 0)
+	_shell.tools.toggle_conveyor_axis()
+	assert_eq(_shell.tools.next_conveyor_yaw_bam(), Fixed.BAM_TURN / 4)
+	assert_true(_shell.tools.place_next_conveyor())
+	var second: SharedComponentRecord = _shell.session.world.get_record(2)
+	var second_pose: Dictionary = second.components.get("transform", {})
+	assert_eq(_dict_int(second_pose, "yaw_bam", -1), Fixed.BAM_TURN / 4)
+	var dir: Button = _shell.tools.find_child("ConveyorDir", true, false) as Button
+	assert_not_null(dir)
+	assert_eq(dir.text, UiCopy.text(UiCopy.CONVEYOR_AXIS_Z))
+
+
+func test_param_row_has_caption_and_range() -> void:
+	_shell = AuthoringEditorShell.create(AuthoringSurfaceNames.INTERNAL_DEV)
+	add_child(_shell)
+	assert_true(_shell.open())
+	var params: Node = _shell.tools.find_child("ParamRow", true, false)
+	assert_not_null(params)
+	var cooldown: SpinBox = _shell.tools.find_child("CooldownTicks", true, false) as SpinBox
+	assert_not_null(cooldown)
+	assert_eq(int(cooldown.min_value), 0)
+	assert_eq(int(cooldown.max_value), 600)
+	var found_caption: bool = false
+	for child: Node in params.get_children():
+		var row: HBoxContainer = child as HBoxContainer
+		if row == null or row.get_child_count() < 1:
+			continue
+		var caption: Label = row.get_child(0) as Label
+		if caption != null and caption.text.contains("0-600"):
+			found_caption = true
+			break
+	assert_true(found_caption)
+
+
+func test_sky_dropdown_is_compact() -> void:
+	_shell = AuthoringEditorShell.create(AuthoringSurfaceNames.INTERNAL_DEV)
+	add_child(_shell)
+	assert_true(_shell.open())
+	var select: OptionButton = _shell.tools.find_child("SkySelect", true, false) as OptionButton
+	assert_not_null(select)
+	assert_eq(select.size_flags_horizontal, Control.SIZE_SHRINK_BEGIN)
+	assert_false(select.fit_to_longest_item)
+
+
+func test_gizmo_appears_on_selected_placeholder() -> void:
+	_shell = AuthoringEditorShell.create(AuthoringSurfaceNames.INTERNAL_DEV)
+	add_child(_shell)
+	assert_true(_shell.open())
+	assert_true(_shell.tools.place_next_solid())
+	assert_eq(_shell.chrome.selected_id, 1)
+	var gizmo: Node3D = _shell.map.get_node_or_null("EditGuide_Gizmo") as Node3D
+	assert_not_null(gizmo)
+	assert_true(gizmo.visible)
+	assert_almost_eq(gizmo.position.x, 0.0, EPS)
+
+
+func test_editor_camera_zoom_and_orbit_change_view() -> void:
+	_shell = AuthoringEditorShell.create(AuthoringSurfaceNames.INTERNAL_DEV)
+	add_child(_shell)
+	assert_true(_shell.open())
+	var start_distance: float = _shell.map.camera_distance
+	assert_true(MatchCameraView.try_zoom(_shell.map, -2))
+	assert_gt(_shell.map.camera_distance, start_distance)
+	var start_yaw: float = _shell.map.camera_yaw_deg
+	assert_true(MatchCameraView.try_orbit(_shell.map, Vector2(20.0, 0.0)))
+	assert_ne(_shell.map.camera_yaw_deg, start_yaw)
+	assert_true(MatchCameraView.try_pan(_shell.map, Vector2(80.0, 0.0)))
+	assert_gt(_shell.map.camera_pan.length(), 0.0)
+
+
+func test_gizmo_axis_projects_to_cell() -> void:
+	var next: Vector3i = GizmoGd.cell_along_axis(
+		Vector3(4.2, 8.0, 0.1),
+		Vector3(0.0, -1.0, 0.0),
+		"x",
+		0,
+		0,
+		0
+	)
+	assert_eq(next.x, 4)
+	assert_eq(next.y, 0)
+	assert_eq(next.z, 0)
+
+
+func test_layout_split_ratio_keeps_panes_side_by_side() -> void:
+	AuthoringWindowLayout.split_ratio = 0.4
+	var host: Vector2i = Vector2i(1920, 1080)
+	var editor_r: Rect2i = AuthoringWindowLayout.editor_rect(host)
+	var preview_r: Rect2i = AuthoringWindowLayout.preview_rect(host)
+	assert_lt(editor_r.size.x, 948)
+	assert_gt(preview_r.size.x, 948)
+	assert_false(AuthoringWindowLayout.panes_overlap(host))
+	AuthoringWindowLayout.reset_split()
 
 
 func _editor_right_of_preview_is_false() -> bool:

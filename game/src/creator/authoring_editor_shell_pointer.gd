@@ -2,10 +2,12 @@ class_name AuthoringEditorShellPointer
 extends RefCounted
 
 ## Editor 3D pointer: pick empty floor for the next place cell, pick a
-## placeholder to select, drag XZ (Shift+drag = Y). Writes set_component.
-## Touch / mobile drag is D7, not this chapter.
+## placeholder to select, drag XZ (Shift+drag = Y), or drag the XYZ gizmo.
+## Wheel / right-drag / Ctrl+left are camera. Touch is D7.
 
 const ConvertGd := preload("res://src/creator/authoring_preview_map_convert.gd")
+const CameraGd := preload("res://src/creator/authoring_editor_shell_pointer_camera.gd")
+const GizmoGd := preload("res://src/creator/authoring_editor_transform_gizmo.gd")
 const HALF: Vector3 = Vector3(0.5, 0.5, 0.5)
 
 
@@ -22,12 +24,16 @@ static func handle(chrome: AuthoringEditorShellChrome, event: InputEvent) -> voi
 
 
 static func _handle_button(chrome: AuthoringEditorShellChrome, mouse: InputEventMouseButton) -> void:
+	if CameraGd.handle_button(chrome, mouse):
+		if mouse.button_index != MOUSE_BUTTON_LEFT or mouse.pressed:
+			return
 	if mouse.button_index != MOUSE_BUTTON_LEFT:
 		return
 	if not mouse.pressed:
-		if chrome.dragging:
+		if chrome.dragging or not chrome.drag_axis.is_empty():
 			_commit_drag(chrome)
 		chrome.dragging = false
+		chrome.drag_axis = ""
 		return
 	if chrome.window.gui_get_hovered_control() != null:
 		return
@@ -38,6 +44,12 @@ static func _handle_button(chrome: AuthoringEditorShellChrome, mouse: InputEvent
 		return
 	var origin: Vector3 = camera.project_ray_origin(mouse.position)
 	var direction: Vector3 = camera.project_ray_normal(mouse.position)
+	var axis: String = GizmoGd.try_pick_axis(chrome.map, origin, direction)
+	if not axis.is_empty() and chrome.selected_id > 0:
+		chrome.drag_axis = axis
+		chrome.dragging = true
+		chrome.drag_vertical = axis == GizmoGd.AXIS_Y
+		return
 	var picked: Dictionary = ConvertGd.try_entity_from_ray(chrome.map, origin, direction, HALF)
 	var ok_raw: Variant = picked.get("ok", false)
 	if typeof(ok_raw) == TYPE_BOOL and ok_raw:
@@ -47,16 +59,20 @@ static func _handle_button(chrome: AuthoringEditorShellChrome, mouse: InputEvent
 			chrome.selected_id = entity_id
 			chrome.dragging = true
 			chrome.drag_vertical = mouse.shift_pressed
+			chrome.drag_axis = ""
 			_cursor_from_entity(chrome, entity_id)
 			chrome.sync_guides()
 			return
 	chrome.selected_id = 0
 	chrome.dragging = false
+	chrome.drag_axis = ""
 	chrome.tools.try_pick_cell_from_screen(mouse.position)
 	chrome.sync_guides()
 
 
 static func _handle_motion(chrome: AuthoringEditorShellChrome, motion: InputEventMouseMotion) -> void:
+	if CameraGd.handle_motion(chrome, motion):
+		return
 	if not chrome.dragging or chrome.selected_id <= 0:
 		return
 	if chrome.tools == null or chrome.map == null:
@@ -66,6 +82,35 @@ static func _handle_motion(chrome: AuthoringEditorShellChrome, motion: InputEven
 		return
 	var origin: Vector3 = camera.project_ray_origin(motion.position)
 	var direction: Vector3 = camera.project_ray_normal(motion.position)
+	if not chrome.drag_axis.is_empty():
+		_drag_gizmo(chrome, origin, direction)
+		return
+	_drag_entity(chrome, camera, origin, direction, motion)
+
+
+static func _drag_gizmo(chrome: AuthoringEditorShellChrome, origin: Vector3, direction: Vector3) -> void:
+	var next: Vector3i = GizmoGd.cell_along_axis(
+		origin,
+		direction,
+		chrome.drag_axis,
+		chrome.tools.cell_x,
+		chrome.tools.floor_index,
+		chrome.tools.cell_z
+	)
+	chrome.tools.cursor.set_cell(next.x, next.y, next.z)
+	var placeholder: MeshInstance3D = chrome.map.placeholder_node(chrome.selected_id)
+	if placeholder != null:
+		placeholder.position = Vector3(float(next.x), float(next.y), float(next.z))
+	chrome.sync_guides()
+
+
+static func _drag_entity(
+	chrome: AuthoringEditorShellChrome,
+	camera: Camera3D,
+	origin: Vector3,
+	direction: Vector3,
+	motion: InputEventMouseMotion
+) -> void:
 	var host: AuthoringEditorShell = chrome.tools.host
 	if host == null:
 		return

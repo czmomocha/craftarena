@@ -35,7 +35,7 @@ func mount(p_map: AuthoringPreviewMap, p_details: bool = true) -> void:
 		return
 	_list = ItemList.new()
 	_list.name = LIST_NAME
-	_list.custom_minimum_size = Vector2(0, 72)
+	_list.custom_minimum_size = Vector2(0, 48)
 	add_child(_list)
 	var focus: Button = Button.new()
 	focus.name = FOCUS_NAME

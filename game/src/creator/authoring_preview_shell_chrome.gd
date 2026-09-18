@@ -157,7 +157,8 @@ func _add_button(row: BoxContainer, node_name: String, copy_key: String, handler
 	var button: Button = Button.new()
 	button.name = node_name
 	button.text = UiCopy.text(copy_key)
-	button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	button.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+	button.focus_mode = Control.FOCUS_NONE
 	button.focus_mode = Control.FOCUS_NONE
 	if handler.is_valid():
 		button.pressed.connect(handler)

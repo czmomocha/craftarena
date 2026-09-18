@@ -1,7 +1,9 @@
 class_name TraprushEditorPanelParams
-extends VBoxContainer
+extends GridContainer
 
 ## Selected-entity fields. Writes set_component only (F-line FF).
+## Left = caption with allowed range, right = spin. Two columns so the
+## 3D view keeps vertical space.
 
 const COOLDOWN_NAME: String = "CooldownTicks"
 const DURABILITY_NAME: String = "Durability"
@@ -20,13 +22,17 @@ func mount(p_host: AuthoringEditorShell) -> void:
 	if get_child_count() > 0:
 		return
 	name = "ParamRow"
-	_add_spin(COOLDOWN_NAME, 0, 600)
-	_add_spin(DURABILITY_NAME, 0, 99)
-	_add_spin(ORDER_NAME, 0, 64)
-	_add_spin(RESPAWN_DX_NAME, -8, 8)
-	_add_spin(RESPAWN_DY_NAME, -8, 8)
-	_add_spin(RESPAWN_DZ_NAME, -8, 8)
-	_add_spin(ASSET_ID_NAME, 1, 32)
+	columns = 2
+	add_theme_constant_override("h_separation", 8)
+	add_theme_constant_override("v_separation", 2)
+	size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+	_add_spin(COOLDOWN_NAME, UiCopy.PARAM_COOLDOWN, 0, 600)
+	_add_spin(DURABILITY_NAME, UiCopy.PARAM_DURABILITY, 0, 99)
+	_add_spin(ORDER_NAME, UiCopy.PARAM_ORDER, 0, 64)
+	_add_spin(RESPAWN_DX_NAME, UiCopy.PARAM_RESPAWN_DX, -8, 8)
+	_add_spin(RESPAWN_DY_NAME, UiCopy.PARAM_RESPAWN_DY, -8, 8)
+	_add_spin(RESPAWN_DZ_NAME, UiCopy.PARAM_RESPAWN_DZ, -8, 8)
+	_add_spin(ASSET_ID_NAME, UiCopy.PARAM_ASSET, 1, 32)
 
 
 func sync_selection() -> void:
@@ -163,24 +169,33 @@ func _write_asset(components: Dictionary) -> void:
 	}
 
 
-func _add_spin(node_name: String, min_v: int, max_v: int) -> void:
+func _add_spin(node_name: String, copy_key: String, min_v: int, max_v: int) -> void:
+	var row: HBoxContainer = HBoxContainer.new()
+	row.add_theme_constant_override("separation", 4)
+	var caption: Label = Label.new()
+	caption.text = UiCopy.text(copy_key)
+	caption.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	row.add_child(caption)
 	var spin: SpinBox = SpinBox.new()
 	spin.name = node_name
 	spin.min_value = min_v
 	spin.max_value = max_v
 	spin.step = 1
+	spin.custom_minimum_size = Vector2(72, 0)
+	spin.size_flags_horizontal = Control.SIZE_SHRINK_END
 	spin.value_changed.connect(_on_changed)
-	add_child(spin)
+	row.add_child(spin)
+	add_child(row)
 
 
 func _set_spin(node_name: String, value: int) -> void:
-	var spin: SpinBox = get_node_or_null(node_name) as SpinBox
+	var spin: SpinBox = find_child(node_name, true, false) as SpinBox
 	if spin != null:
 		spin.value = value
 
 
 func _spin_int(node_name: String) -> int:
-	var spin: SpinBox = get_node_or_null(node_name) as SpinBox
+	var spin: SpinBox = find_child(node_name, true, false) as SpinBox
 	if spin == null:
 		return 0
 	return int(spin.value)

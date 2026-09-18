@@ -19,6 +19,7 @@ const LayoutGd := preload("res://src/creator/authoring_window_layout.gd")
 const PointerGd := preload("res://src/creator/authoring_editor_shell_pointer.gd")
 const FloorGd := preload("res://src/creator/authoring_preview_map_floor.gd")
 const PublishGd := preload("res://src/creator/authoring_editor_shell_publish.gd")
+const GizmoGd := preload("res://src/creator/authoring_editor_transform_gizmo.gd")
 
 var window: Window = null
 var status: Label = null
@@ -28,7 +29,10 @@ var map: AuthoringPreviewMap = null
 var selected_id: int = 0
 var dragging: bool = false
 var drag_vertical: bool = false
+var drag_axis: String = ""
+var camera_panning: bool = false
 var guides: FloorGd = FloorGd.new()
+var _host_shell: AuthoringEditorShell = null
 
 
 func is_alive() -> bool:
@@ -40,9 +44,11 @@ func is_visible() -> bool:
 
 
 func ensure(shell: AuthoringEditorShell, handlers: Dictionary) -> void:
+	_host_shell = shell
 	if is_alive():
 		_sync_shell(shell)
 		LayoutGd.apply_editor(window, shell)
+		_bind_resize(shell)
 		return
 	if not Engine.is_editor_hint():
 		var host_viewport: Viewport = shell.get_viewport()
@@ -69,6 +75,7 @@ func ensure(shell: AuthoringEditorShell, handlers: Dictionary) -> void:
 	root.add_child(status)
 	tools = TraprushEditorPanelGd.new()
 	tools.name = TOOLS_NAME
+	tools.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 	root.add_child(tools)
 	tools.mount(shell)
 	validator = AuthoringValidatorPanelGd.new()
@@ -103,6 +110,7 @@ func ensure(shell: AuthoringEditorShell, handlers: Dictionary) -> void:
 		window.window_input.connect(_on_window_input)
 	LayoutGd.apply_editor(window, shell)
 	_sync_shell(shell)
+	_bind_resize(shell)
 	sync_guides()
 
 
@@ -188,7 +196,8 @@ func _add_button(row: BoxContainer, node_name: String, copy_key: String, handler
 	var button: Button = Button.new()
 	button.name = node_name
 	button.text = UiCopy.text(copy_key)
-	button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	button.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+	button.focus_mode = Control.FOCUS_NONE
 	if handler.is_valid():
 		button.pressed.connect(handler)
 	row.add_child(button)
@@ -206,6 +215,46 @@ func sync_guides() -> void:
 		cursor_x = tools.cell_x
 		cursor_z = tools.cell_z
 	guides.sync(map, floor_y, cursor_x, cursor_z, selected_id)
+	GizmoGd.sync(map, selected_id)
+
+
+func _bind_resize(shell: AuthoringEditorShell) -> void:
+	if window == null or not is_instance_valid(window):
+		return
+	if not window.size_changed.is_connected(_on_pane_resized):
+		window.size_changed.connect(_on_pane_resized)
+	if shell == null or not shell.is_inside_tree():
+		return
+	var viewport: Viewport = shell.get_viewport()
+	if viewport == null:
+		return
+	if not viewport.size_changed.is_connected(_on_host_resized):
+		viewport.size_changed.connect(_on_host_resized)
+
+
+func bind_preview(preview_window: Window) -> void:
+	if preview_window == null or not is_instance_valid(preview_window):
+		return
+	if not preview_window.size_changed.is_connected(_on_pane_resized):
+		preview_window.size_changed.connect(_on_pane_resized)
+
+
+func _on_host_resized() -> void:
+	if not is_alive() or not window.visible:
+		return
+	var preview_window: Window = null
+	if _host_shell != null and _host_shell.preview != null:
+		preview_window = _host_shell.preview.window
+	LayoutGd.apply_pair(window, preview_window, _host_shell)
+
+
+func _on_pane_resized() -> void:
+	if not is_alive():
+		return
+	var preview_window: Window = null
+	if _host_shell != null and _host_shell.preview != null:
+		preview_window = _host_shell.preview.window
+	LayoutGd.note_user_resize(window, preview_window, _host_shell)
 
 
 func _on_window_input(event: InputEvent) -> void:

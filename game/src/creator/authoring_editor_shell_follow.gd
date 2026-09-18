@@ -18,11 +18,15 @@ static func open_preview(shell: AuthoringEditorShell) -> bool:
 	if shell.preview_follows and shell.preview.preview != null and shell.preview.preview.connected:
 		if shell.preview.show_window():
 			LayoutGd.apply_pair(shell.window, shell.preview.window, shell)
+			if shell.chrome != null:
+				shell.chrome.bind_preview(shell.preview.window)
 			shell.refresh_status()
 			return true
 	shell.preview_follows = shell.preview.open_from(shell.session)
 	if shell.preview_follows:
 		LayoutGd.apply_pair(shell.window, shell.preview.window, shell)
+		if shell.chrome != null:
+			shell.chrome.bind_preview(shell.preview.window)
 	shell.refresh_status()
 	return shell.preview_follows
 

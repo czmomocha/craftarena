@@ -16,17 +16,25 @@ var _select: OptionButton = null
 static func attach(host_panel: TraprushEditorPanel) -> void:
 	if host_panel == null:
 		return
+	attach_to(host_panel, host_panel)
+
+
+static func attach_to(host_panel: TraprushEditorPanel, parent: Node) -> void:
+	if host_panel == null or parent == null:
+		return
 	if host_panel.get_node_or_null(ROW_NAME) != null:
 		return
+	if parent.get_node_or_null(ROW_NAME) != null:
+		return
 	var row: TraprushEditorPanelSky = TraprushEditorPanelSky.new()
-	host_panel.add_child(row)
+	parent.add_child(row)
 	row.mount(host_panel)
 
 
 static func sync_panel(host_panel: TraprushEditorPanel, world: AuthoringWorld) -> void:
 	if host_panel == null:
 		return
-	var row: TraprushEditorPanelSky = host_panel.get_node_or_null(ROW_NAME) as TraprushEditorPanelSky
+	var row: TraprushEditorPanelSky = host_panel.find_child(ROW_NAME, true, false) as TraprushEditorPanelSky
 	if row != null:
 		row.sync_from_world(world)
 
@@ -36,13 +44,17 @@ func mount(p_panel: TraprushEditorPanel) -> void:
 	if get_child_count() > 0:
 		return
 	name = ROW_NAME
+	add_theme_constant_override("separation", 4)
+	size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 	var caption: Label = Label.new()
 	caption.name = SKY_LABEL_NAME
 	caption.text = UiCopy.text(UiCopy.SKY)
 	add_child(caption)
 	_select = OptionButton.new()
 	_select.name = SKY_SELECT_NAME
-	_select.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_select.custom_minimum_size = Vector2(120, 0)
+	_select.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+	_select.fit_to_longest_item = false
 	_select.add_item(UiCopy.text(UiCopy.SKY_PASTEL_RIDGE), 0)
 	_select.add_item(UiCopy.text(UiCopy.SKY_LOWPOLY_MESA), 1)
 	_select.item_selected.connect(_on_item_selected)

@@ -15,6 +15,7 @@ const OverlayGd := preload("res://src/creator/authoring_preview_map_overlay.gd")
 const PlayerGd := preload("res://src/creator/authoring_preview_map_player.gd")
 const FloorGd := preload("res://src/creator/authoring_preview_map_floor.gd")
 const SkyGd := preload("res://src/creator/authoring_preview_sky.gd")
+const CameraGd := preload("res://src/creator/authoring_preview_map_camera.gd")
 
 const CAMERA_NAME: String = "PreviewCamera"
 const LIGHT_NAME: String = "PreviewLight"
@@ -57,6 +58,13 @@ var occupancy: OccupancyGd = OccupancyGd.new()
 var gizmos: GizmosGd = GizmosGd.new()
 var overlay: OverlayGd = OverlayGd.new()
 var player_marks: PlayerGd = PlayerGd.new()
+var camera_distance: float = PlaceholderSpec.CAMERA_DISTANCE
+var camera_pan: Vector3 = Vector3.ZERO
+var camera_yaw_deg: float = PlaceholderSpec.CAMERA_YAW_DEG
+var camera_pitch_deg: float = PlaceholderSpec.CAMERA_PITCH_DEG
+var camera_pan_limit: float = PlaceholderSpec.CAMERA_EDIT_PAN_LIMIT
+var camera_distance_min: float = PlaceholderSpec.CAMERA_EDIT_DISTANCE_MIN
+var camera_distance_max: float = PlaceholderSpec.CAMERA_EDIT_DISTANCE_MAX
 
 
 static func meters_from_fixed(value: int) -> float:
@@ -83,12 +91,9 @@ func ensure_rig() -> void:
 	if camera == null:
 		camera = Camera3D.new()
 		camera.name = CAMERA_NAME
-		camera.position = PlaceholderSpec.CAMERA_OFFSET
-		camera.fov = PlaceholderSpec.CAMERA_FOV_DEG
 		camera.current = true
 		add_child(camera)
-		if is_inside_tree():
-			camera.look_at(Vector3.ZERO)
+		CameraGd.aim(self)
 	var light: DirectionalLight3D = get_node_or_null(LIGHT_NAME) as DirectionalLight3D
 	if light == null:
 		light = DirectionalLight3D.new()
@@ -278,20 +283,11 @@ func focus_entity(entity_id: int) -> bool:
 	var placeholder: MeshInstance3D = placeholder_node(entity_id)
 	if placeholder == null:
 		return false
-	var camera: Camera3D = get_node_or_null(CAMERA_NAME) as Camera3D
-	if camera == null:
-		return false
-	var target: Vector3 = placeholder.position
-	camera.position = target + PlaceholderSpec.CAMERA_OFFSET
-	if camera.is_inside_tree():
-		var up: Vector3 = Vector3.UP
-		var look: Vector3 = target - camera.position
-		if look.length_squared() < 0.0000001:
-			return true
-		if absf(look.normalized().dot(Vector3.UP)) > 0.999:
-			up = Vector3.FORWARD
-		camera.look_at(target, up)
+	CameraGd.focus_at(self, placeholder.position)
 	return true
+
+func _aim_camera() -> void:
+	CameraGd.aim(self)
 
 
 func link_node(source_id: int) -> MeshInstance3D:

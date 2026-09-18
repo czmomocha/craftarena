@@ -23,31 +23,40 @@ craft_arena.ui.reset,Reset,重置
 craft_arena.ui.use_item,Use item,使用道具
 craft_arena.ui.jump,Jump,跳跃
 craft_arena.ui.advance_tick,Advance tick,推进一步
-craft_arena.ui.place_checkpoint,Place checkpoint,放置检查点
-craft_arena.ui.place_portal,Place portal,放置传送门
+craft_arena.ui.place_checkpoint,Checkpoint,检查点
+craft_arena.ui.place_portal,Portal,传送门
 craft_arena.ui.remove_last,Remove last,删除上一个
-craft_arena.ui.place_solid,Place solid,放置固体
-craft_arena.ui.place_hazard,Place hazard,放置机关
-craft_arena.ui.place_crate,Place crate,放置箱子
-craft_arena.ui.place_finish,Place finish,放置终点
-craft_arena.ui.place_bomb,Place bomb,放置爆破球
-craft_arena.ui.place_dash,Place dash,放置冲刺
-craft_arena.ui.place_mover,Place mover,放置移动平台
-craft_arena.ui.place_conveyor,Place conveyor,放置传送带
-craft_arena.ui.place_lift,Place lift,放置电梯
-craft_arena.ui.place_launch,Place launch,放置弹射垫
-craft_arena.ui.place_switch,Place switch,放置开关
-craft_arena.ui.place_gate,Place gate,放置门
-craft_arena.ui.place_energy_wall,Place energy wall,放置能量墙
-craft_arena.ui.place_gated_portal,Place gated portal,放置开关传送
-craft_arena.ui.place_spike,Place spike,放置地刺
-craft_arena.ui.place_flame,Place flame,放置喷火
-craft_arena.ui.place_crusher,Place crusher,放置压板
-craft_arena.ui.place_roller,Place roller,放置滚柱
-craft_arena.ui.place_rubble,Place rubble,放置碎石
-craft_arena.ui.place_obstacle_core,Place core,放置障碍核心
-craft_arena.ui.place_pendulum,Place pendulum,放置摆锤
-craft_arena.ui.place_ice,Place ice,放置冰面
+craft_arena.ui.place_solid,Solid,固体
+craft_arena.ui.place_hazard,Hazard,机关
+craft_arena.ui.place_crate,Crate,箱子
+craft_arena.ui.place_finish,Finish,终点
+craft_arena.ui.place_bomb,Bomb,爆破球
+craft_arena.ui.place_dash,Dash,冲刺
+craft_arena.ui.place_mover,Mover,移动平台
+craft_arena.ui.place_conveyor,Conveyor,传送带
+craft_arena.ui.place_lift,Lift,电梯
+craft_arena.ui.place_launch,Launch,弹射垫
+craft_arena.ui.place_switch,Switch,开关
+craft_arena.ui.place_gate,Gate,门
+craft_arena.ui.place_energy_wall,Energy wall,能量墙
+craft_arena.ui.place_gated_portal,Gated portal,开关传送
+craft_arena.ui.place_spike,Spike,地刺
+craft_arena.ui.place_flame,Flame,喷火
+craft_arena.ui.place_crusher,Crusher,压板
+craft_arena.ui.place_roller,Roller,滚柱
+craft_arena.ui.place_rubble,Rubble,碎石
+craft_arena.ui.place_obstacle_core,Core,障碍核心
+craft_arena.ui.place_pendulum,Pendulum,摆锤
+craft_arena.ui.place_ice,Ice,冰面
+craft_arena.ui.conveyor_axis_x,<->,左右
+craft_arena.ui.conveyor_axis_z,^v,上下
+craft_arena.ui.param_cooldown,Cooldown 0-600,冷却 0-600
+craft_arena.ui.param_durability,Durability 0-99,耐久 0-99
+craft_arena.ui.param_order,Order 0-64,序号 0-64
+craft_arena.ui.param_respawn_dx,Respawn X -8-8,复活X -8-8
+craft_arena.ui.param_respawn_dy,Respawn Y -8-8,复活Y -8-8
+craft_arena.ui.param_respawn_dz,Respawn Z -8-8,复活Z -8-8
+craft_arena.ui.param_asset,Asset 1-32,资产 1-32
 craft_arena.ui.mark_corner,Mark corner,标记角点
 craft_arena.ui.fill_solids,Fill solids,矩形填充
 craft_arena.ui.copy_entity,Copy,复制

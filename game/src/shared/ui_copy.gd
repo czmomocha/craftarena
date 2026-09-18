@@ -79,6 +79,15 @@ const PLACE_RUBBLE: String = "craft_arena.ui.place_rubble"
 const PLACE_OBSTACLE_CORE: String = "craft_arena.ui.place_obstacle_core"
 const PLACE_PENDULUM: String = "craft_arena.ui.place_pendulum"
 const PLACE_ICE: String = "craft_arena.ui.place_ice"
+const CONVEYOR_AXIS_X: String = "craft_arena.ui.conveyor_axis_x"
+const CONVEYOR_AXIS_Z: String = "craft_arena.ui.conveyor_axis_z"
+const PARAM_COOLDOWN: String = "craft_arena.ui.param_cooldown"
+const PARAM_DURABILITY: String = "craft_arena.ui.param_durability"
+const PARAM_ORDER: String = "craft_arena.ui.param_order"
+const PARAM_RESPAWN_DX: String = "craft_arena.ui.param_respawn_dx"
+const PARAM_RESPAWN_DY: String = "craft_arena.ui.param_respawn_dy"
+const PARAM_RESPAWN_DZ: String = "craft_arena.ui.param_respawn_dz"
+const PARAM_ASSET: String = "craft_arena.ui.param_asset"
 const SKY: String = "craft_arena.ui.sky"
 const SKY_PASTEL_RIDGE: String = "craft_arena.ui.sky_pastel_ridge"
 const SKY_LOWPOLY_MESA: String = "craft_arena.ui.sky_lowpoly_mesa"
@@ -222,6 +231,15 @@ const ALL_KEYS: PackedStringArray = [
 	PLACE_OBSTACLE_CORE,
 	PLACE_PENDULUM,
 	PLACE_ICE,
+	CONVEYOR_AXIS_X,
+	CONVEYOR_AXIS_Z,
+	PARAM_COOLDOWN,
+	PARAM_DURABILITY,
+	PARAM_ORDER,
+	PARAM_RESPAWN_DX,
+	PARAM_RESPAWN_DY,
+	PARAM_RESPAWN_DZ,
+	PARAM_ASSET,
 	SKY,
 	SKY_PASTEL_RIDGE,
 	SKY_LOWPOLY_MESA,

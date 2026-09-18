@@ -109,6 +109,11 @@ const CAMERA_PAN_SENS: float = 0.012
 const CAMERA_ORBIT_SENS: float = 0.25
 const CAMERA_PITCH_MIN_DEG: float = 15.0
 const CAMERA_PITCH_MAX_DEG: float = 80.0
+## 课程编辑器视口：要比对局预览拉得更远、挪得更开，才能摆 ±64 格外的实体。
+## 不改对局 `CAMERA_DISTANCE_*` / `CAMERA_PAN_LIMIT` 产品桩。
+const CAMERA_EDIT_DISTANCE_MIN: float = 4.0
+const CAMERA_EDIT_DISTANCE_MAX: float = 48.0
+const CAMERA_EDIT_PAN_LIMIT: float = 64.0
 const LIGHT_ROTATION_DEG: Vector3 = Vector3(-50.0, -30.0, 0.0)
 
 ## 跟随锚点一帧内位移超过这么多米，就判为**跳变**（传送 / 复位），由
@@ -301,6 +306,10 @@ const EDIT_GUIDE_FLOOR_FILL_ALBEDO: Color = Color(0.14, 0.16, 0.18, 0.2)
 const EDIT_GUIDE_GRID_LINE_ALBEDO: Color = Color(0.38, 0.42, 0.48, 0.9)
 const EDIT_GUIDE_CURSOR_ALBEDO: Color = Color(0.95, 0.85, 0.25, 0.45)
 const EDIT_GUIDE_SELECT_ALBEDO: Color = Color(1.0, 1.0, 1.0, 0.35)
+## 选中实体的平移 gizmo（Unity 习惯：X 红 / Y 绿 / Z 蓝）。只给编辑器，不是占用色。
+const EDIT_GIZMO_X_ALBEDO: Color = Color(0.92, 0.2, 0.18)
+const EDIT_GIZMO_Y_ALBEDO: Color = Color(0.22, 0.78, 0.28)
+const EDIT_GIZMO_Z_ALBEDO: Color = Color(0.22, 0.45, 0.92)
 
 
 static func floor_albedo(y: int, cell: int) -> Color:
