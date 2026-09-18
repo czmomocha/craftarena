@@ -2,10 +2,10 @@ class_name TraprushCourse06Builder
 extends RefCounted
 
 ## Official `course_06` via the real EditCommand write path.
-## Standing y ∈ {-6,-4,-2,0,2,4,6}; floors sit one cell below (course_01).
-## Layer gap is 2 cells. Bottom 13×13 is the catch-all.
+## Standing y in {-6,-4,-2,0,2,4,6}; floors sit one cell below (course_01).
+## Layer gap is 2 cells. Bottom 13x13 is the catch-all.
 ##
-## Launch pads cannot land a 4-cell hop onto a same-xz floor: peak ≈ 4.25 cells
+## Launch pads cannot land a 4-cell hop onto a same-xz floor: peak ~4.25 cells
 ## so the destination box sits in the ascent and is hit from below. The climb
 ## is therefore three two-way portals (scripted) plus three recovery lifts on
 ## the skipped floors. A* still cannot use this (two portal hops, jump < 1 cell).
@@ -61,7 +61,7 @@ static func export_document() -> Dictionary:
 
 
 static func _place_portals(session: AuthoringSession) -> bool:
-	## three two-way hops: y=-6↔-2, -2↔+2, +2↔+6. Dest is one cell +X so the
+	## three two-way hops: y=-6<->-2, -2<->+2, +2<->+6. Dest is one cell +X so the
 	## next hop is a single walk, not a stack on the landing.
 	var hops: Array[Dictionary] = [
 		{"a": 10, "b": 11, "ax": 1, "ay": BOTTOM, "bx": 1, "by": -2},

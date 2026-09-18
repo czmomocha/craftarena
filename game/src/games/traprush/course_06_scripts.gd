@@ -2,8 +2,8 @@ class_name TraprushCourse06Scripts
 extends RefCounted
 
 ## Scripted climb for official `course_06`.
-## Three two-way hops: walk +X into entity 10 (−6→−2), +X into 12 (−2→+2),
-## −X into 14 (+2→+6), then −X onto the finish. Waits let gravity settle
+## Three two-way hops: walk +X into entity 10 (-6->-2), +X into 12 (-2->+2),
+## -X into 14 (+2->+6), then -X onto the finish. Waits let gravity settle
 ## after each landing. Indices match TraprushCourseCompletionProbe._ACTION_NAMES.
 
 const _MOVE_X: int = 0

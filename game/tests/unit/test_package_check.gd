@@ -7,6 +7,7 @@ extends GutTest
 ## 该缓解没有任何实证。自检脚本要能在源码运行与导出包两种模式下给出可读结论，
 ## 并且只在真正打进包之后才把 addons / tests 当作缺陷。
 
+const OfficialCourses := preload("res://src/shared/official_traprush_courses.gd")
 const PackageCheckGd := preload("res://src/client/package_check.gd")
 
 const ALWAYS_MANDATORY: PackedStringArray = [
@@ -68,7 +69,7 @@ func test_packed_only_checks_are_reported_but_do_not_fail_a_source_run() -> void
 func test_report_names_official_and_f_line_courses() -> void:
 	var report: Dictionary = PackageCheckGd.report()
 	var paths: PackedStringArray = report["course_paths"]
-	assert_eq(paths.size(), 6)
+	assert_eq(paths.size(), OfficialCourses.all_document_ids().size())
 	for path: String in paths:
 		assert_true(path.begins_with("res://content/official/traprush/"), path)
 		assert_true(path.ends_with(".json"), path)
