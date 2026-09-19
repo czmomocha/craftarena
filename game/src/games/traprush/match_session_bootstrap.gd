@@ -42,6 +42,7 @@ static func try_create(
 	if spawn == null:
 		return null
 	var session: TraprushMatchSession = TraprushMatchSession.new()
+	session.match_seed = seed
 	session.live_patch = PatchApplyGd.new()
 	session._world = loaded["world"]
 	session._graph = loaded["graph"]
@@ -151,10 +152,7 @@ static func try_create(
 			"dash": 0,
 			"taken": {},
 			"stun_remaining": 0,
-			# 最近一次**环境失败**的 tick 与原因（可玩性深化，轨 1：失败惩罚可读）。
-			# 权威在这里判定，但**不进 hash_state**：它是既有事件（位姿跳回 +
-			# stun_remaining，两者都已入 hash）的读出别名，不是独立的仿真输入。
-			# 把它入 hash 只会让全部已录制的回放哈希失效而不增加任何检测力。
+			# 环境失败读出别名，不进 hash_state（旧回放哈希不能动）。
 			"setback_tick": -1,
 			"setback_reason": PlaySetback.NONE,
 			"setback_count": 0,
@@ -170,6 +168,7 @@ static func try_create(
 	session.rule_vm.notify_match_started()
 	return session
 
+
 static func pickup_kinds_from_bundle(bundle: SimulationBundle) -> Dictionary:
 	var kinds: Dictionary = {}
 	if bundle == null:
@@ -182,11 +181,7 @@ static func pickup_kinds_from_bundle(bundle: SimulationBundle) -> Dictionary:
 
 
 static func offset_pose(start_x: int, start_y: int, start_z: int, offset: Dictionary) -> Dictionary:
-	if (
-		not offset.has("dx")
-		or not offset.has("dy")
-		or not offset.has("dz")
-	):
+	if not offset.has("dx") or not offset.has("dy") or not offset.has("dz"):
 		return {}
 	if (
 		typeof(offset["dx"]) != TYPE_INT

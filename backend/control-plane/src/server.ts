@@ -37,6 +37,8 @@ import { registerContentSubmitRoutes } from "./server_content_submit.ts";
 import { registerPlazaRoutes } from "./server_plaza.ts";
 import { registerAccountRoutes } from "./server_accounts.ts";
 import { registerSessionRoutes } from "./server_sessions.ts";
+import { registerReplayRoutes } from "./server_replay.ts";
+import { readIdentityOptional } from "./server_identity.ts";
 
 export interface BuildServerOptions {
 	readonly database: ControlPlaneDatabase;
@@ -130,6 +132,7 @@ export function buildServer(options: BuildServerOptions): FastifyInstance {
 	});
 
 	registerSessionRoutes(app, options, now, ticketTtlMs, runDrain);
+	registerReplayRoutes(app, options, now);
 	registerContentRoutes(app, options);
 	registerContentSubmitRoutes(app, options);
 	registerPlazaRoutes(app, options);
@@ -146,7 +149,7 @@ export function buildServer(options: BuildServerOptions): FastifyInstance {
 		if (open !== undefined) {
 			try {
 				reply.code(201);
-				return admitToRoom(options, open.matchId, now(), ticketTtlMs);
+				return admitToRoom(options, open.matchId, now(), ticketTtlMs, readIdentityOptional(options, request));
 			} catch (error) {
 				if (!(error instanceof MatchSessionFullError)) {
 					throw error;
@@ -164,6 +167,7 @@ export function buildServer(options: BuildServerOptions): FastifyInstance {
 			"quick",
 			matchResult.spec,
 			runDrain,
+			readIdentityOptional(options, request),
 		);
 	});
 
@@ -184,6 +188,7 @@ export function buildServer(options: BuildServerOptions): FastifyInstance {
 			"create_room",
 			matchResult.spec,
 			runDrain,
+			readIdentityOptional(options, request),
 		);
 	});
 
@@ -212,7 +217,7 @@ export function buildServer(options: BuildServerOptions): FastifyInstance {
 
 			try {
 				reply.code(201);
-				return admitToRoom(options, session.matchId, now(), ticketTtlMs);
+				return admitToRoom(options, session.matchId, now(), ticketTtlMs, readIdentityOptional(options, request));
 			} catch (error) {
 				if (error instanceof MatchSessionFullError) {
 					reply.code(409);

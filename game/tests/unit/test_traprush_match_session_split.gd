@@ -12,6 +12,7 @@ const SESSION_PATHS: PackedStringArray = [
 	"res://src/games/traprush/match_session_bootstrap.gd",
 	"res://src/games/traprush/match_session_intents.gd",
 	"res://src/games/traprush/match_session_scan.gd",
+	"res://src/games/traprush/match_session_sim.gd",
 	"res://src/games/traprush/match_session_view.gd",
 ]
 

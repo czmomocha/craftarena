@@ -51,6 +51,18 @@ const _ID_TO_INTENT: Dictionary = {
 }
 
 
+static func intent_id_of(intent_name: String) -> int:
+	if not _INTENT_TO_ID.has(intent_name):
+		return 0
+	return _INTENT_TO_ID[intent_name]
+
+
+static func intent_name_of(intent_id: int) -> String:
+	if not _ID_TO_INTENT.has(intent_id):
+		return ""
+	return _ID_TO_INTENT[intent_id]
+
+
 static func encode_command(
 	tick: int,
 	intent_name: String,

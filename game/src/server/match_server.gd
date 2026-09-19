@@ -5,22 +5,11 @@ extends Node
 ## SimulationBundle 并启动 TraprushMatchSession（M3 首章），随后随引擎 physics
 ## tick 推进权威仿真。人类 2026-09-02 把现桩升为锁定：对局 / Solo 60 physics
 ## tick/s（CD-43 §4 / E3）。数字未改。
-## 实时回路：在本场内网端口监听 WebSocket（--bind 占位 0.0.0.0，公网暴露由部署层
-## 与网关拓扑阻止），二进制命令帧经 MatchRealtime 排队、在 commit_tick 边界按到达
-## 顺序应用；每 SNAPSHOT_EVERY_TICKS 个 tick 广播一帧二进制快照。命令帧 tick 只
-## 解码不信任，服务端 tick 权威（CD-43 §3）。入站 ping（type=3）立即回 pong，
-## 不入命令队列。每槽每 tick 至多一条命令（先到先得），
-## 断开丢弃排队；握手后按上游 URL 的 slot 占用席位，缺席位则占用最小空槽。
-## 快照 / 心跳 tick 间隔已锁定（CD-43 §4）。墙钟发送速率由 60 tick/s 导出。
-## 心跳：每 HEARTBEAT_EVERY_TICKS 个 tick 打印一行结构化 JSON（含状态哈希与
-## `valid_input_tick`），全员冲线后另含 settlement；供 MatchHost 活场 flush /
-## 停止前写库、跨进程核对，以及仅在 `valid_input_tick` 前进时续租。
-## 心跳本身不续租（CD-44 §3）。
-## --max-ticks 到达后打印最终心跳并 exit 0；配置非法打印错误事件并 exit 1。
-## 出生偏移与胶囊尺寸仍是进程内占位桩，不锁产品出生布局或尺寸。
-## 心跳/快照节奏已锁定，见 SNAPSHOT_EVERY_TICKS / HEARTBEAT_EVERY_TICKS。
-## 动作数值（跳跃/支撑/下落/道具伤害与触达/推击）与出界 AABB 半宽来自
-## TraprushPlayStubs，本进程不再自带副本。
+## 实时回路：本场内网端口监听 WebSocket；命令经 MatchRealtime 排队，commit_tick
+## 边界按到达顺序应用。命令帧 tick 只解码不信任。每槽每 tick 至多一条。
+## 快照 / 心跳间隔已锁定（CD-43 §4）。心跳含 valid_input_tick，全员冲线后另含
+## settlement。心跳本身不续租（CD-44 §3）。
+## --max-ticks 到达后最终心跳并 exit 0；配置非法 exit 1。动作数值来自 PlayStubs。
 
 const MatchRealtime := preload("res://src/server/match_realtime.gd")
 const MatchRealtimeBastionGd := preload("res://src/server/match_realtime_bastion.gd")
@@ -30,6 +19,7 @@ const BastionMatchSessionGd := preload("res://src/games/bastion/match_session.gd
 const BastionMatchSettlementGd := preload("res://src/games/bastion/match_settlement.gd")
 const MatchServerBootGd := preload("res://src/server/match_server_boot.gd")
 const MatchGameplayGd := preload("res://src/shared/match_gameplay.gd")
+const PlayStubsGd := preload("res://src/games/traprush/play_stubs.gd")
 
 const BOOT_EVENT: String = "match_server_boot"
 const LISTEN_EVENT: String = "match_listen"
@@ -46,6 +36,8 @@ var _traprush_rt: MatchRealtime = null
 var _bastion_rt: MatchRealtimeBastionGd = null
 var _match_id: String = ""
 var _max_ticks: int = 0
+var _replay_out: String = ""
+var _course_path: String = ""
 var _tcp: TCPServer = null
 var _peers: Dictionary = {}
 
@@ -64,6 +56,10 @@ func _ready() -> void:
 		get_tree().quit(1)
 		return
 	_session = session
+	_course_path = str(config.get("course", ""))
+	_replay_out = str(config.get("replay_out", ""))
+	if session is TraprushMatchSession:
+		PlayStubsGd.apply_opening_countdown(session as TraprushMatchSession)
 	if not _attach_realtime(session):
 		print(JSON.stringify({"event": ERROR_EVENT, "error": "session_boot_failed"}))
 		get_tree().quit(1)
@@ -157,6 +153,8 @@ func _physics_process(_delta: float) -> void:
 	if _session == null or not _rt_alive():
 		return
 	_rt_commit_tick()
+	if _traprush_rt != null:
+		_traprush_rt.try_flush_replay(_replay_out)
 	var tick: int = _session_tick()
 	if tick % SNAPSHOT_EVERY_TICKS == 0:
 		_broadcast_snapshot()
@@ -256,6 +254,7 @@ static func _boot_config(options: Dictionary) -> Dictionary:
 		"max_ticks": max_ticks,
 		"bind": bind,
 		"gameplay": gameplay,
+		"replay_out": str(options.get("replay-out", "")),
 	}
 
 
@@ -312,7 +311,10 @@ func _attach_realtime(session: RefCounted) -> bool:
 	if traprush == null:
 		return false
 	_traprush_rt = MatchRealtime.create(traprush)
-	return _traprush_rt != null
+	if _traprush_rt == null:
+		return false
+	_traprush_rt.begin_tape(_course_path)
+	return true
 
 
 func _rt_alive() -> bool:

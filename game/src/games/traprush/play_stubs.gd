@@ -66,6 +66,12 @@ const LAUNCH_XZ: int = Fixed.SCALE
 const RESPAWN_STUN_MS: int = 1000
 const PHYSICS_TICKS_PER_SECOND_PLACEHOLDER: int = 60
 const RESPAWN_STUN_TICKS: int = (RESPAWN_STUN_MS * PHYSICS_TICKS_PER_SECOND_PLACEHOLDER + 999) / 1000
+## 开局倒计时 3.0 s（2026-09-19）。只迁出 CD-63 §1.4 这一个数。默认不注入，
+## 测试 / 探针 / 磁带保持 go_tick=0；产品 Solo 与对局进程才调用 apply_opening_countdown。
+const COUNTDOWN_MS: int = 3000
+const COUNTDOWN_TICKS: int = (COUNTDOWN_MS * PHYSICS_TICKS_PER_SECOND_PLACEHOLDER + 999) / 1000
+## GO 字在竞速开始后停留的表现拍数。不是权威阶段。
+const COUNTDOWN_GO_TICKS: int = PHYSICS_TICKS_PER_SECOND_PLACEHOLDER / 2
 ## Preview 手动 Advance，不是墙钟。硬直一次点击即可过，避免点 60 下。
 const PREVIEW_RESPAWN_STUN_TICKS: int = 1
 
@@ -106,3 +112,33 @@ static func apply_match(session: TraprushMatchSession) -> void:
 	session.launch_xz = LAUNCH_XZ
 	session.respawn_stun_ticks = RESPAWN_STUN_TICKS
 	session.enable_play_range(OutOfRangeReset.STUB_HALF)
+
+
+static func apply_opening_countdown(session: TraprushMatchSession) -> void:
+	if session == null:
+		return
+	session.go_tick = COUNTDOWN_TICKS
+
+
+static func racing_tick(world_tick: int, go_tick: int) -> int:
+	return maxi(0, world_tick - go_tick)
+
+
+static func is_racing(world_tick: int, go_tick: int) -> bool:
+	return world_tick >= go_tick
+
+
+static func overlay_seconds(world_tick: int, go_tick: int) -> int:
+	var tick: int = maxi(world_tick, 0)
+	if go_tick <= 0 or tick >= go_tick:
+		return 0
+	var remaining: int = go_tick - tick
+	return (remaining + PHYSICS_TICKS_PER_SECOND_PLACEHOLDER - 1) / PHYSICS_TICKS_PER_SECOND_PLACEHOLDER
+
+
+static func view_go_tick(session: TraprushMatchSession, online_traprush: bool) -> int:
+	if session != null:
+		return session.go_tick
+	if online_traprush:
+		return COUNTDOWN_TICKS
+	return 0

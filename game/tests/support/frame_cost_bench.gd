@@ -44,6 +44,7 @@ func _initialize() -> void:
 		printerr("frame_cost_bench: try_solo() failed")
 		quit(1)
 		return
+	shell.offline.skip_opening_countdown()
 
 	# 预热：第一帧要建玩家节点、解析视觉资产、生成字体图集，混进均值会读出一个
 	# 假的「每帧很贵」。

@@ -23,6 +23,9 @@ const PlayerIntentNames := preload("res://src/shared/commands/player_intent_name
 const PlayStubsGd := preload("res://src/games/traprush/play_stubs.gd")
 const OutOfRangeResetGd := preload("res://src/games/traprush/out_of_range_reset.gd")
 const TraprushMatchSessionGd := preload("res://src/games/traprush/match_session.gd")
+const OfflineReplayGd := preload("res://src/client/match_offline_replay.gd")
+const ReplayStoreGd := preload("res://src/client/traprush_replay_store.gd")
+const TapeGd := preload("res://src/games/traprush/replay_tape.gd")
 
 const BANNER_KEY: String = UiCopy.OFFLINE_BANNER
 const DEFAULT_COURSE: String = "res://content/official/traprush/course_01.json"
@@ -56,6 +59,12 @@ var play_launch_dy: int = 0
 var play_launch_xz: int = 0
 var play_respawn_stun_ticks: int = 0
 var play_range_half: int = 0
+var persist_replay: bool = false
+var replay_active: bool = false
+var replay_saved: bool = false
+var tape_recorder: Dictionary = {}
+var replay_commands: Array = []
+var replay_store: ReplayStoreGd = ReplayStoreGd.new()
 
 
 static func move_vector(move_x: float, move_z: float, step: int) -> Dictionary:
@@ -93,12 +102,14 @@ func try_begin_bundle(bundle: SimulationBundle) -> bool:
 	return true
 
 
-func _attach(bundle: SimulationBundle) -> bool:
-	var offsets: Array[Dictionary] = [{"dx": 0, "dy": 0, "dz": 0}]
+func _attach(bundle: SimulationBundle, seed: int = MATCH_SEED, seats: int = 1) -> bool:
+	var offsets: Array[Dictionary] = []
+	for slot: int in range(maxi(seats, 1)):
+		offsets.append({"dx": 0, "dy": 0, "dz": -slot * PlaceholderSpec.SPAWN_STRIDE})
 	var created: TraprushMatchSessionGd = TraprushMatchSessionGd.create(
 		bundle,
-		MATCH_SEED,
-		1,
+		seed,
+		offsets.size(),
 		offsets,
 		PlayStubsGd.CAPSULE_RADIUS,
 		PlayStubsGd.CAPSULE_HEIGHT
@@ -128,9 +139,17 @@ func _attach(bundle: SimulationBundle) -> bool:
 	follow = MatchSnapshotFollowGd.new()
 	last_command = PackedByteArray()
 	last_intent = ""
+	replay_saved = false
+	if not replay_active:
+		replay_commands = []
 	state = STATE_PLAYING
 	last_error = ""
+	OfflineReplayGd.start_recorder(self)
 	return _publish()
+
+
+func restart_tape() -> void:
+	OfflineReplayGd.start_recorder(self)
 
 
 func try_stop() -> bool:
@@ -141,13 +160,18 @@ func try_stop() -> bool:
 	last_command = PackedByteArray()
 	last_intent = ""
 	course_path = ""
+	replay_active = false
+	persist_replay = false
+	replay_saved = false
+	tape_recorder = {}
+	replay_commands = []
 	state = STATE_IDLE
 	last_error = ""
 	return true
 
 
 func try_encode_intent(intent_name: String, dx: int, dz: int, yaw_bam: int) -> PackedByteArray:
-	if state != STATE_PLAYING:
+	if state != STATE_PLAYING or replay_active:
 		return PackedByteArray()
 	if intent_name == PlayerIntentNames.INTERACT:
 		return PackedByteArray()
@@ -191,13 +215,50 @@ func try_apply_command(bytes: PackedByteArray) -> bool:
 	var payload: Dictionary = _payload_from(decoded)
 	if not session.apply_player_intent(0, payload):
 		return false
+	OfflineReplayGd.note_applied(self, payload)
 	return _publish()
 
 
 func try_advance() -> bool:
 	if state != STATE_PLAYING or session == null:
 		return false
+	if replay_active and OfflineReplayGd.finished(self):
+		return _publish()
+	if replay_active:
+		OfflineReplayGd.apply_tick_commands(self)
 	session.commit_tick()
+	OfflineReplayGd.maybe_save(self, replay_store)
+	return _publish()
+
+
+func try_begin_replay(raw: Dictionary) -> bool:
+	if state == STATE_PLAYING:
+		last_error = "busy"
+		return false
+	var parsed: Dictionary = OfflineReplayGd.load_tape(raw)
+	if not parsed.get("ok", false):
+		last_error = "invalid_tape"
+		return false
+	var path: String = str(parsed.get("official_path", ""))
+	var bundle: SimulationBundle = MatchCourseMapGd.compile_path(path)
+	if bundle == null:
+		last_error = "missing_course"
+		return false
+	if not OfflineReplayGd.hash_ok(bundle, str(parsed.get("content_hash", ""))):
+		last_error = "hash_mismatch"
+		return false
+	persist_replay = false
+	replay_active = true
+	replay_commands = parsed.get("commands", [])
+	var seats: int = TapeGd.as_int(parsed.get("seats", 1), 1)
+	var seed: int = TapeGd.as_int(parsed.get("seed", MATCH_SEED), MATCH_SEED)
+	if not _attach(bundle, seed, seats):
+		replay_active = false
+		return false
+	if session != null:
+		session.go_tick = TapeGd.as_int(parsed.get("go_tick", 0), 0)
+	course_path = path
+	last_error = ""
 	return _publish()
 
 
@@ -231,6 +292,8 @@ func status_view() -> Dictionary:
 		"bomb_count": session.player_bomb_count(0) if session != null else -1,
 		"dash_count": session.player_dash_count(0) if session != null else -1,
 		"fails_count": session.player_setback_count(0) if session != null else -1,
+		"go_tick": session.go_tick if session != null else 0,
+		"replay_active": replay_active,
 	}
 
 
@@ -261,6 +324,11 @@ func allows_settlement() -> bool:
 
 func allows_online_writes() -> bool:
 	return false
+
+
+func skip_opening_countdown() -> void:
+	if session != null:
+		session.go_tick = 0
 
 
 func _publish() -> bool:

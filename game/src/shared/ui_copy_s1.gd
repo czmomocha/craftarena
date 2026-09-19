@@ -12,6 +12,7 @@ const ENTER: String = "craft_arena.s1.enter"
 const BASTION_TITLE: String = "craft_arena.s1.bastion_title"
 const BASTION_DESC: String = "craft_arena.s1.bastion_desc"
 const NAV_CHARACTER: String = "craft_arena.s1.nav_character"
+const NAV_REPLAY: String = "craft_arena.s1.nav_replay"
 const NAV_MY_CONTENT: String = "craft_arena.s1.nav_my_content"
 const NAV_WORKSHOP: String = "craft_arena.s1.nav_workshop"
 const NAV_SETTINGS: String = "craft_arena.s1.nav_settings"
@@ -26,6 +27,7 @@ const ALL_KEYS: PackedStringArray = [
 	BASTION_TITLE,
 	BASTION_DESC,
 	NAV_CHARACTER,
+	NAV_REPLAY,
 	NAV_MY_CONTENT,
 	NAV_WORKSHOP,
 	NAV_SETTINGS,

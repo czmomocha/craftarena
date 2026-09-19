@@ -33,7 +33,7 @@
 | 改 UI、HUD、菜单、大厅布局 | CD-00 | [CD-12 产品结构](10-product/12-product-structure.md) |
 | 调玩法数值、道具、机关、炮塔 | CD-00 | [CD-21 TRAPRUSH](20-gameplay/21-traprush.md) 或 [CD-22 BASTION](20-gameplay/22-bastion.md)、[CD-63 开发期决策清单](60-plan/63-open-decisions.md) |
 | 改仿真核心、定点数、System | CD-00 | [CD-41 架构](40-technical/41-architecture.md)、[CD-42 数据契约与 Rule VM](40-technical/42-contracts-and-rulevm.md)、[CD-53 测试与 CI](50-engineering/53-testing-and-ci.md) |
-| 改命令、快照、协议、回放 | CD-00 | [CD-43 网络与回放](40-technical/43-networking-and-replay.md)、CD-42 |
+| 改命令、快照、协议、回放 | CD-00 | [CD-43 网络与回放](40-technical/43-networking-and-replay.md)、CD-42、[CD-14 数据与遥测](10-product/14-data-and-telemetry.md) |
 | 改 Component Schema、Rule VM 节点、音频 cue bank | CD-00 | CD-42、[CD-31 UGC 原则](30-ugc/31-ugc-principles.md) |
 | 改编辑器、EditCommand、Preview | CD-00 | [CD-32 编辑器与预览](30-ugc/32-editor-and-preview.md)、CD-31 |
 | 改验证器、发布流水线、热生效 | CD-00 | [CD-33 热修改与热发布](30-ugc/33-hot-publish.md)、CD-31 |

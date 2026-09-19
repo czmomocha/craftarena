@@ -67,11 +67,15 @@ static func apply(
 	world: SimulationWorld,
 	entries: Array,
 	capsule_ids: PackedInt32Array,
-	support_dy: int
+	support_dy: int,
+	tick_index: int = -1
 ) -> PackedInt32Array:
 	var blocked: PackedInt32Array = PackedInt32Array()
 	if world == null:
 		return blocked
+	var tick: int = tick_index
+	if tick < 0:
+		tick = world.tick_index
 	for item: Variant in entries:
 		if typeof(item) != TYPE_DICTIONARY:
 			continue
@@ -86,7 +90,7 @@ static func apply(
 		if typeof(loop_raw) != TYPE_BOOL:
 			continue
 		var loop_on: bool = loop_raw
-		var next: Dictionary = pose_at(world.tick_index, path, speed, loop_on)
+		var next: Dictionary = pose_at(tick, path, speed, loop_on)
 		if next.is_empty():
 			continue
 		var old: Dictionary = world.static_box_pose(box_id)

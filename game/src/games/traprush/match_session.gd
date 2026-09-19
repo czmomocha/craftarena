@@ -3,15 +3,11 @@ extends RefCounted
 
 ## TRAPRUSH 对局门面（Bootstrap/Intents/Scan/View/Patch）。commit 先积分再 tick；占用垫→门→垫→终点。
 
-const Gravity := preload("res://src/games/traprush/gravity.gd")
-const ConveyorCycle := preload("res://src/games/traprush/conveyor_cycle.gd")
-const LaunchCycle := preload("res://src/games/traprush/launch_cycle.gd")
 const GateCycle := preload("res://src/games/traprush/gate_cycle.gd")
-const HazardCycle := preload("res://src/games/traprush/hazard_cycle.gd")
-const MoverCycle := preload("res://src/games/traprush/mover_cycle.gd")
 const TraprushMatchBootstrapGd := preload("res://src/games/traprush/match_session_bootstrap.gd")
 const TraprushMatchIntentsGd := preload("res://src/games/traprush/match_session_intents.gd")
 const TraprushMatchScanGd := preload("res://src/games/traprush/match_session_scan.gd")
+const TraprushMatchSimGd := preload("res://src/games/traprush/match_session_sim.gd")
 const TraprushMatchViewGd := preload("res://src/games/traprush/match_session_view.gd")
 const RuleVmDispatchGd := preload("res://src/ugc/rule_vm_dispatch.gd")
 
@@ -55,6 +51,9 @@ var view: TraprushMatchViewGd = TraprushMatchViewGd.new()
 var rule_vm: RuleVmDispatchGd = RuleVmDispatchGd.new()
 var live_patch: RefCounted = null
 var content_hash: String = ""
+var match_seed: int = 0
+## 竞速开始的世界 tick。0 = 无倒计时（测试 / 探针默认）。
+var go_tick: int = 0
 var _world: SimulationWorld = null
 var _graph: TraprushPortalGraph = null
 var _pad_ids: Dictionary = {}
@@ -224,41 +223,15 @@ func apply_player_intent(slot: int, payload: Dictionary) -> bool:
 
 
 func apply_player_falls() -> void:
-	if _world == null:
-		return
-	for player: Dictionary in _players:
-		var capsule_id: int = player["capsule_id"]
-		Gravity.integrate(_world, capsule_id, fall_dy)
-		_resolve_player_hazards(player)
-		_reset_player_if_out_of_range(player)
+	TraprushMatchSimGd.apply_falls(self)
 
 
 func advance_sim_tick() -> void:
-	if _world == null:
-		return
-	_tick_stuns()
-	_world.tick()
-	_apply_movers()
-	_apply_slides()
-	_apply_launches()
-	_apply_gates()
-	HazardCycle.apply(_world, _hazard_cycle)
-	scan.keep_flames_nonsolid(self)
-	for player: Dictionary in _players:
-		_resolve_player_hazards(player)
-		_reset_player_if_out_of_range(player)
-		_accept_player_pads(player)
-		_resolve_player_portals(player)
-		_accept_player_pads(player)
-		_accept_player_finish(player)
-		_grant_player_pickups(player)
-	rule_vm.notify_every_ticks()
+	TraprushMatchSimGd.advance(self)
 
 
 func commit_tick() -> void:
-	live_patch.call("try_apply_pending", self)
-	apply_player_falls()
-	advance_sim_tick()
+	TraprushMatchSimGd.commit(self)
 
 
 func enable_play_range(half: int) -> void:
@@ -324,65 +297,12 @@ func _reset_player_if_out_of_range(player: Dictionary) -> bool:
 	return scan.reset_player_if_out_of_range(self, player)
 
 
-func _player_capsule_ids() -> PackedInt32Array:
-	var ids: PackedInt32Array = PackedInt32Array()
-	for player: Dictionary in _players:
-		var capsule_id: int = player["capsule_id"]
-		ids.append(capsule_id)
-	return ids
-
-
-func _reset_capsules(ids: PackedInt32Array) -> void:
-	for capsule_id: int in ids:
-		for player: Dictionary in _players:
-			var player_id: int = player["capsule_id"]
-			if player_id == capsule_id:
-				scan.reset_player_to_pad(self, player)
-				break
-
-
-func _apply_movers() -> void:
-	var blocked: PackedInt32Array = MoverCycle.apply(
-		_world, _mover_cycle, _player_capsule_ids(), support_dy
-	)
-	_reset_capsules(blocked)
-	scan.apply_crushers(self)
-	scan.apply_pendulums(self)
-
-
-func _apply_slides() -> void:
-	var ids: PackedInt32Array = _player_capsule_ids()
-	if conveyor_step > 0:
-		ConveyorCycle.apply(_world, _conveyor_cycle, ids, support_dy, conveyor_step)
-	if ice_step > 0:
-		ConveyorCycle.apply(_world, _ice_cycle, ids, support_dy, ice_step)
-
-
 func conveyor_count() -> int:
 	return _conveyor_cycle.size()
 
 
 func launch_count() -> int:
 	return _launch_cycle.size()
-
-
-func _apply_launches() -> void:
-	if _launch_cycle.is_empty():
-		return
-	if launch_dy <= 0 and launch_xz <= 0:
-		return
-	_launch_supported = LaunchCycle.apply(
-		_world, _launch_cycle, _player_capsule_ids(), support_dy,
-		launch_dy, launch_xz, _launch_supported
-	)
-
-
-func _apply_gates() -> void:
-	if _gate_cycle.is_empty():
-		return
-	_reset_capsules(GateCycle.apply(
-		_world, _switch_cycle, _gate_cycle, _player_capsule_ids(), support_dy
-	))
 
 
 func _resolve_player_hazards(player: Dictionary) -> bool:

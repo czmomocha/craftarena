@@ -24,6 +24,8 @@ func apply(session: TraprushMatchSession, slot: int, payload: Dictionary) -> boo
 	var player: Dictionary = session._player_at(slot)
 	if player.is_empty():
 		return false
+	if session.tick_index() < session.go_tick:
+		return false
 	var reset_ok: bool = CheckpointSpawn.is_reset_intent(payload)
 	if session._player_stunned(player) and not reset_ok:
 		return false

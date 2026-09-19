@@ -18,6 +18,7 @@ const OfficialBastionBlueprintsGd := preload("res://src/shared/official_bastion_
 const ServerEndpointGd := preload("res://src/client/server_endpoint.gd")
 const SettlementPanelGd := preload("res://src/shared/match_settlement_panel.gd")
 const PlaySplitTrackerGd := preload("res://src/shared/play_split_tracker.gd")
+const TraprushReplayEntryGd := preload("res://src/client/traprush_replay_entry.gd")
 
 const TITLE: String = MatchLobbyChromeGd.TITLE
 const WINDOW_SIZE: Vector2i = MatchLobbyChromeGd.WINDOW_SIZE
@@ -66,6 +67,7 @@ var plaza: ContentPlazaEntry = null
 var account: AccountEntry = null
 var settings: AudioSettingsEntry = null
 var character_select: CharacterSelectEntry = null
+var replay_records: TraprushReplayEntryGd = null
 var home_screen: Control = null
 var home_surface: String = ""
 var window: Window = null
@@ -170,6 +172,8 @@ func try_poll() -> bool:
 	return director.try_poll()
 func try_solo() -> bool:
 	return director.try_solo()
+func try_begin_replay(tape: Dictionary) -> bool:
+	return director.try_begin_replay(tape)
 func try_open_creator() -> bool:
 	creator = CreatorEntry.ensure(self, creator)
 	return creator != null and creator.try_open()
@@ -186,6 +190,8 @@ func try_show_home() -> bool:
 	return MatchLobbyHomeGd.try_show_home(self)
 func try_show_character_select() -> bool:
 	return MatchLobbyHomeGd.try_show_character_select(self)
+func try_show_replay() -> bool:
+	return MatchLobbyHomeGd.try_show_replay(self)
 func try_enter_channel(gameplay: String) -> bool:
 	return MatchLobbyHomeGd.try_enter_channel(self, gameplay)
 func hide_for_overlay() -> void:
@@ -247,6 +253,8 @@ func fps_label_text() -> String:
 	return chrome.fps_text()
 func clock_label_text() -> String:
 	return chrome.clock_text()
+func countdown_label_text() -> String:
+	return chrome.countdown_text()
 func split_label_text() -> String:
 	return chrome.split_text()
 func guide_label_text() -> String:

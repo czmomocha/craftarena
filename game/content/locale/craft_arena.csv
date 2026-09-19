@@ -13,6 +13,14 @@ craft_arena.ui.apply_server,Apply server,应用服务器
 craft_arena.ui.server_host,Host[:port],主机[:端口]
 craft_arena.ui.room_code,Room code,房间码
 craft_arena.ui.offline_banner,"Offline play, scores are not uploaded",离线试玩，成绩不上传
+craft_arena.ui.countdown_wait,Waiting for opponent,等待对手
+craft_arena.ui.countdown_go,GO,开始
+craft_arena.ui.replay_banner,Replay,回放中
+craft_arena.ui.replay_title,Match records,对局记录
+craft_arena.ui.replay_subtitle,Finish to save. Replay is read-only.,冲线后才保存。回放只读。
+craft_arena.ui.replay_empty,No records yet.,还没有对局记录。
+craft_arena.ui.replay_local,Solo,本机
+craft_arena.ui.replay_online,Online,双人
 craft_arena.ui.undo,Undo,撤销
 craft_arena.ui.redo,Redo,重做
 craft_arena.ui.preview,Preview,预览
@@ -138,6 +146,7 @@ craft_arena.s1.enter,ENTER,进入频道 ENTER
 craft_arena.s1.bastion_title,BASTION,BASTION + 双塔要塞
 craft_arena.s1.bastion_desc,"Place hidden obstacles before the match, build towers during it, and break the enemy cores first",赛前互设障碍布阵，赛中建造炮塔，先破对方双塔者胜
 craft_arena.s1.nav_character,Character,角色选择
+craft_arena.s1.nav_replay,Records,对局记录
 craft_arena.s1.nav_my_content,My Content,我的内容
 craft_arena.s1.nav_workshop,Public Workshop,公共内容广场
 craft_arena.s1.nav_settings,Settings,设置

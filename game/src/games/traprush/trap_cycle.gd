@@ -97,15 +97,18 @@ static func spike_hits(
 
 
 static func flame_hits(
-	world: SimulationWorld, flames: Array[Dictionary], capsule_ids: PackedInt32Array
+	world: SimulationWorld, flames: Array[Dictionary], capsule_ids: PackedInt32Array, tick_index: int = -1
 ) -> PackedInt32Array:
 	var hits: PackedInt32Array = PackedInt32Array()
 	if world == null or flames.is_empty():
 		return hits
+	var tick: int = tick_index
+	if tick < 0:
+		tick = world.tick_index
 	for capsule_id: int in capsule_ids:
 		for flame: Dictionary in flames:
 			var cooldown_ticks: int = flame["cooldown_ticks"]
-			if not TraprushHazardCycle.is_solid(world.tick_index, cooldown_ticks):
+			if not TraprushHazardCycle.is_solid(tick, cooldown_ticks):
 				continue
 			var box_id: int = flame["box_id"]
 			if world.overlaps_static_box(capsule_id, box_id):

@@ -18,6 +18,7 @@
 | 命令 id | TRAPRUSH：1–5 同前；**6 = SprintIntent**。探针 type 3/4 = ping/pong。**BASTION**（2026-09-15，M6 E1）：type **5/6** 新帧，intent id **7–12**；不升协议大版本。来源见 [CD-91 D.4](../90-reference/91-decision-log.md) `bastion_realtime_frames` |
 | Tick / 快照 / 插值 | **已锁（2026-09-02，E3）**：近端 ICMP 与一场协议层样本未证伪现桩，人类把现桩升为锁定值，**不改代码常量**。数字见 §4。远端样本只在 [server-deploy.md §13](../../docs/runbooks/server-deploy.md#13-协议层-rttc3) |
 | 匹配 JSON | **已交（M5 C4）**：可选 `content` 对象；二进制帧不变。字段形状只在 [CD-42 §3.5](42-contracts-and-rulevm.md#35-匹配与玩家发布-httpc3-已接线c4-已接线) |
+| 玩家回放磁带 | **已交（2026-09-19，R2）**：命令日志 + `go_tick` + `content_hash` 重仿真。不是快照流、不是录像。契约 `backend/contracts/src/traprush_replay.ts`。角色网格不进磁带（[CD-12](../10-product/12-product-structure.md)） |
 
 ## 1. 序列化分工
 
@@ -56,6 +57,8 @@
 - Godot 浮点物理与视觉节点不参与关键状态哈希。
 
 实现落点（2026-08-24）：对局进程在本场端口监听 WebSocket（`match_server.gd`），连接经 `MatchRealtime` 映射到槽位（网关带上的 `slot` 走 `occupy_slot`，缺席位时按需占用最小空槽；非法或已占用席位拒绝，不回落到最低空槽；断开释放占用、仿真进度保留，同一席位可再占用；满员拒绝）；二进制命令帧（§1 布局）解码后 FIFO 排队，**每占用槽位每个 commit_tick 至多一条**（先到先得，后到拒绝），在服务端自己的 commit_tick 边界按到达顺序应用——命令帧里的 tick 只解码、不信任，服务端 tick 权威；断开丢弃该槽已排队命令。快照帧不能当命令。每 2 个引擎 tick 广播一帧二进制快照（锁定节奏，见 §4）。快照含全部已配置槽位（含未占用）与可破坏箱耐久。全部配置玩家冲线后，心跳 JSON 带上单局结算记录；心跳另含 `valid_input_tick`（最近一次通过校验且改变权威状态的真人命令所在 tick，从未发生为 -1），MatchHost 仅在该值前进时续租，心跳本身不续租，见 [CD-44 §3](44-deployment.md#3-进程隔离与租约)。墙钟发送速率由 60 tick/s 与锁定间隔导出（§4）。对局会话另拒绝 |dx| 或 |dz| 超过 `Fixed.SCALE` 的 Move（每命令一格，超限整条不应用），见 [CD-21 §8](../20-gameplay/21-traprush.md#8-网络与仿真基线)。Shove 无线上目标 id：会话在一格邻域内选最近其它胶囊，沿 XZ 远离施术者用调用方 `shove_step` 推开；`shove_step` 超过 `Fixed.SCALE` 则整条拒绝。出界复位：`range_enabled` 时调用方 AABB 外写回最近检查点；boot / Solo 打开 ±8 格桩，不是产品场地。`commit_tick` 在 `world.tick()` 之后经 `TraprushHazardCycle` 按已有 `cooldown_ticks` 切换 hazard 固体；lease 比较仍在 tick 前，周期机关切换不单独续租。意图不推进 tick。官方赛道各 1 个机关。
+
+产品回放库（2026-09-19）：磁带最小集是 `schema_version` / `course_id` / `official_path` / `content_hash` / `seed` / `go_tick` / `seats` / 已应用命令（`tick` `slot` `intent_id` `dx` `dz` `yaw_bam`）/ 各席 `finish_ticks`（相对 racing 起点）。权威在成功 `apply` 时追加；全员冲线才序列化。MatchHost 从对局进程 `--replay-out=` 文件读完再 POST 控制面（心跳仍只走结算）。客户端不上传双人磁带。哈希或课对不上：列表可点、进入时报错返回。不做暂停 / 倍速 / 拖进度 / 分享码 / BASTION 回放。
 
 ## 4. 已锁定的网络参数
 

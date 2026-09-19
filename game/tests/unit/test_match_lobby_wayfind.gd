@@ -15,6 +15,11 @@ func after_each() -> void:
 	_shell = null
 
 
+func _try_solo() -> void:
+	assert_true(_shell.try_solo())
+	_shell.offline.skip_opening_countdown()
+
+
 func _open_shell() -> MatchLobbyShellGd:
 	var shell: MatchLobbyShellGd = MatchLobbyShellGd.create()
 	add_child(shell)
@@ -31,7 +36,7 @@ func test_idle_lobby_shows_no_guide_at_all() -> void:
 
 func test_solo_play_publishes_the_next_target_on_every_readout() -> void:
 	_shell = _open_shell()
-	assert_true(_shell.try_solo())
+	_try_solo()
 	var line: String = _shell.status_label_text()
 	assert_true(line.contains("next="), line)
 	assert_true(line.contains("cp"), "首个目标是 order 与已验收数相等的那块垫")
@@ -42,7 +47,7 @@ func test_solo_play_publishes_the_next_target_on_every_readout() -> void:
 
 func test_guide_arrow_points_horizontally_and_sits_above_the_head() -> void:
 	_shell = _open_shell()
-	assert_true(_shell.try_solo())
+	_try_solo()
 	var guide: MeshInstance3D = _shell.map.guide_node(0)
 	assert_not_null(guide)
 	if guide == null:
@@ -54,7 +59,7 @@ func test_guide_arrow_points_horizontally_and_sits_above_the_head() -> void:
 
 func test_leaving_play_drops_the_guide_and_the_token() -> void:
 	_shell = _open_shell()
-	assert_true(_shell.try_solo())
+	_try_solo()
 	assert_eq(_shell.map.guide_count(), 1)
 	assert_true(_shell.try_stop_offline())
 	assert_eq(_shell.map.guide_count(), 0)
@@ -64,7 +69,7 @@ func test_leaving_play_drops_the_guide_and_the_token() -> void:
 
 func test_camera_snaps_on_the_first_frame_and_glides_only_after_a_jump() -> void:
 	_shell = _open_shell()
-	assert_true(_shell.try_solo())
+	_try_solo()
 	# 入局第一帧直接就位——那不是跳变，是「还没有锚点」。
 	assert_false(_shell.map.camera_teleport_active())
 	var player: MeshInstance3D = _shell.map.player_node(0)

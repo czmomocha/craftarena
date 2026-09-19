@@ -232,6 +232,7 @@ func test_solo_shell_opens_course_f_playable() -> void:
 	assert_eq(shell.join.error, "http_official_only")
 	assert_true(shell.status_label_text().contains("error=http_official_only"))
 	assert_true(shell.try_solo(), shell.offline.last_error)
+	shell.offline.skip_opening_countdown()
 	assert_eq(shell.offline.state, MatchOfflineSessionGd.STATE_PLAYING)
 	assert_false(shell.status_label_text().contains("error=http_official_only"))
 	assert_eq(shell.course.pad_count(), 2)

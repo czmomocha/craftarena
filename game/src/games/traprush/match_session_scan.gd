@@ -205,7 +205,10 @@ func resolve_player_hazards(session: TraprushMatchSession, player: Dictionary) -
 		), PlaySetback.HAZARD
 	) or _reset_if_listed(
 		session, player, TrapCycle.flame_hits(
-			session._world, session._flame_cycle, _capsule_ids(session)
+			session._world,
+			session._flame_cycle,
+			_capsule_ids(session),
+			maxi(0, session.tick_index() - session.go_tick)
 		), PlaySetback.HAZARD
 	)
 

@@ -16,6 +16,7 @@ const COLLABORATOR_PATHS: PackedStringArray = [
 	"res://src/client/match_lobby_course_select.gd",
 	"res://src/client/match_lobby_director.gd",
 	"res://src/client/match_lobby_director_join.gd",
+	"res://src/client/match_lobby_director_replay.gd",
 	"res://src/client/match_lobby_hud.gd",
 	"res://src/client/match_lobby_net.gd",
 	"res://src/client/match_lobby_sampler.gd",

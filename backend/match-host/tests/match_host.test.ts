@@ -8,6 +8,7 @@ import type {
 	MatchmakingJoinResponse,
 	MatchSettlementResponse,
 	RecordMatchSettlementRequest,
+	RecordMatchReplayRequest,
 	VerifyMatchTicketSuccess,
 } from "../../contracts/src/index.ts";
 import { ControlPlaneDatabase } from "../../control-plane/src/db/database.ts";
@@ -180,6 +181,12 @@ describe("godot process launcher args", () => {
 		});
 		assert.ok(overridden.includes("--course=res://content/official/traprush/course_03.json"));
 		assert.ok(overridden.includes("--players=8"));
+		const withReplay = launcher.buildArgs({
+			matchId: "m-1",
+			port: 42000,
+			replayOutPath: "/tmp/replay.json",
+		});
+		assert.ok(withReplay.includes("--replay-out=/tmp/replay.json"));
 
 		assert.ok(args.includes("--match-id=m-1"));
 		assert.ok(args.includes("--port=42000"));
@@ -219,6 +226,7 @@ class FakeRegistrar implements MatchSessionRegistrar {
 	readonly registered: MatchSessionRegisterSpec[] = [];
 	readonly unregistered: string[] = [];
 	readonly settlements: { matchId: string; payload: RecordMatchSettlementRequest }[] = [];
+	readonly replays: { matchId: string; payload: RecordMatchReplayRequest }[] = [];
 	failWith: Error | undefined;
 	unregisterFailWith: Error | undefined;
 	settlementFailWith: Error | undefined;
@@ -240,6 +248,10 @@ class FakeRegistrar implements MatchSessionRegistrar {
 			throw this.settlementFailWith;
 		}
 		this.settlements.push({ matchId, payload });
+	}
+
+	async recordReplay(matchId: string, payload: RecordMatchReplayRequest): Promise<void> {
+		this.replays.push({ matchId, payload });
 	}
 
 	async unregister(matchId: string): Promise<void> {

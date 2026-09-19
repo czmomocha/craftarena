@@ -27,6 +27,7 @@ import {
 import { isMatchId, parseUpstreamUrl } from "./tickets.ts";
 import { hasRequestBody, hasUnexpectedKeys } from "./server_matchmaking.ts";
 import { registerSettlementRoutes } from "./server_settlement.ts";
+import { readIdentityOptional } from "./server_identity.ts";
 import type { BuildServerOptions, MatchIdParams } from "./server.ts";
 
 export function registerSessionRoutes(
@@ -250,7 +251,12 @@ export function registerSessionRoutes(
 			}
 
 			try {
-				const issued = options.database.issueTicket(request.params.matchId, now(), ticketTtlMs);
+				const issued = options.database.issueTicket(
+					request.params.matchId,
+					now(),
+					ticketTtlMs,
+					readIdentityOptional(options, request),
+				);
 				reply.code(201);
 				const body: IssueMatchTicketResponse = {
 					ticket: issued.ticket,

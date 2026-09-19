@@ -161,6 +161,8 @@ const UI_BASE_SIZE: Vector2i = Vector2i(1920, 1080)
 const HUD_CLOCK_FONT_SIZE: int = 28
 const HUD_SPLIT_FONT_SIZE: int = 16
 const HUD_STATUS_FONT_SIZE: int = 13
+## 开局倒计时中央数字。占位字号，不是产品字体。
+const HUD_COUNTDOWN_FONT_SIZE: int = 96
 ## 对局窗状态行 / FPS / 局内读出默认字色。可在设置里用调色板覆盖。
 const HUD_TEXT_COLOR: Color = Color.BLACK
 ## 对局窗按钮默认字色。可在设置里用调色板覆盖。

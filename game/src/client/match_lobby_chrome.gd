@@ -248,6 +248,10 @@ func clock_text() -> String:
 	return play_hud.clock_text()
 
 
+func countdown_text() -> String:
+	return play_hud.countdown_text()
+
+
 func split_text() -> String:
 	return play_hud.split_text()
 

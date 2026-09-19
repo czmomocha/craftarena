@@ -13,14 +13,16 @@ extends GutTest
 const UiCopyGd := preload("res://src/shared/ui_copy.gd")
 const UiCopyS1Gd := preload("res://src/shared/ui_copy_s1.gd")
 const UiCopyCharGd := preload("res://src/shared/ui_copy_char.gd")
+const UiCopyPlayGd := preload("res://src/shared/ui_copy_play.gd")
 
 const S1_SCENE: String = "res://src/client/ui/scenes/s1_lobby.tscn"
 const S3_SCENE: String = "res://src/client/ui/scenes/s3_workshop.tscn"
 const CARD_SCENE: String = "res://src/client/ui/scenes/components/content_card.tscn"
 const CHAR_SCENE: String = "res://src/client/ui/scenes/character_select.tscn"
+const REPLAY_SCENE: String = "res://src/client/ui/scenes/traprush_replay.tscn"
 
 ## 已迁移：这些场景的 `text` / `placeholder_text` 必须零中文。
-const MIGRATED_SCENES: Array[String] = [S1_SCENE, S3_SCENE, CARD_SCENE, CHAR_SCENE]
+const MIGRATED_SCENES: Array[String] = [S1_SCENE, S3_SCENE, CARD_SCENE, CHAR_SCENE, REPLAY_SCENE]
 
 ## 未迁移：第三批。列在这里是为了让「还欠着什么」可执行，
 ## 迁完一个就从这里挪到上面那个数组。
@@ -38,6 +40,7 @@ const S1_KEYS: Array[String] = [
 	UiCopyS1Gd.BASTION_TITLE,
 	UiCopyS1Gd.BASTION_DESC,
 	UiCopyS1Gd.NAV_CHARACTER,
+	UiCopyS1Gd.NAV_REPLAY,
 	UiCopyS1Gd.NAV_MY_CONTENT,
 	UiCopyS1Gd.NAV_WORKSHOP,
 	UiCopyS1Gd.NAV_SETTINGS,
@@ -71,6 +74,15 @@ const CHAR_KEYS: Array[String] = [
 	UiCopyCharGd.NAME_CAT,
 	UiCopyCharGd.NAME_RUNNER,
 	UiCopyCharGd.NAME_ROBOT,
+]
+
+const PLAY_KEYS: Array[String] = [
+	UiCopyPlayGd.REPLAY_TITLE,
+	UiCopyPlayGd.REPLAY_SUBTITLE,
+	UiCopyPlayGd.REPLAY_EMPTY,
+	UiCopyPlayGd.REPLAY_LOCAL,
+	UiCopyPlayGd.REPLAY_ONLINE,
+	UiCopyPlayGd.REPLAY_BANNER,
 ]
 
 
@@ -130,6 +142,7 @@ func test_new_keys_resolve_in_both_locales() -> void:
 	keys.append_array(S3_KEYS)
 	keys.append_array(CARD_KEYS)
 	keys.append_array(CHAR_KEYS)
+	keys.append_array(PLAY_KEYS)
 	for key: String in keys:
 		for locale: String in ["en", "zh_CN"]:
 			var value: String = UiCopyGd.text(key, locale)
@@ -175,6 +188,12 @@ func test_s1_fills_its_chrome_at_runtime() -> void:
 	assert_not_null(workshop, "S1 广场导航路径变了")
 	if workshop != null:
 		assert_eq(workshop.text, UiCopyGd.text(UiCopyS1Gd.NAV_WORKSHOP))
+	var replay: Label = root.get_node_or_null(
+		"Layout/Main/Columns/NavColumn/NavReplay/Row/Texts/Zh"
+	) as Label
+	assert_not_null(replay, "S1 对局记录导航路径变了")
+	if replay != null:
+		assert_eq(replay.text, UiCopyGd.text(UiCopyS1Gd.NAV_REPLAY))
 
 
 func test_character_select_fills_its_chrome_at_runtime() -> void:
@@ -192,6 +211,23 @@ func test_character_select_fills_its_chrome_at_runtime() -> void:
 	assert_not_null(grid)
 	if grid != null:
 		assert_eq(grid.get_child_count(), SharedCharacterCatalog.all_ids().size())
+
+
+func test_replay_fills_its_chrome_at_runtime() -> void:
+	var packed: PackedScene = load(REPLAY_SCENE) as PackedScene
+	assert_not_null(packed, "对局记录场景必须能加载")
+	if packed == null:
+		return
+	var root: Node = packed.instantiate()
+	add_child_autofree(root)
+	var title: Label = root.get_node_or_null("Layout/TopBar/Row/TitleBox/Title") as Label
+	assert_not_null(title, "对局记录标题节点路径变了")
+	if title != null:
+		assert_eq(title.text, UiCopyGd.text(UiCopyPlayGd.REPLAY_TITLE), "标题没有从 UiCopy 填上")
+	var empty: Label = root.get_node_or_null("Layout/Main/Empty") as Label
+	assert_not_null(empty)
+	if empty != null:
+		assert_eq(empty.text, UiCopyGd.text(UiCopyPlayGd.REPLAY_EMPTY))
 
 
 func test_s3_fills_its_chrome_at_runtime() -> void:
@@ -281,6 +317,7 @@ func test_demo_entries_are_not_in_the_locale_table() -> void:
 	var keys: PackedStringArray = UiCopyGd.ALL_KEYS.duplicate()
 	keys.append_array(UiCopyS1Gd.ALL_KEYS)
 	keys.append_array(UiCopyCharGd.ALL_KEYS)
+	keys.append_array(UiCopyPlayGd.ALL_KEYS)
 	for key: String in keys:
 		table_titles.append(UiCopyGd.text(key, "zh_CN"))
 	for entry: Dictionary in entries:

@@ -1,4 +1,6 @@
 import { randomUUID } from "node:crypto";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 
 import type { MatchContentRef } from "../../contracts/src/match_body.ts";
 import {
@@ -55,6 +57,7 @@ export interface StartedMatch {
 	readonly contentHash?: string | undefined;
 	readonly process: LaunchedProcess;
 	readonly envelopePath?: string | undefined;
+	readonly replayOutPath?: string | undefined;
 }
 
 export async function launchRegisteredMatch(
@@ -65,12 +68,14 @@ export async function launchRegisteredMatch(
 	const port = ctx.ports.allocate();
 	let process: LaunchedProcess | undefined;
 	let envelopePath: string | undefined;
+	let replayOutPath: string | undefined;
 	let upstreamUrl: string;
 	let content: MatchContentRef | undefined;
 	let contentHash: string | undefined;
 	try {
 		const launch = await resolveLaunch(ctx, matchId, port, plan);
 		envelopePath = launch.envelopePath;
+		replayOutPath = launch.replayOutPath;
 		content = launch.content;
 		contentHash = launch.contentHash;
 		upstreamUrl = buildMatchUpstreamUrl(ctx.upstreamHost, port);
@@ -115,6 +120,7 @@ export async function launchRegisteredMatch(
 		contentHash,
 		process,
 		envelopePath,
+		replayOutPath,
 	};
 }
 
@@ -124,7 +130,8 @@ interface ResolvedLaunch {
 	readonly blueprint?: OfficialBastionBlueprintId;
 	readonly content?: MatchContentRef;
 	readonly contentHash?: string;
-	readonly envelopePath?: string;
+	readonly envelopePath?: string | undefined;
+	readonly replayOutPath?: string | undefined;
 }
 
 async function resolveLaunch(
@@ -134,14 +141,17 @@ async function resolveLaunch(
 	plan: MatchStartPlan,
 ): Promise<ResolvedLaunch> {
 	if (plan.kind === "official") {
+		const replayOutPath = join(tmpdir(), `craftarena-replay-${matchId}.json`);
 		return {
 			spec: {
 				matchId,
 				port,
 				course: officialTraprushCoursePath(plan.course),
 				players: plan.seats,
+				replayOutPath,
 			},
 			course: plan.course,
+			replayOutPath,
 		};
 	}
 	if (plan.kind === "blueprint") {

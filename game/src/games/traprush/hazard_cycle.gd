@@ -56,9 +56,12 @@ static func entries_from(hazards: Array, hazard_ids: Dictionary) -> Array[Dictio
 	return entries
 
 
-static func apply(world: SimulationWorld, entries: Array) -> bool:
+static func apply(world: SimulationWorld, entries: Array, tick_index: int = -1) -> bool:
 	if world == null:
 		return false
+	var tick: int = tick_index
+	if tick < 0:
+		tick = world.tick_index
 	for item: Variant in entries:
 		if typeof(item) != TYPE_DICTIONARY:
 			return false
@@ -69,6 +72,6 @@ static func apply(world: SimulationWorld, entries: Array) -> bool:
 			return false
 		var box_id: int = entry["box_id"]
 		var cooldown_ticks: int = entry["cooldown_ticks"]
-		if not world.set_static_box_solid(box_id, is_solid(world.tick_index, cooldown_ticks)):
+		if not world.set_static_box_solid(box_id, is_solid(tick, cooldown_ticks)):
 			return false
 	return true

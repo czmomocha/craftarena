@@ -88,6 +88,7 @@ const reclaimTimer = setInterval(() => {
 	void (async () => {
 		try {
 			await registry.flushSettlements();
+			await registry.flushReplays();
 		} catch (error: unknown) {
 			server.log.error({ error }, "failed to flush live settlements");
 		}

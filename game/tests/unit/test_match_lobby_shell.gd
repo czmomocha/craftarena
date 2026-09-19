@@ -29,6 +29,7 @@ const TraprushTopologyCompiler := preload("res://src/ugc/traprush_topology_compi
 const AuthoringWorld := preload("res://src/creator/authoring_world.gd")
 const PlayerIntentNames := preload("res://src/shared/commands/player_intent_names.gd")
 const TraprushPlayStubs := preload("res://src/games/traprush/play_stubs.gd")
+const RACING_TICK: int = TraprushPlayStubs.COUNTDOWN_TICKS
 
 var _shell: MatchLobbyShell = null
 
@@ -207,7 +208,7 @@ func test_hud_buttons_do_not_steal_space_and_window_is_dev_default() -> void:
 	assert_not_null(solo)
 	assert_eq(solo.focus_mode, Control.FOCUS_NONE)
 	assert_false(solo.has_focus())
-	assert_true(_shell.try_solo())
+	_try_solo()
 	assert_false(solo.has_focus())
 	var room: LineEdit = _shell.window.find_child(MatchLobbyShell.ROOM_NAME, true, false)
 	assert_not_null(room)
@@ -234,7 +235,7 @@ func test_line_edit_focus_releases_outside_fields_and_on_play_actions() -> void:
 	hit.position = seats.get_global_rect().get_center()
 	_shell.handle_window_input(hit)
 	assert_true(seats.has_focus())
-	assert_true(_shell.try_solo())
+	_try_solo()
 	assert_false(seats.has_focus())
 	_shell.try_cancel()
 	var course: OptionButton = _shell.window.find_child(MatchLobbyShell.COURSE_ID_NAME, true, false)
@@ -493,7 +494,7 @@ func test_buttons_exist_and_live_io_stays_off_in_tests() -> void:
 
 func test_solo_play_maps_local_authority_without_http() -> void:
 	_shell = _open_shell()
-	assert_true(_shell.try_solo())
+	_try_solo()
 	assert_eq(_shell.offline.state, MatchOfflineSession.STATE_PLAYING)
 	assert_eq(_shell.join.state, MatchJoinSession.STATE_IDLE)
 	assert_false(_shell.join.has_pending())
@@ -524,7 +525,7 @@ func test_solo_play_maps_local_authority_without_http() -> void:
 func test_solo_allows_web_and_refuses_online_busy() -> void:
 	_shell = _open_shell()
 	_shell.web_platform = true
-	assert_true(_shell.try_solo())
+	_try_solo()
 	assert_eq(_shell.offline.state, MatchOfflineSession.STATE_PLAYING)
 	assert_eq(_shell.offline.last_error, "")
 	assert_gt(_shell.map.player_count(), 0)
@@ -606,7 +607,7 @@ func test_selected_seats_are_sent_and_invalid_counts_rejected() -> void:
 func test_solo_uses_selected_official_course() -> void:
 	_shell = _open_shell()
 	_shell.set_course_id_text("course_03")
-	assert_true(_shell.try_solo())
+	_try_solo()
 	assert_eq(_shell.offline.state, MatchOfflineSession.STATE_PLAYING)
 	assert_eq(_shell.course.pad_count(), 4)
 	assert_eq(_shell.orders.checkpoint_count(), 4)
@@ -683,7 +684,7 @@ func test_own_slot_move_predicts_until_newer_snapshot() -> void:
 	assert_true(_shell.try_quick())
 	assert_true(_shell.accept_http(201, _join("ABCD23", "ticket-predict")))
 	assert_true(_shell.on_socket_open())
-	assert_true(_shell.on_binary(_snapshot(1, 0, [_crate(40, 1)])))
+	assert_true(_shell.on_binary(_snapshot(RACING_TICK, 0, [_crate(40, 1)])))
 	assert_almost_eq(_shell.map.player_node(0).position.x, 0.0, 0.0001)
 	var step: float = float(_shell.play_move_step) / float(Fixed.SCALE)
 	var move: PackedByteArray = _shell.try_sample_play_move(false, false, false, true)
@@ -691,12 +692,12 @@ func test_own_slot_move_predicts_until_newer_snapshot() -> void:
 	assert_almost_eq(_shell.map.player_node(0).position.x, step, 0.0001)
 	assert_almost_eq(_shell.standings.standing_node(0).position.x, step, 0.0001)
 	assert_eq(_shell.crates.crate_count(), 1)
-	assert_true(_shell.on_binary(_snapshot(2, 0, [_crate(40, 1)])))
+	assert_true(_shell.on_binary(_snapshot(RACING_TICK + 1, 0, [_crate(40, 1)])))
 	assert_almost_eq(_shell.map.player_node(0).position.x, 0.0, 0.0001)
 	assert_eq(_shell.play.predict.dx, 0)
 	assert_false(_shell.try_sample_play_move(false, false, false, true).is_empty())
 	assert_almost_eq(_shell.map.player_node(0).position.x, step, 0.0001)
-	assert_true(_shell.on_binary(_snapshot(3, _shell.play_move_step, [_crate(40, 1)])))
+	assert_true(_shell.on_binary(_snapshot(RACING_TICK + 2, _shell.play_move_step, [_crate(40, 1)])))
 	assert_almost_eq(_shell.map.player_node(0).position.x, step, 0.0001)
 	assert_eq(_shell.play.predict.dx, 0)
 	_shell.play.play_jump_dy = Fixed.SCALE
@@ -711,7 +712,7 @@ func test_online_overlay_stops_on_live_crate_then_passes_when_broken() -> void:
 	assert_true(_shell.try_quick())
 	assert_true(_shell.accept_http(201, _join("ABCD23", "ticket-crate-solid")))
 	assert_true(_shell.on_socket_open())
-	assert_true(_shell.on_binary(_snapshot(1, 0, [_crate(40, 1)])))
+	assert_true(_shell.on_binary(_snapshot(RACING_TICK, 0, [_crate(40, 1)])))
 	assert_eq(_shell.crates.crate_count(), 1)
 	assert_eq(_shell.crates.live_solid_boxes().size(), 1)
 	var steps: int = 0
@@ -720,7 +721,7 @@ func test_online_overlay_stops_on_live_crate_then_passes_when_broken() -> void:
 		steps += 1
 	assert_gt(_shell.play.predict.dz, 0)
 	assert_almost_eq(_shell.map.player_node(0).position.z, 0.0, 0.0001)
-	assert_true(_shell.on_binary(_snapshot(2, 0, [_crate(40, 0)])))
+	assert_true(_shell.on_binary(_snapshot(RACING_TICK + 1, 0, [_crate(40, 0)])))
 	assert_eq(_shell.crates.crate_count(), 0)
 	assert_eq(_shell.play.predict.dz, 0)
 	steps = 0
@@ -735,7 +736,7 @@ func test_online_overlay_stops_on_latest_remote_capsule() -> void:
 	assert_true(_shell.try_quick())
 	assert_true(_shell.accept_http(201, _join("ABCD23", "ticket-remote-solid")))
 	assert_true(_shell.on_socket_open())
-	assert_true(_shell.on_binary(_two_player_snapshot(1, 0, Fixed.SCALE, [_crate(40, 1)])))
+	assert_true(_shell.on_binary(_two_player_snapshot(RACING_TICK, 0, Fixed.SCALE, [_crate(40, 1)])))
 	var remote_steps: int = 0
 	while remote_steps < 20:
 		assert_false(_shell.try_sample_play_move(false, false, false, true).is_empty())
@@ -750,7 +751,7 @@ func test_online_overlay_stops_on_solid_hazard_then_passes_when_open() -> void:
 	assert_true(_shell.try_quick())
 	assert_true(_shell.accept_http(201, _join("ABCD23", "ticket-hazard-solid")))
 	assert_true(_shell.on_socket_open())
-	assert_true(_shell.on_binary(_snapshot(0, 0, [_crate(40, 1)])))
+	assert_true(_shell.on_binary(_snapshot(RACING_TICK, 0, [_crate(40, 1)])))
 	assert_true(_shell.hazards.apply_bundle(_one_hazard_bundle(1)))
 	assert_eq(_shell.hazards.hazard_count(), 1)
 	assert_eq(_shell.hazards.live_solid_boxes().size(), 1)
@@ -760,7 +761,7 @@ func test_online_overlay_stops_on_solid_hazard_then_passes_when_open() -> void:
 		steps += 1
 	assert_gt(_shell.play.predict.dx, 0)
 	assert_almost_eq(_shell.map.player_node(0).position.x, 0.0, 0.0001)
-	assert_true(_shell.on_binary(_snapshot(1, 0, [_crate(40, 1)])))
+	assert_true(_shell.on_binary(_snapshot(RACING_TICK + 1, 0, [_crate(40, 1)])))
 	assert_eq(_shell.hazards.hazard_count(), 0)
 	assert_eq(_shell.play.predict.dx, 0)
 	steps = 0
@@ -775,7 +776,7 @@ func test_online_overlay_stops_on_always_solid() -> void:
 	assert_true(_shell.try_quick())
 	assert_true(_shell.accept_http(201, _join("ABCD23", "ticket-solid-block")))
 	assert_true(_shell.on_socket_open())
-	assert_true(_shell.on_binary(_snapshot(0, 0, [_crate(40, 1)])))
+	assert_true(_shell.on_binary(_snapshot(RACING_TICK, 0, [_crate(40, 1)])))
 	assert_true(_shell.solids.apply_bundle(_one_solid_bundle()))
 	assert_eq(_shell.solids.solid_count(), 1)
 	assert_eq(_shell.solids.live_solid_boxes().size(), 1)
@@ -792,7 +793,7 @@ func test_online_overlay_stops_on_official_solid() -> void:
 	assert_true(_shell.try_quick())
 	assert_true(_shell.accept_http(201, _join("ABCD23", "ticket-official-solid")))
 	assert_true(_shell.on_socket_open())
-	assert_true(_shell.on_binary(_snapshot(0, 0, [_crate(40, 1)])))
+	assert_true(_shell.on_binary(_snapshot(RACING_TICK, 0, [_crate(40, 1)])))
 	assert_eq(_shell.solids.solid_count(), 41)
 	assert_eq(_shell.solids.live_solid_boxes().size(), 41)
 	var steps: int = 0
@@ -805,7 +806,7 @@ func test_online_overlay_stops_on_official_solid() -> void:
 
 func test_offline_solo_does_not_stack_local_predict_overlay() -> void:
 	_shell = _open_shell()
-	assert_true(_shell.try_solo())
+	_try_solo()
 	assert_eq(_shell.play.state, MatchPlaySession.STATE_IDLE)
 	assert_eq(_shell.play.predict.own_slot, -1)
 	var origin_x: float = _shell.map.player_node(0).position.x
@@ -820,7 +821,7 @@ func test_offline_solo_does_not_stack_local_predict_overlay() -> void:
 func test_solo_camera_follows_local_player_and_cancel_resets() -> void:
 	_shell = _open_shell()
 	_assert_lobby_camera_at(Vector3.ZERO)
-	assert_true(_shell.try_solo())
+	_try_solo()
 	_assert_lobby_camera_on(_shell.map.player_node(0))
 	assert_false(_shell.try_sample_play_move(false, false, false, true).is_empty())
 	_assert_lobby_camera_on(_shell.map.player_node(0))
@@ -860,7 +861,7 @@ func test_online_camera_follows_seat_one() -> void:
 
 func test_solo_wasd_turns_facing_marker() -> void:
 	_shell = _open_shell()
-	assert_true(_shell.try_solo())
+	_try_solo()
 	var player: MeshInstance3D = _shell.map.player_node(0)
 	var face: MeshInstance3D = _shell.map.facing_node(0)
 	assert_not_null(player)
@@ -883,19 +884,19 @@ func test_online_wasd_overlays_yaw_then_hard_snaps() -> void:
 	assert_true(_shell.try_quick())
 	assert_true(_shell.accept_http(201, _join("ABCD23", "ticket-yaw")))
 	assert_true(_shell.on_socket_open())
-	assert_true(_shell.on_binary(_snapshot(1, 0, [_crate(40, 1)])))
+	assert_true(_shell.on_binary(_snapshot(RACING_TICK, 0, [_crate(40, 1)])))
 	_assert_player_yaw(_shell.map.player_node(0), MatchMoveFacing.YAW_FORWARD)
 	assert_false(_shell.try_sample_play_move(false, false, false, true).is_empty())
 	_assert_player_yaw(_shell.map.player_node(0), MatchMoveFacing.YAW_RIGHT)
 	assert_eq(_shell.play.predict.yaw_bam, MatchMoveFacing.YAW_RIGHT)
-	assert_true(_shell.on_binary(_snapshot(2, 0, [_crate(40, 1)])))
+	assert_true(_shell.on_binary(_snapshot(RACING_TICK + 1, 0, [_crate(40, 1)])))
 	assert_eq(_shell.play.predict.yaw_bam, -1)
 	_assert_player_yaw(_shell.map.player_node(0), MatchMoveFacing.YAW_FORWARD)
 
 
 func test_solo_own_slot_tints_box_and_stars_standing() -> void:
 	_shell = _open_shell()
-	assert_true(_shell.try_solo())
+	_try_solo()
 	assert_eq(_player_albedo(_shell.map.player_node(0)), MatchSnapshotMap.OWN_ALBEDO)
 	var mark: Label3D = _shell.standings.standing_node(0)
 	assert_not_null(mark)
@@ -933,7 +934,7 @@ func test_solo_own_progress_tints_pads_and_cancel_restores() -> void:
 	_shell = _open_shell()
 	assert_eq(_pad_albedo(1), MatchCourseMap.PENDING_ALBEDO)
 	assert_eq(_finish_albedo(), MatchCourseMap.FINISH_PENDING_ALBEDO)
-	assert_true(_shell.try_solo())
+	_try_solo()
 	assert_eq(_shell.offline.session.player_accepted_count(0), 1)
 	assert_eq(_pad_albedo(1), MatchCourseMap.ACCEPTED_ALBEDO)
 	assert_eq(_pad_albedo(2), MatchCourseMap.CURRENT_ALBEDO)
@@ -962,7 +963,7 @@ func test_solo_own_progress_tints_pads_and_cancel_restores() -> void:
 
 func test_solo_walk_accepts_second_pad_and_retints() -> void:
 	_shell = _open_shell()
-	assert_true(_shell.try_solo())
+	_try_solo()
 	var steps: int = 0
 	while steps < 40:
 		assert_false(_shell.try_sample_play_move(false, false, false, true).is_empty())
@@ -980,7 +981,7 @@ func test_solo_walk_accepts_second_pad_and_retints() -> void:
 
 func test_solo_walk_finishes_and_marks_local_result() -> void:
 	_shell = _open_shell()
-	assert_true(_shell.try_solo())
+	_try_solo()
 	var steps: int = 0
 	while steps < 200:
 		assert_false(_shell.try_sample_play_move(false, false, false, true).is_empty())
@@ -1098,7 +1099,7 @@ func test_online_finish_404_keeps_local_result_without_settled() -> void:
 
 func test_solo_use_item_from_spawn_breaks_course_01_crate() -> void:
 	_shell = _open_shell()
-	assert_true(_shell.try_solo())
+	_try_solo()
 	assert_eq(_shell.crates.crate_count(), 1)
 	assert_eq(_shell.crates.crate_total(), 1)
 	assert_eq(_shell.offline.session.destructible_alive_count(), 1)
@@ -1115,7 +1116,7 @@ func test_solo_use_item_from_spawn_breaks_course_01_crate() -> void:
 
 func test_solo_shove_has_no_target() -> void:
 	_shell = _open_shell()
-	assert_true(_shell.try_solo())
+	_try_solo()
 	var before: Dictionary = _shell.offline.session.player_pose(0)
 	var before_z: int = before.get("z", -1)
 	assert_true(_shell.try_sample_play_shove(true).is_empty())
@@ -1126,7 +1127,7 @@ func test_solo_shove_has_no_target() -> void:
 
 func test_solo_jump_hops_on_spawn_footing() -> void:
 	_shell = _open_shell()
-	assert_true(_shell.try_solo())
+	_try_solo()
 	var before: Dictionary = _shell.offline.session.player_pose(0)
 	var before_y: int = before.get("y", 1)
 	assert_false(_shell.try_sample_play_jump(true).is_empty())
@@ -1152,7 +1153,7 @@ func test_solo_jump_hops_on_spawn_footing() -> void:
 
 func test_solo_anim_starts_idle_then_run() -> void:
 	_shell = _open_shell()
-	assert_true(_shell.try_solo())
+	_try_solo()
 	assert_eq(_shell.map.anim_state(0), PlayAnimState.IDLE)
 	assert_eq(_shell.map.anim_node(0).text, PlayAnimState.IDLE)
 	assert_false(_shell.try_sample_play_move(true, false, false, false).is_empty())
@@ -1164,7 +1165,7 @@ func test_solo_anim_starts_idle_then_run() -> void:
 
 func test_solo_jump_sets_jump_then_land() -> void:
 	_shell = _open_shell()
-	assert_true(_shell.try_solo())
+	_try_solo()
 	var spawn: Dictionary = _shell.offline.session.player_pose(0)
 	var spawn_y: int = spawn.get("y", 0)
 	var camera_y: float = _shell.map.camera_node().position.y
@@ -1196,7 +1197,7 @@ func test_solo_jump_sets_jump_then_land() -> void:
 
 func test_solo_walk_off_spawn_footing_drops_y() -> void:
 	_shell = _open_shell()
-	assert_true(_shell.try_solo())
+	_try_solo()
 	assert_eq(_shell.offline.session.fall_dy, TraprushPlayStubs.FALL_DY)
 	for _settle: int in range(8):
 		assert_true(_shell.offline.try_advance())
@@ -1214,7 +1215,7 @@ func test_solo_walk_off_spawn_footing_drops_y() -> void:
 
 func test_solo_opens_eight_cell_range_stub() -> void:
 	_shell = _open_shell()
-	assert_true(_shell.try_solo())
+	_try_solo()
 	assert_true(_shell.offline.session.range_enabled)
 	assert_eq(_shell.offline.session.range_max_x, 8 * Fixed.SCALE)
 	_shell.offline.session.enable_play_range(Fixed.SCALE)
@@ -1229,7 +1230,7 @@ func test_solo_opens_eight_cell_range_stub() -> void:
 
 func test_solo_reset_after_portal_returns_to_last_pad() -> void:
 	_shell = _open_shell()
-	assert_true(_shell.try_solo())
+	_try_solo()
 	var steps: int = 0
 	while steps < 120:
 		assert_false(_shell.try_sample_play_move(false, false, false, true).is_empty())
@@ -1324,7 +1325,7 @@ func test_rejected_server_host_keeps_current_bases_and_shows_error() -> void:
 
 func test_server_field_refused_mid_session_and_allowed_after_cancel() -> void:
 	_shell = _open_shell()
-	assert_true(_shell.try_solo())
+	_try_solo()
 	assert_false(_shell.try_apply_server_host("203.0.113.9"))
 	assert_eq(_shell.control_plane_base, ServerEndpointGd.DEFAULT_CONTROL_PLANE)
 	assert_eq(_shell.gateway_base, ServerEndpointGd.DEFAULT_GATEWAY)
@@ -1377,7 +1378,7 @@ func test_split_endpoint_shows_gateway_host_separately() -> void:
 ## 慢的时候慢放，快的时候两倍速。
 func test_only_physics_process_advances_the_offline_tick() -> void:
 	_shell = _open_shell()
-	assert_true(_shell.try_solo())
+	_try_solo()
 	var before: int = _shell.offline.session.tick_index()
 
 	for _frame: int in range(5):
@@ -1395,7 +1396,7 @@ func test_only_physics_process_advances_the_offline_tick() -> void:
 ## 保护，两只手不一样）、`try_advance_interp` 一次、`_process` 末尾再显式一次。
 func test_one_render_frame_remaps_once_and_idle_input_remaps_never() -> void:
 	_shell = _open_shell()
-	assert_true(_shell.try_solo())
+	_try_solo()
 
 	var before: int = _shell.snapshot_map_apply_count()
 	_shell._process(0.016)
@@ -1409,6 +1410,11 @@ func test_one_render_frame_remaps_once_and_idle_input_remaps_never() -> void:
 	## 真按了键仍然立即反映，否则本席会等到下一渲染帧才动。
 	assert_false(_shell.try_sample_play_move(false, false, false, true).is_empty())
 	assert_eq(_shell.snapshot_map_apply_count(), idle + 1)
+
+
+func _try_solo() -> void:
+	assert_true(_shell.try_solo())
+	_shell.offline.skip_opening_countdown()
 
 
 func _open_shell() -> MatchLobbyShell:

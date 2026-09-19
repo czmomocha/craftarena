@@ -11,15 +11,21 @@ const SPLIT_NAME: String = "Split"
 const GUIDE_NAME: String = "Guide"
 const SETBACK_NAME: String = "Setback"
 const ITEMS_NAME: String = "Items"
+const COUNTDOWN_NAME: String = "Countdown"
+const REPLAY_NAME: String = "ReplayBanner"
 const ROOT_NAME: String = "PlayHud"
 const ClockGd := preload("res://src/shared/play_clock.gd")
 const PanelGd := preload("res://src/shared/match_settlement_panel.gd")
+const PlayStubsGd := preload("res://src/games/traprush/play_stubs.gd")
+const UiCopyPlayGd := preload("res://src/shared/ui_copy_play.gd")
 
 var clock: Label = null
 var split: Label = null
 var guide: Label = null
 var setback: Label = null
 var items: Label = null
+var countdown: Label = null
+var replay_banner: Label = null
 var panel: PanelContainer = null
 var root: VBoxContainer = null
 
@@ -44,10 +50,29 @@ func attach(window: Window, _toolbar: Control = null) -> void:
 	items = _make_label(ITEMS_NAME, PlaceholderSpec.HUD_SPLIT_FONT_SIZE)
 	apply_text_color(PlaceholderSpec.HUD_TEXT_COLOR)
 	panel = PanelGd.attach(window)
+	countdown = Label.new()
+	countdown.name = COUNTDOWN_NAME
+	countdown.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	countdown.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	countdown.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	countdown.set_anchors_preset(Control.PRESET_FULL_RECT)
+	countdown.add_theme_font_size_override("font_size", PlaceholderSpec.HUD_COUNTDOWN_FONT_SIZE)
+	countdown.add_theme_color_override("font_color", PlaceholderSpec.HUD_TEXT_COLOR)
+	window.add_child(countdown)
+	replay_banner = Label.new()
+	replay_banner.name = REPLAY_NAME
+	replay_banner.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	replay_banner.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	replay_banner.vertical_alignment = VERTICAL_ALIGNMENT_TOP
+	replay_banner.set_anchors_preset(Control.PRESET_TOP_WIDE)
+	replay_banner.offset_top = 16.0
+	replay_banner.add_theme_font_size_override("font_size", PlaceholderSpec.HUD_CLOCK_FONT_SIZE)
+	replay_banner.add_theme_color_override("font_color", PlaceholderSpec.HUD_TEXT_COLOR)
+	window.add_child(replay_banner)
 
 
 func apply_text_color(color: Color) -> void:
-	for label: Label in [clock, split, guide, setback, items]:
+	for label: Label in [clock, split, guide, setback, items, countdown, replay_banner]:
 		if label == null:
 			continue
 		label.add_theme_color_override("font_color", color)
@@ -105,6 +130,14 @@ func apply(view: Dictionary) -> void:
 	if typeof(board_raw) == TYPE_DICTIONARY:
 		board = board_raw
 	PanelGd.apply(panel, board)
+	if countdown != null and is_instance_valid(countdown):
+		var line: String = str(view.get("countdown_text", ""))
+		countdown.visible = playing and line != ""
+		countdown.text = line if countdown.visible else ""
+	if replay_banner != null and is_instance_valid(replay_banner):
+		var replay_on: bool = ClockGd.dict_bool(view, "replay_active", false)
+		replay_banner.visible = playing and replay_on
+		replay_banner.text = UiCopy.text(UiCopyPlayGd.REPLAY_BANNER) if replay_banner.visible else ""
 
 
 func clock_text() -> String:
@@ -139,3 +172,22 @@ func items_text() -> String:
 
 func settlement_visible() -> bool:
 	return panel != null and is_instance_valid(panel) and panel.visible
+
+
+static func countdown_line(world_tick: int, go_tick: int, player_count: int, playing: bool) -> String:
+	if not playing or go_tick <= 0:
+		return ""
+	var tick: int = maxi(world_tick, 0)
+	if player_count > 1 and tick <= 0:
+		return UiCopy.text(UiCopyPlayGd.COUNTDOWN_WAIT)
+	if tick >= go_tick:
+		if tick - go_tick < PlayStubsGd.COUNTDOWN_GO_TICKS:
+			return UiCopy.text(UiCopyPlayGd.COUNTDOWN_GO)
+		return ""
+	return str(PlayStubsGd.overlay_seconds(tick, go_tick))
+
+
+func countdown_text() -> String:
+	if countdown == null or not is_instance_valid(countdown):
+		return ""
+	return countdown.text

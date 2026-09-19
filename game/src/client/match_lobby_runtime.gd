@@ -52,6 +52,10 @@ static func on_process(shell: MatchLobbyShell, delta: float) -> void:
 static func on_physics(shell: MatchLobbyShell, _delta: float) -> void:
 	if not shell.offline_playing() or shell.window == null or not shell.window.visible:
 		return
+	if shell.offline != null and shell.offline.replay_active:
+		shell.offline.try_advance()
+		shell.stage.pump_play_audio(shell.offline)
+		return
 	shell.offline.try_advance()
 	if not shell.chrome.edit_has_focus():
 		shell.sampler.drive_keyboard(shell)

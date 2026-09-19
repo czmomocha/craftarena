@@ -93,6 +93,22 @@ export {
 	type RecordMatchSettlementRequest,
 } from "./match_settlement.ts";
 export {
+	TRAPRUSH_REPLAY_ERRORS,
+	TRAPRUSH_REPLAY_LOCAL_RING,
+	TRAPRUSH_REPLAY_MAX_BYTES,
+	TRAPRUSH_REPLAY_SCHEMA_VERSION,
+	TRAPRUSH_REPLAY_SERVER_RING,
+	recordMatchReplayBodySchema,
+	traprushReplayTapeSchema,
+	type RecordMatchReplayRequest,
+	type RecordMatchReplayResponse,
+	type TraprushReplayError,
+	type TraprushReplayListItem,
+	type TraprushReplayListResponse,
+	type TraprushReplayTape,
+	type TraprushReplayView,
+} from "./traprush_replay.ts";
+export {
 	CONTENT_PUBLISH_ERRORS,
 	CONTENT_PUBLISH_SCHEMA_VERSION,
 	contentPublishBodySchema,

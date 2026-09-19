@@ -8,6 +8,7 @@
 
 import type { MatchContentRef } from "../../contracts/src/match_body.ts";
 import type { MatchSettlementResponse, RecordMatchSettlementRequest } from "../../contracts/src/match_settlement.ts";
+import type { RecordMatchReplayRequest, RecordMatchReplayResponse } from "../../contracts/src/traprush_replay.ts";
 
 export interface MatchSessionRegisterSpec {
 	readonly matchId: string;
@@ -23,6 +24,7 @@ export interface MatchSessionRegisterSpec {
 export interface MatchSessionRegistrar {
 	register(spec: MatchSessionRegisterSpec): Promise<void>;
 	recordSettlement(matchId: string, payload: RecordMatchSettlementRequest): Promise<void>;
+	recordReplay(matchId: string, payload: RecordMatchReplayRequest): Promise<void>;
 	unregister(matchId: string): Promise<void>;
 }
 
@@ -44,6 +46,13 @@ export class MatchSessionSettlementError extends Error {
 	constructor(message: string) {
 		super(message);
 		this.name = "MatchSessionSettlementError";
+	}
+}
+
+export class MatchSessionReplayError extends Error {
+	constructor(message: string) {
+		super(message);
+		this.name = "MatchSessionReplayError";
 	}
 }
 
@@ -203,6 +212,39 @@ export class ControlPlaneMatchSessionRegistrar implements MatchSessionRegistrar 
 		const echoed = (body as MatchSettlementResponse).matchId;
 		if (echoed !== matchId) {
 			throw new MatchSessionSettlementError("control plane settlement returned a mismatched match id");
+		}
+	}
+
+	async recordReplay(matchId: string, payload: RecordMatchReplayRequest): Promise<void> {
+		let response: Response;
+		try {
+			response = await fetch(`${this.#baseUrl}/match-sessions/${encodeURIComponent(matchId)}/replay`, {
+				method: "POST",
+				headers: { "content-type": "application/json" },
+				body: JSON.stringify(payload),
+				signal: AbortSignal.timeout(this.#timeoutMs),
+			});
+		} catch (error) {
+			throw new MatchSessionReplayError(error instanceof Error ? error.message : String(error));
+		}
+		if (response.status === 409) {
+			return;
+		}
+		if (response.status !== 201) {
+			throw new MatchSessionReplayError(`control plane replay returned HTTP ${response.status}`);
+		}
+		let body: unknown;
+		try {
+			body = await response.json();
+		} catch {
+			throw new MatchSessionReplayError("control plane replay returned a non-JSON body");
+		}
+		if (typeof body !== "object" || body === null) {
+			throw new MatchSessionReplayError("control plane replay returned an invalid body");
+		}
+		const echoed = (body as RecordMatchReplayResponse).matchId;
+		if (echoed !== matchId) {
+			throw new MatchSessionReplayError("control plane replay returned a mismatched match id");
 		}
 	}
 }

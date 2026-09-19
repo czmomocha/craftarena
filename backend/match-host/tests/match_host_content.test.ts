@@ -164,6 +164,8 @@ class RecordingRegistrar implements MatchSessionRegistrar {
 
 	async recordSettlement(): Promise<void> {}
 
+	async recordReplay(): Promise<void> {}
+
 	async unregister(): Promise<void> {}
 }
 

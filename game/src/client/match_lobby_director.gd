@@ -13,6 +13,9 @@ const OfficialBastionBlueprintsGd := preload("res://src/shared/official_bastion_
 const ClientAudioGd := preload("res://src/client/client_audio.gd")
 const AudioSettingsEntryGd := preload("res://src/client/audio_settings_entry.gd")
 const MatchLobbyDirectorJoinGd := preload("res://src/client/match_lobby_director_join.gd")
+const MatchLobbyDirectorReplayGd := preload("res://src/client/match_lobby_director_replay.gd")
+const MatchLobbyHomeGd := preload("res://src/client/match_lobby_home.gd")
+const PlayStubsGd := preload("res://src/games/traprush/play_stubs.gd")
 
 var host: MatchLobbyShell = null
 
@@ -94,6 +97,7 @@ func try_solo() -> bool:
 		if host.join.state == MatchJoinSessionGd.STATE_FAILED:
 			host.join.state = MatchJoinSessionGd.STATE_IDLE
 	host.offline.apply_play_stubs()
+	host.offline.persist_replay = host.live_io
 	host.stage.reset_interp()
 	host.sampler.reset_motion()
 	host.play_anim.reset()
@@ -101,6 +105,8 @@ func try_solo() -> bool:
 	if not host.offline.try_begin(host.course_path, host.web_platform):
 		host.refresh_status()
 		return false
+	PlayStubsGd.apply_opening_countdown(host.offline.session)
+	host.offline.restart_tape()
 	MatchLobbyRuntime.reset_match_camera(host)
 	host.apply_course_document(host.course_path)
 	host.apply_snapshot_map()
@@ -217,6 +223,8 @@ func try_solo_plaza(content_id: String = "") -> bool:
 	if not host.offline.try_begin_bundle(bundle):
 		host.refresh_status()
 		return false
+	PlayStubsGd.apply_opening_countdown(host.offline.session)
+	host.offline.restart_tape()
 	MatchLobbyRuntime.reset_match_camera(host)
 	host.stage.apply_bundle(bundle)
 	host.plaza.try_close()
@@ -228,6 +236,7 @@ func try_solo_plaza(content_id: String = "") -> bool:
 func try_stop_offline() -> bool:
 	if host.offline == null or not host.offline_playing():
 		return false
+	var return_replay: bool = host.offline.replay_active
 	if not host.offline.try_stop():
 		return false
 	ClientAudioGd.clear_play()
@@ -239,7 +248,13 @@ func try_stop_offline() -> bool:
 	if official != "":
 		host.apply_course_document(official)
 	host.refresh_status()
+	if return_replay:
+		MatchLobbyHomeGd.try_show_replay(host)
 	return true
+
+
+func try_begin_replay(tape: Dictionary) -> bool:
+	return MatchLobbyDirectorReplayGd.try_begin(host, tape)
 
 
 func try_cancel() -> bool:

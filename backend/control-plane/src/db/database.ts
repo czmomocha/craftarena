@@ -57,9 +57,11 @@ import {
 	type GuestRecord,
 } from "./database_accounts.ts";
 import type { PlazaTab } from "../../../contracts/src/content_plaza.ts";
+import type { TraprushReplayTape } from "../../../contracts/src/traprush_replay.ts";
 import { ControlPlaneQueueStore } from "./database_queue.ts";
 import { ControlPlaneSessionStore } from "./database_sessions.ts";
 import { ControlPlaneTicketStore } from "./database_tickets.ts";
+import { ControlPlaneReplayStore, type TraprushReplayRecord } from "./database_replays.ts";
 
 export {
 	ContentAlreadyLatestError,
@@ -110,6 +112,11 @@ export interface IssuedTicket {
 	readonly matchId: string;
 	readonly expiresAt: string;
 	readonly seat: number;
+}
+
+export interface TicketOwner {
+	readonly ownerKind: ContentOwnerKind;
+	readonly ownerId: string;
 }
 
 export type ConsumeTicketResult =
@@ -189,12 +196,12 @@ export class ControlPlaneDatabase {
 	readonly #content: ControlPlaneContentStore;
 	readonly #plaza: ControlPlanePlazaStore;
 	readonly #accounts: ControlPlaneAccountStore;
+	readonly #replays: ControlPlaneReplayStore;
 
 	constructor(databasePath: string) {
 		if (databasePath !== ":memory:") {
 			mkdirSync(dirname(databasePath), { recursive: true });
 		}
-
 		this.#db = new DatabaseSync(databasePath);
 		this.#sessions = new ControlPlaneSessionStore(this.#db);
 		this.#tickets = new ControlPlaneTicketStore(this.#db, this.#sessions);
@@ -202,6 +209,7 @@ export class ControlPlaneDatabase {
 		this.#content = new ControlPlaneContentStore(this.#db);
 		this.#plaza = new ControlPlanePlazaStore(this.#db);
 		this.#accounts = new ControlPlaneAccountStore(this.#db);
+		this.#replays = new ControlPlaneReplayStore(this.#db);
 		this.#db.exec("PRAGMA journal_mode = WAL");
 		this.#db.exec("PRAGMA foreign_keys = ON");
 	}
@@ -296,17 +304,21 @@ export class ControlPlaneDatabase {
 	}
 	countTickets(matchId: string): number { return this.#tickets.countTickets(matchId); }
 	readSeatByTicket(ticket: string): number | undefined { return this.#tickets.readSeatByTicket(ticket); }
-	issueTicket(matchId: string, now: Date, ttlMs: number): IssuedTicket {
-		return this.#tickets.issueTicket(matchId, now, ttlMs);
+	issueTicket(matchId: string, now: Date, ttlMs: number, owner?: TicketOwner): IssuedTicket {
+		return this.#tickets.issueTicket(matchId, now, ttlMs, owner);
 	}
-	enqueue(
-		kind: MatchQueueKind, now: Date, ttlMs: number,
-		course: OfficialTraprushCourseId | "" = DEFAULT_OFFICIAL_TRAPRUSH_COURSE,
-		seats: number = DEFAULT_MATCHMAKING_SEATS,
-		contentId?: string, contentVersion?: number,
-		gameplay: MatchGameplay = DEFAULT_MATCH_GAMEPLAY,
-		blueprint?: OfficialBastionBlueprintId,
-	): EnqueuedMatch {
+	recordTraprushReplay(input: {
+		readonly matchId: string; readonly tape: TraprushReplayTape; readonly now: Date;
+	}): number {
+		return this.#replays.insertForOwners({ ...input, owners: this.#replays.listOwnersForMatch(input.matchId) });
+	}
+	listTraprushReplays(ownerKind: ContentOwnerKind, ownerId: string): readonly TraprushReplayRecord[] {
+		return this.#replays.listForOwner(ownerKind, ownerId);
+	}
+	getTraprushReplay(replayId: string, ownerKind: ContentOwnerKind, ownerId: string) {
+		return this.#replays.getForOwner(replayId, ownerKind, ownerId);
+	}
+	enqueue(kind: MatchQueueKind, now: Date, ttlMs: number, course: OfficialTraprushCourseId | "" = DEFAULT_OFFICIAL_TRAPRUSH_COURSE, seats: number = DEFAULT_MATCHMAKING_SEATS, contentId?: string, contentVersion?: number, gameplay: MatchGameplay = DEFAULT_MATCH_GAMEPLAY, blueprint?: OfficialBastionBlueprintId): EnqueuedMatch {
 		return this.#queue.enqueue(kind, now, ttlMs, course, seats, contentId, contentVersion, gameplay, blueprint);
 	}
 	getQueueByToken(token: string, now: Date): MatchQueueRecord | undefined {

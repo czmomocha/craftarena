@@ -260,4 +260,23 @@ export const MIGRATIONS: readonly Migration[] = [
 			`ALTER TABLE match_settlements ADD COLUMN teams_json TEXT`,
 		],
 	},
+	{
+		id: "0016_traprush_replays",
+		statements: [
+			`ALTER TABLE match_tickets ADD COLUMN owner_kind TEXT`,
+			`ALTER TABLE match_tickets ADD COLUMN owner_id TEXT`,
+			`CREATE TABLE traprush_replays (
+				replay_id TEXT PRIMARY KEY,
+				owner_kind TEXT NOT NULL CHECK (owner_kind IN ('guest', 'account')),
+				owner_id TEXT NOT NULL,
+				match_id TEXT NOT NULL,
+				course_id TEXT NOT NULL,
+				tape_json TEXT NOT NULL,
+				created_at TEXT NOT NULL,
+				UNIQUE (match_id, owner_kind, owner_id)
+			) STRICT`,
+			`CREATE INDEX traprush_replays_owner_created
+			 ON traprush_replays (owner_kind, owner_id, created_at)`,
+		],
+	},
 ];

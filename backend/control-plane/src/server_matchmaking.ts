@@ -13,6 +13,7 @@ import {
 	type ControlPlaneDatabase,
 	type MatchQueueRecord,
 	type MatchSessionRecord,
+	type TicketOwner,
 } from "./db/database.ts";
 import {
 	MatchHostCapacityError,
@@ -56,6 +57,7 @@ export async function launchOrEnqueue(
 	kind: MatchQueueKind,
 	spec: MatchPlaySpec,
 	runDrain: () => Promise<void>,
+	owner?: TicketOwner,
 ): Promise<MatchmakingJoinResponse | MatchmakingQueueWaitingResponse | { error: string; message?: string }> {
 	if (options.matchLauncher === undefined) {
 		reply.code(503);
@@ -65,7 +67,7 @@ export async function launchOrEnqueue(
 	try {
 		const matchId = await launchRegisteredRoom(options, spec);
 		reply.code(201);
-		return admitToRoom(options, matchId, now(), ticketTtlMs);
+		return admitToRoom(options, matchId, now(), ticketTtlMs, owner);
 	} catch (error) {
 		if (error instanceof MatchHostCapacityError) {
 			const queued = enqueueSpec(options, kind, now(), queueTtlMs, spec);
@@ -243,8 +245,9 @@ export function admitToRoom(
 	matchId: string,
 	now: Date,
 	ticketTtlMs: number,
+	owner?: TicketOwner,
 ): MatchmakingJoinResponse {
-	const issued = options.database.issueTicket(matchId, now, ticketTtlMs);
+	const issued = options.database.issueTicket(matchId, now, ticketTtlMs, owner);
 	const session = options.database.getMatchSession(matchId);
 	if (session === undefined || session.roomCode === undefined) {
 		throw new MatchSessionNotFoundError(matchId);

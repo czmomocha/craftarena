@@ -61,6 +61,13 @@ static func document_path(course_id: String) -> String:
 	return "%s/%s.json" % [_DOCUMENT_DIR, id]
 
 
+static func id_from_path(path: String) -> String:
+	var file_name: String = path.get_file().get_basename()
+	if is_id(file_name):
+		return file_name
+	return ""
+
+
 static func default_path() -> String:
 	return document_path(DEFAULT_ID)
 

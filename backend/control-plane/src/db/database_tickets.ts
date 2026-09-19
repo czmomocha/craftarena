@@ -12,6 +12,7 @@ import {
 	type ConsumeTicketResult,
 	type IssuedTicket,
 	type ReconnectTicketResult,
+	type TicketOwner,
 } from "./database.ts";
 
 export class ControlPlaneTicketStore {
@@ -45,10 +46,10 @@ export class ControlPlaneTicketStore {
 		return row === undefined ? undefined : Number(row["seat"]);
 	}
 
-	issueTicket(matchId: string, now: Date, ttlMs: number): IssuedTicket {
+	issueTicket(matchId: string, now: Date, ttlMs: number, owner?: TicketOwner): IssuedTicket {
 		this.db.exec("BEGIN");
 		try {
-			const issued = this.issueTicketUnlocked(matchId, now, ttlMs);
+			const issued = this.issueTicketUnlocked(matchId, now, ttlMs, owner);
 			this.db.exec("COMMIT");
 			return issued;
 		} catch (error) {
@@ -126,7 +127,7 @@ export class ControlPlaneTicketStore {
 
 			const row = this.db
 				.prepare(
-					`SELECT match_id, consumed_at, superseded_at, seat
+					`SELECT match_id, consumed_at, superseded_at, seat, owner_kind, owner_id
 					 FROM match_tickets
 					 WHERE ticket_hash = ?`,
 				)
@@ -159,7 +160,8 @@ export class ControlPlaneTicketStore {
 				return { ok: false, error: RECONNECT_TICKET_ERRORS.supersededTicket };
 			}
 
-			const issued = this.insertTicketUnlocked(matchId, Number(row["seat"]), now, ttlMs);
+			const owner = ticketOwnerFromRow(row);
+			const issued = this.insertTicketUnlocked(matchId, Number(row["seat"]), now, ttlMs, owner);
 			this.db.exec("COMMIT");
 			return { ok: true, ...issued };
 		} catch (error) {
@@ -168,7 +170,7 @@ export class ControlPlaneTicketStore {
 		}
 	}
 
-	issueTicketUnlocked(matchId: string, now: Date, ttlMs: number): IssuedTicket {
+	issueTicketUnlocked(matchId: string, now: Date, ttlMs: number, owner?: TicketOwner): IssuedTicket {
 		const session = this.sessions.getMatchSession(matchId);
 		if (session === undefined) {
 			throw new MatchSessionNotFoundError(matchId);
@@ -179,7 +181,7 @@ export class ControlPlaneTicketStore {
 			throw new MatchSessionFullError(matchId);
 		}
 
-		return this.insertTicketUnlocked(matchId, seat, now, ttlMs);
+		return this.insertTicketUnlocked(matchId, seat, now, ttlMs, owner);
 	}
 
 	nextSeat(matchId: string, seats: number): number | undefined {
@@ -199,7 +201,13 @@ export class ControlPlaneTicketStore {
 		return undefined;
 	}
 
-	insertTicketUnlocked(matchId: string, seat: number, now: Date, ttlMs: number): IssuedTicket {
+	insertTicketUnlocked(
+		matchId: string,
+		seat: number,
+		now: Date,
+		ttlMs: number,
+		owner?: TicketOwner,
+	): IssuedTicket {
 		const ticket = generateTicket();
 		const createdAt = now.toISOString();
 		const expiresAt = new Date(now.getTime() + ttlMs).toISOString();
@@ -207,11 +215,31 @@ export class ControlPlaneTicketStore {
 		this.db
 			.prepare(
 				`INSERT INTO match_tickets
-				 (ticket_hash, match_id, expires_at, consumed_at, created_at, seat, superseded_at)
-				 VALUES (?, ?, ?, NULL, ?, ?, NULL)`,
+				 (ticket_hash, match_id, expires_at, consumed_at, created_at, seat, superseded_at, owner_kind, owner_id)
+				 VALUES (?, ?, ?, NULL, ?, ?, NULL, ?, ?)`,
 			)
-			.run(hashTicket(ticket), matchId, expiresAt, createdAt, seat);
+			.run(
+				hashTicket(ticket),
+				matchId,
+				expiresAt,
+				createdAt,
+				seat,
+				owner?.ownerKind ?? null,
+				owner?.ownerId ?? null,
+			);
 
 		return { ticket, matchId, expiresAt, seat };
 	}
+}
+
+function ticketOwnerFromRow(row: Record<string, unknown>): TicketOwner | undefined {
+	const ownerKind = row["owner_kind"];
+	const ownerId = row["owner_id"];
+	if (ownerKind !== "guest" && ownerKind !== "account") {
+		return undefined;
+	}
+	if (typeof ownerId !== "string" || ownerId === "") {
+		return undefined;
+	}
+	return { ownerKind, ownerId };
 }

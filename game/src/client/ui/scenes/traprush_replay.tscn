@@ -1,0 +1,102 @@
+[gd_scene load_steps=5 format=3]
+
+[ext_resource type="Theme" path="res://content/ui/theme/craft_arena.tres" id="1_theme"]
+[ext_resource type="Script" path="res://src/client/ui/scripts/press_feedback.gd" id="2_press"]
+[ext_resource type="Script" path="res://src/client/ui/scripts/traprush_replay.gd" id="3_replay"]
+[ext_resource type="Texture2D" path="res://content/ui/assets/logo_mark.png" id="4_logo"]
+
+[node name="TraprushReplay" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme = ExtResource("1_theme")
+script = ExtResource("3_replay")
+
+[node name="Background" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0.12549, 0.141176, 0.184314, 1)
+
+[node name="Layout" type="VBoxContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_constants/separation = 0
+
+[node name="TopBar" type="PanelContainer" parent="Layout"]
+custom_minimum_size = Vector2(0, 72)
+layout_mode = 2
+
+[node name="Row" type="HBoxContainer" parent="Layout/TopBar"]
+layout_mode = 2
+theme_override_constants/separation = 16
+
+[node name="Back" type="Button" parent="Layout/TopBar/Row"]
+custom_minimum_size = Vector2(96, 48)
+layout_mode = 2
+size_flags_vertical = 4
+theme_type_variation = &"ButtonGhost"
+text = ""
+script = ExtResource("2_press")
+
+[node name="Logo" type="TextureRect" parent="Layout/TopBar/Row"]
+custom_minimum_size = Vector2(40, 40)
+layout_mode = 2
+size_flags_vertical = 4
+mouse_filter = 2
+texture = ExtResource("4_logo")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="TitleBox" type="VBoxContainer" parent="Layout/TopBar/Row"]
+layout_mode = 2
+size_flags_vertical = 4
+mouse_filter = 2
+theme_override_constants/separation = 0
+
+[node name="Title" type="Label" parent="Layout/TopBar/Row/TitleBox"]
+layout_mode = 2
+theme_type_variation = &"PageTitle"
+text = ""
+
+[node name="Subtitle" type="Label" parent="Layout/TopBar/Row/TitleBox"]
+layout_mode = 2
+theme_type_variation = &"NavSubtitle"
+text = ""
+
+[node name="Main" type="MarginContainer" parent="Layout"]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_constants/margin_left = 32
+theme_override_constants/margin_top = 24
+theme_override_constants/margin_right = 32
+theme_override_constants/margin_bottom = 24
+
+[node name="Empty" type="Label" parent="Layout/Main"]
+layout_mode = 2
+theme_type_variation = &"NavSubtitle"
+autowrap_mode = 3
+text = ""
+
+[node name="List" type="ItemList" parent="Layout/Main"]
+visible = false
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="Error" type="Label" parent="Layout/Main"]
+visible = false
+layout_mode = 2
+theme_type_variation = &"NavSubtitle"
+text = ""

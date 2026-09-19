@@ -1,8 +1,7 @@
 class_name MatchLobbyStage
 extends RefCounted
 
-## L4 presentation: eight occupancy maps under the lobby Window, plus
-## snapshot sampling / own-slot overlay. Visuals never write authority.
+## L4 occupancy maps and snapshot sampling. Visuals never write authority.
 
 const MatchCheckpointOrderMapGd := preload("res://src/client/match_checkpoint_order_map.gd")
 const MatchCourseMapGd := preload("res://src/client/match_course_map.gd")
@@ -20,6 +19,7 @@ const GateCycleGd := preload("res://src/games/traprush/gate_cycle.gd")
 const ClientAudioGd := preload("res://src/client/client_audio.gd")
 const MatchOfflineSessionGd := preload("res://src/client/match_offline_session.gd")
 const SkyGd := preload("res://src/client/match_lobby_stage_sky.gd")
+const PlayStubsGd := preload("res://src/games/traprush/play_stubs.gd")
 
 const MAP_NAME: String = "SnapshotMap"
 const COURSE_NAME: String = "CourseMap"
@@ -44,7 +44,6 @@ var course_path: String = ""
 var apply_count: int = 0
 var interp_t: int = 0
 var interp_tick: int = -1
-## 本席的「下一个目标在哪」解算结果（可玩性深化，轨 1）。表现读出，不进裁决。
 var wayfind: Dictionary = {"ok": false, "kind": ""}
 
 
@@ -230,12 +229,16 @@ func apply_snapshot(
 		return false
 	var players: Array = players_raw
 	apply_count += 1
+	var present_tick: int = PlayStubsGd.racing_tick(
+		follow.tick,
+		PlayStubsGd.view_go_tick(offline_session, play != null and play.bastion == null)
+	)
 	if crates != null:
 		crates.apply_follow(follow)
 	if hazards != null:
-		hazards.apply_follow(follow)
+		hazards.apply_tick(present_tick)
 	if solids != null:
-		solids.apply_tick(follow.tick)
+		solids.apply_tick(present_tick)
 		var open_ids: PackedInt32Array = PackedInt32Array()
 		if offline_playing and offline_session != null:
 			open_ids = offline_session.open_gate_entity_ids()
@@ -251,7 +254,7 @@ func apply_snapshot(
 				course.portal_switch_bags(), solids.occupied_groups_from_players(players)
 			)
 		MatchCourseMapFx.apply_portal_enabled(course, enabled_portals)
-		course.apply_tick(follow.tick)
+		course.apply_tick(present_tick)
 	if play != null and play.state == MatchPlaySessionGd.STATE_IN_MATCH:
 		var predicted: Dictionary = play.predict.try_apply(
 			players,
@@ -312,9 +315,7 @@ func try_advance_interp(window_visible: bool, step: int, follow: MatchSnapshotFo
 	return true
 
 
-## 寻路只服务本席：目标由服务端已验收的垫数决定，方向由本席权威位姿决定。
-## 每帧复用同一个 `guide` 节点（`set_guide` 内部只写位姿与色），只有换席位时
-## 才拆掉旧的那支——本函数在对局壳里每帧被调一次，不能全清全建。
+## 寻路只服务本席；每帧复用 guide，换席才重建。
 func _sync_wayfind(slot: int, accepted_count: int, finish_tick: int, players: Array) -> void:
 	wayfind = {"ok": false, "kind": ""}
 	if map == null:

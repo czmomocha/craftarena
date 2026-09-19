@@ -11,11 +11,13 @@ const OfficialTraprushCoursesGd := preload("res://src/shared/official_traprush_c
 const ClientAudioGd := preload("res://src/client/client_audio.gd")
 
 const CharacterSelectEntryGd := preload("res://src/client/character_select_entry.gd")
+const TraprushReplayEntryGd := preload("res://src/client/traprush_replay_entry.gd")
 
 const SCREEN_NAME: StringName = &"S1Lobby"
 const SURFACE_HOME: String = "home"
 const SURFACE_CHANNEL: String = "channel"
 const SURFACE_CHARACTER: String = "character"
+const SURFACE_REPLAY: String = "replay"
 const SCENE_PATH: String = "res://src/client/ui/scenes/s1_lobby.tscn"
 const _NAV_CHARACTER_EN := "Layout/Main/Columns/NavColumn/NavCharacter/Row/Texts/En"
 
@@ -53,10 +55,17 @@ static func ensure(shell: MatchLobbyShell) -> void:
 	screen.connect("character_requested", func() -> void:
 		try_show_character_select(shell)
 	)
+	screen.connect("replay_requested", func() -> void:
+		try_show_replay(shell)
+	)
 
 
 static func ensure_character_select(shell: MatchLobbyShell) -> void:
 	shell.character_select = CharacterSelectEntryGd.ensure(shell, shell.character_select)
+
+
+static func ensure_replay(shell: MatchLobbyShell) -> void:
+	shell.replay_records = TraprushReplayEntryGd.ensure(shell, shell.replay_records)
 
 
 static func note_channel_shown(shell: MatchLobbyShell) -> void:
@@ -64,6 +73,7 @@ static func note_channel_shown(shell: MatchLobbyShell) -> void:
 	if shell.home_screen != null:
 		shell.home_screen.visible = false
 	_hide_character_screen(shell)
+	_hide_replay_screen(shell)
 
 
 static func try_show_home(shell: MatchLobbyShell) -> bool:
@@ -75,6 +85,7 @@ static func try_show_home(shell: MatchLobbyShell) -> bool:
 	if shell.window != null:
 		shell.window.visible = false
 	_hide_character_screen(shell)
+	_hide_replay_screen(shell)
 	shell.home_screen.visible = true
 	refresh_character_caption(shell)
 	return true
@@ -86,7 +97,18 @@ static func try_show_character_select(shell: MatchLobbyShell) -> bool:
 	if shell.character_select == null:
 		return false
 	ClientAudioGd.post_ui_confirm()
+	_hide_replay_screen(shell)
 	return shell.character_select.try_open()
+
+
+static func try_show_replay(shell: MatchLobbyShell) -> bool:
+	ensure(shell)
+	ensure_replay(shell)
+	if shell.replay_records == null:
+		return false
+	ClientAudioGd.post_ui_confirm()
+	_hide_character_screen(shell)
+	return shell.replay_records.try_open()
 
 
 static func try_enter_channel(shell: MatchLobbyShell, gameplay: String) -> bool:
@@ -99,6 +121,7 @@ static func try_enter_channel(shell: MatchLobbyShell, gameplay: String) -> bool:
 	if shell.home_screen != null:
 		shell.home_screen.visible = false
 	_hide_character_screen(shell)
+	_hide_replay_screen(shell)
 	if gameplay == MatchGameplayGd.BASTION:
 		if shell.chrome.course_select != null:
 			shell.chrome.course_select.populate_bastion(OfficialBastionBlueprintsGd.DEFAULT_ID)
@@ -124,6 +147,7 @@ static func hide_for_overlay(shell: MatchLobbyShell) -> void:
 	if shell.home_screen != null:
 		shell.home_screen.visible = false
 	_hide_character_screen(shell)
+	_hide_replay_screen(shell)
 	if shell.window != null:
 		shell.window.visible = false
 
@@ -132,12 +156,16 @@ static func restore_from_overlay(shell: MatchLobbyShell) -> void:
 	if shell.home_surface == SURFACE_CHARACTER:
 		try_show_character_select(shell)
 		return
+	if shell.home_surface == SURFACE_REPLAY:
+		try_show_replay(shell)
+		return
 	if shell.home_surface == SURFACE_HOME:
 		try_show_home(shell)
 		return
 	if shell.home_screen != null:
 		shell.home_screen.visible = false
 	_hide_character_screen(shell)
+	_hide_replay_screen(shell)
 	if shell.window != null:
 		shell.window.visible = true
 
@@ -157,6 +185,10 @@ static func is_character_select_visible(shell: MatchLobbyShell) -> bool:
 	return shell.character_select != null and shell.character_select.is_open()
 
 
+static func is_replay_visible(shell: MatchLobbyShell) -> bool:
+	return shell.replay_records != null and shell.replay_records.is_open()
+
+
 static func refresh_character_caption(shell: MatchLobbyShell) -> void:
 	if shell.home_screen == null:
 		return
@@ -173,6 +205,11 @@ static func refresh_character_caption(shell: MatchLobbyShell) -> void:
 static func _hide_character_screen(shell: MatchLobbyShell) -> void:
 	if shell.character_select != null and shell.character_select.screen != null:
 		shell.character_select.screen.visible = false
+
+
+static func _hide_replay_screen(shell: MatchLobbyShell) -> void:
+	if shell.replay_records != null and shell.replay_records.screen != null:
+		shell.replay_records.screen.visible = false
 
 
 static func _set_action_visible(shell: MatchLobbyShell, node_name: String, shown: bool) -> void:

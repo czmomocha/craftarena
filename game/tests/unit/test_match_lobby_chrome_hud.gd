@@ -51,7 +51,12 @@ func test_play_hud_docks_bottom_right_and_shows_when_solo() -> void:
 	assert_eq(hud.get_parent(), _shell.window)
 	assert_eq(_shell.clock_label_text(), "")
 	assert_true(_shell.try_solo())
+	assert_eq(_shell.countdown_label_text(), "3")
 	assert_true(_shell.clock_label_text().begins_with("0:"))
+	var countdown: Label = _shell.window.get_node(OverlayGd.COUNTDOWN_NAME) as Label
+	assert_not_null(countdown)
+	assert_eq(countdown.horizontal_alignment, HORIZONTAL_ALIGNMENT_CENTER)
+	assert_eq(countdown.get_theme_font_size("font_size"), PlaceholderSpec.HUD_COUNTDOWN_FONT_SIZE)
 	var clock: Label = hud.get_node(OverlayGd.CLOCK_NAME) as Label
 	assert_not_null(clock)
 	assert_eq(clock.horizontal_alignment, HORIZONTAL_ALIGNMENT_RIGHT)
@@ -112,5 +117,6 @@ func test_hud_settings_load_falls_back_on_garbage() -> void:
 func _open() -> MatchLobbyShellGd:
 	var shell: MatchLobbyShellGd = MatchLobbyShellGd.create()
 	add_child(shell)
+	shell.chrome.hud_settings.path = "user://hud_settings_chrome_hud_%s.json" % str(Time.get_ticks_usec())
 	assert_true(shell.open())
 	return shell

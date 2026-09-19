@@ -6,6 +6,7 @@ extends Node
 
 const MatchJoinSessionGd := preload("res://src/client/match_join_session.gd")
 const MatchPlaySessionGd := preload("res://src/client/match_play_session.gd")
+const SubmitHttpGd := preload("res://src/ugc/content_submit_http.gd")
 
 var http: HTTPRequest = null
 var peer: WebSocketPeer = null
@@ -34,17 +35,17 @@ func dispatch(control_plane_base: String, join: MatchJoinSessionGd, on_fail: Cal
 			on_fail.call()
 		return
 	var method: String = join.pending_method()
+	var headers: PackedStringArray = _identity_headers()
 	var err: int = ERR_BUG
 	if method == "POST":
 		var body: String = join.pending_body()
-		var headers: PackedStringArray = PackedStringArray()
 		if body != "":
 			headers.append("Content-Type: application/json")
 		err = http.request(url, headers, HTTPClient.METHOD_POST, body)
 	elif method == "GET":
-		err = http.request(url, PackedStringArray(), HTTPClient.METHOD_GET)
+		err = http.request(url, headers, HTTPClient.METHOD_GET)
 	elif method == "DELETE":
-		err = http.request(url, PackedStringArray(), HTTPClient.METHOD_DELETE)
+		err = http.request(url, headers, HTTPClient.METHOD_DELETE)
 	if err != OK:
 		join.fail_transport()
 		if on_fail.is_valid():
@@ -194,3 +195,13 @@ func send_probe(bytes: PackedByteArray) -> void:
 	if peer.get_ready_state() != WebSocketPeer.STATE_OPEN:
 		return
 	peer.send(bytes, WebSocketPeer.WRITE_MODE_BINARY)
+
+
+static func _identity_headers() -> PackedStringArray:
+	var headers: PackedStringArray = PackedStringArray()
+	var guest: Dictionary = SubmitHttpGd.load_guest(SubmitHttpGd.GUEST_FILE)
+	if guest.get("ok", false) != true:
+		return headers
+	headers.append("%s: %s" % [SubmitHttpGd.HEADER_GUEST_ID, str(guest.get(SubmitHttpGd.KEY_GUEST_ID, ""))])
+	headers.append("%s: %s" % [SubmitHttpGd.HEADER_GUEST_KEY, str(guest.get(SubmitHttpGd.KEY_RECOVERY_KEY, ""))])
+	return headers

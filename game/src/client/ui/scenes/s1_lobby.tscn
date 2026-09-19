@@ -439,6 +439,58 @@ size_flags_vertical = 4
 theme_type_variation = &"NavSubtitle"
 text = ">"
 
+[node name="NavReplay" type="Button" parent="Layout/Main/Columns/NavColumn"]
+custom_minimum_size = Vector2(0, 96)
+layout_mode = 2
+theme_type_variation = &"NavItemCharacter"
+script = ExtResource("13_press")
+
+[node name="Row" type="HBoxContainer" parent="Layout/Main/Columns/NavColumn/NavReplay"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_constants/separation = 16
+
+[node name="Icon" type="TextureRect" parent="Layout/Main/Columns/NavColumn/NavReplay/Row"]
+custom_minimum_size = Vector2(66, 66)
+layout_mode = 2
+size_flags_vertical = 4
+mouse_filter = 2
+texture = ExtResource("9_navmine")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="Texts" type="VBoxContainer" parent="Layout/Main/Columns/NavColumn/NavReplay/Row"]
+layout_mode = 2
+size_flags_vertical = 4
+mouse_filter = 2
+theme_override_constants/separation = 0
+
+[node name="Zh" type="Label" parent="Layout/Main/Columns/NavColumn/NavReplay/Row/Texts"]
+layout_mode = 2
+theme_type_variation = &"NavTitle"
+text = ""
+
+[node name="En" type="Label" parent="Layout/Main/Columns/NavColumn/NavReplay/Row/Texts"]
+layout_mode = 2
+theme_type_variation = &"NavSubtitle"
+text = "RECORDS"
+
+[node name="RowSpacer" type="Control" parent="Layout/Main/Columns/NavColumn/NavReplay/Row"]
+layout_mode = 2
+size_flags_horizontal = 3
+mouse_filter = 2
+
+[node name="Chevron" type="Label" parent="Layout/Main/Columns/NavColumn/NavReplay/Row"]
+layout_mode = 2
+size_flags_vertical = 4
+theme_type_variation = &"NavSubtitle"
+text = ">"
+
 [node name="NavMyContent" type="Button" parent="Layout/Main/Columns/NavColumn"]
 custom_minimum_size = Vector2(0, 96)
 layout_mode = 2

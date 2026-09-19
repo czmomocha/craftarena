@@ -11,6 +11,8 @@ export interface MatchLaunchSpec {
 	readonly gameplay?: "traprush" | "bastion";
 	/** Godot `--players=`。省略时用启动器默认。 */
 	readonly players?: number;
+	/** 全员冲线后磁带落盘路径。省略则对局进程不写回放文件。 */
+	readonly replayOutPath?: string | undefined;
 }
 
 export interface MatchExit {
@@ -78,9 +80,12 @@ export class GodotProcessLauncher implements ProcessLauncher {
 		}
 		if (spec.contentEnvelopePath !== undefined) {
 			args.push(`--content-envelope=${spec.contentEnvelopePath}`);
-			return args;
+		} else {
+			args.push(`--course=${spec.course ?? this.#options.course}`);
 		}
-		args.push(`--course=${spec.course ?? this.#options.course}`);
+		if (spec.replayOutPath !== undefined && spec.replayOutPath !== "") {
+			args.push(`--replay-out=${spec.replayOutPath}`);
+		}
 		return args;
 	}
 

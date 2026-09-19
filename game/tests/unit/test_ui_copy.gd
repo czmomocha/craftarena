@@ -4,6 +4,7 @@ extends GutTest
 
 const UiCopyGd := preload("res://src/shared/ui_copy.gd")
 const UiCopyS1Gd := preload("res://src/shared/ui_copy_s1.gd")
+const UiCopyPlayGd := preload("res://src/shared/ui_copy_play.gd")
 const UiCopyCharGd := preload("res://src/shared/ui_copy_char.gd")
 const MatchLobbyChromeGd := preload("res://src/client/match_lobby_chrome.gd")
 const MatchLobbyShellGd := preload("res://src/client/match_lobby_shell.gd")
@@ -27,6 +28,7 @@ func test_every_declared_key_is_registered() -> void:
 	_assert_script_keys_registered("res://src/shared/ui_copy.gd", UiCopyGd.ALL_KEYS)
 	_assert_script_keys_registered("res://src/shared/ui_copy_s1.gd", UiCopyS1Gd.ALL_KEYS)
 	_assert_script_keys_registered("res://src/shared/ui_copy_char.gd", UiCopyCharGd.ALL_KEYS)
+	_assert_script_keys_registered("res://src/shared/ui_copy_play.gd", UiCopyPlayGd.ALL_KEYS)
 	var seen: Dictionary = {}
 	for key: String in _all_keys():
 		assert_false(seen.has(key), "ALL_KEYS 里 %s 重复登记" % key)
@@ -133,6 +135,7 @@ func _all_keys() -> PackedStringArray:
 	var keys: PackedStringArray = UiCopyGd.ALL_KEYS.duplicate()
 	keys.append_array(UiCopyS1Gd.ALL_KEYS)
 	keys.append_array(UiCopyCharGd.ALL_KEYS)
+	keys.append_array(UiCopyPlayGd.ALL_KEYS)
 	return keys
 
 

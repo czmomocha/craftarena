@@ -29,6 +29,7 @@ func test_solo_shows_live_clock_and_hides_panel_until_finished() -> void:
 	assert_eq(shell.clock_label_text(), "")
 	assert_false(shell.settlement_panel_visible())
 	assert_true(shell.try_solo())
+	shell.offline.skip_opening_countdown()
 	assert_true(shell.status_label_text().contains("clock="))
 	assert_true(shell.clock_label_text().begins_with("0:"))
 	assert_false(shell.settlement_panel_visible())

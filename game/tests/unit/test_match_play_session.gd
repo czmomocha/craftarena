@@ -10,6 +10,8 @@ const MatchJoinSession := preload("res://src/client/match_join_session.gd")
 const MatchMoveFacing := preload("res://src/client/match_move_facing.gd")
 const MatchPlaySession := preload("res://src/client/match_play_session.gd")
 const PlayerIntentNames := preload("res://src/shared/commands/player_intent_names.gd")
+const PlayStubs := preload("res://src/games/traprush/play_stubs.gd")
+const RACING_TICK: int = PlayStubs.COUNTDOWN_TICKS
 
 
 func test_begin_requires_ready_ticket_and_ws_base() -> void:
@@ -29,8 +31,8 @@ func test_open_then_snapshot_then_commands() -> void:
 	assert_false(play.on_binary(_one_player_snapshot(1, 4)))
 	assert_true(play.on_open())
 	assert_eq(play.state, MatchPlaySession.STATE_IN_MATCH)
-	assert_true(play.on_binary(_one_player_snapshot(2, 8)))
-	assert_eq(play.follow.tick, 2)
+	assert_true(play.on_binary(_one_player_snapshot(RACING_TICK, 8)))
+	assert_eq(play.follow.tick, RACING_TICK)
 	var pose: Dictionary = play.follow.players[0]
 	var pose_x: int = pose.get("x", -1)
 	assert_eq(pose_x, 8)

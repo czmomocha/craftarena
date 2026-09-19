@@ -22,6 +22,7 @@ const MatchProtocolRttGd := preload("res://src/client/match_protocol_rtt.gd")
 const MatchSnapshotFollowGd := preload("res://src/client/match_snapshot_follow.gd")
 const MatchGameplayGd := preload("res://src/shared/match_gameplay.gd")
 const PlayerIntentNames := preload("res://src/shared/commands/player_intent_names.gd")
+const PlayStubsGd := preload("res://src/games/traprush/play_stubs.gd")
 
 const STATE_IDLE: String = "idle"
 const STATE_CONNECTING: String = "connecting"
@@ -177,10 +178,13 @@ func try_encode_intent(intent_name: String, dx: int, dz: int, yaw_bam: int) -> P
 	if bytes.is_empty():
 		return PackedByteArray()
 	last_command = bytes
+	var racing: bool = not follow.has_snapshot or follow.tick >= PlayStubsGd.COUNTDOWN_TICKS
 	if intent_name == PlayerIntentNames.MOVE:
-		predict.try_add_move(dx, dz, yaw)
+		if racing:
+			predict.try_add_move(dx, dz, yaw)
 	elif intent_name == PlayerIntentNames.JUMP:
-		predict.try_add_jump(play_jump_dy)
+		if racing:
+			predict.try_add_jump(play_jump_dy)
 	return bytes
 
 
@@ -219,6 +223,7 @@ func status_view() -> Dictionary:
 		"rtt_p90_ms": rtt_view.get("rtt_p90_ms", -1),
 		"rtt_p95_ms": rtt_view.get("rtt_p95_ms", -1),
 		"rtt_lost": rtt_view.get("rtt_lost", 0),
+		"go_tick": 0 if bastion != null else PlayStubsGd.COUNTDOWN_TICKS,
 	}
 
 

@@ -24,6 +24,7 @@ const MatchFrameCodec := preload("res://src/shared/protocol/match_frame_codec.gd
 const PlayerIntentNames := preload("res://src/shared/commands/player_intent_names.gd")
 const TraprushMatchSession := preload("res://src/games/traprush/match_session.gd")
 const TraprushMatchSettlement := preload("res://src/games/traprush/match_settlement.gd")
+const TraprushReplayTapeGd := preload("res://src/games/traprush/replay_tape.gd")
 
 const _YAW_BAM_OMITTED: int = -1
 
@@ -32,6 +33,8 @@ var session: TraprushMatchSession = null
 var _occupied: Dictionary = {}
 var _queue: Array[Dictionary] = []
 var _last_valid_input_tick: int = -1
+var _tape: Dictionary = {}
+var _replay_written: bool = false
 
 
 static func create(match_session: TraprushMatchSession) -> MatchRealtime:
@@ -42,7 +45,9 @@ static func create(match_session: TraprushMatchSession) -> MatchRealtime:
 	return realtime
 
 
-## 占用最小的空槽位；满员（达到会话配置人数）返回 -1。
+func begin_tape(course_path: String) -> void:
+	_tape = TraprushReplayTapeGd.empty_recorder(course_path, session)
+	_replay_written = false
 func add_player() -> int:
 	if session == null:
 		return -1
@@ -159,6 +164,8 @@ func accept_command(slot: int, bytes: PackedByteArray) -> bool:
 func commit_tick() -> void:
 	if session == null:
 		return
+	if session.go_tick > 0 and occupied_count() < session.player_count():
+		return
 	session.live_patch.call("try_apply_pending", session)
 	var before_mark: String = _lease_state_mark()
 	session.apply_player_falls()
@@ -172,6 +179,7 @@ func commit_tick() -> void:
 		var payload: Dictionary = item["payload"]
 		if session.apply_player_intent(slot, payload):
 			applied_ok = true
+			TraprushReplayTapeGd.append_applied(_tape, slot, payload, session.tick_index())
 	var changed: bool = applied_ok and _lease_state_mark() != before_mark
 	session.advance_sim_tick()
 	if changed:
@@ -210,6 +218,21 @@ func allows_settlement() -> bool:
 
 func allows_online_writes() -> bool:
 	return false
+
+
+func try_flush_replay(out_path: String) -> bool:
+	if _replay_written or out_path.strip_edges() == "":
+		return false
+	var tape: Dictionary = TraprushReplayTapeGd.finalize(_tape, session)
+	if tape.is_empty():
+		return false
+	var file: FileAccess = FileAccess.open(out_path, FileAccess.WRITE)
+	if file == null:
+		return false
+	file.store_string(JSON.stringify(tape))
+	file.close()
+	_replay_written = true
+	return true
 
 
 ## 续租用的权威标记：会话哈希（位姿/进度/门闩）+ 箱耐久。

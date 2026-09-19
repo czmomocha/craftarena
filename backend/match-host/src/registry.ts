@@ -18,6 +18,7 @@ import type { ContentEnvelopeFetcher } from "./content_envelope.ts";
 import { removeMatchEnvelopeFile } from "./content_envelope.ts";
 import { launchRegisteredMatch } from "./registry_start.ts";
 import { parseMatchTickSettlement, parseMatchTickValidInputTick } from "./settlement.ts";
+import { flushReplayEntries, tryRecordReplay } from "./replay.ts";
 
 export type MatchState = "running" | "stopped";
 
@@ -73,13 +74,6 @@ export interface MatchEvent {
 	readonly recentOutput?: readonly string[] | undefined;
 }
 
-/**
- * 拼进错误消息的进程输出行数。
- *
- * `POST /matches` 的调用方（控制面、运维的 curl）看不到 MatchHost 日志，而"为什么起不来"
- * 只写在子进程这几行里：`spawn ... ENOENT`、项目路径不对、场景缺失、引擎版本不匹配。
- * 不带上它们，502 就只剩一句"进程在 listen 前退出了"。
- */
 export class MatchCapacityError extends Error {
 	constructor(limit: number) {
 		super(`match host is at capacity (${limit} concurrent matches)`);
@@ -91,7 +85,8 @@ interface MatchEntry {
 	record: MatchRecord;
 	readonly process: LaunchedProcess;
 	settlementPosted: boolean;
-	/** 该场上次已用来续租的 valid_input_tick。同一 tick 不重复续。 */
+	replayPosted: boolean;
+	replayOutPath?: string | undefined;
 	lastRenewedValidInputTick: number;
 	envelopePath?: string | undefined;
 }
@@ -196,6 +191,8 @@ export class MatchRegistry {
 				record,
 				process: started.process,
 				settlementPosted: false,
+				replayPosted: false,
+				replayOutPath: started.replayOutPath,
 				lastRenewedValidInputTick: -1,
 				envelopePath: started.envelopePath,
 			});
@@ -230,10 +227,7 @@ export class MatchRegistry {
 		return this.runningCount() + this.#reservations;
 	}
 
-	/**
-	 * 续租。调用方必须已经确认这是一条通过校验且改变了权威状态的真人命令
-	 * （CD-44 §3）；心跳、重复命令、被拒命令和 Bot 流量不得走到这里。
-	 */
+	/** 续租。只有通过校验且改变权威状态的真人命令才能走到这里（CD-44 §3）。 */
 	renew(matchId: string): MatchRecord | undefined {
 		const entry = this.#entries.get(matchId);
 		if (entry === undefined || entry.record.state !== "running") {
@@ -276,10 +270,6 @@ export class MatchRegistry {
 		}
 	}
 
-	/**
-	 * 运行中心跳一旦带上全员冲线结算，立刻 POST 控制面（409 视为已写入）。
-	 * 停止路径仍会再 POST 一次。失败不杀进程，下轮重试。
-	 */
 	async flushSettlements(): Promise<void> {
 		for (const [matchId, entry] of this.#entries) {
 			if (entry.record.state !== "running" || entry.settlementPosted) {
@@ -296,6 +286,10 @@ export class MatchRegistry {
 				continue;
 			}
 		}
+	}
+
+	async flushReplays(): Promise<void> {
+		await flushReplayEntries(this.#entries, (id, p) => this.#options.registrar.recordReplay(id, p));
 	}
 
 	/** 扫描并回收到期对局。由 MatchHost 定时调用。 */
@@ -381,6 +375,11 @@ export class MatchRegistry {
 			}
 			throw new MatchSessionSettlementError(error instanceof Error ? error.message : String(error));
 		}
+		try {
+			entry.replayPosted = await tryRecordReplay(entry.replayOutPath, entry.replayPosted, (p) =>
+				this.#options.registrar.recordReplay(matchId, p),
+			);
+		} catch { /* replay POST must not block unregister */ }
 
 		try {
 			await this.#options.registrar.unregister(matchId);

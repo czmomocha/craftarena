@@ -13,6 +13,8 @@ const ServerEndpointGd := preload("res://src/client/server_endpoint.gd")
 const PlayClockGd := preload("res://src/shared/play_clock.gd")
 const PlaySplitTrackerGd := preload("res://src/shared/play_split_tracker.gd")
 const SettlementPanelGd := preload("res://src/shared/match_settlement_panel.gd")
+const PlayStubsGd := preload("res://src/games/traprush/play_stubs.gd")
+const OverlayGd := preload("res://src/shared/play_hud_overlay.gd")
 
 
 static func floor_index_from_y(y: int) -> int:
@@ -147,6 +149,8 @@ static func build_view(
 		"offline_banner": offline_view.get("banner", ""),
 		"offline_error": offline_view.get("error", ""),
 		"tick": source.get("tick", -1),
+		"go_tick": source.get("go_tick", 0),
+		"replay_active": source.get("replay_active", false),
 		"player_count": source.get("player_count", 0),
 		"crate_count": source.get("crate_count", 0),
 		"mapped_players": mapped.get("players", 0),
@@ -331,8 +335,16 @@ static func sync_play_progress(
 	view["play_hud_active"] = playing
 	var tick: int = PlayClockGd.dict_int(view, "tick", -1)
 	var finish_tick: int = PlayClockGd.dict_int(view, "own_finish_tick", -1)
-	var clock_tick: int = PlayClockGd.clock_tick(tick, finish_tick)
+	var go_tick: int = PlayClockGd.dict_int(view, "go_tick", 0)
+	var live: int = PlayStubsGd.racing_tick(tick, go_tick)
+	var finish: int = -1
+	if finish_tick >= 0:
+		finish = PlayStubsGd.racing_tick(finish_tick, go_tick)
+	var clock_tick: int = PlayClockGd.clock_tick(live, finish)
 	view["clock_tick"] = clock_tick
+	view["countdown_text"] = OverlayGd.countdown_line(
+		tick, go_tick, PlayClockGd.dict_int(view, "player_count", 0), playing
+	)
 	if tracker == null:
 		view["split_line"] = ""
 	elif playing:
