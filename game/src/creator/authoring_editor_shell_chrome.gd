@@ -333,12 +333,12 @@ func handle_window_input(event: InputEvent, hovered: Control = null) -> void:
 		if PointerCameraGd.hits_editable_control(hover):
 			note_window_focus(true)
 			return
-		if window.is_inside_tree():
-			window.grab_focus()
 		note_window_focus(true)
 		release_focus()
 		if PointerCameraGd.hits_interactive_control(hover):
 			return
+		if window.is_inside_tree():
+			window.grab_focus()
 	if not is_editor_active():
 		return
 	PointerGd.handle(self, event)
