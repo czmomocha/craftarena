@@ -12,6 +12,7 @@ extends GutTest
 
 const UiCopyGd := preload("res://src/shared/ui_copy.gd")
 const UiCopyS1Gd := preload("res://src/shared/ui_copy_s1.gd")
+const UiCopyCharGd := preload("res://src/shared/ui_copy_char.gd")
 
 const FONT_PATH: String = UiFont.FONT_PATH
 const LICENSE_PATH: String = "res://content/ui/fonts/OFL-1.1.txt"
@@ -147,6 +148,7 @@ func test_locale_table_is_fully_covered() -> void:
 	var missing: Array[int] = []
 	var keys: PackedStringArray = UiCopyGd.ALL_KEYS.duplicate()
 	keys.append_array(UiCopyS1Gd.ALL_KEYS)
+	keys.append_array(UiCopyCharGd.ALL_KEYS)
 	for key: String in keys:
 		for locale: String in ["en", "zh_CN"]:
 			var text: String = UiCopyGd.text(key, locale)

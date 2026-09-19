@@ -65,6 +65,7 @@ var creator: CreatorEntry = null
 var plaza: ContentPlazaEntry = null
 var account: AccountEntry = null
 var settings: AudioSettingsEntry = null
+var character_select: CharacterSelectEntry = null
 var home_screen: Control = null
 var home_surface: String = ""
 var window: Window = null
@@ -183,6 +184,8 @@ func try_open_settings() -> bool: return director.try_open_settings()
 func try_close_settings() -> bool: return director.try_close_settings()
 func try_show_home() -> bool:
 	return MatchLobbyHomeGd.try_show_home(self)
+func try_show_character_select() -> bool:
+	return MatchLobbyHomeGd.try_show_character_select(self)
 func try_enter_channel(gameplay: String) -> bool:
 	return MatchLobbyHomeGd.try_enter_channel(self, gameplay)
 func hide_for_overlay() -> void:

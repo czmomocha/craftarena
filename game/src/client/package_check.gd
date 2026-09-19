@@ -54,6 +54,7 @@ static func _run_checks(failures: Array[String]) -> Dictionary:
 	var addons: PackedStringArray = _packed_addons()
 	_record(checks, failures, "courses_readable", _courses_readable(), true)
 	_record(checks, failures, "character_visual_loadable", _character_visual_loadable(), true)
+	_record(checks, failures, "character_catalog_loadable", _character_catalog_loadable(), true)
 	_record(checks, failures, "terrain_tile_visual_loadable", _terrain_tile_visual_loadable(), true)
 	_record(checks, failures, "checkpoint_pad_visual_loadable", _fitted_tile_loadable(SharedVisualAssetCatalog.CHECKPOINT_PAD_SCENE_PATH), true)
 	_record(checks, failures, "checkpoint_gate_visual_loadable", _fitted_prop_loadable(SharedVisualAssetCatalog.CHECKPOINT_GATE_SCENE_PATH), true)
@@ -101,6 +102,7 @@ static func _body(checks: Dictionary, failures: Array[String]) -> Dictionary:
 		"packed_addons": _packed_addons(),
 		"course_paths": _course_paths(),
 		"character_visual_path": SharedVisualAssetCatalog.CHARACTER_SCENE_PATH,
+		"character_catalog_ids": SharedCharacterCatalog.all_ids(),
 		"terrain_tile_visual_path": SharedVisualAssetCatalog.TERRAIN_TILE_SCENE_PATH,
 		"checkpoint_pad_visual_path": SharedVisualAssetCatalog.CHECKPOINT_PAD_SCENE_PATH,
 		"checkpoint_gate_visual_path": SharedVisualAssetCatalog.CHECKPOINT_GATE_SCENE_PATH,
@@ -161,6 +163,19 @@ static func _character_visual_loadable() -> bool:
 	if visual == null:
 		return false
 	visual.free()
+	return true
+
+
+static func _character_catalog_loadable() -> bool:
+	if SharedCharacterCatalog.scene_path(SharedCharacterCatalog.DEFAULT_ID) != SharedVisualAssetCatalog.CHARACTER_SCENE_PATH:
+		return false
+	for id: String in SharedCharacterCatalog.all_ids():
+		if not SharedCharacterCatalog.has_scene(id):
+			return false
+		var visual: Node3D = SharedVisualAssetCatalog.try_instantiate(SharedCharacterCatalog.scene_path(id))
+		if visual == null:
+			return false
+		visual.free()
 	return true
 
 

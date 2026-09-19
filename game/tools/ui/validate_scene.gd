@@ -20,6 +20,7 @@ const DEFAULT_SCENES: Array[String] = [
 	"res://src/client/ui/scenes/s1_lobby.tscn",
 	"res://src/client/ui/scenes/s2_matchmaking.tscn",
 	"res://src/client/ui/scenes/s3_workshop.tscn",
+	"res://src/client/ui/scenes/character_select.tscn",
 ]
 
 const FEEDBACK_SCRIPT := "press_feedback.gd"

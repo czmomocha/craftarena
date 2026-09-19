@@ -19,10 +19,10 @@
 | 进行中 | M3（表现层增强不阻塞 M3 退出，归 M-Art；深化段已收口的表现不再挡本号） |
 | M5 退出记录 | 2026-09-13 人类签署，结论 **「基本通过」**（不是无保留的「通过」）。依据：A1–C6 十一章全交；五张官方课 `npm run bot-run` 全 `completable`；GUT 1645/1645；[可玩性签署：TRAPRUSH](../../docs/runbooks/playability-signoff-traprush.md) 八项均为「通过」。**两处已知缺口随本号带走，不因退出而消失**：[网络故障人工检查](../../docs/runbooks/network-fault-check.md) 九项中乱序与重复包**未严格注入**（macOS `dnctl` 无对应开关，待 Linux `tc netem`）；签署对象是当前自绘大厅 + 占位美术 + 占位数值那一版，换 UI / 定稿美术 / 改 D-F4·F5·F6 后结论不自动延续 |
 | 部分交付 | M-Export（C1 三预设；**Web 游玩分发两刀已交**；Android / iOS 排到一期收尾；公开 TLS / PR 沙盒排到 **M7 之后**）；M-Art（C4 契约与第一批 `.glb`；字体入包与 S3 已交；与 F 线重叠项已交） |
-| 下一动 | **M6 F2**（退出验收 + TRAPRUSH 可玩性重签）。**天空盒与多层官方课 A1 → A2 → A3 已交**（A3：2026-09-18，`course_06` 七层多层进匹配白名单）。2026-09-17 人类拍板把这一段插在 **M6 F1 之后、F2 之前**，计划见 [天空盒与多层官方课](../../docs/plans/sky-and-multilayer-course-2026-09.md)；不是新里程碑号，不发明 M8。插这一段的理由是**只签一次**：F2 要重签 TRAPRUSH 可玩性，而天空与新课都会改变被签对象，放在 F2 之后就要再作废一次。M6 章节拆分见 [M6 章节计划](../../docs/plans/m6-bastion-1v1.md)（11 章，D1 → F2；实现级计划，不是本文件的替代）。**M6 D1–F1 已交**（F1：2026-09-16）。E4 音效按诚实边界复用已登记 cue，无新 OGG，见 [CD-91 D.4](../90-reference/91-decision-log.md) `bastion_e4_audio`。S1 主大厅壳已接线（F1）：落地是 `s1_lobby.tscn`，频道仍是自绘 Window，`project.godot` 全局 theme 仍不挂。**F1 让 M5 那份 TRAPRUSH 可玩性签署作废，须在 F2 重签**，届时一并覆盖 S1 新 UI + 天空 + `course_06`。**测试期 VPS Web 分发已交**（2026-09-14；人类 2026-09-15 确认部署与测试已自行走过）。测试期继续明文 `http`/`ws` + 自备 VPS 链接和端口。S3 三项设计缺口仍待产品输入，见 [ui-wiring.md §2.2](../../docs/runbooks/ui-wiring.md) |
-| 未开工（顺序，不是冻结） | 公开 TLS / 每个 PR 的 Web 沙盒（**M7 之后**）；**产品 UI 接线第三批**（S2 / S4 / S5 / S6）；M6 F2、M7；Android / iOS 烟测（一期收尾）；角色选择界面（紧跟主大厅壳，不提前开工） |
+| 下一动 | **M6 F2**（退出验收 + TRAPRUSH 可玩性重签）。**天空盒与多层官方课 A1 → A2 → A3 已交**（A3：2026-09-18，`course_06` 七层多层进匹配白名单）。2026-09-17 人类拍板把这一段插在 **M6 F1 之后、F2 之前**，计划见 [天空盒与多层官方课](../../docs/plans/sky-and-multilayer-course-2026-09.md)；不是新里程碑号，不发明 M8。插这一段的理由是**只签一次**：F2 要重签 TRAPRUSH 可玩性，而天空与新课都会改变被签对象，放在 F2 之后就要再作废一次。M6 章节拆分见 [M6 章节计划](../../docs/plans/m6-bastion-1v1.md)（11 章，D1 → F2；实现级计划，不是本文件的替代）。**M6 D1–F1 已交**（F1：2026-09-16）。E4 音效按诚实边界复用已登记 cue，无新 OGG，见 [CD-91 D.4](../90-reference/91-decision-log.md) `bastion_e4_audio`。S1 主大厅壳已接线（F1）：落地是 `s1_lobby.tscn`，频道仍是自绘 Window，`project.godot` 全局 theme 仍不挂。**角色选择已交**（2026-09-19）：S1 入口可点，系统目录三只（猫 / 奔跑者 / 机器人），本机 `user://character_select.json`，机关狂奔本席带入所选网格；远端仍默认猫；不进协议帧。人类 2026-09-19 拍板插在 **A3 之后、F2 之前**（关闭 §1 与「紧跟主大厅壳」的位置冲突，不发明新里程碑号）。**F1 让 M5 那份 TRAPRUSH 可玩性签署作废，须在 F2 重签**，届时一并覆盖 S1 新 UI + 天空 + `course_06` + 角色选择。**测试期 VPS Web 分发已交**（2026-09-14；人类 2026-09-15 确认部署与测试已自行走过）。测试期继续明文 `http`/`ws` + 自备 VPS 链接和端口。S3 三项设计缺口仍待产品输入，见 [ui-wiring.md §2.2](../../docs/runbooks/ui-wiring.md) |
+| 未开工（顺序，不是冻结） | 公开 TLS / 每个 PR 的 Web 沙盒（**M7 之后**）；**产品 UI 接线第三批**（S2 / S4 / S5 / S6）；M6 F2、M7；Android / iOS 烟测（一期收尾） |
 | 纠偏闸门 | **已解除**（2026-09-03）。C0–C5 不是里程碑号。此后本文件进度顺序生效 |
-| 解冻后顺序 | 创作者可测（已收口）→ F 线（已收口）→ Web 游玩分发（第一刀已收口）→ 可玩性深化（已收口）→ M-Art 剩余已拍板项 → **M4a** → M4b → M5 → **字体入包 → UI 接线第一批（S3 广场）** → **测试期 VPS Web 分发（M-Export 剩余）** → M6 D1–F1（含 **UI 接线第二批 S1 主大厅壳**）→ **天空盒与多层官方课 A1 → A2 → A3**（插入段，2026-09-17 拍板）→ **M6 F2** → M7 → **公开 TLS / 每个 PR 的 Web 沙盒** → **UI 接线第三批（S2 / S4 / S5 / S6）** → **一期收尾**（Android / iOS 烟测、触控 UI） |
+| 解冻后顺序 | 创作者可测（已收口）→ F 线（已收口）→ Web 游玩分发（第一刀已收口）→ 可玩性深化（已收口）→ M-Art 剩余已拍板项 → **M4a** → M4b → M5 → **字体入包 → UI 接线第一批（S3 广场）** → **测试期 VPS Web 分发（M-Export 剩余）** → M6 D1–F1（含 **UI 接线第二批 S1 主大厅壳**）→ **天空盒与多层官方课 A1 → A2 → A3**（插入段，2026-09-17 拍板）→ **角色选择**（已交，2026-09-19）→ **M6 F2** → M7 → **公开 TLS / 每个 PR 的 Web 沙盒** → **UI 接线第三批（S2 / S4 / S5 / S6）** → **一期收尾**（Android / iOS 烟测、触控 UI） |
 
 ## 1. 开发顺序
 
@@ -47,10 +47,10 @@
       · M6 D1–F1 已交
       · 插入：天空盒与多层官方课（A1 → A2 → A3 **已交**；2026-09-17 人类拍板排在 **M6 F1 之后、F2 之前**，
         理由是 F2 那次可玩性重签要一次性覆盖新 UI + 天空 + 新课；不是新里程碑号，不发明 M8）
+      · 角色选择界面（**已交**，2026-09-19；人类拍板排在 A3 之后、F2 之前，不发明新里程碑号，不塞进 F2）
       · M6 F2（退出验收 + TRAPRUSH 可玩性重签）→ M7
   → 公开 TLS / 每个 PR 的 Web 沙盒（仍属 M-Export 产出，2026-09-14 拍板推迟到 **M7 之后**）
   → UI 接线第三批：S2 匹配屏 + S4 / S5 / S6（S6 局内 HUD 尚未设计）
-  → 角色选择界面（紧跟主大厅壳；2026-09-10 立项，不发明新里程碑号，不提前开工）
   → 一期收尾：Android / iOS 导出烟测（不是风险项，不挡前面任何号）、触控 UI（D7）
   → 网页 / 微信小游戏减配
   → 鸿蒙 NEXT 二期评估
@@ -344,6 +344,7 @@
   | 第三批 | S2 匹配屏 + S4 账号 + S5 我的内容 + S6 局内 HUD | 第二批之后 | S4 / S5 / S6 尚未设计，需先出设计稿 |
 
   不提前、不跳批、不在 M5 C6 期间接任何一屏——C6 要签的可玩性清单描述的是现有自绘大厅，换 UI 会让刚签的验收对象当场作废（宪法第九条）。
+- **角色选择（已交，2026-09-19）**。S1 右侧入口可点；系统目录 `game/src/shared/character_catalog.gd`（append-only id：`cat` / `runner` / `robot`，默认仍是已接线的猫）；overlay `character_select.tscn`；本机 `user://character_select.json`。机关狂奔本席视觉走所选路径，远端仍默认猫。不进协议帧 / SimulationBundle / ContentHash。Kenney 其余 23 只仍受 D-F9 未拍约束。BASTION 场上没有玩家网格，只记住这次选择。人类拍板排在 **A3 之后、F2 之前**，不发明新里程碑号，不塞进 F2。
 - **天空盒与多层官方课（插入段，2026-09-17 人类拍板）**。三章 A1 → A2 → A3，排在 **M6 F1 之后、F2 之前**，章节拆分与边界见 [天空盒与多层官方课](../../docs/plans/sky-and-multilayer-course-2026-09.md)（实现级计划，不是本文件的替代）。**A1 已交**（2026-09-17）：Component Schema v1 加第 20 个组件 `environment`（恰好 `sky_id`，复用 `place` / `set_component`，**不新增第四个 EditCommand op**）；SimulationBundle 加第 23 个**可选表现袋**，空时省略，所以 `course_01` 的 `COURSE_01_BUNDLE_DIGEST` 与 26 个 wire 键两条金标**一个字未改仍绿**——已发布内容的 ContentHash 没有移动（宪法第六条）；两张 1024×512 全景贴图入库（预算档位见 [CD-11 §8.1](../10-product/11-scope-and-platforms.md)，入库形态见 [CD-51 §5.1](../50-engineering/51-dev-environment.md)）。**A2 已交**（2026-09-18）：对局壳 / Preview / Editor 三处挂 `Camera3D.environment`（不挂 `WorldEnvironment`），IBL 显式关闭，创作者下拉走已有 `place` / `set_component`。**A3 已交**（2026-09-18）：多层官方课 `course_06`（7 层、层距 2 格、底层 13×13 满铺、终点与起点相隔 6 层）进匹配白名单；爬升是三对双向传送门 + 三座电梯补被跳过的层（弹射垫在层距 2 格时无法落在同 xz 上层地板）；`bot-run` 重放手写脚本，A* 两次中转不够三段。
 - 按 `asset_id` 解析视觉（F 线 FC，已交）；
 - 传送门模型（F 线 FC 占位；深化段可补专用模型，若仍无模型须诚实标注）；
@@ -414,7 +415,7 @@
 
 **2026-09-15 人类拍板两项**（结论与未覆盖范围见 [CD-91 D.4](../90-reference/91-decision-log.md)）：蓝图编译产物是独立新类型、不动 Bundle v2 与 Component Schema v1（`bastion_blueprint_bundle`）；M6 最小集 = 3 塔 + 3 兵 + 3 障碍，只锁「M6 用哪九个」、数值仍是占位桩（`bastion_minimum_set_m6`，口径在 [CD-22 当前生效值](../20-gameplay/22-bastion.md)）。**D1 由此解锁**。同日开工 E1 时另拍两项：v1 加 type 5/6 与 intent id 7–12、不升协议大版本（`bastion_realtime_frames`）；隐藏布障走服务端裁剪（`hidden_state_sync`）。同日开工 E2 时另拍一项：第一张官方蓝图 = 对称双线（`official_bastion_blueprint_01`）。同日开工 E3 时另拍两项：匹配 HTTP 加可选 `gameplay`、官方蓝图走独立 `blueprint`（`match_http_gameplay`）；结算 HTTP 加可选 `teams[]`、复用 `mvpSlot`（`settlement_http_teams`）。E4 音效按本章诚实边界复用已登记 cue（`bastion_e4_audio`），无新 OGG；新素材入库仍须宪法第十八条。
 
-**D1–F1 交了什么、没交什么**：交的是**全离线的玩法底座**加上 **E1 协议帧**加上 **E2 第一张官方蓝图**加上 **E3 对局进程 / 匹配 / 结算**加上 **E4 客户端对局壳**加上 **F1 S1 主大厅壳**——BASTION 蓝图 bundle v1 与编译器、九个原型的白名单、占位数值单一配置源、与玩法无关的确定性边图搜索、「不得完全封路」守卫、五阶段会话与镜像波次与核心伤害与胜负、炮塔与经济（含四类伪造建造的反例）、互设障碍的点数预算与盲设揭示退点与布障磁带、type 5/6 实时帧与 intent id 7–12、布障阶段服务端裁剪、`blueprint_01` 对称双线（手写 AuthoringDocument + 双端 id 白名单）、MatchServer 按玩法分派、匹配 HTTP 玩法判别位与官方 `blueprint`、结算 HTTP 可选 `teams[]`、快照跟从 / 建造交互（无预测）/ HUD tokens / 布障只画本方 / `bastion_audio_router.gd` 复用已登记 cue、`s1_lobby.tscn` 落地壳与双玩法频道入口（关频道窗回 S1；BASTION 卡开放；角色选择 / 我的内容可见但禁用）。**没交**：F2 退出验收与 TRAPRUSH 可玩性重签；S2 匹配屏；角色选择功能；BASTION 单人对 AI / 蓝图 Edit（M7）。**第一次有画面是 E4。** 数值全部是 `game/src/games/bastion/play_stubs.gd` 的占位桩（[CD-63 §1.2 / §1.3](63-open-decisions.md) 仍延期）。频道入口仍是自绘 `Window`（TRAPRUSH 默认 `course_01`，BASTION 钉 `blueprint_01` / 2 席）。**F1 已让 M5 那份可玩性签署作废，须在 F2 重签。** 官方蓝图 id 已落，**匹配 HTTP 已认 `blueprint_01`**。
+**D1–F1 交了什么、没交什么**：交的是**全离线的玩法底座**加上 **E1 协议帧**加上 **E2 第一张官方蓝图**加上 **E3 对局进程 / 匹配 / 结算**加上 **E4 客户端对局壳**加上 **F1 S1 主大厅壳**——BASTION 蓝图 bundle v1 与编译器、九个原型的白名单、占位数值单一配置源、与玩法无关的确定性边图搜索、「不得完全封路」守卫、五阶段会话与镜像波次与核心伤害与胜负、炮塔与经济（含四类伪造建造的反例）、互设障碍的点数预算与盲设揭示退点与布障磁带、type 5/6 实时帧与 intent id 7–12、布障阶段服务端裁剪、`blueprint_01` 对称双线（手写 AuthoringDocument + 双端 id 白名单）、MatchServer 按玩法分派、匹配 HTTP 玩法判别位与官方 `blueprint`、结算 HTTP 可选 `teams[]`、快照跟从 / 建造交互（无预测）/ HUD tokens / 布障只画本方 / `bastion_audio_router.gd` 复用已登记 cue、`s1_lobby.tscn` 落地壳与双玩法频道入口（关频道窗回 S1；BASTION 卡开放；我的内容可见但禁用）。**没交**：F2 退出验收与 TRAPRUSH 可玩性重签；S2 匹配屏；BASTION 单人对 AI / 蓝图 Edit（M7）。**第一次有画面是 E4。** 数值全部是 `game/src/games/bastion/play_stubs.gd` 的占位桩（[CD-63 §1.2 / §1.3](63-open-decisions.md) 仍延期）。频道入口仍是自绘 `Window`（TRAPRUSH 默认 `course_01`，BASTION 钉 `blueprint_01` / 2 席）。**F1 已让 M5 那份可玩性签署作废，须在 F2 重签。** 官方蓝图 id 已落，**匹配 HTTP 已认 `blueprint_01`**。
 
 **UI 接线第二批 S1 主大厅壳已在本号 F1 落地**；M5 的 TRAPRUSH 可玩性签署结论作废、须在 F2 重签（见上「M5 退出记录」第 2 条）。
 

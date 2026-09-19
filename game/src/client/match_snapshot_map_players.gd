@@ -28,11 +28,12 @@ static func spawn_player(map: MatchSnapshotMap, slot: int, body: Dictionary) -> 
 	node.rotation.y = MatchSnapshotMap.yaw_radians_from_bam(yaw_bam)
 	map.add_child(node)
 	spawn_facing(node)
-	attach_visual(map, node, seat)
+	attach_visual(map, node, seat, slot)
 
 
-static func attach_visual(map: MatchSnapshotMap, player: MeshInstance3D, seat: Color) -> bool:
-	var visual: Node3D = SharedVisualAssetCatalog.try_instantiate(map.character_scene_path)
+static func attach_visual(map: MatchSnapshotMap, player: MeshInstance3D, seat: Color, slot: int = -1) -> bool:
+	var path: String = map.visual_path_for_slot(slot)
+	var visual: Node3D = SharedVisualAssetCatalog.try_instantiate(path)
 	if visual == null:
 		return false
 	visual.name = MatchSnapshotMap.VISUAL_NAME
@@ -40,8 +41,29 @@ static func attach_visual(map: MatchSnapshotMap, player: MeshInstance3D, seat: C
 	player.add_child(visual)
 	SharedVisualAssetCatalog.tint(visual, seat)
 	player.layers = 0
+	player.set_meta(MatchSnapshotMap.VISUAL_PATH_META, path)
 	map._visual_count += 1
 	return true
+
+
+static func refresh_visual(
+	map: MatchSnapshotMap, player: MeshInstance3D, slot: int, seat: Color
+) -> void:
+	if player == null:
+		return
+	var wanted: String = map.visual_path_for_slot(slot)
+	var current: String = ""
+	if player.has_meta(MatchSnapshotMap.VISUAL_PATH_META):
+		current = str(player.get_meta(MatchSnapshotMap.VISUAL_PATH_META))
+	if current == wanted:
+		return
+	var stale: Node = player.get_node_or_null(MatchSnapshotMap.VISUAL_NAME)
+	if stale != null:
+		player.remove_child(stale)
+		stale.free()
+		map._visual_count -= 1
+		player.layers = 1
+	attach_visual(map, player, seat, slot)
 
 
 static func spawn_facing(player: MeshInstance3D) -> void:

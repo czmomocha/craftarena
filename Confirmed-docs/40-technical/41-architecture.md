@@ -112,11 +112,11 @@ repo/
 │  │  ├─ gut/
 │  │  └─ authoring_editor/       # 内部开发 EditorPlugin；可自动启用本机 godot_ai，插件本身不入库
 │  ├─ src/
-│  │  ├─ shared/                 # ids/schema/commands/events/protocol；D4 数值唯一落点 `placeholder_spec.gd`；BASTION 帧 `protocol/bastion_frame_codec.gd`（E1，v1 type 5/6）；占位剪影 `occupancy_gadget.gd` + traps/bastion（E4 加 BASTION 种类）；文案键 `ui_copy.gd` + `ui_copy_s1.gd`（F1 E9 拆文件）
+│  │  ├─ shared/                 # ids/schema/commands/events/protocol；D4 数值唯一落点 `placeholder_spec.gd`；天空 id `sky_catalog.gd`；角色目录 `character_catalog.gd`（append-only）；BASTION 帧 `protocol/bastion_frame_codec.gd`（E1，v1 type 5/6）；占位剪影 `occupancy_gadget.gd` + traps/bastion（E4 加 BASTION 种类）；文案键 `ui_copy.gd` + `ui_copy_s1.gd` + `ui_copy_char.gd`（E9 拆文件）
 │  │  ├─ simulation/             # fixed-point world/systems/rng/spatial/replay；World 门面 `simulation_world.gd` + query/move
 │  │  ├─ ugc/                    # compiler/validator/bytecode_vm/migration；Bundle 门面 `simulation_bundle.gd` + decode/bags；拓扑编译门面 `traprush_topology_compiler.gd` + bags/fields；Rule VM 门面 `rule_vm.gd` + opcodes/codec/compiler/dispatch/host/apply；内容签名 `content_sign.gd`；玩家代签 `content_submit.gd`；内容补丁 `content_patch.gd`；内容目录 `content_catalog.gd`
 │  │  ├─ server/                 # Godot Headless match/replication/result
-│  │  ├─ client/                 # platform/input/prediction/presentation；大厅门面 `match_lobby_shell.gd` + chrome/net/sampler/stage/hud/director/runtime/home（F1 S1 落地）；`ui/scenes/` + `ui/scripts/`（S1 / S2 / S3）；BASTION 场 `bastion_field_map.gd` + follow/hud/interact（E4）；匹配门面 `match_join_session.gd` + codec/accept；联机音频源 `match_audio_source.gd`
+│  │  ├─ client/                 # platform/input/prediction/presentation；大厅门面 `match_lobby_shell.gd` + chrome/net/sampler/stage/hud/director/runtime/home（F1 S1 落地）；角色选择 `character_select_entry.gd` + store；`ui/scenes/` + `ui/scripts/`（S1 / S2 / S3 / character_select）；BASTION 场 `bastion_field_map.gd` + follow/hud/interact（E4）；匹配门面 `match_join_session.gd` + codec/accept；联机音频源 `match_audio_source.gd`
 │  │  ├─ audio/                  # 游戏无关音频模块（自愿等同第二十三条）；仅 `audio_backend.gd` 碰 AudioServer / AudioStreamPlayer / AudioStreamPlayer3D / AudioListener3D；`audio_music_director.gd` 交叉淡入淡出；玩法映射不在此目录
 │  │  ├─ creator/                # shared shell/edit_commands/preview；Preview 门面 `authoring_preview.gd` + bootstrap/intents/scan/view；Preview 映射门面 `authoring_preview_map.gd` + convert/occupancy/gizmos/overlay/player；Preview 窗口门面 `authoring_preview_shell.gd` + chrome/sampler/hud/play/view；编辑门面 `authoring_editor_shell.gd` + chrome/place/follow
 │  │  └─ games/

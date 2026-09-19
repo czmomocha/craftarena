@@ -543,7 +543,7 @@ func test_match_solid_visual_count_resets_on_rebuild() -> void:
 func test_package_check_covers_both_visual_assets() -> void:
 	var report: Dictionary = PackageCheck.report()
 	var checks: Dictionary = report["checks"]
-	for key: String in ["character_visual_loadable", "terrain_tile_visual_loadable"]:
+	for key: String in ["character_visual_loadable", "terrain_tile_visual_loadable", "character_catalog_loadable"]:
 		assert_true(checks.has(key), "包内自检没查 %s" % key)
 		var loadable: bool = checks.get(key, false)
 		assert_true(loadable, "源码工程里 %s 就已经不成立" % key)

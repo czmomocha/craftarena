@@ -59,6 +59,7 @@ static func on_physics(shell: MatchLobbyShell, _delta: float) -> void:
 
 
 static func apply_snapshot(shell: MatchLobbyShell) -> void:
+	_sync_own_character(shell)
 	if _bastion_live(shell):
 		MatchLobbyStageBastion.apply_follow(shell)
 		shell.refresh_status()
@@ -238,6 +239,15 @@ static func _pump_bastion_audio(shell: MatchLobbyShell) -> void:
 	if shell.play == null or shell.play.bastion == null:
 		return
 	MatchLobbyStageBastion.pump_audio(shell)
+
+
+static func _sync_own_character(shell: MatchLobbyShell) -> void:
+	MatchLobbyHomeGd.ensure_character_select(shell)
+	if shell.map == null:
+		return
+	if shell.character_select == null or shell.character_select.store == null:
+		return
+	shell.map.own_character_scene_path = shell.character_select.store.scene_path()
 
 
 static func _bastion_live(shell: MatchLobbyShell) -> bool:

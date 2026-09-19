@@ -70,6 +70,10 @@ var follow_transition: CameraFollowTransition = CameraFollowTransition.new()
 var follow_grounded: bool = true
 ## 空字符串或解析失败 ⇒ 回退占位盒。是变量而不是常量，好让测试两条分支都能跑。
 var character_scene_path: String = SharedVisualAssetCatalog.CHARACTER_SCENE_PATH
+## 本席视觉。空串 = 所有席位都走 `character_scene_path`（测试与未选择时）。
+## 本机角色选择只改 follow_slot；远端仍是目录默认，因为选择不进协议帧。
+var own_character_scene_path: String = ""
+const VISUAL_PATH_META: String = "visual_path"
 var _player_count: int = 0
 var _visual_count: int = 0
 
@@ -90,6 +94,12 @@ static func player_albedo(slot: int, followed: int) -> Color:
 	if followed >= 0 and slot == followed:
 		return OWN_ALBEDO
 	return REMOTE_ALBEDO
+
+
+func visual_path_for_slot(slot: int) -> String:
+	if slot == follow_slot and not own_character_scene_path.is_empty():
+		return own_character_scene_path
+	return character_scene_path
 
 
 func apply_follow(follow: MatchSnapshotFollowGd) -> bool:
@@ -218,7 +228,9 @@ func _update_player(node: MeshInstance3D, slot: int, body: Dictionary) -> void:
 	var yaw_bam: int = pose["yaw_bam"]
 	node.position = Vector3(meters_from_fixed(x), meters_from_fixed(y), meters_from_fixed(z))
 	node.rotation.y = yaw_radians_from_bam(yaw_bam)
-	_retint(node, player_albedo(slot, follow_slot))
+	var seat: Color = player_albedo(slot, follow_slot)
+	_retint(node, seat)
+	PlayersGd.refresh_visual(self, node, slot, seat)
 
 
 ## 座位色只在真的变了时才写。`follow_slot` 一局里基本不变，所以每帧的常态是

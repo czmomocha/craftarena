@@ -12,13 +12,15 @@ extends GutTest
 
 const UiCopyGd := preload("res://src/shared/ui_copy.gd")
 const UiCopyS1Gd := preload("res://src/shared/ui_copy_s1.gd")
+const UiCopyCharGd := preload("res://src/shared/ui_copy_char.gd")
 
 const S1_SCENE: String = "res://src/client/ui/scenes/s1_lobby.tscn"
 const S3_SCENE: String = "res://src/client/ui/scenes/s3_workshop.tscn"
 const CARD_SCENE: String = "res://src/client/ui/scenes/components/content_card.tscn"
+const CHAR_SCENE: String = "res://src/client/ui/scenes/character_select.tscn"
 
 ## 已迁移：这些场景的 `text` / `placeholder_text` 必须零中文。
-const MIGRATED_SCENES: Array[String] = [S1_SCENE, S3_SCENE, CARD_SCENE]
+const MIGRATED_SCENES: Array[String] = [S1_SCENE, S3_SCENE, CARD_SCENE, CHAR_SCENE]
 
 ## 未迁移：第三批。列在这里是为了让「还欠着什么」可执行，
 ## 迁完一个就从这里挪到上面那个数组。
@@ -58,6 +60,17 @@ const CARD_KEYS: Array[String] = [
 	UiCopyGd.CARD_UNVERIFIED_BADGE,
 	UiCopyGd.CARD_ACTION_EDIT_REUSE,
 	UiCopyGd.CARD_PLAYS_COUNT,
+]
+
+const CHAR_KEYS: Array[String] = [
+	UiCopyCharGd.TITLE,
+	UiCopyCharGd.SUBTITLE,
+	UiCopyCharGd.HINT,
+	UiCopyCharGd.SELECTED,
+	UiCopyCharGd.BACK,
+	UiCopyCharGd.NAME_CAT,
+	UiCopyCharGd.NAME_RUNNER,
+	UiCopyCharGd.NAME_ROBOT,
 ]
 
 
@@ -116,6 +129,7 @@ func test_new_keys_resolve_in_both_locales() -> void:
 	var keys: Array[String] = S1_KEYS.duplicate()
 	keys.append_array(S3_KEYS)
 	keys.append_array(CARD_KEYS)
+	keys.append_array(CHAR_KEYS)
 	for key: String in keys:
 		for locale: String in ["en", "zh_CN"]:
 			var value: String = UiCopyGd.text(key, locale)
@@ -161,6 +175,23 @@ func test_s1_fills_its_chrome_at_runtime() -> void:
 	assert_not_null(workshop, "S1 广场导航路径变了")
 	if workshop != null:
 		assert_eq(workshop.text, UiCopyGd.text(UiCopyS1Gd.NAV_WORKSHOP))
+
+
+func test_character_select_fills_its_chrome_at_runtime() -> void:
+	var packed: PackedScene = load(CHAR_SCENE) as PackedScene
+	assert_not_null(packed, "角色选择场景必须能加载")
+	if packed == null:
+		return
+	var root: Node = packed.instantiate()
+	add_child_autofree(root)
+	var title: Label = root.get_node_or_null("Layout/TopBar/Row/TitleBox/Title") as Label
+	assert_not_null(title, "角色选择标题节点路径变了")
+	if title != null:
+		assert_eq(title.text, UiCopyGd.text(UiCopyCharGd.TITLE), "标题没有从 UiCopy 填上")
+	var grid: GridContainer = root.get_node_or_null("Layout/Main/HBox/CardScroll/Grid") as GridContainer
+	assert_not_null(grid)
+	if grid != null:
+		assert_eq(grid.get_child_count(), SharedCharacterCatalog.all_ids().size())
 
 
 func test_s3_fills_its_chrome_at_runtime() -> void:
@@ -249,6 +280,7 @@ func test_demo_entries_are_not_in_the_locale_table() -> void:
 	var table_titles: Array[String] = []
 	var keys: PackedStringArray = UiCopyGd.ALL_KEYS.duplicate()
 	keys.append_array(UiCopyS1Gd.ALL_KEYS)
+	keys.append_array(UiCopyCharGd.ALL_KEYS)
 	for key: String in keys:
 		table_titles.append(UiCopyGd.text(key, "zh_CN"))
 	for entry: Dictionary in entries:

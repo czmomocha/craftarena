@@ -108,7 +108,7 @@ cue 是数据，定义在 `game/content/audio/banks/*.json`，字段初稿：
 |---|---|---|
 | 击毁障碍 | 已有：可破坏箱 / 碎石 / 障碍核心 / 能量墙，走 UseItem | 直接接，按被打碎的袋类型分 cue |
 | 获胜冲线 | 已有：`finish_tick` + 单局名次 | 直接接，冲线与"第一名"分两个 cue |
-| 选择角色 | **界面已立项但未开工**（`character_select_screen`，排在主大厅壳之后） | 先登记为通用 UI cue（`ui.select` / `ui.confirm`），接到现有大厅按钮；角色选择界面落地时直接复用，不改音频层 |
+| 选择角色 | **界面已交**（2026-09-19，`character_select_screen = catalog_local_persist`） | 通用 UI cue（`ui.select` / `ui.confirm`）已接到选择卡片与返回；不改音频层 |
 | 击杀 | **不存在**。TRAPRUSH 是竞速，没有击杀，只有推击（Shove）与环境失败（hazard / out_of_range / crushed） | 拆成两个诚实的 cue：`player.shove_hit`（推击命中）与 `player.rival_failed`（他人环境失败）。**不叫击杀，也不为此加击杀机制**。真正的击杀属 BASTION（M6 / M7），届时新 router 复用同一模块 |
 | gameover | **不存在**。单局按名次结束，未冲线也不是失败态 | 拆成 `player.env_fail`（环境失败复位，已有三种原因）与 `match.settled`（结算面板出现）。若你要的是"本局结束"的收束音，用后者 |
 | 背景音乐 | 无 | A3 的 `music_director`：大厅 / 对局 / 结算 / 编辑四态，交叉淡入淡出 |

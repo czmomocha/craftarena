@@ -1,6 +1,6 @@
 # Craft Arena UI 基础包 · 接线说明
 
-> **状态（2026-09-16）：资产已落库，四项前置已清完，S3 与 S1 已接线。**
+> **状态（2026-09-19）：资产已落库，四项前置已清完，S3、S1 与角色选择已接线。**
 >
 > - **排期的所有者是 [CD-61 §2 M-Art](../../Confirmed-docs/60-plan/61-milestones.md#m-art表现与美术)**，本文件不复述（宪法第二十六条）。三批：S3 广场 → S1 主大厅（M6 主大厅壳章内）→ S2 / S4 / S5 / S6。
 > - 第一批四项前置全部已交（均 2026-09-13）：**字体入包**（[CD-11 §8.2 第 3 条](../../Confirmed-docs/10-product/11-scope-and-platforms.md)，见 [§3.5](#36-字体已完成2026-09-13)）；**两个校验脚本进 CI**（见 [§0](#0-两个校验脚本已进-ci2026-09-13)）；**S3 + 卡片文案迁 `UiCopy`**（见 [§0.3](#03-文案迁-uicopy-的真实口径)）；**本文件按仓库实际落点重写**（本次）。
@@ -19,7 +19,7 @@
 "$GODOT4" --headless --path game --script res://tools/ui/validate_scene.gd
 ```
 
-`validate_scene.gd` 不带参数时查 `DEFAULT_SCENES`（S1 / S2 / S3），也可以在 `--` 之后传场景路径。
+`validate_scene.gd` 不带参数时查 `DEFAULT_SCENES`（S1 / S2 / S3 / 角色选择），也可以在 `--` 之后传场景路径。
 
 ### 0.1 接进 CI 那天修掉的两个假绿
 
@@ -61,7 +61,7 @@
 
 #### 已迁移与未迁移
 
-**已迁移**：`s1_lobby.tscn`、`s3_workshop.tscn`、`components/content_card.tscn`。文件的 `text` 已清空，运行时由 `_apply_copy()` / `_apply()` 从 `UiCopy` 填。S1 的键在 `ui_copy_s1.gd`（E9 拆文件），查表仍走 `UiCopy.text()`。占位假数据（昵称、草稿数、版本号）留在 `s1_lobby.gd` 的 `DEMO_*`，不进 CSV。
+**已迁移**：`s1_lobby.tscn`、`s3_workshop.tscn`、`components/content_card.tscn`、`character_select.tscn`。文件的 `text` 已清空，运行时由 `_apply_copy()` / `_apply()` 从 `UiCopy` 填。S1 的键在 `ui_copy_s1.gd`，角色选择的键在 `ui_copy_char.gd`（E9 拆文件），查表仍走 `UiCopy.text()`。占位假数据（昵称、草稿数、版本号）留在 `s1_lobby.gd` 的 `DEMO_*`，不进 CSV。
 
 **未迁移**：`s2_matchmaking.tscn`（52 处）。属于第三批。
 
@@ -92,6 +92,7 @@ game/
 │   │   ├── s1_lobby.tscn
 │   │   ├── s2_matchmaking.tscn
 │   │   ├── s3_workshop.tscn
+│   │   ├── character_select.tscn
 │   │   └── components/content_card.tscn
 │   └── scripts/
 │       ├── content_card.gd           卡片组件
@@ -100,7 +101,9 @@ game/
 │       ├── spinner.gd
 │       ├── s1_lobby.gd               主大厅视图（F1）：填文案、发 intent，不开战
 │       ├── s2_matchmaking.gd
-│       └── s3_workshop.gd
+│       ├── s3_workshop.gd
+│       ├── character_select.gd       角色选择视图：目录卡片 + 3D 预览
+│       └── character_select_preview.gd
 └── tools/ui/
     ├── validate_theme.gd             CI 门禁（§0）
     ├── validate_scene.gd             CI 门禁（§0）
@@ -116,6 +119,7 @@ game/
 | 屏 | 场景 | 运行时 | 接线批次 |
 |---|---|---|---|
 | S1 主大厅 | `s1_lobby.tscn` | **已接线**（2026-09-16）：主视口落地壳；频道仍是自绘 Window | 第二批（M6 F1）✅ |
+| 角色选择 | `character_select.tscn` | **已接线**（2026-09-19）：S1 入口 overlay；系统目录 + 本机存档；机关狂奔本席带入 | 主大厅壳之后、F2 之前 ✅ |
 | S2 匹配 | `s2_matchmaking.tscn` | 频道窗口内的输入框与按钮仍是自绘 | 第三批 |
 | S3 广场 | `s3_workshop.tscn` | **已接线**（2026-09-13）：`content_plaza_entry.gd` 的视图 | 第一批 ✅ |
 | S4 / S5 / S6 | — | — | 第三批，尚无设计稿 |
@@ -124,7 +128,7 @@ game/
 
 **换了落地壳，没换频道窗。** `s1_lobby.gd` 是视图：从 `UiCopy` 填设计稿文案、把 BASTION 卡改成开放态、点卡发 `channel_requested`。频道成员、匹配、3D 场仍在 `MatchLobbyShell` 的自绘 Window 里（公开 API `open()` / `try_quick()` 等一字未改）。玩家启动走 `try_show_home()`；测试与 `?room=` / `?edit=` 仍先看到频道窗。关频道窗回 S1。广场 / 账号 / 设置 / 创作按进入时的表面还原，不会从 S1 进 overlay 再被强制弹到频道窗。
 
-角色选择与「我的内容」留在设计树里但禁用——删掉是改设计，启用却什么都不发生更糟（与 S3 灰掉排序 / 搜索同一条）。CD-12 树里 BASTION 的「单人对 AI」与「蓝图编辑」属 M7，频道窗里对应的是把 TRAPRUSH 专用的 Solo / 创作 / 冲刺藏起来，不是接那两项。
+角色选择已接线：S1 右侧入口可点，主视口换成 `character_select.tscn` overlay（不是 Window）。点选即写入 `user://character_select.json`；「我的内容」仍留在设计树里但禁用。CD-12 树里 BASTION 的「单人对 AI」与「蓝图编辑」属 M7，频道窗里对应的是把 TRAPRUSH 专用的 Solo / 创作 / 冲刺藏起来，不是接那两项。
 
 `project.godot` 仍不挂全局 theme。
 

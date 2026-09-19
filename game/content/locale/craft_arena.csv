@@ -145,3 +145,11 @@ craft_arena.s1.status_online,● ONLINE,● 在线 ONLINE
 craft_arena.ui.sky,Sky,天空
 craft_arena.ui.sky_pastel_ridge,Pastel mountains,粉彩群山
 craft_arena.ui.sky_lowpoly_mesa,Block mesa,积木荒原
+craft_arena.char.title,Character,角色选择
+craft_arena.char.subtitle,System roster,系统角色
+craft_arena.char.hint,"Pick a character. It follows you into Traprush and stays selected for Bastion.",点选角色。机关狂奔会带上它，双塔要塞也会记住这次选择。
+craft_arena.char.selected,Selected,已选择
+craft_arena.char.back,<,返回
+craft_arena.char.name_cat,Cat,立方猫
+craft_arena.char.name_runner,Runner,奔跑者
+craft_arena.char.name_robot,Robot,机器人

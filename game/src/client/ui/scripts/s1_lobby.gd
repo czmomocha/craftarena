@@ -7,6 +7,7 @@ signal channel_requested(gameplay: String)
 signal plaza_requested()
 signal settings_requested()
 signal account_requested()
+signal character_requested()
 
 const MatchGameplayGd := preload("res://src/shared/match_gameplay.gd")
 const UiCopyS1Gd := preload("res://src/shared/ui_copy_s1.gd")
@@ -22,11 +23,11 @@ const _TRAPRUSH := "Layout/Main/Columns/Left/TraprushCard"
 const _BASTION := "Layout/Main/Columns/Left/BastionCard"
 const _NAV := "Layout/Main/Columns/NavColumn"
 
-## Designed entries that this chapter must not open (character select is not
-## in F1; 我的内容 is S5 / third batch). They stay visible because removing
-## them would edit the design; they are disabled for the same reason S3 greys
-## Sort / Search — an enabled control that silently does nothing is worse.
-const DEAD_NAV: Array[String] = ["NavCharacter", "NavMyContent"]
+## Designed entries that this chapter must not open. 我的内容 is S5 / third
+## batch. It stays visible because removing it would edit the design; it is
+## disabled for the same reason S3 greys Sort / Search — an enabled control
+## that silently does nothing is worse. Character select is wired this chapter.
+const DEAD_NAV: Array[String] = ["NavMyContent"]
 
 var _chrome_ready: bool = false
 
@@ -85,6 +86,7 @@ func _wire_chrome() -> void:
 	_connect_button(_TRAPRUSH + "/Content/VBox/CTA", func() -> void: channel_requested.emit(MatchGameplayGd.TRAPRUSH))
 	_connect_button(_BASTION, func() -> void: channel_requested.emit(MatchGameplayGd.BASTION))
 	_connect_button(_BASTION + "/Content/VBox/CTA", func() -> void: channel_requested.emit(MatchGameplayGd.BASTION))
+	_connect_button(_NAV + "/NavCharacter", func() -> void: character_requested.emit())
 	_connect_button(_NAV + "/NavWorkshop", func() -> void: plaza_requested.emit())
 	_connect_button(_NAV + "/NavSettings", func() -> void: settings_requested.emit())
 	_connect_button("Layout/TopBar/Row/Gear", func() -> void: settings_requested.emit())

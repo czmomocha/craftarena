@@ -52,14 +52,18 @@ func test_bastion_card_is_open_and_has_no_lock_overlay() -> void:
 		assert_false(chip.text.contains("🔒"))
 
 
-func test_character_and_my_content_stay_visible_but_disabled() -> void:
+func test_character_nav_is_enabled_and_my_content_stays_disabled() -> void:
 	var root: Control = _instantiate_s1()
-	for node_name: String in ["NavCharacter", "NavMyContent"]:
-		var button: Button = root.get_node_or_null("%s/%s" % [_NAV, node_name]) as Button
-		assert_not_null(button, "%s 被删了；设计里的项应留下并禁用" % node_name)
-		if button != null:
-			assert_true(button.disabled)
-			assert_true(button.visible)
+	var character: Button = root.get_node_or_null("%s/NavCharacter" % _NAV) as Button
+	assert_not_null(character)
+	if character != null:
+		assert_false(character.disabled, "角色选择本刀必须能点")
+		assert_true(character.visible)
+	var mine: Button = root.get_node_or_null("%s/NavMyContent" % _NAV) as Button
+	assert_not_null(mine, "我的内容被删了；设计里的项应留下并禁用")
+	if mine != null:
+		assert_true(mine.disabled)
+		assert_true(mine.visible)
 
 
 func test_open_still_shows_the_match_window_public_api() -> void:
