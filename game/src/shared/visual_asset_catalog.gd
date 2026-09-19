@@ -239,8 +239,10 @@ static func fit_prop_on_cell(visual: Node3D) -> bool:
 
 ## 角色贴合：等比缩到 `CHARACTER_VISUAL_CELL_SPAN` 格宽、水平居中、脚底落在
 ## 权威胶囊底面，并把基准 transform 记进 meta 供 `PlayAnimVisual` 读。
-static func fit_character_on_cell(visual: Node3D) -> bool:
-	return FitGd.fit_character_on_cell(visual)
+## `yaw_deg` 只转 visual，给目录里朝向与 Godot -Z 不一致的静态人型用；默认 0
+## 保持已接线的猫。
+static func fit_character_on_cell(visual: Node3D, yaw_deg: float = 0.0) -> bool:
+	return FitGd.fit_character_on_cell(visual, yaw_deg)
 
 
 ## 角色 visual 的基准 transform。`PlayAnimVisual` 的姿态叠加在它之上；

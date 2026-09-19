@@ -37,7 +37,9 @@ static func attach_visual(map: MatchSnapshotMap, player: MeshInstance3D, seat: C
 	if visual == null:
 		return false
 	visual.name = MatchSnapshotMap.VISUAL_NAME
-	SharedVisualAssetCatalog.fit_character_on_cell(visual)
+	SharedVisualAssetCatalog.fit_character_on_cell(
+		visual, SharedCharacterCatalog.visual_yaw_deg_for_path(path)
+	)
 	player.add_child(visual)
 	SharedVisualAssetCatalog.tint(visual, seat)
 	player.layers = 0

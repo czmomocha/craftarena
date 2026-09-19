@@ -75,7 +75,9 @@ static func fit_prop_on_cell(visual: Node3D) -> bool:
 ## 3. 结果同时写进 `visual.transform` **与** `CHARACTER_BASE_META`。第二处是给
 ##    `PlayAnimVisual` 读的：姿态态要在这个基准上叠加俯仰，而基准现在含 scale，
 ##    没法再由一个常量重建。两边读同一份，否则姿态会把缩放抹掉、角色一跳变大。
-static func fit_character_on_cell(visual: Node3D) -> bool:
+## 4. 可选 `yaw_deg` 绕 Y 加在缩放之后。目录里静态人型脸朝 +Z、对局前向是 -Z，
+##    由调用方传入；默认 0 不改变已接线的猫。
+static func fit_character_on_cell(visual: Node3D, yaw_deg: float = 0.0) -> bool:
 	if visual == null:
 		return false
 	var bounds: AABB = local_bounds(visual)
@@ -85,8 +87,11 @@ static func fit_character_on_cell(visual: Node3D) -> bool:
 	var span: float = PlaceholderSpec.METERS_PER_CELL * PlaceholderSpec.CHARACTER_VISUAL_CELL_SPAN
 	var factor: float = span / widest
 	var scaled: AABB = AABB(bounds.position * factor, bounds.size * factor)
+	var planted: Basis = Basis().scaled(Vector3(factor, factor, factor))
+	if not is_zero_approx(yaw_deg):
+		planted = Basis(Vector3.UP, deg_to_rad(yaw_deg)) * planted
 	var base: Transform3D = Transform3D(
-		Basis().scaled(Vector3(factor, factor, factor)),
+		planted,
 		Vector3(
 			-(scaled.position.x + scaled.size.x / 2.0),
 			-PlaceholderSpec.CHARACTER_CAPSULE_BOTTOM_M - scaled.position.y,

@@ -142,6 +142,43 @@ func test_selecting_a_card_persists_and_rebuilds_own_visual() -> void:
 		)
 
 
+func test_static_humanoids_yaw_to_godot_forward_without_moving_the_capsule() -> void:
+	assert_eq(SharedCharacterCatalog.VISUAL_YAW_DEG.size(), SharedCharacterCatalog.IDS.size())
+	assert_eq(SharedCharacterCatalog.visual_yaw_deg(SharedCharacterCatalog.ID_CAT), 0.0)
+	assert_eq(SharedCharacterCatalog.visual_yaw_deg(SharedCharacterCatalog.ID_ROBOT), 180.0)
+	var cat_map: MatchSnapshotMap = MatchSnapshotMap.new()
+	add_child_autofree(cat_map)
+	cat_map.follow_slot = 0
+	cat_map.own_character_scene_path = SharedCharacterCatalog.scene_path(
+		SharedCharacterCatalog.ID_CAT
+	)
+	assert_true(cat_map.apply_players([_player_body()]))
+	var robot_map: MatchSnapshotMap = MatchSnapshotMap.new()
+	add_child_autofree(robot_map)
+	robot_map.follow_slot = 0
+	robot_map.own_character_scene_path = SharedCharacterCatalog.scene_path(
+		SharedCharacterCatalog.ID_ROBOT
+	)
+	assert_true(robot_map.apply_players([_player_body()]))
+	var cat_player: MeshInstance3D = cat_map.player_node(0)
+	var robot_player: MeshInstance3D = robot_map.player_node(0)
+	assert_not_null(cat_player)
+	assert_not_null(robot_player)
+	if cat_player == null or robot_player == null:
+		return
+	assert_eq(cat_player.position, robot_player.position, "选机器人不得移动权威位姿")
+	var cat_visual: Node3D = cat_map.visual_node(0)
+	var robot_visual: Node3D = robot_map.visual_node(0)
+	assert_not_null(cat_visual)
+	assert_not_null(robot_visual)
+	if cat_visual == null or robot_visual == null:
+		return
+	var cat_face: Vector3 = (cat_visual.transform.basis * Vector3(0.0, 0.0, 1.0)).normalized()
+	var robot_face: Vector3 = (robot_visual.transform.basis * Vector3(0.0, 0.0, 1.0)).normalized()
+	assert_gt(cat_face.dot(Vector3(0.0, 0.0, 1.0)), 0.99, "默认猫的朝向被改了")
+	assert_gt(robot_face.dot(Vector3(0.0, 0.0, -1.0)), 0.99, "机器人没有转到对局 -Z")
+
+
 func test_package_check_covers_the_catalog() -> void:
 	var report: Dictionary = PackageCheck.report()
 	var checks: Dictionary = report["checks"]

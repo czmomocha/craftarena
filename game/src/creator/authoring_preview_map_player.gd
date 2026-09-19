@@ -101,7 +101,9 @@ func _attach_player_visual(map: AuthoringPreviewMap, player: MeshInstance3D) -> 
 	if visual == null:
 		return false
 	visual.name = AuthoringPreviewMap.VISUAL_NAME
-	SharedVisualAssetCatalog.fit_character_on_cell(visual)
+	SharedVisualAssetCatalog.fit_character_on_cell(
+		visual, SharedCharacterCatalog.visual_yaw_deg_for_path(map.character_scene_path)
+	)
 	player.add_child(visual)
 	SharedVisualAssetCatalog.tint(visual, PlaceholderSpec.PREVIEW_PLAYER_ALBEDO)
 	player.layers = 0

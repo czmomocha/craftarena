@@ -43,6 +43,14 @@ const SCENE_PATHS: PackedStringArray = [
 	"res://content/assets/characters/robot_placeholder.glb",
 ]
 
+## 对局玩家节点的前向是局部 -Z（`MatchMoveFacing` yaw 0 = 世界 -Z）。
+## Kenney 猫脸朝 +Z，但 idle/run clip 让走向仍然可读，且它是已接线默认，
+## 本表保持 0，避免默认真机画面再动一个三角面。
+## 奔跑者 / 机器人是混元·TRELLIS 静态人型、没有 clip，脸同样朝 +Z：
+## 不转的话本席看起来像站在 course_01 出生点内侧空洞里，WASD 像侧移。
+## 只转 `visual` 子节点，不改权威胶囊、不进协议帧。
+const VISUAL_YAW_DEG: PackedFloat32Array = [0.0, 180.0, 180.0]
+
 
 static func is_known(id: String) -> bool:
 	return IDS.find(id) >= 0
@@ -65,6 +73,22 @@ static func scene_path(id: String) -> String:
 	if index < 0 or index >= SCENE_PATHS.size():
 		return SCENE_PATHS[0]
 	return SCENE_PATHS[index]
+
+
+static func visual_yaw_deg(id: String) -> float:
+	var index: int = index_of(id)
+	if index < 0 or index >= VISUAL_YAW_DEG.size():
+		return 0.0
+	return VISUAL_YAW_DEG[index]
+
+
+static func visual_yaw_deg_for_path(path: String) -> float:
+	if path.is_empty():
+		return 0.0
+	var index: int = SCENE_PATHS.find(path)
+	if index < 0 or index >= VISUAL_YAW_DEG.size():
+		return 0.0
+	return VISUAL_YAW_DEG[index]
 
 
 static func name_key(id: String) -> String:
