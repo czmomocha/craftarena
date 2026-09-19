@@ -91,7 +91,7 @@
 - `traprush_web_player_count = same_eight`。
 - `player_collision_prediction = predict_remote_capsules`。
 - `authoritative_character_physics = custom_kinematic`。
-- `traprush_offline_opponents = local_ghost`。
+- `traprush_offline_opponents = local_ghost`。该句中「实现落点仍待」被 `traprush_solo_ghost = local_best_tape_parallel_session`（2026-09-19，R3 落地）覆盖：Solo 开局播本机该课最快命令磁带的无碰撞幽灵（第二个本地 `TraprushMatchSession`，直播 `player_count` 仍为 1）。独立 `user://traprush_solo_ghosts.json` 每课一条，冲线且 `finish_ticks[0]` 严格更快才替换；设置默认开，关窗落 `user://traprush_ghost_settings.json`。只读回放不套幽灵。不下载他人幽灵，不做在线 / 双人 / BASTION 幽灵。口径见 [CD-13 §3](../10-product/13-account-and-session.md#3-离线单人模式) 与 [CD-12](../10-product/12-product-structure.md)。
 - `authoritative_motion_dof = upright_3d_kinematic`。
 - `traprush_inventory = 延期`。
 - `traprush_respawn_stun = 1_second`（2026-08-28）：纠偏 D5 中档。一期环境失败（出界 / 踩实心机关）固定硬直 **1.0 s**。不锁 Tick Hz。对局 / Solo 经 `TraprushPlayStubs.RESPAWN_STUN_MS` 与 `PHYSICS_TICKS_PER_SECOND_PLACEHOLDER`（当前 60）换成会话 tick；Preview 仍 1 次 Advance。覆盖 CD-63 §1.3 中「复活硬直」秒数空白，以及 D.8 `match_oob_reset` 里「不写复活硬直」的产品秒数空白。§1.3 其余数值仍延期。口径见 [纠偏方案 D5](../../docs/plans/course-correction-2026-08.md) 与 [CD-21 §6](../20-gameplay/21-traprush.md#6-单局流程)。该句中「不锁 Tick Hz」被 `e3_lock = promote_existing_stubs_2026_09_02`（2026-09-02）覆盖：对局 / Solo 60 physics tick/s 升为锁定值，见 D.8。

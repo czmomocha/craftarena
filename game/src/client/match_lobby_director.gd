@@ -233,7 +233,7 @@ func try_solo_plaza(content_id: String = "") -> bool:
 	return true
 
 
-func try_stop_offline() -> bool:
+func try_stop_offline(return_to_replay: bool = true) -> bool:
 	if host.offline == null or not host.offline_playing():
 		return false
 	var return_replay: bool = host.offline.replay_active
@@ -248,7 +248,7 @@ func try_stop_offline() -> bool:
 	if official != "":
 		host.apply_course_document(official)
 	host.refresh_status()
-	if return_replay:
+	if return_replay and return_to_replay:
 		MatchLobbyHomeGd.try_show_replay(host)
 	return true
 

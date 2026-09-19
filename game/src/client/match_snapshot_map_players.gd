@@ -5,6 +5,7 @@ extends RefCounted
 ## Public apply_players stays on the map facade so this file stays under E9.
 
 const MatchCameraViewGd := preload("res://src/client/match_camera_view.gd")
+const GhostMapGd := preload("res://src/client/match_snapshot_map_ghost.gd")
 
 
 static func spawn_player(map: MatchSnapshotMap, slot: int, body: Dictionary) -> void:
@@ -89,6 +90,7 @@ static func clear_players(map: MatchSnapshotMap) -> void:
 		node.free()
 	map._player_count = 0
 	map._visual_count = 0
+	GhostMapGd.clear(map)
 
 
 ## 相机看的是 `follow_transition.anchor`，不是本席位姿本身。常态下两者逐帧相等

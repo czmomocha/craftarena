@@ -1,9 +1,7 @@
 class_name MatchLobbyHud
 extends RefCounted
 
-## L4 presentation: lobby HUD status dictionary + the `join=` status line.
-## Tokens (`join=` / `pads=` / `FPS`) stay untranslated (C4). FPS itself is
-## FrameRateMeter, not this line.
+## L4 HUD status dictionary + `join=` line. Tokens stay untranslated (C4).
 
 const MatchJoinSessionGd := preload("res://src/client/match_join_session.gd")
 const MatchOfflineSessionGd := preload("res://src/client/match_offline_session.gd")
@@ -151,6 +149,7 @@ static func build_view(
 		"tick": source.get("tick", -1),
 		"go_tick": source.get("go_tick", 0),
 		"replay_active": source.get("replay_active", false),
+		"ghost_active": source.get("ghost_active", false),
 		"player_count": source.get("player_count", 0),
 		"crate_count": source.get("crate_count", 0),
 		"mapped_players": mapped.get("players", 0),
@@ -268,6 +267,8 @@ static func format_line(view: Dictionary) -> String:
 			var player_count: int = view.get("player_count", 0)
 			parts.append("tick=%d" % tick)
 			parts.append("players=%d" % player_count)
+			if view.get("ghost_active", false):
+				parts.append("ghost=on")
 			var mapped_players: int = view.get("mapped_players", 0)
 			parts.append("mapped=%d" % mapped_players)
 			var own_accepted_count: int = view.get("own_accepted_count", -1)

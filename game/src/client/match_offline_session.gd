@@ -13,7 +13,8 @@ extends RefCounted
 ## into the session; play_fall_dy is gravity accel. 0 keeps the session
 ## default (no accel; leftover vy still coasts). play_range_half is a
 ## caller stub copied into enable_play_range; 0 keeps the session default
-## (off). No HTTP, sockets, settlement, ghosts, or online writes.
+## (off). No HTTP, sockets, settlement, or online writes. Solo ghost is a
+## second local session and never occupies a live seat.
 
 const MatchCourseMapGd := preload("res://src/client/match_course_map.gd")
 const MatchFrameCodec := preload("res://src/shared/protocol/match_frame_codec.gd")
@@ -26,6 +27,9 @@ const TraprushMatchSessionGd := preload("res://src/games/traprush/match_session.
 const OfflineReplayGd := preload("res://src/client/match_offline_replay.gd")
 const ReplayStoreGd := preload("res://src/client/traprush_replay_store.gd")
 const TapeGd := preload("res://src/games/traprush/replay_tape.gd")
+const GhostGd := preload("res://src/client/match_offline_ghost.gd")
+const GhostSettingsGd := preload("res://src/client/traprush_ghost_settings.gd")
+const GhostStoreGd := preload("res://src/client/traprush_ghost_store.gd")
 
 const BANNER_KEY: String = UiCopy.OFFLINE_BANNER
 const DEFAULT_COURSE: String = "res://content/official/traprush/course_01.json"
@@ -65,6 +69,10 @@ var replay_saved: bool = false
 var tape_recorder: Dictionary = {}
 var replay_commands: Array = []
 var replay_store: ReplayStoreGd = ReplayStoreGd.new()
+var ghost_settings: GhostSettingsGd = GhostSettingsGd.new()
+var ghost_store: GhostStoreGd = GhostStoreGd.new()
+var ghost: MatchOfflineSession = null
+var ghost_saved: bool = false
 
 
 static func move_vector(move_x: float, move_z: float, step: int) -> Dictionary:
@@ -83,9 +91,11 @@ func try_begin(path: String, _web_platform: bool = false) -> bool:
 	if bundle == null:
 		last_error = "missing_course"
 		return false
-	if not _attach(bundle):
-		return false
 	course_path = path
+	if not _attach(bundle):
+		course_path = ""
+		return false
+	GhostGd.try_start(self)
 	return true
 
 
@@ -99,6 +109,7 @@ func try_begin_bundle(bundle: SimulationBundle) -> bool:
 	if not _attach(bundle):
 		return false
 	course_path = ""
+	GhostGd.try_start(self)
 	return true
 
 
@@ -140,6 +151,7 @@ func _attach(bundle: SimulationBundle, seed: int = MATCH_SEED, seats: int = 1) -
 	last_command = PackedByteArray()
 	last_intent = ""
 	replay_saved = false
+	ghost_saved = false
 	if not replay_active:
 		replay_commands = []
 	state = STATE_PLAYING
@@ -155,6 +167,7 @@ func restart_tape() -> void:
 func try_stop() -> bool:
 	if state != STATE_PLAYING:
 		return false
+	GhostGd.try_stop(self)
 	session = null
 	follow = MatchSnapshotFollowGd.new()
 	last_command = PackedByteArray()
@@ -228,6 +241,7 @@ func try_advance() -> bool:
 		OfflineReplayGd.apply_tick_commands(self)
 	session.commit_tick()
 	OfflineReplayGd.maybe_save(self, replay_store)
+	GhostGd.after_tick(self)
 	return _publish()
 
 
@@ -294,6 +308,7 @@ func status_view() -> Dictionary:
 		"fails_count": session.player_setback_count(0) if session != null else -1,
 		"go_tick": session.go_tick if session != null else 0,
 		"replay_active": replay_active,
+		"ghost_active": GhostGd.is_active(self),
 	}
 
 

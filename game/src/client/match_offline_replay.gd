@@ -10,7 +10,7 @@ const TraprushMatchSettlement := preload("res://src/games/traprush/match_settlem
 
 
 static func start_recorder(host: MatchOfflineSession) -> void:
-	if not host.persist_replay or host.session == null:
+	if host.replay_active or host.session == null:
 		host.tape_recorder = {}
 		return
 	host.tape_recorder = TapeGd.empty_recorder(host.course_path, host.session)

@@ -85,6 +85,28 @@ func test_show_home_hides_the_match_window() -> void:
 	assert_false(_shell.is_window_visible())
 
 
+func test_home_after_solo_finish_resets_channel_to_preview() -> void:
+	_shell = _open_shell()
+	assert_true(_shell.try_enter_channel(MatchGameplayGd.TRAPRUSH))
+	assert_true(_shell.try_solo())
+	_shell.offline.skip_opening_countdown()
+	assert_true(_shell.offline_playing())
+	var steps: int = 0
+	while steps < 200:
+		assert_false(_shell.try_sample_play_move(false, false, false, true).is_empty())
+		if _shell.offline.session.player_finish_tick(0) >= 0:
+			break
+		steps += 1
+	assert_gte(_shell.offline.session.player_finish_tick(0), 0)
+	assert_true(_shell.try_show_home())
+	assert_false(_shell.offline_playing(), "返回大厅必须结束单人局，不能还停在冲线后的会话里")
+	assert_true(MatchLobbyHomeGd.is_home_visible(_shell))
+	assert_true(_shell.try_enter_channel(MatchGameplayGd.TRAPRUSH))
+	assert_false(_shell.offline_playing())
+	assert_false(_shell.status_label_text().contains("result="))
+	assert_true(_shell.is_window_visible())
+
+
 func test_enter_traprush_restores_channel_chrome_and_quick_play() -> void:
 	_shell = _open_shell()
 	assert_true(_shell.try_show_home())

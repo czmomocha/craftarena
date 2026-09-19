@@ -13,7 +13,7 @@
 
 | 项 | 当前口径 |
 |---|---|
-| 保留期 | 结算表等结构化对局记录 90 天、工程回放缓冲 30 天（一期都不做按天清扫）。**玩家回放库**改走条数环：本机 Solo 50 / 每账号 100（Guest 按 guest id） |
+| 保留期 | 结算表等结构化对局记录 90 天、工程回放缓冲 30 天（一期都不做按天清扫）。**玩家回放库**改走条数环：本机 Solo 50 / 每账号 100（Guest 按 guest id）。**Solo 幽灵最佳磁带**每课一条，不环 |
 | 备份 | **无**。不得对外承诺持久性 |
 | 遥测 | 伪匿名可退出；无仪表盘 |
 
@@ -24,6 +24,7 @@
 | 结构化对局记录 | 90 天（一期不做按天清扫） |
 | 工程回放缓冲 | 30 天（一期不做按天清扫） |
 | 玩家回放库 | **本机 50 条 / 每账号 100 条**（环，挤掉最旧）。一期不做按天清扫 |
+| Solo 幽灵最佳磁带 | **每课 1 条**（`user://traprush_solo_ghosts.json`；更快才替换，平局保旧）。一期不做按天清扫 |
 | 详细日志 | 14 天 |
 | 崩溃与安全事件 | 180 天 |
 | 匿名（Guest）草稿 | 30 天 |
@@ -49,4 +50,4 @@
 
 实现落点（2026-08-25）：控制面 `match_settlements` 保存单局名次记录（全员冲线后由 MatchHost 提交）。一期不做过期清扫。保留期仍以本节表格为准，不构成持久性承诺。
 
-实现落点（2026-09-19）：玩家回放库不替代 `match_settlements`。Solo 写 `user://traprush_replays.json` 环 50；双人由 MatchHost 在全员冲线后 POST 控制面，按账号环 100。未登录无双人记录。契约见 [CD-42](../40-technical/42-contracts-and-rulevm.md) `backend/contracts/src/traprush_replay.ts`。
+实现落点（2026-09-19）：玩家回放库不替代 `match_settlements`。Solo 写 `user://traprush_replays.json` 环 50；双人由 MatchHost 在全员冲线后 POST 控制面，按账号环 100。未登录无双人记录。契约见 [CD-42](../40-technical/42-contracts-and-rulevm.md) `backend/contracts/src/traprush_replay.ts`。Solo 幽灵最佳磁带另写 `user://traprush_solo_ghosts.json`（每课一条，不进环 50）；开关落 `user://traprush_ghost_settings.json`。口径见 [CD-13 §3](13-account-and-session.md#3-离线单人模式)。

@@ -13,6 +13,8 @@ const RouterGd := preload("res://src/games/bastion/audio_router.gd")
 const CatalogGd := preload("res://src/ugc/bastion_prototype_catalog.gd")
 const WindowSizeHudGd := preload("res://src/client/window_size_hud.gd")
 const MatchCameraViewGd := preload("res://src/client/match_camera_view.gd")
+const GhostGd := preload("res://src/client/match_offline_ghost.gd")
+const GhostMapGd := preload("res://src/client/match_snapshot_map_ghost.gd")
 
 
 static func on_process(shell: MatchLobbyShell, delta: float) -> void:
@@ -76,6 +78,7 @@ static func apply_snapshot(shell: MatchLobbyShell) -> void:
 		follow, shell.stage.interp_t, shell.play, shell.offline_playing(),
 		shell.sampler.play_moving, shell.play_anim, session
 	):
+		_apply_ghost(shell)
 		shell.refresh_status()
 
 
@@ -243,6 +246,16 @@ static func _pump_bastion_audio(shell: MatchLobbyShell) -> void:
 	if shell.play == null or shell.play.bastion == null:
 		return
 	MatchLobbyStageBastion.pump_audio(shell)
+
+
+static func _apply_ghost(shell: MatchLobbyShell) -> void:
+	if shell.map == null or shell.offline == null or not GhostGd.is_active(shell.offline):
+		GhostMapGd.clear(shell.map)
+		return
+	var path: String = shell.map.own_character_scene_path
+	if path.is_empty():
+		path = shell.map.character_scene_path
+	GhostMapGd.apply(shell.map, shell.offline.ghost.follow, path)
 
 
 static func _sync_own_character(shell: MatchLobbyShell) -> void:

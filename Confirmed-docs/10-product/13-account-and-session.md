@@ -15,7 +15,7 @@
 |---|---|
 | 账号接线 | **已交**：Guest ID + 恢复密钥；用户名 + 密码注册 / 登录；认领 Guest 云端草稿。入场票据仍不绑账号 |
 | 玩家发布鉴权 | **已交（M5 C3）**：`POST /content/submit` 绑 Guest 或正式会话；测试期不做 CAPTCHA / 邮箱。持钥 `POST /content/publish` 仍不绑账号（测试 / 工具）。流水线见 [CD-33 §2.2](../30-ugc/33-hot-publish.md#22-玩家发布路径已交m5-c3) |
-| 离线 | 永不回写；恢复在线也不补传。**测试期 Web 允许 Solo** |
+| 离线 | 永不回写；恢复在线也不补传。**测试期 Web 允许 Solo**。Solo 可追赶本机最高纪录幽灵（R3） |
 | 单局排名 | 名次 + MVP；无 MMR / 段位 |
 | 补票 | 已消费票补发同一席位；Cancel 不补票 |
 
@@ -66,7 +66,9 @@
 
 实现落点（2026-09-02）：离线横幅走键 `craft_arena.ui.offline_banner`。`zh_CN` 仍是「离线试玩，成绩不上传」（本节原文）；`en` 为 `Offline play, scores are not uploaded`。大厅 HUD 写解析后的句子，不再把中文写进 `MatchOfflineSession`。字体已于 2026-09-13 入包（常用 3500 字子集）。落点见 [CD-11 §8](11-scope-and-platforms.md#8-产品表现与设备基线) 与 `game/src/shared/ui_copy.gd`。
 
-实现落点（2026-08-25）：机关狂奔大厅 `Solo play` 启动 `MatchOfflineSession`：把所选官方赛道（空则 `course_01`）编进与线上相同的 `TraprushMatchSession`，命令帧 tick 为 0，快照只跟从本地最新帧。HUD 在离线进行中持续写出「离线试玩，成绩不上传」。`allows_settlement` / `allows_online_writes` 恒为 false，不发匹配 HTTP 或网关 WS。道具占位桩与对局进程/Preview 对齐（伤害 1，reach dz = `Fixed.SCALE`，dx/dy = 0）；官方 `course_01` 出生点 UseItem 打碎 +Z 箱。本机最佳轨迹幽灵、已缓存签名 UGC / 本地草稿试玩、个人试玩记录落盘仍待。落点见 [CD-12 §1](12-product-structure.md#1-入口结构) 与 [CD-42 §3.4](../40-technical/42-contracts-and-rulevm.md#34-实现落点)。**测试期允许 Web Solo**（2026-09-07）；2026-09-08 已接线：`MatchOfflineSession.try_begin` 不再因 `web` 拒绝；大厅填 `主机` 或 `主机:控制面端口`（网关端口仍走当前值，默认 8090）；浏览器可用 `?server=` / `?control-plane=` / `?gateway=`，或打开控制面 `/play/` 让页主机生效。2026-09-14：Nginx 在 `/` 托管时同样用页主机填默认 `--server=`（控制面 8080 / 网关 8090）。仍不回写。
+实现落点（2026-08-25）：机关狂奔大厅 `Solo play` 启动 `MatchOfflineSession`：把所选官方赛道（空则 `course_01`）编进与线上相同的 `TraprushMatchSession`，命令帧 tick 为 0，快照只跟从本地最新帧。HUD 在离线进行中持续写出「离线试玩，成绩不上传」。`allows_settlement` / `allows_online_writes` 恒为 false，不发匹配 HTTP 或网关 WS。道具占位桩与对局进程/Preview 对齐（伤害 1，reach dz = `Fixed.SCALE`，dx/dy = 0）；官方 `course_01` 出生点 UseItem 打碎 +Z 箱。已缓存签名 UGC / 本地草稿试玩仍待。落点见 [CD-12 §1](12-product-structure.md#1-入口结构) 与 [CD-42 §3.4](../40-technical/42-contracts-and-rulevm.md#34-实现落点)。**测试期允许 Web Solo**（2026-09-07）；2026-09-08 已接线：`MatchOfflineSession.try_begin` 不再因 `web` 拒绝；大厅填 `主机` 或 `主机:控制面端口`（网关端口仍走当前值，默认 8090）；浏览器可用 `?server=` / `?control-plane=` / `?gateway=`，或打开控制面 `/play/` 让页主机生效。2026-09-14：Nginx 在 `/` 托管时同样用页主机填默认 `--server=`（控制面 8080 / 网关 8090）。仍不回写。
+
+实现落点（2026-09-19，R3）：Solo 开局若设置开且本课 `course_id` + `content_hash` 有最佳磁带，并行第二个本地会话重仿真无碰撞幽灵（直播 `player_count` 仍为 1，不占席、不上名次、不发 HTTP）。网格用本席当前选择；节点树 `GeometryInstance3D.transparency = 0.5`。最佳纪录独立落 `user://traprush_solo_ghosts.json`（每课一条，冲线且 `finish_ticks[0]` 严格更快才替换），不走 R2 环 50。设置窗复选框默认开，关窗落 `user://traprush_ghost_settings.json`。只读回放局不套幽灵。返回大厅 / 关窗结束 Solo（与取消相同清会话），再进是开局前预览。覆盖 [CD-91 D.3](../90-reference/91-decision-log.md) `traprush_offline_opponents = local_ghost` 的实现落点。
 
 ## 4. 单局排名
 

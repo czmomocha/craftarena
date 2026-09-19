@@ -81,6 +81,8 @@ static func try_show_home(shell: MatchLobbyShell) -> bool:
 	ensure_character_select(shell)
 	if shell.home_screen == null:
 		return false
+	if shell.offline_playing():
+		shell.try_stop_offline(false)
 	shell.home_surface = SURFACE_HOME
 	if shell.window != null:
 		shell.window.visible = false
@@ -114,6 +116,8 @@ static func try_show_replay(shell: MatchLobbyShell) -> bool:
 static func try_enter_channel(shell: MatchLobbyShell, gameplay: String) -> bool:
 	if not MatchGameplayGd.is_id(gameplay):
 		return false
+	if shell.offline_playing():
+		shell.try_stop_offline(false)
 	ensure(shell)
 	ensure_character_select(shell)
 	ClientAudioGd.post_ui_confirm()

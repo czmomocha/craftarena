@@ -21,6 +21,7 @@ craft_arena.ui.replay_subtitle,Finish to save. Replay is read-only.,冲线后才
 craft_arena.ui.replay_empty,No records yet.,还没有对局记录。
 craft_arena.ui.replay_local,Solo,本机
 craft_arena.ui.replay_online,Online,双人
+craft_arena.ui.ghost_chase,Race my best time,追赶本机最高纪录
 craft_arena.ui.undo,Undo,撤销
 craft_arena.ui.redo,Redo,重做
 craft_arena.ui.preview,Preview,预览

@@ -198,7 +198,8 @@ func hide_for_overlay() -> void:
 	MatchLobbyHomeGd.hide_for_overlay(self)
 func restore_from_overlay() -> void:
 	MatchLobbyHomeGd.restore_from_overlay(self)
-func try_stop_offline() -> bool: return director.try_stop_offline()
+func try_stop_offline(return_to_replay: bool = true) -> bool:
+	return director.try_stop_offline(return_to_replay)
 func try_cancel() -> bool: return director.try_cancel()
 func try_leave_play() -> bool: return director.try_leave_play()
 func accept_http(status_code: int, body: Dictionary) -> bool:

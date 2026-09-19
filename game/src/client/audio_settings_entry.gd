@@ -1,8 +1,9 @@
 class_name AudioSettingsEntry
 extends Node
 
-## Lobby settings window: five bus sliders + mute + HUD / button colours.
-## Close applies and persists through AudioService and HudSettings.
+## Lobby settings window: five bus sliders + mute + HUD / button colours
+## + Solo ghost chase. Close applies and persists through AudioService,
+## HudSettings, and TraprushGhostSettings.
 ## No locale hot-switch, no graphics quality, no keybinds.
 
 const AudioServiceGd := preload("res://src/audio/audio_service.gd")
@@ -10,9 +11,11 @@ const AudioSettingsGd := preload("res://src/audio/audio_settings.gd")
 const ClientAudioGd := preload("res://src/client/client_audio.gd")
 const MatchLobbyHomeGd := preload("res://src/client/match_lobby_home.gd")
 const HudSettingsGd := preload("res://src/client/hud_settings.gd")
+const UiCopyPlayGd := preload("res://src/shared/ui_copy_play.gd")
 
 const WINDOW_NAME: String = "SettingsWindow"
 const MUTE_NAME: String = "AudioMute"
+const GHOST_NAME: String = "GhostChase"
 const CLOSE_NAME: String = "SettingsClose"
 const TEXT_COLOR_NAME: String = "HudTextColor"
 const BUTTON_COLOR_NAME: String = "ButtonFontColor"
@@ -20,6 +23,7 @@ const SLIDER_PREFIX: String = "Bus_"
 
 var window: Window = null
 var mute_box: CheckBox = null
+var ghost_box: CheckBox = null
 var lobby_window: Window = null
 var host: MatchLobbyShell = null
 var _sliders: Dictionary = {}
@@ -70,8 +74,8 @@ func _ensure_window() -> void:
 	window = Window.new()
 	window.name = WINDOW_NAME
 	window.title = UiCopy.text(UiCopy.WINDOW_SETTINGS)
-	window.size = Vector2i(520, 520)
-	window.min_size = Vector2i(400, 400)
+	window.size = Vector2i(520, 560)
+	window.min_size = Vector2i(400, 440)
 	window.exclusive = false
 	window.transient = false
 	window.close_requested.connect(_on_close)
@@ -96,6 +100,12 @@ func _ensure_window() -> void:
 	_add_slider(root, AudioSettingsGd.BUS_AMBIENCE, UiCopy.AUDIO_AMBIENCE)
 	text_picker = _add_color(root, TEXT_COLOR_NAME, UiCopy.HUD_TEXT_COLOR, _on_text_color)
 	button_picker = _add_color(root, BUTTON_COLOR_NAME, UiCopy.BUTTON_FONT_COLOR, _on_button_color)
+	ghost_box = CheckBox.new()
+	ghost_box.name = GHOST_NAME
+	ghost_box.text = UiCopy.text(UiCopyPlayGd.GHOST_CHASE)
+	ghost_box.focus_mode = Control.FOCUS_CLICK
+	ghost_box.toggled.connect(_on_ghost)
+	root.add_child(ghost_box)
 	var close_btn: Button = Button.new()
 	close_btn.name = CLOSE_NAME
 	close_btn.text = UiCopy.text(UiCopy.BACK_TO_LOBBY)
@@ -138,15 +148,16 @@ func _add_color(root: BoxContainer, node_name: String, copy_key: String, handler
 
 func _refresh() -> void:
 	var svc: AudioServiceGd = ClientAudioGd.service
-	if svc == null:
-		return
-	if mute_box != null:
+	if mute_box != null and svc != null:
 		mute_box.set_pressed_no_signal(svc.settings.muted)
-	for bus: String in AudioSettingsGd.BUSES:
-		if not _sliders.has(bus):
-			continue
-		var slider: HSlider = _sliders[bus]
-		slider.set_value_no_signal(svc.settings.get_bus_db(bus))
+	if ghost_box != null and host != null and host.offline != null:
+		ghost_box.set_pressed_no_signal(host.offline.ghost_settings.enabled)
+	if svc != null:
+		for bus: String in AudioSettingsGd.BUSES:
+			if not _sliders.has(bus):
+				continue
+			var slider: HSlider = _sliders[bus]
+			slider.set_value_no_signal(svc.settings.get_bus_db(bus))
 	if host != null and host.chrome != null:
 		var hud: HudSettingsGd = host.chrome.hud_settings
 		if text_picker != null:
@@ -165,6 +176,12 @@ func _on_mute(pressed: bool) -> void:
 	if ClientAudioGd.service == null:
 		return
 	ClientAudioGd.service.set_muted(pressed)
+
+
+func _on_ghost(pressed: bool) -> void:
+	if host == null or host.offline == null:
+		return
+	host.offline.ghost_settings.enabled = pressed
 
 
 func _on_text_color(color: Color) -> void:
@@ -186,6 +203,9 @@ func _persist() -> void:
 		ClientAudioGd.service.settings.save()
 	if host != null and host.chrome != null:
 		host.chrome.hud_settings.save()
+	if ghost_box != null and host != null and host.offline != null:
+		host.offline.ghost_settings.enabled = ghost_box.button_pressed
+		host.offline.ghost_settings.save()
 
 
 func _on_close() -> void:

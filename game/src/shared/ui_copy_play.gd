@@ -12,6 +12,7 @@ const REPLAY_SUBTITLE: String = "craft_arena.ui.replay_subtitle"
 const REPLAY_EMPTY: String = "craft_arena.ui.replay_empty"
 const REPLAY_LOCAL: String = "craft_arena.ui.replay_local"
 const REPLAY_ONLINE: String = "craft_arena.ui.replay_online"
+const GHOST_CHASE: String = "craft_arena.ui.ghost_chase"
 
 const ALL_KEYS: PackedStringArray = [
 	COUNTDOWN_WAIT,
@@ -22,4 +23,5 @@ const ALL_KEYS: PackedStringArray = [
 	REPLAY_EMPTY,
 	REPLAY_LOCAL,
 	REPLAY_ONLINE,
+	GHOST_CHASE,
 ]
