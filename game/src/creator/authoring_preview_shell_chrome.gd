@@ -24,6 +24,7 @@ const PlayHudGd := preload("res://src/shared/play_hud_overlay.gd")
 var window: Window = null
 var status: Label = null
 var play_hud: PlayHudGd = PlayHudGd.new()
+var on_activated: Callable = Callable()
 
 
 func is_alive() -> bool:
@@ -74,6 +75,8 @@ func attach(parent: Node, handlers: Dictionary) -> Window:
 	_add_auto_tick(action_row, _handler(handlers, "auto_tick"))
 	play_hud.attach(window, overlay)
 	LayoutGd.apply_preview(window, parent)
+	if not window.window_input.is_connected(_on_window_input):
+		window.window_input.connect(_on_window_input)
 	return window
 
 
@@ -91,6 +94,21 @@ func focus_window() -> void:
 		return
 	if window.is_inside_tree():
 		window.grab_focus()
+	if on_activated.is_valid():
+		on_activated.call()
+
+
+func handle_window_input(event: InputEvent) -> void:
+	if not is_alive():
+		return
+	var mouse: InputEventMouseButton = event as InputEventMouseButton
+	if mouse == null or not mouse.pressed:
+		return
+	focus_window()
+
+
+func _on_window_input(event: InputEvent) -> void:
+	handle_window_input(event)
 
 
 func hide_window() -> void:

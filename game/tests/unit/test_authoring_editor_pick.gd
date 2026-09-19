@@ -42,6 +42,15 @@ func test_layout_and_label_do_not_count_as_interactive_gui() -> void:
 	caption.free()
 
 
+func test_spin_is_editable_button_is_not() -> void:
+	var spin: SpinBox = SpinBox.new()
+	var button: Button = Button.new()
+	assert_true(AuthoringEditorShellPointerCamera.hits_editable_control(spin))
+	assert_false(AuthoringEditorShellPointerCamera.hits_editable_control(button))
+	spin.free()
+	button.free()
+
+
 func test_buttons_spins_and_lists_count_as_interactive_gui() -> void:
 	var button: Button = Button.new()
 	var spin: SpinBox = SpinBox.new()

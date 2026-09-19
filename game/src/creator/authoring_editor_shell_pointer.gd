@@ -14,6 +14,8 @@ const HALF: Vector3 = Vector3(0.5, 0.5, 0.5)
 static func handle(chrome: AuthoringEditorShellChrome, event: InputEvent) -> void:
 	if chrome == null or chrome.window == null or not is_instance_valid(chrome.window):
 		return
+	if not chrome.is_editor_active():
+		return
 	var mouse_button: InputEventMouseButton = event as InputEventMouseButton
 	if mouse_button != null:
 		_handle_button(chrome, mouse_button)

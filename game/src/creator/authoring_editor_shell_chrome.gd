@@ -32,6 +32,7 @@ var dragging: bool = false
 var drag_vertical: bool = false
 var drag_axis: String = ""
 var camera_panning: bool = false
+var editor_active: bool = true
 var guides: FloorGd = FloorGd.new()
 var _host_shell: AuthoringEditorShell = null
 var _last_host_size: Vector2i = Vector2i.ZERO
@@ -111,6 +112,10 @@ func ensure(shell: AuthoringEditorShell, handlers: Dictionary) -> void:
 	PointerCameraGd.apply_passthrough_mouse_filters(root)
 	if not window.window_input.is_connected(_on_window_input):
 		window.window_input.connect(_on_window_input)
+	if not window.focus_entered.is_connected(_on_focus_entered):
+		window.focus_entered.connect(_on_focus_entered)
+	if not window.focus_exited.is_connected(_on_focus_exited):
+		window.focus_exited.connect(_on_focus_exited)
 	LayoutGd.apply_editor(window, shell)
 	_sync_shell(shell)
 	_bind_resize(shell)
@@ -246,6 +251,10 @@ func bind_preview(preview_window: Window) -> void:
 		return
 	if not preview_window.size_changed.is_connected(_on_pane_resized):
 		preview_window.size_changed.connect(_on_pane_resized)
+	if _host_shell != null and _host_shell.preview != null:
+		_host_shell.preview.chrome.on_activated = _on_preview_activated
+	if not preview_window.focus_entered.is_connected(_on_preview_activated):
+		preview_window.focus_entered.connect(_on_preview_activated)
 
 
 func _unbind_resize() -> void:
@@ -294,5 +303,58 @@ func _on_pane_resized() -> void:
 	LayoutGd.note_user_resize(window, preview_window, _host_shell)
 
 
-func _on_window_input(event: InputEvent) -> void:
+func is_editor_active() -> bool:
+	return is_alive() and editor_active
+
+
+func note_window_focus(focused: bool) -> void:
+	editor_active = focused
+	if focused:
+		return
+	release_focus()
+	dragging = false
+	drag_axis = ""
+	camera_panning = false
+
+
+func release_focus() -> void:
+	if is_alive():
+		window.gui_release_focus()
+
+
+func handle_window_input(event: InputEvent, hovered: Control = null) -> void:
+	if not is_alive():
+		return
+	var mouse: InputEventMouseButton = event as InputEventMouseButton
+	if mouse != null and mouse.pressed:
+		var hover: Control = hovered
+		if hover == null:
+			hover = window.gui_get_hovered_control()
+		if PointerCameraGd.hits_editable_control(hover):
+			note_window_focus(true)
+			return
+		if window.is_inside_tree():
+			window.grab_focus()
+		note_window_focus(true)
+		release_focus()
+		if PointerCameraGd.hits_interactive_control(hover):
+			return
+	if not is_editor_active():
+		return
 	PointerGd.handle(self, event)
+
+
+func _on_window_input(event: InputEvent) -> void:
+	handle_window_input(event)
+
+
+func _on_focus_entered() -> void:
+	note_window_focus(true)
+
+
+func _on_focus_exited() -> void:
+	note_window_focus(false)
+
+
+func _on_preview_activated() -> void:
+	note_window_focus(false)

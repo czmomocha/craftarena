@@ -52,10 +52,20 @@ static func hits_gui(chrome: AuthoringEditorShellChrome, _point: Vector2) -> boo
 ## Layout containers and Labels are not picks. Walk parents so a SpinBox's
 ## inner LineEdit still counts as the spin.
 static func hits_interactive_control(hovered: Control) -> bool:
+	return _hits_typed_control(hovered, true)
+
+
+## Spin / dropdown / list keep the caret. Buttons do not — click elsewhere
+## must drop GUI focus (lobby LineEdit contract).
+static func hits_editable_control(hovered: Control) -> bool:
+	return _hits_typed_control(hovered, false)
+
+
+static func _hits_typed_control(hovered: Control, include_buttons: bool) -> bool:
 	var node: Node = hovered
 	while node != null:
 		var control: Control = node as Control
-		if control != null and _is_interactive_type(control):
+		if control != null and _is_interactive_type(control, include_buttons):
 			return true
 		node = node.get_parent()
 	return false
@@ -72,13 +82,12 @@ static func apply_passthrough_mouse_filters(node: Node) -> void:
 		apply_passthrough_mouse_filters(child)
 
 
-static func _is_interactive_type(control: Control) -> bool:
-	return (
-		control is BaseButton
-		or control is SpinBox
-		or control is OptionButton
-		or control is ItemList
-	)
+static func _is_interactive_type(control: Control, include_buttons: bool = true) -> bool:
+	if control is SpinBox or control is OptionButton or control is ItemList:
+		return true
+	if control is LineEdit or control is TextEdit:
+		return true
+	return include_buttons and control is BaseButton
 
 
 static func _should_ignore_mouse(control: Control) -> bool:
