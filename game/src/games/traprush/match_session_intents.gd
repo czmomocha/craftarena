@@ -59,6 +59,11 @@ func apply(session: TraprushMatchSession, slot: int, payload: Dictionary) -> boo
 		session._grant_player_pickups(player)
 		return true
 	var track: CheckpointTrack = player["track"]
+	var now_tick: int = 0
+	if session._world != null:
+		now_tick = session._world.tick_index
+	var last_supported_tick: int = player.get("last_supported_tick", -1)
+	var jump_consumed: bool = player.get("jump_consumed", false)
 	var stepped: Dictionary = IntentStepper.apply(
 		session._world,
 		capsule_id,
@@ -66,11 +71,19 @@ func apply(session: TraprushMatchSession, slot: int, payload: Dictionary) -> boo
 		session.jump_dy,
 		session._spawn,
 		track,
-		session.support_dy
+		session.support_dy,
+		now_tick,
+		last_supported_tick,
+		jump_consumed,
+		session.coyote_ticks
 	)
 	var stepped_ok: bool = stepped.get("ok", false)
 	if not stepped_ok:
 		return false
+	var next_last: int = stepped.get("last_supported_tick", -1)
+	var next_consumed: bool = stepped.get("consumed", false)
+	player["last_supported_tick"] = next_last
+	player["jump_consumed"] = next_consumed
 	if reset_ok:
 		player["latch"] = {}
 	session._resolve_player_hazards(player)

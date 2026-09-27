@@ -14,6 +14,8 @@ export const OFFICIAL_TRAPRUSH_COURSE_IDS = [
 	"course_04",
 	"course_05",
 	"course_06",
+	"course_07",
+	"course_08",
 ] as const;
 
 export type OfficialTraprushCourseId = (typeof OFFICIAL_TRAPRUSH_COURSE_IDS)[number];

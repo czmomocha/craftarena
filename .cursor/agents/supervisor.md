@@ -43,6 +43,7 @@ Cursor 没有 Agent Teams：没有共享任务列表，子 Agent 之间没有消
 | [networking](networking.md) | `game/src/server/`、`backend/realtime-gateway/`、`backend/match-host/` 的协议部分 | 命令帧、快照、重连、回放、网关转发、票据 |
 | [backend](backend.md) | `backend/control-plane/`、SQLite、`infra/`、`tools/dev-launcher/` | 匹配 / 结算 / 发布 / 广场 HTTP、库表、部署与容量 |
 | [editor](editor.md) | `game/src/creator/` | EditCommand、创作者 UI、Preview、编辑窗口 |
+| [course-author](course-author.md) | `game/content/official/traprush/`、`course_XX_builder.gd`、`build_course_XX.gd` | 交付物是一张能走通的 TRAPRUSH 课（`AuthoringDocument`），或对既有课的关卡设计修订。派它时任务单必须写明课 id 与体验目标；进匹配白名单另走人类门禁 |
 | [ugc](ugc.md) | `game/src/ugc/`、`tools/content-validator/`、`game/content/` | 编译器、Rule VM、验证器、签名与热发布、官方内容 |
 | [client](client.md) | `game/src/client/`、`game/src/audio/`、`tools/web-export/`、`tools/font-subset/` | 大厅、对局壳、HUD、表现映射、音频 router、导出表现 |
 | [assets](assets.md) | `game/content/assets/`、`game/content/audio/`、`tools/asset-budget/` | 占位网格、贴图、音效草稿、导入与预算检查 |
@@ -60,6 +61,7 @@ Cursor 没有 Agent Teams：没有共享任务列表，子 Agent 之间没有消
 - **只读调研可以并行多个**，因为它不写文件。但要在回报里说明并行了几个、为什么值这个 token。
 - **两个域之间不得共享未冻结的契约面。** 需要动契约就先串行让 architecture 锁掉，再并行。
 - **不得把一条链路拆成两个域各交一半。** 每个域交出的都必须能独立验收。
+- **关卡创作有已知落点重叠**：course-author 的课 JSON 与 builder 压在 ugc（`game/content/`）和 gameplay（`game/src/games/`）的落点上。任务单必须写明这几个文件归谁主改，两队不得同时写同一份课 JSON 或同一个 builder。只跑测不写文件的关卡调研可以并行。
 
 ## 5. 汇总与交付
 

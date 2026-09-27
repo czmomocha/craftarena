@@ -21,7 +21,14 @@ extends RefCounted
 ## 那不是产品路线，所以不搜索。安全长路存在但不接线 `--route=safe`。
 ## `course_06` 默认重放三连传送爬楼脚本；探针动作集爬不上一整格，启发式只
 ## 允许两次传送中转，三跳会把预算耗尽，所以不搜索。
+## `course_07` 默认重放四段折返 + 三连传送脚本；A* 两次中转不够三段传送，
+## 所以不搜索。
 ## `course_f_playable` 在 `--route=any` 下重放危险捷径脚本（站在主路能量墙
+##
+## `--pace=human` 走人跑（TraprushHumanPaceRunner），缺省 / `--pace=probe` /
+## 省略仍是探针。未知 pace 整体拒绝，不悄悄当探针。人跑必须有磁带：`--tape=`
+## 为人跑每 tick 码，或把本课已有探针脚本展成 1 格 = SCALE/MOVE_STEP 个 Move
+## tick。没有可跑磁带的课打 JSON error，不拿探针快路冒充人跑。
 ##
 ## 判定强度与动作集的边界写在 TraprushCourseCompletionProbe 的文件头，
 ## 那里也解释了为什么 not_completable 不等于「人也过不去」。
@@ -29,7 +36,10 @@ extends RefCounted
 const CourseCompletionProbe := preload("res://src/games/traprush/course_completion_probe.gd")
 const Course05Scripts := preload("res://src/games/traprush/course_05_scripts.gd")
 const Course06Scripts := preload("res://src/games/traprush/course_06_scripts.gd")
+const Course07Scripts := preload("res://src/games/traprush/course_07_scripts.gd")
+const Course08Scripts := preload("res://src/games/traprush/course_08_scripts.gd")
 const CourseFPlayableScripts := preload("res://src/games/traprush/course_f_playable_scripts.gd")
+const HumanPaceRunner := preload("res://src/games/traprush/human_pace_runner.gd")
 const OfficialTraprushCourses := preload("res://src/shared/official_traprush_courses.gd")
 
 const FLAG: String = "--bot-run"
@@ -38,9 +48,13 @@ const MAX_TICKS_FLAG: String = "--max-ticks"
 const MAX_DEPTH_FLAG: String = "--max-depth"
 const ROUTE_FLAG: String = "--route"
 const FORBID_PORTAL_FLAG: String = "--forbid-portal"
+const PACE_FLAG: String = "--pace"
+const TAPE_FLAG: String = "--tape"
 
 const ROUTE_ANY: String = "any"
 const ROUTE_SAFE: String = "safe"
+const PACE_PROBE: String = "probe"
+const PACE_HUMAN: String = "human"
 ## course_01 危险捷径上楼的 two_way 源。不是产品关卡 id，只是这张课的搜索约束。
 const COURSE_01_SHORTCUT_PORTAL_ID: int = 10
 
@@ -60,6 +74,14 @@ static func run_and_print(user_args: PackedStringArray) -> int:
 			"event": ERROR_EVENT,
 			"error": "unknown_route",
 			"detail": _raw_value(user_args, ROUTE_FLAG),
+		}))
+		return 1
+	var pace: String = resolve_pace(user_args)
+	if pace == "":
+		print(JSON.stringify({
+			"event": ERROR_EVENT,
+			"error": "unknown_pace",
+			"detail": _raw_value(user_args, PACE_FLAG),
 		}))
 		return 1
 	var courses: PackedStringArray = resolve_courses(user_args)
@@ -95,6 +117,8 @@ static func run_and_print(user_args: PackedStringArray) -> int:
 	var forbid_portals: PackedInt32Array = forbid_ids_raw
 	if route == ROUTE_SAFE:
 		forbid_portals = _append_unique(forbid_portals, COURSE_01_SHORTCUT_PORTAL_ID)
+	if pace == PACE_HUMAN:
+		return _run_human_and_print(user_args, courses, route)
 	var max_ticks: int = _budget_ticks(user_args, route)
 	var max_depth: int = _int_value(
 		user_args, MAX_DEPTH_FLAG, CourseCompletionProbe.DEFAULT_MAX_DEPTH
@@ -120,6 +144,10 @@ static func run_and_print(user_args: PackedStringArray) -> int:
 			course_hint = Course05Scripts.fast_hint()
 		elif course_id == OfficialTraprushCourses.COURSE_06 and route == ROUTE_ANY:
 			course_hint = Course06Scripts.climb_hint()
+		elif course_id == OfficialTraprushCourses.COURSE_07 and route == ROUTE_ANY:
+			course_hint = Course07Scripts.fast_hint()
+		elif course_id == "course_08" and route == ROUTE_ANY:
+			course_hint = Course08Scripts.fast_hint()
 		var result: Dictionary = CourseCompletionProbe.run_path(
 			path, max_ticks, max_depth, forbid_portals, action_count, course_hint
 		)
@@ -176,6 +204,38 @@ static func resolve_route(user_args: PackedStringArray) -> String:
 	return ""
 
 
+## 缺省与 `--pace=probe` 都是探针。未知值回空，调用方整体拒绝。
+static func resolve_pace(user_args: PackedStringArray) -> String:
+	var raw: String = _raw_value(user_args, PACE_FLAG)
+	if raw == "":
+		return PACE_PROBE
+	if raw == PACE_PROBE or raw == PACE_HUMAN:
+		return raw
+	return ""
+
+
+## `--tape=` 为人跑每 tick 码。缺省 `{present: false}`；非法对角 / 非数字
+## `{present: true, ok: false}`。
+static func resolve_human_tape(user_args: PackedStringArray) -> Dictionary:
+	if not _has_flag(user_args, TAPE_FLAG):
+		return {"present": false, "ok": true, "tape": PackedByteArray(), "reason": ""}
+	var raw: String = _raw_value(user_args, TAPE_FLAG)
+	if raw == "":
+		return {"present": true, "ok": false, "tape": PackedByteArray(), "reason": HumanPaceRunner.REASON_BAD_TAPE}
+	var parsed: Dictionary = HumanPaceRunner.parse_tick_codes(raw)
+	var parsed_ok: bool = parsed.get("ok", false)
+	var tape_raw: Variant = parsed.get("tape", PackedByteArray())
+	var tape: PackedByteArray = PackedByteArray()
+	if typeof(tape_raw) == TYPE_PACKED_BYTE_ARRAY:
+		tape = tape_raw
+	return {
+		"present": true,
+		"ok": parsed_ok,
+		"tape": tape,
+		"reason": parsed.get("reason", HumanPaceRunner.REASON_BAD_TAPE),
+	}
+
+
 ## 解析 `--forbid-portal=`。非法数字返回 `{ok: false}`。
 static func resolve_forbid_portals(user_args: PackedStringArray) -> Dictionary:
 	var ids: PackedInt32Array = PackedInt32Array()
@@ -191,6 +251,125 @@ static func resolve_forbid_portals(user_args: PackedStringArray) -> Dictionary:
 			return {"ok": false, "ids": PackedInt32Array()}
 		ids = _append_unique(ids, entity_id)
 	return {"ok": true, "ids": ids}
+
+
+static func _run_human_and_print(
+	user_args: PackedStringArray,
+	courses: PackedStringArray,
+	route: String
+) -> int:
+	var tape_parsed: Dictionary = resolve_human_tape(user_args)
+	var tape_present: bool = tape_parsed.get("present", false)
+	var tape_ok: bool = tape_parsed.get("ok", false)
+	if tape_present and not tape_ok:
+		print(JSON.stringify({
+			"event": ERROR_EVENT,
+			"error": "bad_tape",
+			"detail": str(tape_parsed.get("reason", HumanPaceRunner.REASON_BAD_TAPE)),
+		}))
+		return 1
+	var max_ticks: int = _human_budget(user_args)
+	if max_ticks < 0:
+		print(JSON.stringify({"event": ERROR_EVENT, "error": "bad_budget"}))
+		return 1
+	var explicit_raw: Variant = tape_parsed.get("tape", PackedByteArray())
+	var explicit_tape: PackedByteArray = PackedByteArray()
+	if typeof(explicit_raw) == TYPE_PACKED_BYTE_ARRAY:
+		explicit_tape = explicit_raw
+	var started: int = Time.get_ticks_msec()
+	var completable: int = 0
+	for course_id: String in courses:
+		var course_started: int = Time.get_ticks_msec()
+		var tape: PackedByteArray = PackedByteArray()
+		if tape_present:
+			tape = explicit_tape
+		else:
+			var hint: PackedByteArray = _course_scripted_hint(course_id, route)
+			if hint.is_empty():
+				print(JSON.stringify({
+					"event": ERROR_EVENT,
+					"error": "missing_human_tape",
+					"detail": course_id,
+				}))
+				return 1
+			var expanded: Dictionary = HumanPaceRunner.expand_probe_actions(hint)
+			var expanded_ok: bool = expanded.get("ok", false)
+			if not expanded_ok:
+				print(JSON.stringify({
+					"event": ERROR_EVENT,
+					"error": str(expanded.get("reason", HumanPaceRunner.REASON_BAD_TAPE)),
+					"detail": course_id,
+				}))
+				return 1
+			var expanded_raw: Variant = expanded.get("tape", PackedByteArray())
+			if typeof(expanded_raw) != TYPE_PACKED_BYTE_ARRAY:
+				print(JSON.stringify({
+					"event": ERROR_EVENT,
+					"error": "bad_tape",
+					"detail": course_id,
+				}))
+				return 1
+			tape = expanded_raw
+		var path: String = OfficialTraprushCourses.document_path(course_id)
+		var result: Dictionary = HumanPaceRunner.run_path(path, tape, max_ticks)
+		var outcome: String = result["outcome"]
+		if outcome == HumanPaceRunner.OUTCOME_COMPLETABLE:
+			completable += 1
+		var line: Dictionary = result.duplicate()
+		line["event"] = COURSE_EVENT
+		line["course"] = course_id
+		line["route"] = route
+		line["pace"] = PACE_HUMAN
+		line["max_ticks"] = max_ticks
+		line["wall_ms"] = Time.get_ticks_msec() - course_started
+		print(JSON.stringify(line))
+	var total: int = courses.size()
+	print(JSON.stringify({
+		"event": SUMMARY_EVENT,
+		"ok": completable == total,
+		"total": total,
+		"completable": completable,
+		"not_completable": total - completable,
+		"route": route,
+		"pace": PACE_HUMAN,
+		"max_ticks": max_ticks,
+		"max_depth": 0,
+		"action_count": 0,
+		"wall_ms": Time.get_ticks_msec() - started,
+	}))
+	return 0 if completable == total else 1
+
+
+## 与探针默认 hint 同一套接线。空 = 这张课没有可展的人跑磁带。
+static func _course_scripted_hint(course_id: String, route: String) -> PackedByteArray:
+	if route == ROUTE_SAFE and course_id == OfficialTraprushCourses.COURSE_01:
+		return CourseCompletionProbe.course_01_safe_cardinal()
+	if route != ROUTE_ANY:
+		return PackedByteArray()
+	if course_id == OfficialTraprushCourses.COURSE_F_PLAYABLE:
+		return CourseFPlayableScripts.fast_hint()
+	if course_id == OfficialTraprushCourses.COURSE_05:
+		return Course05Scripts.fast_hint()
+	if course_id == OfficialTraprushCourses.COURSE_06:
+		return Course06Scripts.climb_hint()
+	if course_id == OfficialTraprushCourses.COURSE_07:
+		return Course07Scripts.fast_hint()
+	if course_id == "course_08":
+		return Course08Scripts.fast_hint()
+	return PackedByteArray()
+
+
+## 人跑省略 `--max-ticks` 为 0（跑完整磁带）。非法回 -1。
+static func _human_budget(user_args: PackedStringArray) -> int:
+	var raw: String = _raw_value(user_args, MAX_TICKS_FLAG)
+	if raw == "":
+		return 0
+	if not raw.is_valid_int():
+		return -1
+	var parsed: int = raw.to_int()
+	if parsed < 1:
+		return -1
+	return parsed
 
 
 static func _budget_ticks(user_args: PackedStringArray, route: String) -> int:
@@ -211,6 +390,14 @@ static func _append_unique(ids: PackedInt32Array, entity_id: int) -> PackedInt32
 	var next: PackedInt32Array = ids.duplicate()
 	next.append(entity_id)
 	return next
+
+
+static func _has_flag(user_args: PackedStringArray, flag: String) -> bool:
+	var prefix: String = "%s=" % flag
+	for arg: String in user_args:
+		if arg == flag or arg.begins_with(prefix):
+			return true
+	return false
 
 
 static func _raw_value(user_args: PackedStringArray, flag: String) -> String:

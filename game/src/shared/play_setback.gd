@@ -18,7 +18,7 @@ extends RefCounted
 const NONE: String = ""
 ## 周期机关在固体半周期与胶囊重叠：击退并弹回。
 const HAZARD: String = "hazard"
-## 掉出开发期 ±8 格出界桩（`OutOfRangeReset.STUB_HALF`），不是产品边界。
+## 掉出开发期出界桩（`OutOfRangeReset.content_bounds`，紧凑课 ±8 格），不是产品边界。
 const OUT_OF_RANGE: String = "out_of_range"
 ## 移动平台把胶囊顶进固体里，无处可去：弹回。
 const CRUSHED: String = "crushed"

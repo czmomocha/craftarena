@@ -9,6 +9,8 @@ const TraprushMatchIntentsGd := preload("res://src/games/traprush/match_session_
 const TraprushMatchScanGd := preload("res://src/games/traprush/match_session_scan.gd")
 const TraprushMatchSimGd := preload("res://src/games/traprush/match_session_sim.gd")
 const TraprushMatchViewGd := preload("res://src/games/traprush/match_session_view.gd")
+const OutOfRangeResetGd := preload("res://src/games/traprush/out_of_range_reset.gd")
+const CoyoteGd := preload("res://src/games/traprush/coyote.gd")
 const RuleVmDispatchGd := preload("res://src/ugc/rule_vm_dispatch.gd")
 
 const MAX_PLAYERS: int = 8
@@ -37,6 +39,8 @@ var ice_step: int = 0
 var launch_dy: int = 0
 var launch_xz: int = 0
 var respawn_stun_ticks: int = 0
+## 土狼窗口。apply_match / 会话创建后从 PlayStubs.COYOTE_TICKS 写入。0 ⇒ 仅支撑可跳。
+var coyote_ticks: int = 0
 var range_enabled: bool = false
 var range_min_x: int = 0
 var range_max_x: int = 0
@@ -44,6 +48,9 @@ var range_min_y: int = 0
 var range_max_y: int = 0
 var range_min_z: int = 0
 var range_max_z: int = 0
+## bootstrap 按本局内容算好的出界六面（`OutOfRangeReset.content_bounds`）。
+## 只是候选；`enable_content_play_range` 才打开。
+var content_play_bounds: Dictionary = {}
 
 var intents: TraprushMatchIntentsGd = TraprushMatchIntentsGd.new()
 var scan: TraprushMatchScanGd = TraprushMatchScanGd.new()
@@ -222,6 +229,26 @@ func apply_player_intent(slot: int, payload: Dictionary) -> bool:
 	return intents.apply(self, slot, payload)
 
 
+func refresh_coyote() -> void:
+	if _world == null:
+		return
+	var now_tick: int = _world.tick_index
+	for player: Dictionary in _players:
+		var capsule_id: int = player["capsule_id"]
+		var last_supported_tick: int = player.get("last_supported_tick", -1)
+		var jump_consumed: bool = player.get("jump_consumed", false)
+		var observed: Dictionary = CoyoteGd.observe_world(
+			_world,
+			capsule_id,
+			support_dy,
+			now_tick,
+			last_supported_tick,
+			jump_consumed
+		)
+		player["last_supported_tick"] = observed["last_supported_tick"]
+		player["jump_consumed"] = observed["consumed"]
+
+
 func apply_player_falls() -> void:
 	TraprushMatchSimGd.apply_falls(self)
 
@@ -234,17 +261,27 @@ func commit_tick() -> void:
 	TraprushMatchSimGd.commit(self)
 
 
+## 以原点为中心的 ±half 立方体。half < 1 关闭。测试与紧区间场景用。
 func enable_play_range(half: int) -> void:
-	if half < 1:
-		range_enabled = false
+	enable_play_bounds(OutOfRangeResetGd.cube_bounds(half))
+
+
+## 按六面打开出界。缺键 / 非 int / 某轴 min > max ⇒ 关闭，不写半截边界。
+func enable_play_bounds(bounds: Dictionary) -> void:
+	range_enabled = OutOfRangeResetGd.bounds_ok(bounds)
+	if not range_enabled:
 		return
-	range_enabled = true
-	range_min_x = -half
-	range_max_x = half
-	range_min_y = -half
-	range_max_y = half
-	range_min_z = -half
-	range_max_z = half
+	range_min_x = bounds["min_x"]
+	range_max_x = bounds["max_x"]
+	range_min_y = bounds["min_y"]
+	range_max_y = bounds["max_y"]
+	range_min_z = bounds["min_z"]
+	range_max_z = bounds["max_z"]
+
+
+## 产品路径：按本局内容推导的六面（紧凑课仍是 ±STUB_HALF 立方体）。
+func enable_content_play_range() -> void:
+	enable_play_bounds(content_play_bounds)
 
 
 static func move_step_allowed(dx: int, dz: int) -> bool:

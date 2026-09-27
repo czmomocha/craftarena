@@ -19,6 +19,7 @@ const ServerEndpointGd := preload("res://src/client/server_endpoint.gd")
 const SettlementPanelGd := preload("res://src/shared/match_settlement_panel.gd")
 const PlaySplitTrackerGd := preload("res://src/shared/play_split_tracker.gd")
 const TraprushReplayEntryGd := preload("res://src/client/traprush_replay_entry.gd")
+const MatchProgressGd := preload("res://src/client/match_progress.gd")
 
 const TITLE: String = MatchLobbyChromeGd.TITLE
 const WINDOW_SIZE: Vector2i = MatchLobbyChromeGd.WINDOW_SIZE
@@ -298,6 +299,10 @@ func _refresh_status() -> void:
 		play_state = play.state
 	MatchLobbyHudGd.sync_play_progress(
 		view, split_tracker, _local_settlement_board(), offline_playing(), play_state
+	)
+	MatchProgressGd.fill_lobby_view(
+		view, stage.course, active_follow(),
+		stage.camera_follow_slot(offline_playing(), play), offline
 	)
 	chrome.set_status_text(MatchLobbyHudGd.format_line(view))
 	chrome.sync_play_hud(view)

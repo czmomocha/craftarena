@@ -2,8 +2,8 @@ extends GutTest
 
 ## TraprushIntentStepper：把 Move / Jump / ResetToCheckpoint 接到 SimulationWorld。
 ## CD-21 §3 / §8：短跳是按钮意图。位移、jump_dy、support_dy 由调用方传入。
-## 不发明默认速度、跳跃高度、重力或 coyote。Jump 仅在 is_supported_by_solid 时
-## TraprushGravity.apply_jump：开阔地终点与成功 try_move_y 相同；路径上有盒则
+## 不发明默认速度、跳跃高度或重力。本文件不传 coyote 参数（默认 0 / last=-1），
+## 空中从未支撑仍不能跳。Jump 在支撑上才 apply_jump：开阔地终点与成功 try_move_y 相同；路径上有盒则
 ## {ok: true} 且停在最后未阻挡样本并把 vy 置 0；对照 try_move_y 仍 false 且不写。
 ## Move 走 try_move_xz_until_blocked：开阔地终点与成功 try_move_xz 相同；路径上有盒/胶囊则
 ## {ok: true} 且停在最后未阻挡样本；对照 try_move_xz 仍 false 且不写。第一步即挡则保持起点。

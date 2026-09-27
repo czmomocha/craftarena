@@ -40,6 +40,7 @@ const FPS_NAME: String = "Fps"
 const STATUS_NAME: String = "Status"
 const FIELDS_NAME: String = MatchLobbyChromeLayoutGd.FIELDS_NAME
 const OverlayGd := preload("res://src/shared/play_hud_overlay.gd")
+const ProgressBarGd := preload("res://src/client/match_progress_bar.gd")
 const MatchInviteGd := preload("res://src/client/match_invite.gd")
 
 var window: Window = null
@@ -51,6 +52,7 @@ var seats_edit: LineEdit = null
 var invite_edit: LineEdit = null
 var server_edit: LineEdit = null
 var play_hud: OverlayGd = OverlayGd.new()
+var progress_bar: ProgressBarGd = ProgressBarGd.new()
 var hud_settings: HudSettingsGd = HudSettingsGd.new()
 var _on_camera_zoom: Callable = Callable()
 var _on_camera_pan: Callable = Callable()
@@ -130,6 +132,7 @@ func attach(parent: Node, handlers: Dictionary) -> Window:
 	frame_rate.add_theme_font_size_override("font_size", PlaceholderSpec.HUD_STATUS_FONT_SIZE)
 	MatchLobbyChromeLayoutGd.dock_fps(frame_rate, window)
 	play_hud.attach(window, root)
+	progress_bar.attach(window)
 	apply_colors()
 	return window
 
@@ -221,6 +224,7 @@ func apply_colors() -> void:
 
 func sync_play_hud(view: Dictionary) -> void:
 	play_hud.apply(view)
+	progress_bar.apply(view)
 	sync_invite(view)
 
 

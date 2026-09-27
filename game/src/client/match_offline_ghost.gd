@@ -81,3 +81,4 @@ static func copy_play_stubs(from_host: MatchOfflineSession, to_host: MatchOfflin
 	to_host.play_launch_xz = from_host.play_launch_xz
 	to_host.play_respawn_stun_ticks = from_host.play_respawn_stun_ticks
 	to_host.play_range_half = from_host.play_range_half
+	to_host.play_range_from_content = from_host.play_range_from_content

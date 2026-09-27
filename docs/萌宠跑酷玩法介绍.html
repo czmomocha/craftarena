@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>萌宠跑酷 · 街机模式补充分册 | 萌宠拆拆乐 Messy Up</title>
+<meta name="description" content="《萌宠拆拆乐》（Messy Up）街机模式「萌宠跑酷」玩法介绍：操控宠物躲避障碍的分屏竞速小游戏，节奏轻快，附官方原图。">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%238B5CF6'/%3E%3Cg fill='%23FFC53D'%3E%3Ccircle cx='10' cy='12' r='3'/%3E%3Ccircle cx='16' cy='9' r='3'/%3E%3Ccircle cx='22' cy='12' r='3'/%3E%3Cpath d='M16 14c-4.5 0-7 3-7 6 0 2.2 1.8 4 4 4h6c2.2 0 4-1.8 4-4 0-3-2.5-6-7-6z'/%3E%3C/g%3E%3C/svg%3E">
+<link rel="stylesheet" href="https://miaoda.feishu.cn/fonts/css2?family=ZCOOL+KuaiLe&family=Noto+Sans+SC:wght@400;500;700;900&display=swap">
+<style>
+/* ===== 设计令牌（与主拆解页一致） ===== */
+:root{
+  --bg:#FFF8F1;--bg-pink:#FDF0F8;--bg-blue:#EEF6FF;--bg-yellow:#FFF6E0;--bg-purple:#F3EEFF;
+  --card:#FFFFFF;--ink:#3A2E45;--ink-2:#6B5D78;--line:#F0E3EF;
+  --pink:#E05AA6;--pink-deep:#C2458D;--purple:#8B5CF6;--blue:#3E93F5;--yellow:#F2A71B;--green:#2FBE7A;
+  --radius:20px;--shadow:0 10px 30px rgba(139,92,246,.08);
+  --font-d:'ZCOOL KuaiLe','Noto Sans SC','PingFang SC','Microsoft YaHei',sans-serif;
+  --font-b:'Noto Sans SC','PingFang SC','Microsoft YaHei',system-ui,sans-serif;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--ink);font-family:var(--font-b);line-height:1.75;font-size:16px;-webkit-font-smoothing:antialiased}
+img{display:block;max-width:100%}
+.wrap{max-width:1000px;margin:0 auto;padding:0 24px}
+
+/* ===== 页眉小条 ===== */
+.topbar{background:#2F2340;color:#CBBBDD;font-size:13px}
+.topbar .wrap{display:flex;align-items:center;justify-content:space-between;gap:12px;padding-top:10px;padding-bottom:10px;flex-wrap:wrap}
+.topbar b{color:#fff;font-weight:700}
+.topbar .sub{font-size:12px;color:#9D8BAF}
+
+/* ===== Hero ===== */
+.hero{position:relative;overflow:hidden;background:linear-gradient(120deg,#F7DFF3 0%,#E9DDFF 45%,#DCEBFF 100%)}
+.hero::after{content:"";position:absolute;inset:0;background-image:radial-gradient(rgba(255,255,255,.55) 1.5px,transparent 1.5px);background-size:26px 26px;pointer-events:none}
+.hero-inner{position:relative;z-index:1;padding:52px 0 44px;display:grid;grid-template-columns:1.05fr .95fr;gap:40px;align-items:center}
+.hero-kicker{display:inline-flex;align-items:center;gap:8px;background:#fff;border:1px solid var(--line);color:var(--pink-deep);font-size:13px;font-weight:700;padding:5px 14px;border-radius:999px;margin-bottom:16px}
+.hero h1{font-family:var(--font-d);font-size:clamp(32px,4.6vw,48px);line-height:1.15;letter-spacing:1px}
+.hero h1 .en{color:var(--purple)}
+.hero-sub{margin-top:12px;font-size:15.5px;color:var(--ink-2);max-width:520px}
+.hero-chips{display:flex;flex-wrap:wrap;gap:10px;margin-top:20px}
+.chip{background:#fff;border:1px solid var(--line);border-radius:999px;padding:5px 13px;font-size:13px;font-weight:700;color:var(--ink);display:inline-flex;align-items:center;gap:6px}
+.hero-img .frame{background:#fff;border-radius:24px;padding:10px;box-shadow:var(--shadow);transform:rotate(1.2deg);border:1px solid #F3E3F0}
+.hero-img img{border-radius:16px;width:100%}
+.hero-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-top:36px}
+.stat{background:rgba(255,255,255,.85);border:1px solid var(--line);border-radius:var(--radius);padding:14px 16px;text-align:center}
+.stat .n{font-family:var(--font-d);font-size:25px;color:var(--purple);line-height:1.2}
+.stat .l{font-size:12.5px;color:var(--ink-2);margin-top:2px}
+
+/* ===== 区块 ===== */
+section{padding:56px 0;border-top:1px dashed #EBD8E7}
+.sec-head{display:flex;align-items:center;gap:14px;margin-bottom:8px}
+.sec-no{font-family:var(--font-d);font-size:14px;color:#fff;background:var(--purple);border-radius:10px;padding:4px 12px;transform:rotate(-2deg);flex:none}
+.sec-kicker{font-size:12.5px;font-weight:700;color:var(--pink-deep);letter-spacing:1px}
+.sec-head h2{font-family:var(--font-d);font-size:28px;line-height:1.25;margin-top:2px}
+.sec-desc{color:var(--ink-2);max-width:720px;margin-bottom:26px;font-size:14.5px}
+.sec-alt{background:var(--bg-blue)}
+.sec-pink{background:var(--bg-pink)}
+.sec-purple{background:var(--bg-purple)}
+
+/* ===== 档案卡 ===== */
+.facts{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:30px}
+.fact{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:16px 18px;box-shadow:var(--shadow)}
+.fact .t{font-size:12.5px;font-weight:700;color:var(--pink-deep);display:flex;align-items:center;gap:7px;margin-bottom:6px}
+.fact .v{font-size:14px;color:var(--ink);font-weight:700}
+.fact .s{font-size:12.5px;color:var(--ink-2);margin-top:2px}
+
+/* ===== 双栏 ===== */
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:26px;align-items:start}
+.detail{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:26px;box-shadow:var(--shadow)}
+.detail h3{font-family:var(--font-d);font-size:20px;margin-bottom:12px;display:flex;align-items:center;gap:10px}
+.dot{width:10px;height:10px;border-radius:50%;flex:none}
+ul.pts{list-style:none;display:grid;gap:10px}
+ul.pts li{position:relative;padding-left:24px;font-size:14.5px;color:var(--ink)}
+ul.pts li::before{content:"";position:absolute;left:0;top:9px;width:8px;height:8px;border-radius:2px;transform:rotate(45deg);background:var(--pink)}
+ul.pts.blue li::before{background:var(--blue)}
+ul.pts.green li::before{background:var(--green)}
+ul.pts li b{color:var(--ink)}
+.gal2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.gal2 figure{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow)}
+.gal2 img{width:100%;aspect-ratio:16/10;object-fit:cover;cursor:zoom-in}
+.gal2 figcaption{padding:10px 14px;font-size:12.5px;color:var(--ink-2)}
+
+/* ===== 街机三兄弟 ===== */
+.sibs{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:8px}
+.sib{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow);display:flex;flex-direction:column}
+.sib .ph{aspect-ratio:16/9;overflow:hidden;background:#F7F1FB}
+.sib .ph img{width:100%;height:100%;object-fit:cover}
+.sib .bd{padding:13px 16px 15px;display:flex;flex-direction:column;gap:5px;flex:1}
+.sib h3{font-size:16px;font-family:var(--font-d);letter-spacing:.5px}
+.sib .tag{font-size:11.5px;font-weight:700;color:var(--pink-deep)}
+.sib p{font-size:13px;color:var(--ink-2);line-height:1.6}
+.sib.cur{border:2.5px solid var(--purple);position:relative}
+.sib.cur .cur-tag{position:absolute;top:10px;right:10px;background:var(--purple);color:#fff;font-size:11px;font-weight:700;padding:3px 10px;border-radius:999px;z-index:2}
+
+/* ===== 趣味点 ===== */
+.why{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+.why-card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:18px;box-shadow:var(--shadow)}
+.why-card .ic{width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;margin-bottom:10px}
+.why-card h4{font-size:15.5px;margin-bottom:6px}
+.why-card p{font-size:13px;color:var(--ink-2);line-height:1.65}
+
+/* ===== 可借鉴 ===== */
+.lessons{display:grid;gap:12px}
+.lesson{display:grid;grid-template-columns:60px 1fr;gap:18px;background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:16px 20px;box-shadow:var(--shadow);align-items:start}
+.lesson .num{font-family:var(--font-d);font-size:24px;color:var(--purple);background:var(--bg-purple);border-radius:14px;display:flex;align-items:center;justify-content:center;height:54px}
+.lesson h4{font-size:16px;margin-bottom:4px}
+.lesson p{font-size:13.5px;color:var(--ink-2);line-height:1.7}
+
+/* ===== 画廊 ===== */
+.gallery{display:grid;grid-template-columns:repeat(2,1fr);gap:16px}
+.gallery figure{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow);cursor:zoom-in}
+.gallery img{width:100%;aspect-ratio:16/10;object-fit:cover;transition:transform .4s}
+.gallery figure:hover img{transform:scale(1.04)}
+.gallery figcaption{padding:11px 14px;font-size:12.5px;color:var(--ink-2);line-height:1.6}
+.gallery figcaption b{display:block;color:var(--ink);font-size:13.5px;margin-bottom:2px}
+
+/* ===== 灯箱 ===== */
+.lightbox{position:fixed;inset:0;z-index:100;background:rgba(35,22,48,.92);display:none;align-items:center;justify-content:center;flex-direction:column;padding:24px;cursor:zoom-out}
+.lightbox.open{display:flex}
+.lightbox img{max-width:92vw;max-height:78vh;border-radius:12px;box-shadow:0 20px 60px rgba(0,0,0,.5)}
+.lightbox .cap{color:#fff;margin-top:14px;font-size:14px;text-align:center;max-width:720px}
+.lightbox .close{position:absolute;top:20px;right:26px;color:#fff;font-size:30px;line-height:1;cursor:pointer;background:none;border:none}
+
+/* ===== 页脚 ===== */
+footer{background:#2F2340;color:#CBBBDD;padding:44px 0 54px;border-top:4px solid var(--purple)}
+footer h4{color:#fff;font-family:var(--font-d);font-size:16px;margin-bottom:10px;letter-spacing:1px}
+footer p{font-size:12.5px;line-height:1.9;color:#9D8BAF}
+footer a{color:#E6D9F5}
+
+:focus-visible{outline:3px solid var(--purple);outline-offset:2px;border-radius:6px}
+
+/* ===== 响应式 ===== */
+@media (max-width:880px){
+  .hero-inner{grid-template-columns:1fr;padding:40px 0 36px}
+  .hero-stats{grid-template-columns:repeat(2,1fr)}
+  .facts{grid-template-columns:repeat(2,1fr)}
+  .grid2{grid-template-columns:1fr}
+  .sibs{grid-template-columns:1fr}
+  .why{grid-template-columns:repeat(2,1fr)}
+  .gallery{grid-template-columns:1fr}
+  .gal2{grid-template-columns:1fr}
+}
+@media (max-width:640px){
+  section{padding:42px 0}
+  body{font-size:16px}
+  .why{grid-template-columns:1fr}
+  .why-card p,.sib p,.lesson p{font-size:14px}
+  .lesson{grid-template-columns:1fr;gap:10px}
+  .lesson .num{height:42px;width:50px;font-size:19px}
+}
+@media (prefers-reduced-motion:reduce){
+  *{transition:none!important;animation:none!important}
+  html{scroll-behavior:auto}
+}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="wrap">
+    <span><b>萌宠拆拆乐 · Messy Up 玩法拆解</b> 街机模式补充分册</span>
+    <span class="sub">本页可独立阅读</span>
+  </div>
+</div>
+
+<header class="hero">
+  <div class="wrap hero-inner">
+    <div>
+      <span class="hero-kicker"><svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10S17.5 2 12 2z"/></svg>街机模式补充分册 · Arcade</span>
+      <h1>萌宠跑酷 <span class="en">Pet Parkour</span></h1>
+      <p class="hero-sub">操控宠物躲避障碍的快节奏跑酷小游戏——拆家拆累了？来高耸的工地赛道跑一圈。单局即爽、随时进出，是派对局里最好的「喘息位」。</p>
+      <div class="hero-chips">
+        <span class="chip">街机模式分支</span>
+        <span class="chip">建筑工地赛道</span>
+        <span class="chip">分屏竞速</span>
+        <span class="chip">节奏轻快</span>
+      </div>
+    </div>
+    <div class="hero-img">
+      <div class="frame"><img src="https://media.doubao.com/space/api/box/stream/download/all_by_mount_point/Nw6ab6KrooyRVSxnwBvcN9Dknrd" alt="萌宠跑酷实机原图：分屏竞速画面，木质赛道、桁架障碍与 1st/2nd 排名"></div>
+    </div>
+  </div>
+  <div class="wrap">
+    <div class="hero-stats">
+      <div class="stat"><div class="n">3 大</div><div class="l">街机分支之一</div></div>
+      <div class="stat"><div class="n">2 人</div><div class="l">分屏同场竞速</div></div>
+      <div class="stat"><div class="n">1 键</div><div class="l">方向 + 冲刺技能</div></div>
+      <div class="stat"><div class="n">1 分钟</div><div class="l">级短单局</div></div>
+    </div>
+  </div>
+</header>
+
+<main>
+
+<!-- ===== 一、玩法档案 ===== -->
+<section id="profile">
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="sec-no">01</span>
+      <div>
+        <div class="sec-kicker">MODE PROFILE</div>
+        <h2>玩法档案</h2>
+      </div>
+    </div>
+    <p class="sec-desc">「萌宠跑酷」是街机模式三大分支之一。与「梦魇幻境」「投掷训练场」并列，它把主线里的宠物角色搬上高空建筑工地，用方向控制与冲刺技能挑战极限，穿梭于钢筋与脚手架之间。</p>
+    <div class="facts">
+      <div class="fact"><div class="t"><svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2l2.4 7.2H22l-6 4.4 2.3 7.1-6.3-4.5-6.3 4.5L8 13.6l-6-4.4h7.6z"/></svg>所属模式</div><div class="v">街机模式（Arcade）</div><div class="s">三大分支：萌宠跑酷 / 梦魇幻境 / 投掷训练场</div></div>
+      <div class="fact"><div class="t"><svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M2 20h20L12 4z"/></svg>主题场景</div><div class="v">高空建筑工地</div><div class="s">穿梭于钢筋与脚手架之间，冲刺挑战极限</div></div>
+      <div class="fact"><div class="t"><svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 5h18v14H3z" fill="none" stroke="currentColor" stroke-width="2"/><path d="M8 19v2m8-2v2M3 10h18"/></svg></div><div class="v">呈现方式</div><div class="s">分屏双人竞速，1st / 2nd 即时排名 + 进度百分比 + 计时</div></div>
+      <div class="fact"><div class="t"><svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 1l3 6 6 .8-4.5 4.3L17.8 19 12 15.8 6.2 19l1.3-6.9L3 7.8 9 7z"/></svg>体验定位</div><div class="v">休闲解压</div><div class="s">短单局、零学习成本、不肝不氪（媒体评）</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 二、怎么玩 ===== -->
+<section id="play" class="sec-pink">
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="sec-no">02</span>
+      <div>
+        <div class="sec-kicker">HOW TO PLAY</div>
+        <h2>怎么玩</h2>
+      </div>
+    </div>
+    <div class="grid2">
+      <div class="detail">
+        <h3><span class="dot" style="background:var(--pink)"></span>核心规则</h3>
+        <ul class="pts">
+          <li><b>跑</b>：控制宠物在工地赛道上持续前进，方向控制决定走线。</li>
+          <li><b>躲</b>：钢筋、脚手架、桁架等障碍拦路，撞上会掉节奏、拖进度。</li>
+          <li><b>冲</b>：用冲刺技能提速穿越障碍密集区，时机与路线是关键。</li>
+          <li><b>比</b>：分屏双人同场竞速，进度百分比与计时实时可见，先到 / 领先者胜。</li>
+        </ul>
+      </div>
+      <div class="detail">
+        <h3><span class="dot" style="background:var(--blue)"></span>体验节奏</h3>
+        <ul class="pts blue">
+          <li><b>单局即爽</b>：约 1 分钟级短局，开跑即高潮，随时重开。</li>
+          <li><b>上手即玩</b>：无需教程，方向 + 冲刺两个动作讲完就开赛。</li>
+          <li><b>轻竞技</b>：排名反馈直给，输赢都是一乐，适合朋友互坑与暖场。</li>
+          <li><b>解压定位</b>：与主玩法「拆家」的重策略形成互补，拆累了就跑一局换换脑子。</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 三、街机三兄弟 ===== -->
+<section id="sibs" class="sec-purple">
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="sec-no">03</span>
+      <div>
+        <div class="sec-kicker">ARCADE TRIO</div>
+        <h2>街机模式三兄弟</h2>
+      </div>
+    </div>
+    <p class="sec-desc">三个小游戏分别练「跑、扔、稳」，玩法互补，共用同一批萌宠角色与物理手感。</p>
+    <div class="sibs">
+      <article class="sib cur">
+        <span class="cur-tag">本页主角</span>
+        <div class="ph"><img src="https://media.doubao.com/space/api/box/stream/download/all_by_mount_point/Nw6ab6KrooyRVSxnwBvcN9Dknrd" alt="萌宠跑酷分屏竞速原图"></div>
+        <div class="bd"><span class="tag">练速度 · 躲避障碍</span><h3>萌宠跑酷</h3><p>高空建筑工地分屏竞速，方向 + 冲刺，穿梭钢筋脚手架。</p></div>
+      </article>
+      <article class="sib">
+        <div class="ph"><img src="https://media.doubao.com/space/api/box/stream/download/all_by_mount_point/NyZRbnSPUorRdexfKHycL5dknif" alt="投掷训练场关卡原图：马戏团主题"></div>
+        <div class="bd"><span class="tag">练准头 · 命中移动靶</span><h3>投掷训练场</h3><p>利用跳板、用足球命中移动靶子，蓄力与角度是核心。</p></div>
+      </article>
+      <article class="sib">
+        <div class="ph"><img src="https://media.doubao.com/space/api/box/stream/download/all_by_mount_point/PPwMbO80TofD3jx9Y7hcPIcfnbL" alt="梦魇幻境幽灵主题关卡原图"></div>
+        <div class="bd"><span class="tag">练稳性 · 平衡挑战</span><h3>梦魇幻境</h3><p>幽灵主题，在家具冲撞下保持平衡，画风突变的另类体验。</p></div>
+      </article>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 四、为什么好玩 ===== -->
+<section id="fun">
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="sec-no">04</span>
+      <div>
+        <div class="sec-kicker">WHY IT'S FUN</div>
+        <h2>趣味性分析</h2>
+      </div>
+    </div>
+    <p class="sec-desc">以下为编者视角的分析，帮助理解这个小模式在整款游戏里的位置与价值。</p>
+    <div class="why">
+      <div class="why-card"><div class="ic" style="background:#FDE7F5"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#E05AA6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v3m0 12v3M3 12h3m12 0h3M5.6 5.6l2.2 2.2m8.4 8.4l2.2 2.2m0-12.8l-2.2 2.2M7.8 16.2l-2.2 2.2"/></svg></div><h4>反差萌</h4><p>拆家里的「破坏王」在跑酷里要灵敏躲避——能拆也能跑，角色人设更有层次。</p></div>
+      <div class="why-card"><div class="ic" style="background:#E7F2FF"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#3E93F5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L4.5 13H11l-1 9 8.5-11H12z"/></svg></div><h4>节奏切换</h4><p>派对局的「喘息位」：短单局、低压力，和朋友轮流上手，气氛不冷场。</p></div>
+      <div class="why-card"><div class="ic" style="background:#FFF3DA"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#F2A71B" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 21h8m-4-4v4m-6-4h12l-1-5H9z"/><path d="M9 8V6a3 3 0 016 0v2"/></svg></div><h4>轻竞技</h4><p>分屏 1v1 即时排名，谁更灵活一目了然——胜负快、嘴仗也多，天然社交催化剂。</p></div>
+      <div class="why-card"><div class="ic" style="background:#E3F7EC"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#2FBE7A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 20L12 4l9 16z"/><path d="M12 10v6m0-3h3"/></svg></div><h4>速度感</h4><p>高空工地场景自带高度与速度刺激，不需要复杂玩法就能制造肾上腺素。</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 五、可借鉴 ===== -->
+<section id="lessons" class="sec-alt">
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="sec-no">05</span>
+      <div>
+        <div class="sec-kicker">DESIGN TAKEAWAYS</div>
+        <h2>可以借鉴的地方</h2>
+      </div>
+    </div>
+    <div class="lessons">
+      <div class="lesson"><div class="num">01</div><div><h4>副玩法要当「调味剂」</h4><p>短、快、零学习成本，与核心玩法的重节奏互补——跑酷不是要超越拆家，而是让玩家在两种节奏间切换，反而拉长单次开机的时长。</p></div></div>
+      <div class="lesson"><div class="num">02</div><div><h4>一套资产多模式复用</h4><p>角色、物理手感、美术风格全部复用主线，新玩法只需新赛道与新规则——低成本给内容库「加量」，性价比极高。</p></div></div>
+      <div class="lesson"><div class="num">03</div><div><h4>分屏竞速的即时反馈</h4><p>1st / 2nd 排名、进度百分比、计时三件套同时可见，胜负趋势全程透明，观众与选手都能读懂的「公共信息」。</p></div></div>
+      <div class="lesson"><div class="num">04</div><div><h4>场景主题自带张力</h4><p>高空建筑工地让「跑」天然带高度差与坠落风险感，用场景叙事替代规则复杂度——刺激感可以来自环境而非数值。</p></div></div>
+      <div class="lesson"><div class="num">05</div><div><h4>三合一构成「街机包」</h4><p>跑、扔、稳三个维度打包成街机模式，每局 1 分钟、三款轮换，聚会时按人心情选——模式越多，派对场景越不重复。</p></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 六、原图展示 ===== -->
+<section id="gallery">
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="sec-no">06</span>
+      <div>
+        <div class="sec-kicker">GALLERY</div>
+        <h2>原图展示</h2>
+      </div>
+    </div>
+    <p class="sec-desc">官方与公开物料中的原图：跑酷赛道、街机分支与同世界观的速度感场景，点开可看大图。</p>
+    <div class="gallery">
+      <figure><img src="https://media.doubao.com/space/api/box/stream/download/all_by_mount_point/Nw6ab6KrooyRVSxnwBvcN9Dknrd" alt="萌宠跑酷分屏竞速原图" data-cap="萌宠跑酷实机原图：左右分屏竞速，木质赛道、桁架障碍，1st / 2nd 排名与进度计时可见"><figcaption><b>萌宠跑酷（本页主角）</b>分屏竞速实机画面</figcaption></figure>
+      <figure><img src="https://media.doubao.com/space/api/box/stream/download/all_by_mount_point/TJaob9kSroBe3xxlnHkcNYv6nMc" alt="糖果游乐园过山车关卡原图" data-cap="同世界观的速度感场景：糖果游乐园过山车轨道，跑酷的速度感一脉相承"><figcaption><b>速度感场景</b>糖果乐园过山车轨道</figcaption></figure>
+      <figure><img src="https://media.doubao.com/space/api/box/stream/download/all_by_mount_point/NyZRbnSPUorRdexfKHycL5dknif" alt="投掷训练场原图" data-cap="街机三兄弟之投掷训练场：马戏团主题，跳板与移动靶"><figcaption><b>投掷训练场</b>街机分支之一</figcaption></figure>
+      <figure><img src="https://media.doubao.com/space/api/box/stream/download/all_by_mount_point/PPwMbO80TofD3jx9Y7hcPIcfnbL" alt="梦魇幻境幽灵主题原图" data-cap="街机三兄弟之梦魇幻境：幽灵主题，家具冲撞中保持平衡"><figcaption><b>梦魇幻境</b>街机分支之一</figcaption></figure>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <h4>信息源与说明</h4>
+    <p>
+      本页为《萌宠拆拆乐 Messy Up 玩法拆解》主网页的街机模式补充分册，可独立阅读。<br>
+      信息综合自：盒六网发售报道（三大街机分支玩法细节）、九游评测（投掷训练 / 萌宠跑酷 / 梦魇幻境）、TapTap 官方话题、Steam 商店页官方物料。<br>
+      玩法细节为官方物料与公开报道综合整理，部分规则描述为合理推断，以游戏实际内容为准；「趣味性分析」「可借鉴」为编者视角分析观点。<br>
+      图片均来自官方商店页与公开报道中的游戏原图，版权归开发商 Liquid Meow（液态喵游戏）所有。
+    </p>
+  </div>
+</footer>
+
+<!-- 灯箱 -->
+<div class="lightbox" id="lightbox" role="dialog" aria-label="图片放大预览">
+  <button class="close" id="lbClose" aria-label="关闭">&times;</button>
+  <img id="lbImg" alt="">
+  <div class="cap" id="lbCap"></div>
+</div>
+
+<script>
+(function(){
+  var lb=document.getElementById('lightbox'),img=document.getElementById('lbImg'),cap=document.getElementById('lbCap'),close=document.getElementById('lbClose');
+  function open(src,c){img.src=src;img.alt=c;cap.textContent=c;lb.classList.add('open');document.body.style.overflow='hidden';}
+  function off(){lb.classList.remove('open');document.body.style.overflow='';}
+  document.querySelectorAll('.gallery img,.gal2 img').forEach(function(im){
+    im.addEventListener('click',function(e){
+      e.stopPropagation();
+      var fig=im.closest('figure');
+      var c=(im.dataset.cap||(fig&&fig.querySelector('figcaption')?fig.querySelector('figcaption').textContent:'')).trim();
+      open(im.src,c);
+    });
+  });
+  lb.addEventListener('click',off);close.addEventListener('click',off);
+  document.addEventListener('keydown',function(e){if(e.key==='Escape')off();});
+})();
+</script>
+</body>
+</html>
+<!-- （注：内容由AI生成） -->

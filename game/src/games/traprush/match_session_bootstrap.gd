@@ -10,6 +10,7 @@ const LaunchCycleGd := preload("res://src/games/traprush/launch_cycle.gd")
 const GateCycleGd := preload("res://src/games/traprush/gate_cycle.gd")
 const HazardCycle := preload("res://src/games/traprush/hazard_cycle.gd")
 const MoverCycleGd := preload("res://src/games/traprush/mover_cycle.gd")
+const OutOfRangeResetGd := preload("res://src/games/traprush/out_of_range_reset.gd")
 const PatchApplyGd := preload("res://src/games/traprush/match_session_patch.gd")
 const TopologyLoader := preload("res://src/games/traprush/traprush_topology_loader.gd")
 const TraprushDestructible := preload("res://src/games/traprush/destructible.gd")
@@ -121,6 +122,7 @@ static func try_create(
 	session._pickup_kinds = pickup_kinds_from_bundle(bundle)
 	session._spawn = spawn
 	session._ordered_ids = ordered
+	session.content_play_bounds = OutOfRangeResetGd.content_bounds(bundle)
 	var start_x: int = start["x"]
 	var start_y: int = start["y"]
 	var start_z: int = start["z"]
@@ -148,6 +150,8 @@ static func try_create(
 			"last_shove_tick": -1,
 			"last_use_item_tick": -1,
 			"last_sprint_tick": -1,
+			"last_supported_tick": -1,
+			"jump_consumed": false,
 			"bomb": 0,
 			"dash": 0,
 			"taken": {},
@@ -157,11 +161,13 @@ static func try_create(
 			"setback_reason": PlaySetback.NONE,
 			"setback_count": 0,
 		})
+	session.coyote_ticks = TraprushPlayStubs.COYOTE_TICKS
 	for player: Dictionary in session._players:
 		session._accept_player_pads(player)
 		session._resolve_player_portals(player)
 		session._accept_player_finish(player)
 		session._grant_player_pickups(player)
+	session.refresh_coyote()
 	session.content_hash = ContentSignGd.hash_hex(bundle)
 	if session.content_hash.is_empty():
 		return null

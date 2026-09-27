@@ -19,9 +19,8 @@ extends RefCounted
 ## MATCH 组给随引擎 tick 连续推进的场景（对局进程、Solo、BotRunner）；
 ## PREVIEW 组的下落加速度与对局同一 `FALL_DY`（F 线 FD；不再用 `-SCALE` 特判）。
 ##
-## 出界半宽不在这里复制，直接用 TraprushOutOfRangeReset.STUB_HALF。
+## 出界范围不在这里复制：规则与占位常量都在 TraprushOutOfRangeReset（`content_bounds`）。
 
-const OutOfRangeReset := preload("res://src/games/traprush/out_of_range_reset.gd")
 const TraprushMatchSession := preload("res://src/games/traprush/match_session.gd")
 
 ## 起跳冲量（本拍位移 + 初速）。四分之一格，后面各拍继续上升，不再一拍到顶。
@@ -74,6 +73,8 @@ const COUNTDOWN_TICKS: int = (COUNTDOWN_MS * PHYSICS_TICKS_PER_SECOND_PLACEHOLDE
 const COUNTDOWN_GO_TICKS: int = PHYSICS_TICKS_PER_SECOND_PLACEHOLDER / 2
 ## Preview 手动 Advance，不是墙钟。硬直一次点击即可过，避免点 60 下。
 const PREVIEW_RESPAWN_STUN_TICKS: int = 1
+## 离开支撑后仍允许起跳的 tick 数。占位桩，100 ms @ 60 Hz，不是产品定稿，不锁 Tick Hz。
+const COYOTE_TICKS: int = 6
 
 
 ## 墙钟毫秒 → 会话 tick。向上取整，避免把 1.0 s 缩短。非正数当 0。
@@ -88,7 +89,8 @@ const CAPSULE_RADIUS: int = PlaceholderSpec.CHARACTER_RADIUS
 const CAPSULE_HEIGHT: int = PlaceholderSpec.CHARACTER_HEIGHT
 
 
-## 套用 MATCH 组并打开开发桩出界 AABB。对局进程、BotRunner 与任何直接持有
+## 套用 MATCH 组并打开按内容推导的出界六面（紧凑课仍是 ±8 格桩）。
+## 会话由 bootstrap 创建时已带着本局内容的候选六面。对局进程、BotRunner 与任何直接持有
 ## TraprushMatchSession 的调用方都走这里；只持有 `play_*` 字段的外壳
 ## （Solo、Preview）按分层自己读上面的常量。
 static func apply_match(session: TraprushMatchSession) -> void:
@@ -111,7 +113,9 @@ static func apply_match(session: TraprushMatchSession) -> void:
 	session.launch_dy = LAUNCH_DY
 	session.launch_xz = LAUNCH_XZ
 	session.respawn_stun_ticks = RESPAWN_STUN_TICKS
-	session.enable_play_range(OutOfRangeReset.STUB_HALF)
+	session.coyote_ticks = COYOTE_TICKS
+	session.enable_content_play_range()
+	session.refresh_coyote()
 
 
 static func apply_opening_countdown(session: TraprushMatchSession) -> void:

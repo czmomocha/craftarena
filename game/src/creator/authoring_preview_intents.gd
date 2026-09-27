@@ -8,6 +8,24 @@ extends RefCounted
 
 const ShoveGate := preload("res://src/games/traprush/shove_gate.gd")
 const SprintApply := preload("res://src/games/traprush/sprint_apply.gd")
+const CoyoteGd := preload("res://src/games/traprush/coyote.gd")
+
+
+func refresh_coyote(preview: AuthoringPreview) -> void:
+	if preview.play_world == null:
+		return
+	var observed: Dictionary = CoyoteGd.observe_world(
+		preview.play_world,
+		preview.player_id,
+		preview.play_support_dy,
+		preview.play_world.tick_index,
+		preview.play_last_supported_tick,
+		preview.play_jump_consumed
+	)
+	var next_last: int = observed["last_supported_tick"]
+	var next_consumed: bool = observed["consumed"]
+	preview.play_last_supported_tick = next_last
+	preview.play_jump_consumed = next_consumed
 
 
 func apply(preview: AuthoringPreview, payload: Dictionary) -> bool:
@@ -37,6 +55,9 @@ func apply(preview: AuthoringPreview, payload: Dictionary) -> bool:
 		return true
 	if preview.play_spawn == null or preview.play_track == null:
 		return false
+	var now_tick: int = 0
+	if preview.play_world != null:
+		now_tick = preview.play_world.tick_index
 	var stepped: Dictionary = TraprushIntentStepper.apply(
 		preview.play_world,
 		preview.player_id,
@@ -44,11 +65,19 @@ func apply(preview: AuthoringPreview, payload: Dictionary) -> bool:
 		preview.play_jump_dy,
 		preview.play_spawn,
 		preview.play_track,
-		preview.play_support_dy
+		preview.play_support_dy,
+		now_tick,
+		preview.play_last_supported_tick,
+		preview.play_jump_consumed,
+		preview.play_coyote_ticks
 	)
 	var stepped_ok: bool = stepped.get("ok", false)
 	if not stepped_ok:
 		return false
+	var next_last: int = stepped.get("last_supported_tick", -1)
+	var next_consumed: bool = stepped.get("consumed", false)
+	preview.play_last_supported_tick = next_last
+	preview.play_jump_consumed = next_consumed
 	if reset_ok:
 		preview._portal_latch = {}
 	preview._resolve_play_hazards()

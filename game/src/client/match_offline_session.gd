@@ -13,8 +13,9 @@ extends RefCounted
 ## into the session; play_fall_dy is gravity accel. 0 keeps the session
 ## default (no accel; leftover vy still coasts). play_range_half is a
 ## caller stub copied into enable_play_range; 0 keeps the session default
-## (off). No HTTP, sockets, settlement, or online writes. Solo ghost is a
-## second local session and never occupies a live seat.
+## (off). play_range_from_content (set by apply_play_stubs) swaps an enabled
+## range for the content-derived bounds. No HTTP, sockets, settlement, or online
+## writes. Solo ghost is a second local session and never occupies a live seat.
 
 const MatchCourseMapGd := preload("res://src/client/match_course_map.gd")
 const MatchFrameCodec := preload("res://src/shared/protocol/match_frame_codec.gd")
@@ -63,6 +64,7 @@ var play_launch_dy: int = 0
 var play_launch_xz: int = 0
 var play_respawn_stun_ticks: int = 0
 var play_range_half: int = 0
+var play_range_from_content: bool = false
 var persist_replay: bool = false
 var replay_active: bool = false
 var replay_saved: bool = false
@@ -146,6 +148,8 @@ func _attach(bundle: SimulationBundle, seed: int = MATCH_SEED, seats: int = 1) -
 	created.launch_xz = play_launch_xz
 	created.respawn_stun_ticks = play_respawn_stun_ticks
 	created.enable_play_range(play_range_half)
+	if play_range_from_content and created.range_enabled:
+		created.enable_content_play_range()
 	session = created
 	follow = MatchSnapshotFollowGd.new()
 	last_command = PackedByteArray()
@@ -331,6 +335,7 @@ func apply_play_stubs() -> void:
 	play_launch_xz = PlayStubsGd.LAUNCH_XZ
 	play_respawn_stun_ticks = PlayStubsGd.RESPAWN_STUN_TICKS
 	play_range_half = OutOfRangeResetGd.STUB_HALF
+	play_range_from_content = true
 
 
 func allows_settlement() -> bool:

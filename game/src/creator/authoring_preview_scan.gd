@@ -60,6 +60,22 @@ func try_cross_play_finish(preview: AuthoringPreview) -> bool:
 	return false
 
 
+## `play_range_from_content` 为真时，开玩编译后把出界六面换成按内容推导的
+## `OutOfRangeReset.content_bounds`，与对局 / Solo 同一规则。出界没开时不动。
+func apply_content_play_range(preview: AuthoringPreview, bundle: SimulationBundle) -> void:
+	if not preview.play_range_enabled or not preview.play_range_from_content:
+		return
+	var bounds: Dictionary = OutOfRangeReset.content_bounds(bundle)
+	if not OutOfRangeReset.bounds_ok(bounds):
+		return
+	preview.play_range_min_x = bounds["min_x"]
+	preview.play_range_max_x = bounds["max_x"]
+	preview.play_range_min_y = bounds["min_y"]
+	preview.play_range_max_y = bounds["max_y"]
+	preview.play_range_min_z = bounds["min_z"]
+	preview.play_range_max_z = bounds["max_z"]
+
+
 func reset_play_if_out_of_range(preview: AuthoringPreview) -> bool:
 	if not preview.play_range_enabled:
 		return false

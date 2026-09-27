@@ -12,6 +12,8 @@ const COURSE_03: String = "course_03"
 const COURSE_04: String = "course_04"
 const COURSE_05: String = "course_05"
 const COURSE_06: String = "course_06"
+const COURSE_07: String = "course_07"
+const COURSE_08: String = "course_08"
 const COURSE_F_PLAYABLE: String = "course_f_playable"
 const MATCH_IDS: PackedStringArray = [
 	COURSE_01,
@@ -20,6 +22,8 @@ const MATCH_IDS: PackedStringArray = [
 	COURSE_04,
 	COURSE_05,
 	COURSE_06,
+	COURSE_07,
+	COURSE_08,
 ]
 const DEFAULT_SEATS: int = 2
 const MIN_SEATS: int = 1

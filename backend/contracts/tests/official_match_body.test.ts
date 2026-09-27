@@ -35,6 +35,16 @@ describe("official match body", () => {
 			course: "course_06",
 			seats: 2,
 		});
+		assert.deepEqual(readOfficialMatchBody({ course: "course_07" }), {
+			ok: true,
+			course: "course_07",
+			seats: 2,
+		});
+		assert.deepEqual(readOfficialMatchBody({ course: "course_08" }), {
+			ok: true,
+			course: "course_08",
+			seats: 2,
+		});
 		assert.deepEqual(readOfficialMatchBody({ seats: 8 }), {
 			ok: true,
 			course: "course_01",

@@ -21,6 +21,8 @@ const AuthoringDocument := preload("res://src/creator/authoring_document.gd")
 const AuthoringWorld := preload("res://src/creator/authoring_world.gd")
 const CourseCompletionProbe := preload("res://src/games/traprush/course_completion_probe.gd")
 const Course06Scripts := preload("res://src/games/traprush/course_06_scripts.gd")
+const Course07Scripts := preload("res://src/games/traprush/course_07_scripts.gd")
+const Course08Scripts := preload("res://src/games/traprush/course_08_scripts.gd")
 const CourseProbeCache := preload("res://tests/support/course_probe_cache.gd")
 const SimulationBundle := preload("res://src/ugc/simulation_bundle.gd")
 const TraprushTopologyCompiler := preload("res://src/ugc/traprush_topology_compiler.gd")
@@ -31,6 +33,8 @@ const COURSE_03: String = "res://content/official/traprush/course_03.json"
 const COURSE_04: String = "res://content/official/traprush/course_04.json"
 const COURSE_05: String = "res://content/official/traprush/course_05.json"
 const COURSE_06: String = "res://content/official/traprush/course_06.json"
+const COURSE_07: String = "res://content/official/traprush/course_07.json"
+const COURSE_08: String = "res://content/official/traprush/course_08.json"
 const SHORTCUT_PORTAL: int = 10
 
 
@@ -60,6 +64,49 @@ func test_course_06_scripted_climb_is_completable() -> void:
 	assert_eq(outcome, CourseCompletionProbe.OUTCOME_COMPLETABLE, reason)
 	var actions: Array = result["actions"]
 	var replay: Dictionary = CourseCompletionProbe.try_replay(_compile(COURSE_06), actions)
+	var ok: bool = replay["ok"]
+	assert_true(ok, str(replay.get("reason", "")))
+	var finish_tick: int = replay["finish_tick"]
+	assert_gte(finish_tick, 0)
+
+
+## course_07：四段折返 + 三连传送，不走 A*。
+func test_course_07_scripted_circuit_is_completable() -> void:
+	var result: Dictionary = CourseProbeCache.run_path(
+		COURSE_07,
+		20000,
+		800,
+		PackedInt32Array(),
+		CourseCompletionProbe.ACTION_SET_FULL,
+		Course07Scripts.fast_hint()
+	)
+	var outcome: String = result["outcome"]
+	var reason: String = result.get("reason", "")
+	assert_eq(outcome, CourseCompletionProbe.OUTCOME_COMPLETABLE, reason)
+	var actions: Array = result["actions"]
+	var replay: Dictionary = CourseCompletionProbe.try_replay(_compile(COURSE_07), actions)
+	var ok: bool = replay["ok"]
+	assert_true(ok, str(replay.get("reason", "")))
+	var finish_tick: int = replay["finish_tick"]
+	assert_gte(finish_tick, 0)
+
+
+## course_08：标杆跑酷，不走 A*。
+func test_course_08_scripted_safe_edge_is_completable() -> void:
+	var hint: PackedByteArray = Course08Scripts.fast_hint()
+	var result: Dictionary = CourseCompletionProbe.run_path(
+		COURSE_08,
+		8000,
+		800,
+		PackedInt32Array(),
+		CourseCompletionProbe.ACTION_SET_FULL,
+		hint
+	)
+	var outcome: String = result["outcome"]
+	var reason: String = result.get("reason", "")
+	assert_eq(outcome, CourseCompletionProbe.OUTCOME_COMPLETABLE, reason)
+	var actions: Array = result["actions"]
+	var replay: Dictionary = CourseCompletionProbe.try_replay(_compile(COURSE_08), actions)
 	var ok: bool = replay["ok"]
 	assert_true(ok, str(replay.get("reason", "")))
 	var finish_tick: int = replay["finish_tick"]

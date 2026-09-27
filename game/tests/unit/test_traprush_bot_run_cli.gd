@@ -64,11 +64,13 @@ func test_forbid_portal_rejects_junk() -> void:
 
 func test_default_courses_are_the_official_match_ids() -> void:
 	var ids: PackedStringArray = BotRunCli.resolve_courses(PackedStringArray())
-	assert_eq(ids.size(), 6)
+	assert_eq(ids.size(), 8)
 	assert_eq(ids, OfficialTraprushCourses.all_match_ids())
 	assert_eq(ids[0], OfficialTraprushCourses.COURSE_01)
 	assert_eq(ids[4], OfficialTraprushCourses.COURSE_05)
 	assert_eq(ids[5], OfficialTraprushCourses.COURSE_06)
+	assert_eq(ids[6], OfficialTraprushCourses.COURSE_07)
+	assert_eq(ids[7], OfficialTraprushCourses.COURSE_08)
 	assert_eq(
 		BotRunCli.resolve_courses(PackedStringArray(["--course=course_f_playable"])),
 		PackedStringArray([OfficialTraprushCourses.COURSE_F_PLAYABLE])
@@ -96,6 +98,24 @@ func test_safe_route_on_course_02_exits_1_without_searching() -> void:
 	assert_eq(code, 1)
 
 
+func test_safe_route_on_course_07_exits_1_without_searching() -> void:
+	var code: int = BotRunCli.run_and_print(PackedStringArray([
+		"--bot-run",
+		"--course=course_07",
+		"--route=safe",
+	]))
+	assert_eq(code, 1)
+
+
+func test_safe_route_on_course_08_exits_1_without_searching() -> void:
+	var code: int = BotRunCli.run_and_print(PackedStringArray([
+		"--bot-run",
+		"--course=course_08",
+		"--route=safe",
+	]))
+	assert_eq(code, 1)
+
+
 func test_unknown_route_exits_1() -> void:
 	var code: int = BotRunCli.run_and_print(PackedStringArray([
 		"--bot-run",
@@ -110,3 +130,63 @@ func test_course_01_shortcut_portal_is_entity_10() -> void:
 		CourseCompletionProbe.SAFE_ROUTE_MAX_TICKS,
 		12000
 	)
+
+
+func test_default_pace_is_probe() -> void:
+	assert_eq(BotRunCli.resolve_pace(PackedStringArray()), BotRunCli.PACE_PROBE)
+	assert_eq(
+		BotRunCli.resolve_pace(PackedStringArray(["--bot-run"])),
+		BotRunCli.PACE_PROBE
+	)
+	assert_eq(
+		BotRunCli.resolve_pace(PackedStringArray(["--pace=probe"])),
+		BotRunCli.PACE_PROBE
+	)
+
+
+func test_pace_human_and_unknown() -> void:
+	assert_eq(
+		BotRunCli.resolve_pace(PackedStringArray(["--pace=human"])),
+		BotRunCli.PACE_HUMAN
+	)
+	assert_eq(BotRunCli.resolve_pace(PackedStringArray(["--pace=fast"])), "")
+	assert_eq(BotRunCli.resolve_pace(PackedStringArray(["--pace=bot"])), "")
+
+
+func test_unknown_pace_exits_1() -> void:
+	var code: int = BotRunCli.run_and_print(PackedStringArray([
+		"--bot-run",
+		"--pace=fast",
+	]))
+	assert_eq(code, 1)
+
+
+func test_human_pace_without_tape_on_course_02_exits_1() -> void:
+	var code: int = BotRunCli.run_and_print(PackedStringArray([
+		"--bot-run",
+		"--pace=human",
+		"--course=course_02",
+	]))
+	assert_eq(code, 1)
+
+
+func test_human_tape_parses_tick_codes_and_rejects_diagonal() -> void:
+	var parsed: Dictionary = BotRunCli.resolve_human_tape(
+		PackedStringArray(["--tape=0,2,8,10"])
+	)
+	var present: bool = parsed.get("present", false)
+	var ok: bool = parsed.get("ok", false)
+	assert_true(present)
+	assert_true(ok)
+	var tape_raw: Variant = parsed["tape"]
+	assert_eq(typeof(tape_raw), TYPE_PACKED_BYTE_ARRAY)
+	var tape: PackedByteArray = tape_raw
+	assert_eq(tape.size(), 4)
+	var missing: Dictionary = BotRunCli.resolve_human_tape(PackedStringArray())
+	var missing_present: bool = missing.get("present", true)
+	assert_false(missing_present)
+	var diagonal: Dictionary = BotRunCli.resolve_human_tape(
+		PackedStringArray(["--tape=0,4"])
+	)
+	var diagonal_ok: bool = diagonal.get("ok", true)
+	assert_false(diagonal_ok)

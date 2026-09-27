@@ -620,12 +620,14 @@ func test_course_select_is_dropdown_and_remounts_preview_without_solo() -> void:
 	var course: OptionButton = _shell.window.find_child(MatchLobbyShell.COURSE_ID_NAME, true, false)
 	assert_not_null(course)
 	assert_eq(course.get_class(), "OptionButton")
-	assert_eq(course.get_item_count(), 7)
+	assert_eq(course.get_item_count(), 9)
 	var seen: Dictionary = {}
 	for i: int in course.get_item_count():
 		seen[course.get_item_text(i)] = true
 	assert_true(seen.has("course_01"))
 	assert_true(seen.has("course_06"))
+	assert_true(seen.has("course_07"))
+	assert_true(seen.has("course_08"))
 	assert_true(seen.has("course_f_playable"))
 	assert_eq(_shell.course.pad_count(), 3)
 	assert_false(_shell.offline_playing())

@@ -63,6 +63,9 @@ var play_use_item_reach_dz: int = 0
 var play_jump_dy: int = 0
 var play_support_dy: int = 0
 var play_fall_dy: int = 0
+var play_coyote_ticks: int = 0
+var play_last_supported_tick: int = -1
+var play_jump_consumed: bool = false
 var play_sprint_step: int = 0
 var play_item_cooldown_ticks: int = 1
 var play_hazard_knockback_step: int = 0
@@ -79,6 +82,7 @@ var play_range_min_y: int = 0
 var play_range_max_y: int = 0
 var play_range_min_z: int = 0
 var play_range_max_z: int = 0
+var play_range_from_content: bool = false
 var _in_tick: bool = false
 var _playing: bool = false
 var _portal_latch: Dictionary = {}
@@ -185,6 +189,7 @@ func try_advance_play() -> bool:
 	_accept_overlapping_play_pads()
 	_accept_overlapping_play_finish()
 	_grant_play_pickups()
+	intents.refresh_coyote(self)
 	rule_vm.notify_every_ticks()
 	return true
 
@@ -390,7 +395,6 @@ func _resolve_play_portals() -> bool:
 
 func _accept_overlapping_play_finish() -> void:
 	scan.accept_overlapping_play_finish(self)
-
 
 func _grant_play_pickups() -> void:
 	scan.grant_play_pickups(self)

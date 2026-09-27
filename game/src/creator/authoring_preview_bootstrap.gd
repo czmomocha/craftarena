@@ -140,9 +140,11 @@ static func try_start_play(
 	preview.play_taken = {}
 	preview.play_last_use_item_tick = -1
 	preview.play_last_sprint_tick = -1
+	preview.play_coyote_ticks = TraprushPlayStubs.COYOTE_TICKS
 	preview.play_track = TraprushCheckpointTrack.new(ordered_checkpoint_ids(bundle))
 	preview.play_spawn = spawn
 	preview.play_cell = bundle.cell
+	preview.scan.apply_content_play_range(preview, bundle)
 	preview.player_id = spawned_id
 	preview._playing = true
 	preview._portal_latch = {}
@@ -153,6 +155,7 @@ static func try_start_play(
 	preview._accept_overlapping_play_finish()
 	preview._grant_play_pickups()
 	preview._resolve_play_hazards()
+	preview.intents.refresh_coyote(preview)
 	return true
 
 static func try_stop_play(preview: AuthoringPreview) -> bool:

@@ -28,6 +28,7 @@ static func apply_falls(session: TraprushMatchSession) -> void:
 		Gravity.integrate(session._world, capsule_id, session.fall_dy)
 		session._resolve_player_hazards(player)
 		session._reset_player_if_out_of_range(player)
+	session.refresh_coyote()
 
 
 static func advance(session: TraprushMatchSession) -> void:
@@ -52,6 +53,7 @@ static func advance(session: TraprushMatchSession) -> void:
 		session._accept_player_pads(player)
 		session._accept_player_finish(player)
 		session._grant_player_pickups(player)
+	session.refresh_coyote()
 	session.rule_vm.notify_every_ticks()
 
 

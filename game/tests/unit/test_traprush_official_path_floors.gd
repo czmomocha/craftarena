@@ -25,6 +25,7 @@ const COURSE_03: String = "res://content/official/traprush/course_03.json"
 const COURSE_04: String = "res://content/official/traprush/course_04.json"
 const COURSE_05: String = "res://content/official/traprush/course_05.json"
 const COURSE_06: String = "res://content/official/traprush/course_06.json"
+const COURSE_07: String = "res://content/official/traprush/course_07.json"
 const CELL: int = 65536
 const IDLE_TICKS: int = 48
 const FALL_TICKS: int = 40
@@ -37,6 +38,7 @@ func test_official_courses_have_path_floor_counts() -> void:
 	assert_eq(_compile(COURSE_04).solids.size(), 21)
 	assert_eq(_compile(COURSE_05).solids.size(), 27)
 	assert_eq(_compile(COURSE_06).solids.size(), 388)
+	assert_gte(_compile(COURSE_07).solids.size(), 400)
 
 
 func test_required_path_cells_are_supported() -> void:
@@ -46,6 +48,7 @@ func test_required_path_cells_are_supported() -> void:
 	_assert_supported(COURSE_04, _course_04_stands())
 	_assert_supported(COURSE_05, _course_05_stands())
 	_assert_supported(COURSE_06, _course_06_stands())
+	_assert_supported(COURSE_07, _course_07_stands())
 
 
 func test_idle_on_spawn_does_not_out_of_range_reset() -> void:
@@ -232,6 +235,17 @@ func _course_06_stands() -> Array[Vector3i]:
 		Vector3i(0, -4 * CELL, 0),
 		Vector3i(-6 * CELL, -6 * CELL, 0),
 		Vector3i(CELL, -4 * CELL, 2 * CELL),
+	]
+
+
+func _course_07_stands() -> Array[Vector3i]:
+	return [
+		Vector3i(-6 * CELL, -6 * CELL, 2 * CELL),
+		Vector3i(-5 * CELL, -6 * CELL, 2 * CELL),
+		Vector3i(CELL, -2 * CELL, CELL),
+		Vector3i(2 * CELL, 2 * CELL, -6 * CELL),
+		Vector3i(-5 * CELL, 6 * CELL, -6 * CELL),
+		Vector3i(0, -6 * CELL, 0),
 	]
 
 

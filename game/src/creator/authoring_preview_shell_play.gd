@@ -29,6 +29,7 @@ func copy_jump_stubs(shell: AuthoringPreviewShell) -> void:
 		return
 	shell.preview.play_jump_dy = shell.play_jump_dy
 	shell.preview.play_support_dy = shell.play_support_dy
+	shell.preview.play_coyote_ticks = shell.play_coyote_ticks
 
 
 func copy_fall_stub(shell: AuthoringPreviewShell) -> void:
@@ -41,6 +42,7 @@ func copy_play_range_stub(shell: AuthoringPreviewShell) -> void:
 	if shell.preview == null:
 		return
 	shell.preview.enable_play_range(shell.play_range_half)
+	shell.preview.play_range_from_content = shell.play_range_from_content
 
 
 func copy_hazard_hit_stubs(shell: AuthoringPreviewShell) -> void:

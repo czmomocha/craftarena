@@ -48,9 +48,11 @@ var play_respawn_stun_ticks: int = PlayStubs.RESPAWN_STUN_TICKS
 var play_auto_tick: bool = true
 var play_jump_dy: int = PlayStubs.JUMP_DY
 var play_support_dy: int = PlayStubs.SUPPORT_DY
+var play_coyote_ticks: int = PlayStubs.COYOTE_TICKS
 ## Advance tick is a click, not a frame, so Preview falls a whole cell per step.
 var play_fall_dy: int = PlayStubs.PREVIEW_FALL_DY
 var play_range_half: int = OutOfRangeReset.STUB_HALF
+var play_range_from_content: bool = true
 var play_anim: PlayAnimState = PlayAnimState.new()
 var chrome: ChromeGd = ChromeGd.new()
 var sampler: SamplerGd = SamplerGd.new()
