@@ -5,7 +5,7 @@ extends Node
 ## Imports the published AuthoringDocument. Validator should be empty.
 ## editor_sandbox.tscn still seeds a dangling portal for validator visuals.
 ## Open Preview, then Play: the player marker sits on the first checkpoint pad.
-## WASD moves the marker in world XZ while the Preview window is visible.
+## WASD follows screen directions while the Preview window is visible.
 ## Occupancy accepts checkpoint pads; walking into a portal marker lands upstairs.
 ## After the last pad, walking onto the finish marker records finish=n.
 ## +X is the short dangerous path. From checkpoint 1, +Z is the longer safe

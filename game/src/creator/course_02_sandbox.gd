@@ -4,7 +4,7 @@ extends Node
 ## Not the main scene. Not CI. Play current scene (F6), not the project (F5).
 ## Imports the published AuthoringDocument. Validator should be empty.
 ## Open Preview, then Play: the player marker sits on the first checkpoint pad.
-## WASD moves the marker in world XZ while the Preview window is visible.
+## WASD follows screen directions while the Preview window is visible.
 ## Occupancy accepts checkpoint pads; walking into a portal marker lands upstairs.
 ## After the last pad, walking onto the finish marker records finish=n.
 ## Reset or R snaps the marker back to the last accepted pad.

@@ -145,7 +145,10 @@ func _attach(bundle: SimulationBundle, seed: int = MATCH_SEED, seats: int = 1) -
 	created.launch_dy = play_launch_dy
 	created.launch_xz = play_launch_xz
 	created.respawn_stun_ticks = play_respawn_stun_ticks
-	created.enable_play_range(play_range_half)
+	var half: int = play_range_half
+	if half == OutOfRangeResetGd.STUB_HALF:
+		half = PlayStubsGd.play_range_half_for(bundle)
+	created.enable_play_range(half)
 	session = created
 	follow = MatchSnapshotFollowGd.new()
 	last_command = PackedByteArray()

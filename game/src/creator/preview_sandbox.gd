@@ -3,7 +3,7 @@ extends Node
 ## F6 visual sandbox for Preview 3D, gizmos, reachability overlay, and Play.
 ## Not the main scene. Not CI. Play current scene (F6), not the project (F5).
 ## Preview Play compiles this seeded world and draws the player marker.
-## WASD moves the marker in world XZ while the Preview window is visible.
+## WASD follows screen directions while the Preview window is visible.
 ## Occupancy accepts checkpoint pads; walking into a portal marker lands
 ## through try_land_exit. Overlapping the finish box after every pad records
 ## finish=n. Reset or R snaps back to the last accepted pad. Status shows

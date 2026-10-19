@@ -34,7 +34,7 @@ describe("resolveGodotExecutable", () => {
 
 describe("runBotRun", () => {
 	it("writes a report covering official match courses", () => {
-		const courses = ["course_01", "course_02", "course_03", "course_04", "course_05", "course_06"];
+		const courses = ["course_01", "course_02", "course_03", "course_04", "course_05", "course_06", "course_07"];
 		const lines = courses.map((course, index) =>
 			JSON.stringify({
 				event: "bot_run_course",
@@ -53,8 +53,8 @@ describe("runBotRun", () => {
 			JSON.stringify({
 				event: "bot_run_summary",
 				ok: true,
-				total: 6,
-				completable: 6,
+				total: 7,
+				completable: 7,
 				not_completable: 0,
 				route: "any",
 				max_ticks: 3000,

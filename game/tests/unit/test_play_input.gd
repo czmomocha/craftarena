@@ -13,7 +13,7 @@ const STEP: int = 16
 const EPS: float = 0.0001
 
 
-func test_wasd_axes_match_world_xz() -> void:
+func test_wasd_axes_are_screen_relative() -> void:
 	var forward: Vector2 = PlayInputGd.vector_from_axes(true, false, false, false)
 	var right: Vector2 = PlayInputGd.vector_from_axes(false, false, false, true)
 	var back_left: Vector2 = PlayInputGd.vector_from_axes(false, true, true, false)
@@ -26,6 +26,31 @@ func test_wasd_axes_match_world_xz() -> void:
 	assert_almost_eq(back_left.y, 1.0, EPS)
 	assert_almost_eq(cancelled.x, 0.0, EPS)
 	assert_almost_eq(cancelled.y, 0.0, EPS)
+
+
+func test_screen_vectors_rotate_into_world_xz() -> void:
+	var right_45: Vector2 = PlayInputGd.screen_vector_to_world(1.0, 0.0, 45.0)
+	var forward_45: Vector2 = PlayInputGd.screen_vector_to_world(0.0, -1.0, 45.0)
+	var forward_right_45: Vector2 = PlayInputGd.screen_vector_to_world(1.0, -1.0, 45.0)
+	var right_0: Vector2 = PlayInputGd.screen_vector_to_world(1.0, 0.0, 0.0)
+	var forward_0: Vector2 = PlayInputGd.screen_vector_to_world(0.0, -1.0, 0.0)
+	var right_90: Vector2 = PlayInputGd.screen_vector_to_world(1.0, 0.0, 90.0)
+	var forward_90: Vector2 = PlayInputGd.screen_vector_to_world(0.0, -1.0, 90.0)
+	var diagonal: float = sqrt(0.5)
+	assert_almost_eq(right_45.x, diagonal, EPS)
+	assert_almost_eq(right_45.y, -diagonal, EPS)
+	assert_almost_eq(forward_45.x, -diagonal, EPS)
+	assert_almost_eq(forward_45.y, -diagonal, EPS)
+	assert_almost_eq(forward_right_45.x, 0.0, EPS)
+	assert_almost_eq(forward_right_45.y, -sqrt(2.0), EPS)
+	assert_almost_eq(right_0.x, 1.0, EPS)
+	assert_almost_eq(right_0.y, 0.0, EPS)
+	assert_almost_eq(forward_0.x, 0.0, EPS)
+	assert_almost_eq(forward_0.y, -1.0, EPS)
+	assert_almost_eq(right_90.x, 0.0, EPS)
+	assert_almost_eq(right_90.y, -1.0, EPS)
+	assert_almost_eq(forward_90.x, -1.0, EPS)
+	assert_almost_eq(forward_90.y, 0.0, EPS)
 
 
 func test_stick_clamps_and_keeps_axes() -> void:

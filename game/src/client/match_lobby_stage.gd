@@ -359,12 +359,10 @@ func clear_play_overlay() -> void:
 	if standings != null:
 		standings.follow_slot = -1
 		standings.apply_players([])
-	if crates != null:
-		crates.apply_path(course_path)
-	if hazards != null:
-		hazards.apply_path(course_path)
-	if course != null:
-		course.apply_own_progress(-1)
+	if crates != null: crates.apply_path(course_path)
+	if hazards != null: hazards.apply_path(course_path)
+	if solids != null: solids.occlusion.clear(solids)
+	if course != null: course.apply_own_progress(-1)
 
 
 func _apply_solo_anim(

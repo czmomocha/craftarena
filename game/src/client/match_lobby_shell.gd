@@ -217,13 +217,14 @@ func try_reconnect() -> bool:
 func on_binary(bytes: PackedByteArray, now_ms: int = -1) -> bool:
 	return director.on_binary(bytes, now_ms)
 func try_sample_play_vector(move_x: float, move_z: float) -> PackedByteArray:
+	var yaw_deg: float = 0.0 if map == null else map.camera_yaw_deg
+	var world: Vector2 = PlayInput.screen_vector_to_world(move_x, move_z, yaw_deg)
 	return _take_sample(sampler.try_vector(
-		move_x, move_z, is_window_visible(), offline_playing(), offline, play, play_move_step
+		world.x, world.y, is_window_visible(), offline_playing(), offline, play, play_move_step
 	))
 func try_sample_play_move(forward: bool, back: bool, left: bool, right: bool) -> PackedByteArray:
-	return _take_sample(sampler.try_axes(
-		forward, back, left, right, is_window_visible(), offline_playing(), offline, play, play_move_step
-	))
+	var screen: Vector2 = PlayInput.vector_from_axes(forward, back, left, right)
+	return try_sample_play_vector(screen.x, screen.y)
 func try_sample_play_reset(pressed: bool) -> PackedByteArray:
 	return _take_sample(sampler.try_reset(pressed, is_window_visible(), offline_playing(), offline, play))
 func try_sample_play_use_item(pressed: bool) -> PackedByteArray:

@@ -53,6 +53,19 @@ static func vector_from_axes(forward: bool, back: bool, left: bool, right: bool)
 	return Vector2(move_x, move_z)
 
 
+## 屏幕输入向量 → 世界 XZ。`yaw_deg` 是相机水平方位角；屏幕右与屏幕上分别
+## 对应相机自身基向量的 +X / -Z。45° 等距视角下，单按 D 会同时改变世界
+## X 与 Z，看起来才是屏幕水平移动。
+static func screen_vector_to_world(move_x: float, move_z: float, yaw_deg: float) -> Vector2:
+	var yaw: float = deg_to_rad(yaw_deg)
+	var cosine: float = cos(yaw)
+	var sine: float = sin(yaw)
+	return Vector2(
+		move_x * cosine + move_z * sine,
+		-move_x * sine + move_z * cosine
+	)
+
+
 static func vector_from_stick(stick_x: float, stick_z: float) -> Vector2:
 	return Vector2(clampf(stick_x, -1.0, 1.0), clampf(stick_z, -1.0, 1.0))
 

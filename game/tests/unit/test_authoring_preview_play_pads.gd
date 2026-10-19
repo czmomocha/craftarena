@@ -127,7 +127,7 @@ func test_shell_status_and_checkpoint_mark_follow_accepts() -> void:
 	assert_not_null(mark)
 	assert_eq(mark.text, "0*")
 	_preview_shell.play_move_step = CELL
-	assert_true(_preview_shell.try_sample_play_move(false, false, false, true))
+	assert_true(_preview_shell.try_sample_play_vector(1.0, 1.0))
 	assert_true(_preview_shell.status_label_text().contains("pads=1/3"))
 	assert_true(_preview_shell.try_apply_play_intent(_move(CELL, 0)))
 	var walked: Dictionary = _preview_shell.status_view()

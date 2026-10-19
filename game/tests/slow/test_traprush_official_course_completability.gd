@@ -21,6 +21,7 @@ const AuthoringDocument := preload("res://src/creator/authoring_document.gd")
 const AuthoringWorld := preload("res://src/creator/authoring_world.gd")
 const CourseCompletionProbe := preload("res://src/games/traprush/course_completion_probe.gd")
 const Course06Scripts := preload("res://src/games/traprush/course_06_scripts.gd")
+const Course07Scripts := preload("res://src/games/traprush/course_07_scripts.gd")
 const CourseProbeCache := preload("res://tests/support/course_probe_cache.gd")
 const SimulationBundle := preload("res://src/ugc/simulation_bundle.gd")
 const TraprushTopologyCompiler := preload("res://src/ugc/traprush_topology_compiler.gd")
@@ -31,6 +32,7 @@ const COURSE_03: String = "res://content/official/traprush/course_03.json"
 const COURSE_04: String = "res://content/official/traprush/course_04.json"
 const COURSE_05: String = "res://content/official/traprush/course_05.json"
 const COURSE_06: String = "res://content/official/traprush/course_06.json"
+const COURSE_07: String = "res://content/official/traprush/course_07.json"
 const SHORTCUT_PORTAL: int = 10
 
 
@@ -41,8 +43,8 @@ func test_official_courses_are_completable_on_the_authority() -> void:
 	_assert_completable(COURSE_03)
 	_assert_completable(COURSE_04)
 	_assert_completable(COURSE_05)
-	## course_06 needs three portal hops; A* only budgets two, so it is not
-	## in this search set. Scripted climb is the next test.
+	## course_06 / course_07 need three portal hops; A* only budgets two, so
+	## they are not in this search set. Scripted climbs are the next tests.
 
 
 ## A3：手写三连传送，不走 A*（启发式两次中转不够三段）。
@@ -60,6 +62,26 @@ func test_course_06_scripted_climb_is_completable() -> void:
 	assert_eq(outcome, CourseCompletionProbe.OUTCOME_COMPLETABLE, reason)
 	var actions: Array = result["actions"]
 	var replay: Dictionary = CourseCompletionProbe.try_replay(_compile(COURSE_06), actions)
+	var ok: bool = replay["ok"]
+	assert_true(ok, str(replay.get("reason", "")))
+	var finish_tick: int = replay["finish_tick"]
+	assert_gte(finish_tick, 0)
+
+
+func test_course_07_scripted_climb_is_completable() -> void:
+	var result: Dictionary = CourseProbeCache.run_path(
+		COURSE_07,
+		CourseCompletionProbe.DEFAULT_MAX_TICKS,
+		CourseCompletionProbe.DEFAULT_MAX_DEPTH,
+		PackedInt32Array(),
+		CourseCompletionProbe.ACTION_SET_FULL,
+		Course07Scripts.climb_hint()
+	)
+	var outcome: String = result["outcome"]
+	var reason: String = result.get("reason", "")
+	assert_eq(outcome, CourseCompletionProbe.OUTCOME_COMPLETABLE, reason)
+	var actions: Array = result["actions"]
+	var replay: Dictionary = CourseCompletionProbe.try_replay(_compile(COURSE_07), actions)
 	var ok: bool = replay["ok"]
 	assert_true(ok, str(replay.get("reason", "")))
 	var finish_tick: int = replay["finish_tick"]

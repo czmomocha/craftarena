@@ -2,8 +2,9 @@ class_name MatchSolidMap
 extends Node3D
 
 ## Presentation mapping for compiled TRAPRUSH always-solid occupancy (CD-43).
-## Topology bags supply Q48.16 poses. Ordinary floors stay visible; compiled
-## gates hide while their `link_group` is occupied (踩区开关门).
+## Topology bags supply Q48.16 poses. Ordinary floors stay opaque until the
+## camera cutaway fades a floor above the followed player; compiled gates hide
+## while their `link_group` is occupied (踩区开关门).
 ## Float conversion happens only here. Placeholders are not hitboxes.
 ## live_solid_boxes() returns compiled Q48.16 centers plus cell/2 half-extents
 ## (authoring lattice, not the 1 m placeholder), skipping currently open gates.
@@ -29,6 +30,7 @@ const GateCycleGd := preload("res://src/games/traprush/gate_cycle.gd")
 const PlayStubsGd := preload("res://src/games/traprush/play_stubs.gd")
 const OccupancyGadgetGd := preload("res://src/shared/occupancy_gadget.gd")
 const VisualGd := preload("res://src/client/match_solid_map_visual.gd")
+const OcclusionGd := preload("res://src/client/match_solid_map_occlusion.gd")
 
 const SOLID_PREFIX: String = "solid_"
 const VISUAL_NAME: String = "visual"
@@ -58,6 +60,7 @@ var _ice_yaw: Dictionary = {}
 var _live_solids: Array[Dictionary] = []
 var _solid_count: int = 0
 var _visual_count: int = 0
+var occlusion: OcclusionGd = OcclusionGd.new()
 
 
 static func meters_from_fixed(value: int) -> float:
@@ -106,6 +109,7 @@ func apply_bundle(bundle: SimulationBundle) -> bool:
 	for pendulum_id: Variant in _pendulum_ids.keys():
 		_lift_ids.erase(pendulum_id)
 	_open_gate_ids = {}
+	occlusion.reset()
 	_rebuild()
 	return true
 
@@ -146,9 +150,7 @@ func apply_gate_visibility(open_ids: PackedInt32Array) -> void:
 		_open_gate_ids[entity_id] = true
 	for item: Dictionary in _gates:
 		var gate_id: int = PlayClock.dict_int(item, "entity_id", 0)
-		var node: MeshInstance3D = solid_node(gate_id)
-		if node != null:
-			node.visible = not _open_gate_ids.has(gate_id)
+		occlusion.refresh_visibility(self, gate_id)
 
 
 func occupied_groups_from_players(players: Array) -> Dictionary:

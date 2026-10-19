@@ -1,8 +1,9 @@
 extends GutTest
 
 ## Preview play MoveIntent: while playing, apply existing MoveIntent through
-## TraprushIntentStepper. WASD maps to world XZ. Caller supplies dx/dz; the
-## shell step is a presentation stub, not a product speed. Shove/Interact
+## TraprushIntentStepper. The shell rotates WASD from screen axes into world XZ;
+## raw payload helpers still take world dx/dz. The shell step is a presentation
+## stub, not a product speed. Shove/Interact
 ## stay refused. Occupancy is in test_authoring_preview_play_pads. No
 ## gravity, no tick Hz, no settlement.
 
@@ -142,7 +143,7 @@ func test_shell_sample_moves_marker() -> void:
 	var marker: MeshInstance3D = _preview_shell.map.player_node()
 	assert_not_null(marker)
 	assert_almost_eq(marker.position.x, 1.0, EPS)
-	assert_almost_eq(marker.position.z, 0.0, EPS)
+	assert_almost_eq(marker.position.z, -1.0, EPS)
 	assert_false(_preview_shell.try_sample_play_move(false, false, false, false))
 	assert_false(_preview_shell.allows_settlement())
 	_preview_shell.hide_window()
@@ -151,7 +152,7 @@ func test_shell_sample_moves_marker() -> void:
 	assert_true(_preview_shell.try_apply_play_intent(_move(0, CELL)))
 	marker = _preview_shell.map.player_node()
 	assert_not_null(marker)
-	assert_almost_eq(marker.position.z, 1.0, EPS)
+	assert_almost_eq(marker.position.z, 0.0, EPS)
 
 
 func _connected_course() -> AuthoringPreview:

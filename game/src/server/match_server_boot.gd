@@ -44,7 +44,7 @@ static func _boot_traprush(config: Dictionary) -> TraprushMatchSession:
 	)
 	if session == null:
 		return null
-	PlayStubs.apply_match(session)
+	PlayStubs.apply_match(session, bundle)
 	return session
 
 

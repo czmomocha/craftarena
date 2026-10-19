@@ -185,8 +185,10 @@ func try_apply_play_intent(payload: Dictionary) -> bool:
 
 
 func try_sample_play_vector(move_x: float, move_z: float) -> bool:
+	var yaw_deg: float = 0.0 if map == null else map.camera_yaw_deg
+	var world: Vector2 = PlayInput.screen_vector_to_world(move_x, move_z, yaw_deg)
 	var payload: Dictionary = sampler.try_vector(
-		move_x, move_z, play_move_step, _is_playing(), chrome.is_visible()
+		world.x, world.y, play_move_step, _is_playing(), chrome.is_visible()
 	)
 	if payload.is_empty():
 		return false
@@ -194,8 +196,8 @@ func try_sample_play_vector(move_x: float, move_z: float) -> bool:
 
 
 func try_sample_play_move(forward: bool, back: bool, left: bool, right: bool) -> bool:
-	var vector: Vector2 = PlayInput.vector_from_axes(forward, back, left, right)
-	return try_sample_play_vector(vector.x, vector.y)
+	var screen: Vector2 = PlayInput.vector_from_axes(forward, back, left, right)
+	return try_sample_play_vector(screen.x, screen.y)
 
 
 func try_sample_play_use_item(pressed: bool) -> bool:

@@ -6,8 +6,8 @@ extends Node
 ## TRAPRUSH tools can pair the portal, or Place solid / Place hazard / Place crate
 ## / Place finish on the occupancy row. Press Preview, then keep editing: a
 ## connected Preview follows committed writes, and the status bar shows follow.
-## Preview Play compiles the current Preview world; WASD moves the capsule
-## while the Preview window is visible. Overlapping checkpoint pads accept
+## Preview Play compiles the current Preview world; WASD follows screen
+## directions while the Preview window is visible. Overlapping checkpoint pads accept
 ## ordered progress. Overlapping portal boxes land through try_land_exit.
 ## Overlapping the finish box after every pad records finish_tick.
 ## Reset or R snaps back to the last accepted pad.

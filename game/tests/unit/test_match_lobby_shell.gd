@@ -428,6 +428,29 @@ func test_vector_move_encodes_the_same_bytes_as_boolean_axes() -> void:
 	assert_eq(weak, right)
 
 
+func test_screen_axes_encode_camera_relative_world_move() -> void:
+	_shell = _open_shell()
+	assert_true(_shell.try_quick())
+	assert_true(_shell.accept_http(201, _join("ABCD23", "ticket-screen")))
+	assert_true(_shell.on_socket_open())
+	var right_bytes: PackedByteArray = _shell.try_sample_play_move(false, false, false, true)
+	var right: Dictionary = MatchFrameCodec.decode_command(right_bytes)
+	var right_dx: int = right.get("dx", 0)
+	var right_dz: int = right.get("dz", 0)
+	var right_yaw: int = right.get("yaw_bam", -2)
+	assert_gt(right_dx, 0, "D moves toward world +X")
+	assert_eq(right_dz, -right_dx, "D also moves toward world -Z")
+	assert_eq(right_yaw, MatchMoveFacing.YAW_FORWARD_RIGHT)
+	var forward_bytes: PackedByteArray = _shell.try_sample_play_move(true, false, false, false)
+	var forward: Dictionary = MatchFrameCodec.decode_command(forward_bytes)
+	var forward_dx: int = forward.get("dx", 0)
+	var forward_dz: int = forward.get("dz", 0)
+	var forward_yaw: int = forward.get("yaw_bam", -2)
+	assert_lt(forward_dx, 0, "W moves toward world -X")
+	assert_eq(forward_dz, forward_dx, "W also moves toward world -Z")
+	assert_eq(forward_yaw, MatchMoveFacing.YAW_FORWARD_LEFT)
+
+
 func test_stale_or_bad_snapshot_keeps_mapped_pose() -> void:
 	_shell = _open_shell()
 	assert_true(_shell.try_quick())
@@ -615,17 +638,63 @@ func test_solo_uses_selected_official_course() -> void:
 	assert_true(_shell.status_label_text().contains("course=4/5/1"))
 
 
+func test_solo_course_07_keeps_the_distant_next_band_opaque() -> void:
+	_shell = _open_shell()
+	_shell.set_course_id_text("course_07")
+	_try_solo()
+	assert_eq(_shell.selected_course_id(), "course_07")
+	var next_band_id: int = _solid_entity_at(_shell.solids._poses, 50, -5, 50)
+	assert_gt(next_band_id, 0)
+	var node: MeshInstance3D = _shell.solids.solid_node(next_band_id)
+	assert_not_null(node)
+	if node == null:
+		return
+	assert_null(node.material_override, "a platform ahead of the player is not an occluder")
+	var visual: Node3D = node.get_node_or_null("visual") as Node3D
+	if visual != null:
+		assert_true(visual.visible)
+	assert_eq(_shell.solids.occlusion.count(), 0)
+	assert_true(_shell.try_cancel())
+	var restored: MeshInstance3D = _shell.solids.solid_node(next_band_id)
+	assert_not_null(restored)
+	if restored != null:
+		assert_null(restored.material_override, "cancel restores the opaque tile")
+
+
+func test_solo_course_06_fades_the_overhead_floor_and_cancel_restores_it() -> void:
+	_shell = _open_shell()
+	_shell.set_course_id_text("course_06")
+	_try_solo()
+	assert_eq(_shell.selected_course_id(), "course_06")
+	var overhead_id: int = _solid_entity_at(_shell.solids._poses, 0, -5, 0)
+	assert_gt(overhead_id, 0)
+	var node: MeshInstance3D = _shell.solids.solid_node(overhead_id)
+	assert_not_null(node)
+	if node == null:
+		return
+	assert_not_null(node.material_override, "the floor above the spawn is faded")
+	var visual: Node3D = node.get_node_or_null("visual") as Node3D
+	if visual != null:
+		assert_false(visual.visible)
+	assert_true(_shell.try_cancel())
+	var restored: MeshInstance3D = _shell.solids.solid_node(overhead_id)
+	assert_not_null(restored)
+	if restored != null:
+		assert_null(restored.material_override, "cancel restores the opaque tile")
+
+
 func test_course_select_is_dropdown_and_remounts_preview_without_solo() -> void:
 	_shell = _open_shell()
 	var course: OptionButton = _shell.window.find_child(MatchLobbyShell.COURSE_ID_NAME, true, false)
 	assert_not_null(course)
 	assert_eq(course.get_class(), "OptionButton")
-	assert_eq(course.get_item_count(), 7)
+	assert_eq(course.get_item_count(), 8)
 	var seen: Dictionary = {}
 	for i: int in course.get_item_count():
 		seen[course.get_item_text(i)] = true
 	assert_true(seen.has("course_01"))
 	assert_true(seen.has("course_06"))
+	assert_true(seen.has("course_07"))
 	assert_true(seen.has("course_f_playable"))
 	assert_eq(_shell.course.pad_count(), 3)
 	assert_false(_shell.offline_playing())
@@ -717,7 +786,7 @@ func test_online_overlay_stops_on_live_crate_then_passes_when_broken() -> void:
 	assert_eq(_shell.crates.live_solid_boxes().size(), 1)
 	var steps: int = 0
 	while steps < 20:
-		assert_false(_shell.try_sample_play_move(false, true, false, false).is_empty())
+		assert_false(_sample_world(0.0, 1.0).is_empty())
 		steps += 1
 	assert_gt(_shell.play.predict.dz, 0)
 	assert_almost_eq(_shell.map.player_node(0).position.z, 0.0, 0.0001)
@@ -726,7 +795,7 @@ func test_online_overlay_stops_on_live_crate_then_passes_when_broken() -> void:
 	assert_eq(_shell.play.predict.dz, 0)
 	steps = 0
 	while steps < 20:
-		assert_false(_shell.try_sample_play_move(false, true, false, false).is_empty())
+		assert_false(_sample_world(0.0, 1.0).is_empty())
 		steps += 1
 	assert_gt(_shell.map.player_node(0).position.z, 1.0)
 
@@ -739,7 +808,7 @@ func test_online_overlay_stops_on_latest_remote_capsule() -> void:
 	assert_true(_shell.on_binary(_two_player_snapshot(RACING_TICK, 0, Fixed.SCALE, [_crate(40, 1)])))
 	var remote_steps: int = 0
 	while remote_steps < 20:
-		assert_false(_shell.try_sample_play_move(false, false, false, true).is_empty())
+		assert_false(_sample_world(1.0, 0.0).is_empty())
 		remote_steps += 1
 	assert_gt(_shell.play.predict.dx, 0)
 	assert_almost_eq(_shell.map.player_node(0).position.x, 0.0, 0.0001)
@@ -757,7 +826,7 @@ func test_online_overlay_stops_on_solid_hazard_then_passes_when_open() -> void:
 	assert_eq(_shell.hazards.live_solid_boxes().size(), 1)
 	var steps: int = 0
 	while steps < 20:
-		assert_false(_shell.try_sample_play_move(false, false, false, true).is_empty())
+		assert_false(_sample_world(1.0, 0.0).is_empty())
 		steps += 1
 	assert_gt(_shell.play.predict.dx, 0)
 	assert_almost_eq(_shell.map.player_node(0).position.x, 0.0, 0.0001)
@@ -766,7 +835,7 @@ func test_online_overlay_stops_on_solid_hazard_then_passes_when_open() -> void:
 	assert_eq(_shell.play.predict.dx, 0)
 	steps = 0
 	while steps < 20:
-		assert_false(_shell.try_sample_play_move(false, false, false, true).is_empty())
+		assert_false(_sample_world(1.0, 0.0).is_empty())
 		steps += 1
 	assert_gt(_shell.map.player_node(0).position.x, 1.0)
 
@@ -782,7 +851,7 @@ func test_online_overlay_stops_on_always_solid() -> void:
 	assert_eq(_shell.solids.live_solid_boxes().size(), 1)
 	var steps: int = 0
 	while steps < 20:
-		assert_false(_shell.try_sample_play_move(false, false, false, true).is_empty())
+		assert_false(_sample_world(1.0, 0.0).is_empty())
 		steps += 1
 	assert_gt(_shell.play.predict.dx, 0)
 	assert_almost_eq(_shell.map.player_node(0).position.x, 0.0, 0.0001)
@@ -798,7 +867,7 @@ func test_online_overlay_stops_on_official_solid() -> void:
 	assert_eq(_shell.solids.live_solid_boxes().size(), 41)
 	var steps: int = 0
 	while steps < 20:
-		assert_false(_shell.try_sample_play_move(false, false, true, false).is_empty())
+		assert_false(_sample_world(-1.0, 0.0).is_empty())
 		steps += 1
 	assert_lt(_shell.play.predict.dx, 0)
 	assert_almost_eq(_shell.map.player_node(0).position.x, 0.0, 0.0001)
@@ -870,13 +939,15 @@ func test_solo_wasd_turns_facing_marker() -> void:
 	assert_false(_shell.try_sample_play_move(false, false, false, true).is_empty())
 	player = _shell.map.player_node(0)
 	face = _shell.map.facing_node(0)
-	_assert_player_yaw(player, MatchMoveFacing.YAW_RIGHT)
-	assert_gt(face.global_position.x - player.global_position.x, 0.4)
+	_assert_player_yaw(player, MatchMoveFacing.YAW_FORWARD_RIGHT)
+	assert_gt(face.global_position.x - player.global_position.x, 0.35)
+	assert_lt(face.global_position.z - player.global_position.z, -0.35)
 	assert_false(_shell.try_sample_play_move(true, false, false, false).is_empty())
 	player = _shell.map.player_node(0)
 	face = _shell.map.facing_node(0)
-	_assert_player_yaw(player, MatchMoveFacing.YAW_FORWARD)
-	assert_lt(face.global_position.z - player.global_position.z, -0.4)
+	_assert_player_yaw(player, MatchMoveFacing.YAW_FORWARD_LEFT)
+	assert_lt(face.global_position.x - player.global_position.x, -0.35)
+	assert_lt(face.global_position.z - player.global_position.z, -0.35)
 
 
 func test_online_wasd_overlays_yaw_then_hard_snaps() -> void:
@@ -887,8 +958,8 @@ func test_online_wasd_overlays_yaw_then_hard_snaps() -> void:
 	assert_true(_shell.on_binary(_snapshot(RACING_TICK, 0, [_crate(40, 1)])))
 	_assert_player_yaw(_shell.map.player_node(0), MatchMoveFacing.YAW_FORWARD)
 	assert_false(_shell.try_sample_play_move(false, false, false, true).is_empty())
-	_assert_player_yaw(_shell.map.player_node(0), MatchMoveFacing.YAW_RIGHT)
-	assert_eq(_shell.play.predict.yaw_bam, MatchMoveFacing.YAW_RIGHT)
+	_assert_player_yaw(_shell.map.player_node(0), MatchMoveFacing.YAW_FORWARD_RIGHT)
+	assert_eq(_shell.play.predict.yaw_bam, MatchMoveFacing.YAW_FORWARD_RIGHT)
 	assert_true(_shell.on_binary(_snapshot(RACING_TICK + 1, 0, [_crate(40, 1)])))
 	assert_eq(_shell.play.predict.yaw_bam, -1)
 	_assert_player_yaw(_shell.map.player_node(0), MatchMoveFacing.YAW_FORWARD)
@@ -966,7 +1037,7 @@ func test_solo_walk_accepts_second_pad_and_retints() -> void:
 	_try_solo()
 	var steps: int = 0
 	while steps < 40:
-		assert_false(_shell.try_sample_play_move(false, false, false, true).is_empty())
+		assert_false(_sample_world(1.0, 0.0).is_empty())
 		if _shell.offline.session.player_accepted_count(0) >= 2:
 			break
 		steps += 1
@@ -984,7 +1055,7 @@ func test_solo_walk_finishes_and_marks_local_result() -> void:
 	_try_solo()
 	var steps: int = 0
 	while steps < 200:
-		assert_false(_shell.try_sample_play_move(false, false, false, true).is_empty())
+		assert_false(_sample_world(1.0, 0.0).is_empty())
 		if _shell.offline.session.player_finish_tick(0) >= 0:
 			break
 		steps += 1
@@ -1205,8 +1276,8 @@ func test_solo_walk_off_spawn_footing_drops_y() -> void:
 	var rest_y: int = rest.get("y", 1)
 	_shell.play_move_step = Fixed.SCALE
 	## 出生点 −Z 现在有走到机关的踏板；先 +X 再 +Z 才落到空格。
-	assert_false(_shell.try_sample_play_move(false, false, false, true).is_empty())
-	assert_false(_shell.try_sample_play_move(false, true, false, false).is_empty())
+	assert_false(_sample_world(1.0, 0.0).is_empty())
+	assert_false(_sample_world(0.0, 1.0).is_empty())
 	assert_true(_shell.offline.try_advance())
 	var dropped: Dictionary = _shell.offline.session.player_pose(0)
 	var dropped_y: int = dropped.get("y", 2)
@@ -1220,8 +1291,8 @@ func test_solo_opens_eight_cell_range_stub() -> void:
 	assert_eq(_shell.offline.session.range_max_x, 8 * Fixed.SCALE)
 	_shell.offline.session.enable_play_range(Fixed.SCALE)
 	_shell.play_move_step = Fixed.SCALE
-	assert_false(_shell.try_sample_play_move(false, false, false, true).is_empty())
-	assert_false(_shell.try_sample_play_move(false, false, false, true).is_empty())
+	assert_false(_sample_world(1.0, 0.0).is_empty())
+	assert_false(_sample_world(1.0, 0.0).is_empty())
 	var pose: Dictionary = _shell.offline.session.player_pose(0)
 	var pose_x: int = pose.get("x", -1)
 	assert_eq(pose_x, 0)
@@ -1233,7 +1304,7 @@ func test_solo_reset_after_portal_returns_to_last_pad() -> void:
 	_try_solo()
 	var steps: int = 0
 	while steps < 120:
-		assert_false(_shell.try_sample_play_move(false, false, false, true).is_empty())
+		assert_false(_sample_world(1.0, 0.0).is_empty())
 		var pose: Dictionary = _shell.offline.session.player_pose(0)
 		var pose_y: int = pose.get("y", 0)
 		if pose_y >= Fixed.SCALE:
@@ -1417,6 +1488,25 @@ func _try_solo() -> void:
 	_shell.offline.skip_opening_countdown()
 
 
+func _solid_entity_at(poses: Array[Dictionary], x: int, y: int, z: int) -> int:
+	for pose: Dictionary in poses:
+		var x_raw: Variant = pose.get("x", 0)
+		var y_raw: Variant = pose.get("y", 0)
+		var z_raw: Variant = pose.get("z", 0)
+		if typeof(x_raw) != TYPE_INT or typeof(y_raw) != TYPE_INT or typeof(z_raw) != TYPE_INT:
+			continue
+		var pose_x: int = x_raw
+		var pose_y: int = y_raw
+		var pose_z: int = z_raw
+		if pose_x != x * Fixed.SCALE or pose_y != y * Fixed.SCALE or pose_z != z * Fixed.SCALE:
+			continue
+		var id_raw: Variant = pose.get("entity_id", 0)
+		if typeof(id_raw) == TYPE_INT:
+			var entity_id: int = id_raw
+			return entity_id
+	return 0
+
+
 func _open_shell() -> MatchLobbyShell:
 	var shell: MatchLobbyShell = MatchLobbyShell.create()
 	add_child(shell)
@@ -1589,3 +1679,10 @@ func _assert_lobby_camera_at(target: Vector3) -> void:
 	assert_almost_eq(camera.position.x, expected.x, 0.0001)
 	assert_almost_eq(camera.position.y, expected.y, 0.0001)
 	assert_almost_eq(camera.position.z, expected.z, 0.0001)
+
+
+func _sample_world(world_x: float, world_z: float) -> PackedByteArray:
+	var yaw: float = deg_to_rad(_shell.map.camera_yaw_deg)
+	var screen_x: float = world_x * cos(yaw) - world_z * sin(yaw)
+	var screen_z: float = world_x * sin(yaw) + world_z * cos(yaw)
+	return _shell.try_sample_play_vector(screen_x, screen_z)

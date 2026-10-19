@@ -93,7 +93,7 @@ func test_home_after_solo_finish_resets_channel_to_preview() -> void:
 	assert_true(_shell.offline_playing())
 	var steps: int = 0
 	while steps < 200:
-		assert_false(_shell.try_sample_play_move(false, false, false, true).is_empty())
+		assert_false(_sample_world(1.0, 0.0).is_empty())
 		if _shell.offline.session.player_finish_tick(0) >= 0:
 			break
 		steps += 1
@@ -231,3 +231,12 @@ func _action_visible(node_name: String) -> bool:
 		"VBoxContainer/MatchActions/%s" % node_name
 	) as Button
 	return button != null and button.visible
+
+
+## Solo course_01 runs toward world +X. Turn that into the matching screen
+## vector so this walk keeps its meaning under the locked 45-degree camera.
+func _sample_world(world_x: float, world_z: float) -> PackedByteArray:
+	var yaw: float = deg_to_rad(_shell.map.camera_yaw_deg)
+	var screen_x: float = world_x * cos(yaw) - world_z * sin(yaw)
+	var screen_z: float = world_x * sin(yaw) + world_z * cos(yaw)
+	return _shell.try_sample_play_vector(screen_x, screen_z)

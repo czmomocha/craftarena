@@ -20,7 +20,8 @@ extends RefCounted
 ## `course_05` 默认重放能量墙短路脚本（站其 −Z 侧 Q 打碎）；A* 会抄空中对角绕墙，
 ## 那不是产品路线，所以不搜索。安全长路存在但不接线 `--route=safe`。
 ## `course_06` 默认重放三连传送爬楼脚本；探针动作集爬不上一整格，启发式只
-## 允许两次传送中转，三跳会把预算耗尽，所以不搜索。
+## 允许两次传送中转，三跳会把预算耗尽，所以不搜索。`course_07` 同一条脚本
+## （平台沿视线错开，走法仍是三次 +X 进门再 -X 冲线）。
 ## `course_f_playable` 在 `--route=any` 下重放危险捷径脚本（站在主路能量墙
 ##
 ## 判定强度与动作集的边界写在 TraprushCourseCompletionProbe 的文件头，
@@ -29,6 +30,7 @@ extends RefCounted
 const CourseCompletionProbe := preload("res://src/games/traprush/course_completion_probe.gd")
 const Course05Scripts := preload("res://src/games/traprush/course_05_scripts.gd")
 const Course06Scripts := preload("res://src/games/traprush/course_06_scripts.gd")
+const Course07Scripts := preload("res://src/games/traprush/course_07_scripts.gd")
 const CourseFPlayableScripts := preload("res://src/games/traprush/course_f_playable_scripts.gd")
 const OfficialTraprushCourses := preload("res://src/shared/official_traprush_courses.gd")
 
@@ -120,6 +122,8 @@ static func run_and_print(user_args: PackedStringArray) -> int:
 			course_hint = Course05Scripts.fast_hint()
 		elif course_id == OfficialTraprushCourses.COURSE_06 and route == ROUTE_ANY:
 			course_hint = Course06Scripts.climb_hint()
+		elif course_id == OfficialTraprushCourses.COURSE_07 and route == ROUTE_ANY:
+			course_hint = Course07Scripts.climb_hint()
 		var result: Dictionary = CourseCompletionProbe.run_path(
 			path, max_ticks, max_depth, forbid_portals, action_count, course_hint
 		)

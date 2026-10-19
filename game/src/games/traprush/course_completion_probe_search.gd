@@ -212,7 +212,7 @@ static func _fresh_session(bundle: SimulationBundle) -> TraprushMatchSession:
 	)
 	if session == null:
 		return null
-	PlayStubs.apply_match(session)
+	PlayStubs.apply_match(session, bundle)
 	return session
 
 

@@ -78,6 +78,15 @@ static func apply_snapshot(shell: MatchLobbyShell) -> void:
 		follow, shell.stage.interp_t, shell.play, shell.offline_playing(),
 		shell.sampler.play_moving, shell.play_anim, session
 	):
+		if shell.map != null and shell.solids != null:
+			var camera: Camera3D = shell.map.camera_node()
+			var camera_position: Vector3 = Vector3.ZERO
+			if camera != null:
+				camera_position = camera.position
+			var focus: Vector3 = shell.map.follow_transition.anchor + shell.map.camera_pan
+			shell.solids.occlusion.update(
+				shell.solids, camera_position, focus, shell.map.follow_slot >= 0
+			)
 		_apply_ghost(shell)
 		shell.refresh_status()
 

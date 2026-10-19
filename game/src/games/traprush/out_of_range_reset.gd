@@ -12,9 +12,18 @@ extends RefCounted
 const CheckpointSpawn := preload("res://src/games/traprush/checkpoint_spawn.gd")
 const CheckpointTrack := preload("res://src/games/traprush/checkpoint_track.gd")
 
-## 开发期占位半宽：±8 格。官方三张赛道沿路有立足固体后，这是真正的坑边界
+## 开发期占位半宽：±8 格。官方赛道沿路有立足固体后，这是真正的坑边界
 ## （走下路面才碰到），不是缺地板时的兜底。不是产品场地尺寸。
+## 占用中心超出这盒时用 `half_covering` 把闭区间扩到包住中心，下限仍是本值。
 const STUB_HALF: int = 8 * Fixed.SCALE
+
+
+## 闭区间半宽。`max_abs` 是占用中心到原点的最大绝对值（含 X/Y/Z）。
+## 不超过桩就维持 ±8，这样已有课的出界行为不变。
+static func half_covering(max_abs: int) -> int:
+	if max_abs > STUB_HALF:
+		return max_abs
+	return STUB_HALF
 
 
 static func try_apply(

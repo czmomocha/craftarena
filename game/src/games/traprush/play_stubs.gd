@@ -19,7 +19,8 @@ extends RefCounted
 ## MATCH 组给随引擎 tick 连续推进的场景（对局进程、Solo、BotRunner）；
 ## PREVIEW 组的下落加速度与对局同一 `FALL_DY`（F 线 FD；不再用 `-SCALE` 特判）。
 ##
-## 出界半宽不在这里复制，直接用 TraprushOutOfRangeReset.STUB_HALF。
+## 出界半宽不在这里复制。下限是 TraprushOutOfRangeReset.STUB_HALF；
+## 编译占用超出时 `play_range_half_for` 扩到包住占用中心。
 
 const OutOfRangeReset := preload("res://src/games/traprush/out_of_range_reset.gd")
 const TraprushMatchSession := preload("res://src/games/traprush/match_session.gd")
@@ -88,10 +89,10 @@ const CAPSULE_RADIUS: int = PlaceholderSpec.CHARACTER_RADIUS
 const CAPSULE_HEIGHT: int = PlaceholderSpec.CHARACTER_HEIGHT
 
 
-## 套用 MATCH 组并打开开发桩出界 AABB。对局进程、BotRunner 与任何直接持有
-## TraprushMatchSession 的调用方都走这里；只持有 `play_*` 字段的外壳
-## （Solo、Preview）按分层自己读上面的常量。
-static func apply_match(session: TraprushMatchSession) -> void:
+## 套用 MATCH 组并打开出界 AABB。对局进程、BotRunner 与任何直接持有
+## TraprushMatchSession 的调用方都走这里。传入 bundle 时半宽包住占用中心，
+## 否则维持 ±8 桩。Solo / Preview 按分层自己读，见 `play_range_half_for`。
+static func apply_match(session: TraprushMatchSession, bundle: SimulationBundle = null) -> void:
 	if session == null:
 		return
 	session.jump_dy = JUMP_DY
@@ -111,7 +112,56 @@ static func apply_match(session: TraprushMatchSession) -> void:
 	session.launch_dy = LAUNCH_DY
 	session.launch_xz = LAUNCH_XZ
 	session.respawn_stun_ticks = RESPAWN_STUN_TICKS
-	session.enable_play_range(OutOfRangeReset.STUB_HALF)
+	session.enable_play_range(play_range_half_for(bundle))
+
+
+## 出界闭区间半宽。无 bundle 时就是 ±8 桩。
+static func play_range_half_for(bundle: SimulationBundle) -> int:
+	if bundle == null:
+		return OutOfRangeReset.STUB_HALF
+	return OutOfRangeReset.half_covering(_max_abs_coord(bundle))
+
+
+static func _max_abs_coord(bundle: SimulationBundle) -> int:
+	var max_abs: int = 0
+	max_abs = _fold_bags(max_abs, bundle.pads)
+	max_abs = _fold_bags(max_abs, bundle.portals)
+	max_abs = _fold_bags(max_abs, bundle.finish)
+	max_abs = _fold_bags(max_abs, bundle.destructibles)
+	max_abs = _fold_bags(max_abs, bundle.hazards)
+	max_abs = _fold_bags(max_abs, bundle.solids)
+	max_abs = _fold_bags(max_abs, bundle.pickups)
+	for raw: Variant in bundle.movers:
+		if typeof(raw) != TYPE_DICTIONARY:
+			continue
+		var mover: Dictionary = raw
+		var path_raw: Variant = mover.get("path", [])
+		if typeof(path_raw) != TYPE_ARRAY:
+			continue
+		var path: Array = path_raw
+		max_abs = _fold_bags(max_abs, path)
+	return max_abs
+
+
+static func _fold_bags(max_abs: int, bags: Array) -> int:
+	for raw: Variant in bags:
+		if typeof(raw) != TYPE_DICTIONARY:
+			continue
+		var bag: Dictionary = raw
+		max_abs = _fold_axis(max_abs, bag.get("x", 0))
+		max_abs = _fold_axis(max_abs, bag.get("y", 0))
+		max_abs = _fold_axis(max_abs, bag.get("z", 0))
+	return max_abs
+
+
+static func _fold_axis(max_abs: int, value: Variant) -> int:
+	if typeof(value) != TYPE_INT:
+		return max_abs
+	var number: int = value
+	var axis: int = absi(number)
+	if axis > max_abs:
+		return axis
+	return max_abs
 
 
 static func apply_opening_countdown(session: TraprushMatchSession) -> void:
